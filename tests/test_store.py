@@ -7,7 +7,7 @@ import multiprocessing
 import json
 
 from an_kla.evaluation import evaluate_retrieval
-from an_kla.index import build_index
+from an_kla.index import build_index, detect_fts5, resolve_index, verify_index_deep
 from an_kla.retrieval import retrieve
 from an_kla.mcp import ReadOnlyMcp
 from an_kla.store import ConcurrentUpdateError, IntegrityError, LockBusyError, MemoryStore
@@ -152,8 +152,62 @@ class MemoryStoreTests(unittest.TestCase):
         )
         result = build_index(self.store)
         self.assertEqual(result["revision"], revision)
-        if result["index"]:
+        if detect_fts5():
+            self.assertIsNotNone(result["index"])
+            self.assertEqual(result["profile"], "sqlite-fts5/v1")
             self.assertIn(revision[7:], result["index"])
+            self.assertEqual(resolve_index(self.store, revision), self.store.root / result["index"])
+            self.assertIn("CURRENT", result["index_reference"])
+            self.assertTrue(verify_index_deep(self.store)["ok"])
+        else:
+            self.assertIsNone(result["index"])
+
+    def test_retrieval_excludes_fact_without_supported_text(self) -> None:
+        self.store.commit(expected_current_hash=self.root_revision, checkpoint_patch={}, facts=[
+            {"id": "f-001", "payload": {"other": "not searchable"}},
+            {"id": "f-002", "render": "memoria recuperable"},
+        ])
+        result = retrieve(self.store, "memoria", 200)
+        self.assertEqual([item["id"] for item in result["selected"]], ["f-002"])
+        self.assertEqual(result["excluded_summary"], {"no_text": 1})
+
+    def test_retrieval_uses_only_explicit_index_reference(self) -> None:
+        revision = self.store.commit(expected_current_hash=self.root_revision, checkpoint_patch={}, facts=[
+            {"id": "f-001", "payload": {"text": "memoria indexada"}},
+        ])
+        built = build_index(self.store)
+        result = retrieve(self.store, "memoria", 200)
+        if built["index"]:
+            self.assertEqual(result["profile"], "sqlite-fts5/v1")
+            reference = self.store.root / built["index_reference"]
+            reference.unlink()
+            fallback = retrieve(self.store, "memoria", 200)
+            self.assertEqual(fallback["profile"], "scan-fallback/v1")
+            self.assertEqual(fallback["degradation"], "index_unavailable")
+        else:
+            self.assertEqual(result["profile"], "scan-fallback/v1")
+        self.assertEqual(result["revision"], revision)
+
+    def test_fts_and_scan_are_equivalent_for_ascii_compatible_tokens(self) -> None:
+        self.store.commit(expected_current_hash=self.root_revision, checkpoint_patch={}, facts=[
+            {"id": "f-001", "payload": {"text": "memory budget decision"}},
+            {"id": "f-002", "payload": {"text": "memory exception"}},
+            {"id": "f-003", "payload": {"text": "unrelated"}},
+        ])
+        built = build_index(self.store)
+        indexed = retrieve(self.store, "memory budget", 200)
+        if built["index"]:
+            reference = self.store.root / built["index_reference"]
+            reference.unlink()
+            scanned = retrieve(self.store, "memory budget", 200)
+            self.assertEqual(indexed["selected"], scanned["selected"])
+            self.assertEqual(indexed["used_bytes"], scanned["used_bytes"])
+
+    def test_doctor_counts_legacy_index_temporary(self) -> None:
+        legacy = self.store.root / "indexes" / ".build-leftover.sqlite"
+        legacy.parent.mkdir(parents=True, exist_ok=True)
+        legacy.write_bytes(b"temporary")
+        self.assertEqual(self.store.doctor()["index_orphan_temporaries"], 1)
 
     def test_two_processes_commit_once_and_one_terminal_result(self) -> None:
         queue: multiprocessing.Queue = multiprocessing.Queue()
