@@ -272,6 +272,7 @@ class MemoryStore:
             "quarantine_objects": len(objects),
             "quarantine_bytes": sum(path.stat().st_size for path in objects),
             "durability_profile": self.durability_profile,
+            "index_orphan_temporaries": sum(1 for path in (self.root / "indexes").rglob(".build-*.sqlite") if path.is_file()) if (self.root / "indexes").exists() else 0,
         }
 
     @contextmanager

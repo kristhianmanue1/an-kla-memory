@@ -27,6 +27,12 @@ archivo y comprueba que los metadatos del índice declaren la misma revisión.
 Un índice inexistente, corrupto o no referenciado produce fallback explícito a
 `scan-fallback/v1`.
 
+El resultado declara `degradation`: `fts5_unavailable` si la plataforma no
+ofrece FTS5, `index_unavailable` si aún no existe referencia para la revisión,
+e `index_unresolvable` si la referencia o el SQLite no pueden usarse. La
+verificación criptográfica completa del SQLite se ejecuta únicamente mediante
+`an-kla doctor --deep-index`, no en el camino caliente de cada consulta.
+
 La referencia de índice es una caché derivada: no es autoridad de commit y no
 modifica el manifiesto inmutable de la memoria.
 
@@ -42,3 +48,8 @@ construcción del índice como `skipped_no_text`.
 Esto elimina la selección accidental por hash sin exigir aún una migración de
 todos los facts a `fact-v1`. La normalización, procedencia y supersession siguen
 siendo trabajo posterior y requieren un migrador explícito.
+
+Para tokens ASCII compatibles, FTS5 sólo estrecha candidatos y debe conservar
+los registros seleccionados y el presupuesto del scan. Los diagnósticos de
+exclusión pueden diferir porque el índice descarta un candidato antes de que el
+selector léxico le asigne una causa.

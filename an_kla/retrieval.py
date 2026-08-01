@@ -6,7 +6,7 @@ import re
 import sqlite3
 from typing import Any, Mapping
 
-from .index import INDEX_PROFILE, detect_fts5, record_text, resolve_index
+from .index import INDEX_PROFILE, detect_fts5, index_resolution, record_text
 from .store import MemoryStore
 
 
@@ -78,14 +78,22 @@ def retrieve(
         ranked.append((score, identifier, record, rendered))
     ranked.sort(key=lambda item: (-item[0], item[1]))
     profile = "scan-fallback/v1"
+    degradation = "none"
     clause = _match_clause(query)
-    if query_terms and clause and detect_fts5():
-        index_path = resolve_index(store, snapshot.revision_id)
-        if index_path is not None:
-            narrowed = _narrow_with_index(index_path, snapshot.revision_id, clause)
-            if narrowed is not None:
-                ranked = [item for item in ranked if item[1] in narrowed]
-                profile = INDEX_PROFILE
+    if query_terms and clause:
+        if not detect_fts5():
+            degradation = "fts5_unavailable"
+        else:
+            resolution = index_resolution(store, snapshot.revision_id)
+            degradation = resolution.status
+            if resolution.path is not None:
+                narrowed = _narrow_with_index(resolution.path, snapshot.revision_id, clause)
+                if narrowed is None:
+                    degradation = "index_unresolvable"
+                else:
+                    ranked = [item for item in ranked if item[1] in narrowed]
+                    profile = INDEX_PROFILE
+                    degradation = "none"
     selected: list[dict[str, Any]] = []
     used = fixed_overhead_bytes
     for score, identifier, _record, rendered in ranked:
@@ -102,6 +110,7 @@ def retrieve(
         "schema": "an-kla/retrieval-result-v1",
         "revision": snapshot.revision_id,
         "profile": profile,
+        "degradation": degradation,
         "budget_bytes": budget,
         "used_bytes": used,
         "reserved_overhead_bytes": {

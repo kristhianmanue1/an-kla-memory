@@ -7,6 +7,7 @@ import os
 from pathlib import Path
 import sqlite3
 import tempfile
+from dataclasses import dataclass
 from typing import Any
 
 from .canonical import bare_digest
@@ -14,6 +15,12 @@ from .store import MemoryStore
 
 INDEX_PROFILE = "sqlite-fts5/v1"
 INDEX_DIR_NAME = "sqlite-fts5-v1"
+
+
+@dataclass(frozen=True)
+class IndexResolution:
+    path: Path | None
+    status: str
 
 
 def record_text(record: dict[str, Any]) -> str:
@@ -49,7 +56,7 @@ def build_index(store: MemoryStore, *, revision_id: str | None = None) -> dict[s
     profile = INDEX_DIR_NAME
     directory = store.root / "indexes" / bare_digest(snapshot.revision_id) / profile
     directory.mkdir(parents=True, exist_ok=True)
-    descriptor, name = tempfile.mkstemp(prefix=".build-", suffix=".sqlite", dir=directory)
+    descriptor, name = tempfile.mkstemp(prefix="an-kla-index-", suffix=".sqlite")
     temporary = Path(name)
     try:
         os.close(descriptor)
@@ -96,17 +103,42 @@ def build_index(store: MemoryStore, *, revision_id: str | None = None) -> dict[s
             temporary.unlink()
 
 
-def resolve_index(store: MemoryStore, revision_id: str) -> Path | None:
-    """Resolve and verify the one index selected for this revision/profile."""
+def index_resolution(store: MemoryStore, revision_id: str) -> IndexResolution:
+    """Resolve an index reference without hashing a whole SQLite per query."""
     directory = store.root / "indexes" / bare_digest(revision_id) / INDEX_DIR_NAME
     reference = directory / "CURRENT"
     try:
         raw = reference.read_bytes()
+    except FileNotFoundError:
+        return IndexResolution(None, "index_unavailable")
+    except OSError:
+        return IndexResolution(None, "index_unresolvable")
+    try:
         identifier = raw[:-1].decode("ascii") if raw.endswith(b"\n") else ""
         bare_digest(identifier)
         target = directory / (bare_digest(identifier) + ".sqlite")
-        if not target.is_file() or hashlib.sha256(target.read_bytes()).hexdigest() != bare_digest(identifier):
-            return None
-        return target
-    except (OSError, UnicodeDecodeError, ValueError):
-        return None
+        return IndexResolution(target if target.is_file() else None, "none" if target.is_file() else "index_unresolvable")
+    except (UnicodeDecodeError, ValueError):
+        return IndexResolution(None, "index_unresolvable")
+
+
+def resolve_index(store: MemoryStore, revision_id: str) -> Path | None:
+    return index_resolution(store, revision_id).path
+
+
+def verify_index_deep(store: MemoryStore, revision_id: str | None = None) -> dict[str, Any]:
+    """Hash the selected derived index on explicit diagnostic request only."""
+    snapshot = store.snapshot(revision_id)
+    resolution = index_resolution(store, snapshot.revision_id)
+    if resolution.path is None:
+        return {"ok": False, "revision": snapshot.revision_id, "degradation": resolution.status}
+    payload = resolution.path.read_bytes()
+    actual = "sha256:" + hashlib.sha256(payload).hexdigest()
+    expected = "sha256:" + resolution.path.stem
+    return {"ok": actual == expected, "revision": snapshot.revision_id, "index": str(resolution.path.relative_to(store.root)), "expected": expected, "actual": actual}
+
+
+def orphan_index_temporaries(store: MemoryStore) -> int:
+    """Count legacy temporaries left inside profile directories."""
+    indexes = store.root / "indexes"
+    return sum(1 for path in indexes.rglob(".build-*.sqlite") if path.is_file()) if indexes.exists() else 0
