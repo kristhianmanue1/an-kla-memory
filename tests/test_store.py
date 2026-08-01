@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import hashlib
+import json
+import multiprocessing
+import shutil
+import sqlite3
 import tempfile
 import unittest
 from pathlib import Path
-import multiprocessing
-import json
-import sqlite3
 
 from an_kla.evaluation import evaluate_retrieval
 from an_kla.index import INDEX_PROFILE, build_index, detect_fts5, record_text, resolve_index, verify_index_deep
@@ -306,6 +308,34 @@ class MemoryStoreTests(unittest.TestCase):
             self.assertEqual(result["degradation"], "index_hash_mismatch")
             self.assertEqual([item["id"] for item in result["selected"]], ["f-001"])
             self.assertFalse(verify_index_deep(self.store)["ok"])
+
+    def test_rehashed_incomplete_index_cannot_suppress_scan_match(self) -> None:
+        self.store.commit(expected_current_hash=self.root_revision, checkpoint_patch={}, facts=[
+            {"id": "f-001", "payload": {"text": "memory critical decision"}},
+        ])
+        built = build_index(self.store)
+        if built["index"]:
+            original = self.store.root / built["index"]
+            forged_work = Path(self.temp.name) / "forged.sqlite"
+            shutil.copyfile(original, forged_work)
+            con = sqlite3.connect(forged_work)
+            try:
+                con.execute("DELETE FROM facts_fts WHERE id = ?", ("f-001",))
+                con.commit()
+            finally:
+                con.close()
+            payload = forged_work.read_bytes()
+            forged_hash = "sha256:" + hashlib.sha256(payload).hexdigest()
+            forged = original.with_name(forged_hash[7:] + ".sqlite")
+            self.store._write_immutable(forged, payload)
+            reference = self.store.root / built["index_reference"]
+            self.store._atomic_write(reference, (forged_hash + "\n").encode("ascii"))
+
+            result = retrieve(self.store, "critical", 200, profile=INDEX_PROFILE)
+            self.assertEqual(result["profile"], SCAN_PROFILE)
+            self.assertEqual(result["degradation"], "index_candidate_mismatch")
+            self.assertEqual([item["id"] for item in result["selected"]], ["f-001"])
+            self.assertTrue(verify_index_deep(self.store)["ok"])
 
     def test_doctor_counts_legacy_index_temporary(self) -> None:
         legacy = self.store.root / "indexes" / ".build-leftover.sqlite"

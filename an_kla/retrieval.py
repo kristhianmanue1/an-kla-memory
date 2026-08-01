@@ -107,6 +107,11 @@ def retrieve(
                     narrowed = _narrow_with_index(resolution.path, snapshot.revision_id, clause)
                     if narrowed is None:
                         degradation = "index_unresolvable"
+                    elif any(
+                        score > 0 and identifier not in narrowed
+                        for score, identifier, _record, _rendered in ranked
+                    ):
+                        degradation = "index_candidate_mismatch"
                     else:
                         ranked = [item for item in ranked if item[1] in narrowed]
                         actual_profile = INDEX_PROFILE

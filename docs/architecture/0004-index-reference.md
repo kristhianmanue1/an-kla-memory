@@ -37,6 +37,12 @@ divergencia de huella produce `index_hash_mismatch`. La alfa prioriza correcció
 y verifica la huella en cada consulta opt-in; `an-kla doctor --deep-index`
 expone además las huellas esperada y observada para diagnóstico.
 
+Una huella válida no demuestra que el índice derive fielmente del snapshot. El
+selector compara por ello los matches positivos del escaneo canónico contra los
+candidatos del índice. Si FTS omite cualquiera, degrada al escaneo con
+`index_candidate_mismatch`. Esta comprobación impide supresión silenciosa aun
+si un índice incompleto fue rehasheado y referenciado deliberadamente.
+
 La referencia de índice es una caché derivada: no es autoridad de commit y no
 modifica el manifiesto inmutable de la memoria.
 
