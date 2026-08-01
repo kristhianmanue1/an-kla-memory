@@ -2,8 +2,10 @@
 
 ## Estado
 
-Aceptada como contrato de F0. La política y su integración transaccional siguen
-pendientes; este ADR no atribuye la compuerta al código actual.
+Aceptada como contrato de F0. El núcleo puro candidato se implementa en
+`an_kla/write_policy.py`; su integración transaccional sigue pendiente. Hasta
+fusionar F1 y completar F2, este ADR no atribuye la compuerta al camino de
+escritura vigente.
 
 ## Contexto
 
@@ -71,6 +73,17 @@ La política v1 reconoce:
 criptográfica futura podrá elevar esa afirmación prospectivamente sin alterar
 los registros históricos.
 
+El núcleo F1 recibe un objeto de autoridad ya construido y no puede observar el
+canal que lo originó. Por ello F2 no deberá tratar un archivo JSON creado por el
+candidato como prueba suficiente de `channel_confirmed`: el adaptador de llamada
+construirá esa autoridad desde configuración y estado separados del contenido.
+
+La clase y el tipo de emisor deben ser compatibles: `tool_observed` exige
+`issuer.kind=tool`, `channel_confirmed` exige `channel`, `model_derived` exige
+`model`, `derived_from_retrieval` admite `model` o `resolver`, y `unresolved`
+admite `unknown` o `resolver`. Una clase privilegiada con emisor incompatible
+es `invalid_write_authority`.
+
 El objeto `WriteAuthority` llega como argumento separado. Si el contenido de
 `WriteProposal.record` incluye campos de autoridad, la política los trata como
 datos y emite `self_asserted_authority_ignored`. Nunca los copia al resultado
@@ -105,6 +118,7 @@ Códigos iniciales reservados:
 | `summary_required_for_authority_ceiling` | `skip`; requiere nueva propuesta |
 | `full_required_for_exception` | selección |
 | `no_durable_value` | `skip` |
+| `operation_not_supported` | `skip` hasta implementar su semántica |
 
 Añadir o cambiar razones modifica `policy_fingerprint`. No se reinterpretan
 decisiones históricas bajo un perfil nuevo.

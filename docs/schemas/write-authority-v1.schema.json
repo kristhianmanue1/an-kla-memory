@@ -47,7 +47,13 @@
           "id": {"type": "string", "minLength": 1},
           "resolution": {"enum": ["verified", "unresolved", "invalid"]},
           "sha256": {"$ref": "#/$defs/digest"}
-        }
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"resolution": {"const": "verified"}}},
+            "then": {"required": ["sha256"]}
+          }
+        ]
       }
     },
     "scope": {
@@ -76,6 +82,28 @@
       }
     }
   },
+  "allOf": [
+    {
+      "if": {"properties": {"authority_class": {"const": "tool_observed"}}},
+      "then": {"properties": {"issuer": {"properties": {"kind": {"const": "tool"}}}}}
+    },
+    {
+      "if": {"properties": {"authority_class": {"const": "channel_confirmed"}}},
+      "then": {"properties": {"issuer": {"properties": {"kind": {"const": "channel"}}}}}
+    },
+    {
+      "if": {"properties": {"authority_class": {"const": "model_derived"}}},
+      "then": {"properties": {"issuer": {"properties": {"kind": {"const": "model"}}}}}
+    },
+    {
+      "if": {"properties": {"authority_class": {"const": "derived_from_retrieval"}}},
+      "then": {"properties": {"issuer": {"properties": {"kind": {"enum": ["model", "resolver"]}}}}}
+    },
+    {
+      "if": {"properties": {"authority_class": {"const": "unresolved"}}},
+      "then": {"properties": {"issuer": {"properties": {"kind": {"enum": ["unknown", "resolver"]}}}}}
+    }
+  ],
   "$defs": {
     "digest": {
       "type": "string",
