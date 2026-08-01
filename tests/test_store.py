@@ -4,10 +4,12 @@ import tempfile
 import unittest
 from pathlib import Path
 import multiprocessing
+import json
 
 from an_kla.evaluation import evaluate_retrieval
 from an_kla.index import build_index
 from an_kla.retrieval import retrieve
+from an_kla.mcp import ReadOnlyMcp
 from an_kla.store import ConcurrentUpdateError, IntegrityError, MemoryStore
 
 
@@ -200,6 +202,18 @@ class MemoryStoreTests(unittest.TestCase):
         self.assertEqual(report["current"], self.root_revision)
         self.assertEqual(report["action"], "none_current_authoritative")
 
+    def test_mcp_retrieval_measures_exact_utf8_payload(self) -> None:
+        self.store.commit(expected_current_hash=self.root_revision, checkpoint_patch={}, facts=[
+            {"id": "f-001", "payload": {"text": "memoria ágil"}},
+            {"id": "f-002", "payload": {"text": "memoria muy larga para el límite"}},
+        ])
+        server = ReadOnlyMcp(self.temp.name)
+        payload = server.call("an_kla_retrieve", {"query": "memoria", "budget_bytes": 300})
+        encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        self.assertEqual(len(encoded), payload["used_bytes"])
+        self.assertLessEqual(payload["used_bytes"], payload["budget_bytes"])
+        self.assertTrue(payload["untrusted_memory_data"])
+        self.assertRaises(ValueError, server.call, "an_kla_retrieve", {"query": "memoria", "budget_bytes": 1})
 
 if __name__ == "__main__":
     unittest.main()
