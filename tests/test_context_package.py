@@ -33,8 +33,10 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class PureContextBlockTests(unittest.TestCase):
     def test_repository_contract_and_managed_block_match_templates(self) -> None:
-        self.assertEqual((ROOT / "AN-KLA.md").read_text(), DETAILED_CONTRACT)
-        parsed = parse_managed_block((ROOT / "AGENTS.md").read_text())
+        self.assertEqual(
+            (ROOT / "AN-KLA.md").read_text(encoding="utf-8"), DETAILED_CONTRACT
+        )
+        parsed = parse_managed_block((ROOT / "AGENTS.md").read_text(encoding="utf-8"))
         self.assertIsNotNone(parsed)
         self.assertEqual(parsed.payload, COMPACT_PAYLOAD)
 
@@ -118,17 +120,19 @@ class ContextFilesystemTests(unittest.TestCase):
     def test_preexisting_canonical_contract_survives_uninstall(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "AN-KLA.md").write_text(DETAILED_CONTRACT)
+            (root / "AN-KLA.md").write_text(DETAILED_CONTRACT, encoding="utf-8")
             apply_context_plan(root, plan_context_change(root, "install"))
-            manifest = json.loads((root / MANIFEST_RELATIVE).read_text())
+            manifest = json.loads((root / MANIFEST_RELATIVE).read_text(encoding="utf-8"))
             self.assertFalse(manifest["contract_created_by_an_kla"])
             apply_context_plan(root, plan_context_change(root, "uninstall"))
-            self.assertEqual((root / "AN-KLA.md").read_text(), DETAILED_CONTRACT)
+            self.assertEqual(
+                (root / "AN-KLA.md").read_text(encoding="utf-8"), DETAILED_CONTRACT
+            )
 
     def test_preexisting_empty_agents_file_survives_uninstall(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "AGENTS.md").write_text("")
+            (root / "AGENTS.md").write_text("", encoding="utf-8")
             apply_context_plan(root, plan_context_change(root, "install"))
             result = apply_context_plan(root, plan_context_change(root, "uninstall"))
             self.assertEqual(result["action"], "preserve_empty")
@@ -140,7 +144,10 @@ class ContextFilesystemTests(unittest.TestCase):
             root = Path(directory)
             apply_context_plan(root, plan_context_change(root, "install"))
             target = root / "AGENTS.md"
-            target.write_text(target.read_text() + "\nRegla nueva del usuario.\n")
+            target.write_text(
+                target.read_text(encoding="utf-8") + "\nRegla nueva del usuario.\n",
+                encoding="utf-8",
+            )
             status = context_status(root)
             self.assertTrue(status["ok"])
             self.assertEqual(status["diagnostics"], [])
@@ -148,13 +155,13 @@ class ContextFilesystemTests(unittest.TestCase):
                 "context_target_changed_outside_managed_block", status["warnings"]
             )
             apply_context_plan(root, plan_context_change(root, "update"))
-            self.assertIn("Regla nueva del usuario.", target.read_text())
+            self.assertIn("Regla nueva del usuario.", target.read_text(encoding="utf-8"))
 
     def test_clean_clone_without_local_manifest_is_healthy_with_warning(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "AGENTS.md").write_text(render_managed_block())
-            (root / "AN-KLA.md").write_text(DETAILED_CONTRACT)
+            (root / "AGENTS.md").write_text(render_managed_block(), encoding="utf-8")
+            (root / "AN-KLA.md").write_text(DETAILED_CONTRACT, encoding="utf-8")
             status = context_status(root)
             self.assertTrue(status["ok"])
             self.assertEqual(status["diagnostics"], [])
@@ -165,14 +172,15 @@ class ContextFilesystemTests(unittest.TestCase):
             root = Path(directory)
             (root / "AGENTS.md").write_text(
                 "python3 -m an_kla status\npython3 -m an_kla write "
-                "--expected-current x\nrebuild-index\n"
+                "--expected-current x\nrebuild-index\n",
+                encoding="utf-8",
             )
             self.assertIn(
                 "legacy_an_kla_context_detected", context_status(root)["diagnostics"]
             )
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            (root / "AN-KLA.md").write_text(DETAILED_CONTRACT)
+            (root / "AN-KLA.md").write_text(DETAILED_CONTRACT, encoding="utf-8")
             self.assertIn(
                 "orphan_managed_contract", context_status(root)["diagnostics"]
             )
@@ -183,14 +191,14 @@ class ContextFilesystemTests(unittest.TestCase):
             apply_context_plan(root, plan_context_change(root, "install"))
             plan = plan_context_change(root, "update")
             manifest_path = root / MANIFEST_RELATIVE
-            manifest = json.loads(manifest_path.read_text())
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["target_sha256"] = "sha256:" + "0" * 64
-            manifest_path.write_text(json.dumps(manifest))
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
             with self.assertRaisesRegex(ContextPackageError, "context_plan_mismatch"):
                 apply_context_plan(root, plan)
 
             manifest["unexpected"] = True
-            manifest_path.write_text(json.dumps(manifest))
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
             status = context_status(root)
             self.assertIn("context_manifest_invalid", status["diagnostics"])
 
@@ -204,7 +212,9 @@ class ContextFilesystemTests(unittest.TestCase):
             self.assertEqual(result["action"], "append")
             installed = (root / "AGENTS.md").read_bytes()
             self.assertTrue(installed.startswith(original))
-            manifest = json.loads((root / MANIFEST_RELATIVE).read_text())
+            manifest = json.loads(
+                (root / MANIFEST_RELATIVE).read_text(encoding="utf-8")
+            )
             backup = root / manifest["original_backup"]
             self.assertEqual(backup.read_bytes(), original)
             self.assertTrue((root / CONTRACT_RELATIVE).is_file())
@@ -235,12 +245,12 @@ class ContextFilesystemTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             target = root / "AGENTS.md"
-            target.write_text("original\n")
+            target.write_text("original\n", encoding="utf-8")
             plan = plan_context_change(root, "install")
-            target.write_text("cambio concurrente\n")
+            target.write_text("cambio concurrente\n", encoding="utf-8")
             with self.assertRaisesRegex(ContextConcurrentUpdate, "context_file_concurrent_update"):
                 apply_context_plan(root, plan)
-            self.assertEqual(target.read_text(), "cambio concurrente\n")
+            self.assertEqual(target.read_text(encoding="utf-8"), "cambio concurrente\n")
 
     def test_modified_plan_and_invalid_targets_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -283,11 +293,12 @@ class ContextFilesystemTests(unittest.TestCase):
                     apply_context_plan(root, plan)
             self.assertFalse((root / "AGENTS.md").exists())
 
+    @unittest.skipUnless(os.name == "posix", "POSIX permission bits")
     def test_file_permissions_are_preserved(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             target = root / "AGENTS.md"
-            target.write_text("reglas\n")
+            target.write_text("reglas\n", encoding="utf-8")
             target.chmod(0o640)
             apply_context_plan(root, plan_context_change(root, "install"))
             self.assertEqual(target.stat().st_mode & 0o777, 0o640)
@@ -297,11 +308,11 @@ class ContextFilesystemTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             outside = root / "outside"
-            outside.write_text("no tocar\n")
+            outside.write_text("no tocar\n", encoding="utf-8")
             (root / "AGENTS.md").symlink_to(outside)
             with self.assertRaisesRegex(ContextPackageError, "symlink_forbidden"):
                 plan_context_change(root, "install")
-            self.assertEqual(outside.read_text(), "no tocar\n")
+            self.assertEqual(outside.read_text(encoding="utf-8"), "no tocar\n")
 
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
@@ -317,7 +328,10 @@ class ContextFilesystemTests(unittest.TestCase):
             root = Path(directory)
             apply_context_plan(root, plan_context_change(root, "install"))
             contract = root / CONTRACT_RELATIVE
-            contract.write_text(contract.read_text() + "alterado\n")
+            contract.write_text(
+                contract.read_text(encoding="utf-8") + "alterado\n",
+                encoding="utf-8",
+            )
             status = context_status(root)
             self.assertIn("managed_contract_modified", status["diagnostics"])
             with self.assertRaisesRegex(ContextPackageError, "managed_contract_modified"):
@@ -344,7 +358,7 @@ class ContextFilesystemTests(unittest.TestCase):
                 text=True,
                 check=True,
             )
-            plan_path.write_text(planned.stdout)
+            plan_path.write_text(planned.stdout, encoding="utf-8")
             subprocess.run(
                 [
                     sys.executable,
