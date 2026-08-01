@@ -273,15 +273,31 @@ class MemoryStore:
         try:
             import fcntl  # type: ignore
         except ImportError:
-            lock_dir = self.root / ".write.lock-dir"
             try:
-                lock_dir.mkdir()
-            except FileExistsError as exc:
-                raise LockBusyError("write_lock_busy") from exc
-            try:
-                yield
-            finally:
-                lock_dir.rmdir()
+                import msvcrt  # type: ignore
+            except ImportError:
+                lock_dir = self.root / ".write.lock-dir"
+                try:
+                    lock_dir.mkdir()
+                except FileExistsError as exc:
+                    raise LockBusyError("write_lock_busy") from exc
+                try:
+                    yield
+                finally:
+                    lock_dir.rmdir()
+                return
+            lock_path = self.root / ".write.lock"
+            with lock_path.open("a+b") as handle:
+                handle.seek(0)
+                handle.write(b"0")
+                handle.flush()
+                handle.seek(0)
+                msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+                try:
+                    yield
+                finally:
+                    handle.seek(0)
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
             return
         lock_path = self.root / ".write.lock"
         with lock_path.open("a+b") as handle:
@@ -367,7 +383,8 @@ class MemoryStore:
         # Objects are unreferenced until a valid manifest becomes CURRENT.  O_EXCL
         # prevents an existing object from being overwritten.
         try:
-            descriptor = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
+            descriptor = os.open(target, flags, 0o644)
         except FileExistsError:
             if target.read_bytes() != payload:
                 self._quarantine_conflict(target)
