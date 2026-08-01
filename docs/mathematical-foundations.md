@@ -138,7 +138,8 @@ Esto no equivale a una cota exacta de tokens para un tokenizador específico. Un
 | Revisiones inmutables y puntero `CURRENT` | Implementada |
 | Escritura serializada y recuperación diagnosticable | Implementada |
 | Presupuesto exacto UTF-8 en recuperación | Implementada |
-| Presupuesto global del contexto ensamblado | Pendiente |
+| Presupuesto global del contexto ensamblado en bytes UTF-8 | Implementado en `context-assembly/v1` |
+| Presupuesto global exacto en tokens | Contrato `cost-model/v1`; implementación pendiente |
 | Medición emparejada de distorsión decisional | Pendiente |
 | Selector modular con aproximación \(1/2\) | Teorema condicional; no implementado |
 | Compactación respetando compatibilidad operacional | Invariante de diseño; compactación no implementada |
