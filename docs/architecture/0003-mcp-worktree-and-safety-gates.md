@@ -113,7 +113,9 @@ usan marcadores de comentario como mecanismo de propiedad.
 2. La interfaz de lectura sanea diagnósticos y rechaza raíz ausente o ambigua.
 3. Una prueba demuestra que `read_current()` abre y cierra `CURRENT` antes de
    cualquier lectura posterior; otra se ejecutará en Windows antes de declarar
-   compatibilidad con ese sistema.
+   compatibilidad con ese sistema. La prueba fuerza un reemplazo mientras un
+   lector MCP permanece ocioso entre solicitudes; no pretende modelar una
+   carrera no determinista durante una recuperación en vuelo.
 4. La documentación declara que aún no hay GC. Antes de introducir GC o
    compactación, se diseñan leases de lectores y pruebas de retención; no se
    afirma que el servidor MCP los resuelva anticipadamente.
@@ -131,6 +133,15 @@ usan marcadores de comentario como mecanismo de propiedad.
 la alfa no puede sincronizar el rename de directorio con la misma primitiva.
 La integridad de contenido y el CAS siguen aplicando, pero no se afirma igual
 garantía de persistencia ante caída súbita.
+
+## Contención de escritores
+
+En Windows el lock usa espera no bloqueante con backoff y límite de 10 s.
+`LockBusyError` es un resultado terminal y reintentable: el escritor no obtuvo
+el lock y no participó en la comparación CAS. `ConcurrentUpdateError` significa
+que sí participó y perdió la carrera de `CURRENT`. Las pruebas concurrentes
+aceptan ambos resultados, exigen exactamente un commit y no aceptan procesos
+abortados.
 
 ## Consecuencias
 

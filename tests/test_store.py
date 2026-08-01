@@ -10,7 +10,7 @@ from an_kla.evaluation import evaluate_retrieval
 from an_kla.index import build_index
 from an_kla.retrieval import retrieve
 from an_kla.mcp import ReadOnlyMcp
-from an_kla.store import ConcurrentUpdateError, IntegrityError, MemoryStore
+from an_kla.store import ConcurrentUpdateError, IntegrityError, LockBusyError, MemoryStore
 
 
 def _concurrent_writer(project_root: str, expected: str, event_id: str, queue: multiprocessing.Queue) -> None:
@@ -24,6 +24,8 @@ def _concurrent_writer(project_root: str, expected: str, event_id: str, queue: m
         queue.put(("committed", result))
     except ConcurrentUpdateError:
         queue.put(("conflict", None))
+    except LockBusyError:
+        queue.put(("busy", None))
 
 
 class MemoryStoreTests(unittest.TestCase):
@@ -153,7 +155,7 @@ class MemoryStoreTests(unittest.TestCase):
         if result["index"]:
             self.assertIn(revision[7:], result["index"])
 
-    def test_two_processes_commit_once_and_one_conflicts(self) -> None:
+    def test_two_processes_commit_once_and_one_terminal_result(self) -> None:
         queue: multiprocessing.Queue = multiprocessing.Queue()
         processes = [
             multiprocessing.Process(target=_concurrent_writer, args=(self.temp.name, self.root_revision, f"e-00{index}", queue))
@@ -166,9 +168,9 @@ class MemoryStoreTests(unittest.TestCase):
             self.assertEqual(process.exitcode, 0)
         outcomes = [queue.get(timeout=2)[0] for _ in processes]
         self.assertEqual(outcomes.count("committed"), 1)
-        self.assertEqual(outcomes.count("conflict"), 1)
+        self.assertEqual(outcomes.count("conflict") + outcomes.count("busy"), 1)
 
-    def test_twenty_processes_commit_once_and_nineteen_conflict(self) -> None:
+    def test_twenty_processes_commit_once_and_nineteen_terminal_results(self) -> None:
         queue: multiprocessing.Queue = multiprocessing.Queue()
         processes = [
             multiprocessing.Process(target=_concurrent_writer, args=(self.temp.name, self.root_revision, f"e-{index:03d}", queue))
@@ -181,7 +183,7 @@ class MemoryStoreTests(unittest.TestCase):
             self.assertEqual(process.exitcode, 0)
         outcomes = [queue.get(timeout=2)[0] for _ in processes]
         self.assertEqual(outcomes.count("committed"), 1)
-        self.assertEqual(outcomes.count("conflict"), 19)
+        self.assertEqual(outcomes.count("conflict") + outcomes.count("busy"), 19)
 
     def test_synthetic_evaluation_uses_revisioned_retrieval(self) -> None:
         self.store.commit(
