@@ -24,11 +24,17 @@ class IndexResolution:
 
 
 def record_text(record: dict[str, Any]) -> str:
-    """Return supported textual fields; an empty result is never indexed."""
-    payload = record.get("payload", record)
-    if not isinstance(payload, dict):
-        return str(payload).strip()
-    return str(payload.get("text", payload.get("render", payload.get("summary", payload.get("p", ""))))).strip()
+    """Return the first supported non-empty string in normative priority."""
+    payload = record.get("payload")
+    containers = (payload, record) if isinstance(payload, dict) else (record,)
+    for field in ("text", "render", "summary", "p"):
+        for container in containers:
+            value = container.get(field)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+    if isinstance(payload, str) and payload.strip():
+        return payload.strip()
+    return ""
 
 
 def detect_fts5() -> bool:
@@ -132,10 +138,22 @@ def verify_index_deep(store: MemoryStore, revision_id: str | None = None) -> dic
     resolution = index_resolution(store, snapshot.revision_id)
     if resolution.path is None:
         return {"ok": False, "revision": snapshot.revision_id, "degradation": resolution.status}
-    payload = resolution.path.read_bytes()
+    try:
+        payload = resolution.path.read_bytes()
+    except OSError:
+        return {"ok": False, "revision": snapshot.revision_id, "degradation": "index_unresolvable"}
     actual = "sha256:" + hashlib.sha256(payload).hexdigest()
     expected = "sha256:" + resolution.path.stem
     return {"ok": actual == expected, "revision": snapshot.revision_id, "index": str(resolution.path.relative_to(store.root)), "expected": expected, "actual": actual}
+
+
+def index_integrity_status(path: Path) -> str:
+    """Diagnose a content-addressed index before it narrows candidates."""
+    try:
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError:
+        return "index_unresolvable"
+    return "none" if actual == path.stem else "index_hash_mismatch"
 
 
 def orphan_index_temporaries(store: MemoryStore) -> int:

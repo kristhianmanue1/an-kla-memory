@@ -25,24 +25,30 @@ actualiza atómicamente sólo después de escribir y hashear el objeto inmutable
 El perfil `scan-fallback/v1` es el predeterminado y no consulta FTS5. Sólo cuando
 el llamador solicita `sqlite-fts5/v1`, la recuperación resuelve exclusivamente
 esa referencia y comprueba que los metadatos del índice declaren la misma
-revisión. Un índice inexistente, corrupto o no referenciado produce fallback
-explícito a `scan-fallback/v1`.
+revisión. Antes de estrechar candidatos también verifica que los bytes coincidan
+con la huella content-addressed del nombre del SQLite. Un índice inexistente,
+alterado, corrupto o no referenciado produce fallback explícito a
+`scan-fallback/v1`.
 
 El resultado declara `degradation`: `fts5_unavailable` si la plataforma no
 ofrece FTS5, `index_unavailable` si aún no existe referencia para la revisión,
-e `index_unresolvable` si la referencia o el SQLite no pueden usarse. La
-verificación criptográfica completa del SQLite se ejecuta únicamente mediante
-`an-kla doctor --deep-index`, no en el camino caliente de cada consulta.
+e `index_unresolvable` si la referencia o el SQLite no pueden usarse. Una
+divergencia de huella produce `index_hash_mismatch`. La alfa prioriza corrección
+y verifica la huella en cada consulta opt-in; `an-kla doctor --deep-index`
+expone además las huellas esperada y observada para diagnóstico.
 
 La referencia de índice es una caché derivada: no es autoridad de commit y no
 modifica el manifiesto inmutable de la memoria.
 
 ## Texto recuperable
 
-Las formas heredadas admitidas se extraen en este orden: `text`, `render`,
-`summary`, `p`. Un fact sin texto en esos campos no se indexa ni participa en
-recuperación; se informa en `excluded_summary.no_text` y en el resultado de
-construcción del índice como `skipped_no_text`.
+Las formas heredadas admitidas se extraen en este orden de campo: `text`,
+`render`, `summary`, `p`; para cada campo se consulta primero `payload` y luego
+la raíz. Como último fallback se conserva un `payload` que sea directamente un
+string. Sólo se aceptan strings no vacíos: `null`, números, colecciones y objetos no se
+convierten a texto ficticio. Un fact sin texto admisible no se indexa ni
+participa en recuperación; se informa en `excluded_summary.no_text` y en el
+resultado de construcción del índice como `skipped_no_text`.
 
 ## Consecuencia
 

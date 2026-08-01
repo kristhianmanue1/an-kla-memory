@@ -8,7 +8,7 @@ import json
 import sqlite3
 
 from an_kla.evaluation import evaluate_retrieval
-from an_kla.index import INDEX_PROFILE, build_index, detect_fts5, resolve_index, verify_index_deep
+from an_kla.index import INDEX_PROFILE, build_index, detect_fts5, record_text, resolve_index, verify_index_deep
 from an_kla.retrieval import SCAN_PROFILE, retrieve
 from an_kla.mcp import ReadOnlyMcp
 from an_kla.store import ConcurrentUpdateError, IntegrityError, LockBusyError, MemoryStore
@@ -145,6 +145,18 @@ class MemoryStoreTests(unittest.TestCase):
         self.assertEqual([item["id"] for item in result["selected"]], ["f-001"])
         self.assertEqual(result["excluded_summary"], {"inactive": 1, "zero_score": 1, "budget": 1})
 
+    def test_fixed_overhead_cannot_exceed_budget(self) -> None:
+        self.store.commit(
+            expected_current_hash=self.root_revision,
+            checkpoint_patch={},
+            facts=[{"id": "f-001", "payload": {"text": "memoria"}}],
+        )
+        exact = retrieve(self.store, "memoria", 8, fixed_overhead_bytes=8)
+        self.assertEqual(exact["used_bytes"], 8)
+        self.assertEqual(exact["selected"], [])
+        with self.assertRaisesRegex(ValueError, "fixed_overhead_exceeds_budget"):
+            retrieve(self.store, "memoria", 8, fixed_overhead_bytes=9)
+
     def test_index_is_bound_to_revision_when_fts_is_available(self) -> None:
         revision = self.store.commit(
             expected_current_hash=self.root_revision,
@@ -183,6 +195,26 @@ class MemoryStoreTests(unittest.TestCase):
         result = retrieve(self.store, "memoria", 200)
         self.assertEqual([item["id"] for item in result["selected"]], ["f-002"])
         self.assertEqual(result["excluded_summary"], {"no_text": 1})
+
+    def test_record_text_supports_hybrid_fallbacks_and_rejects_non_text(self) -> None:
+        self.assertEqual(
+            record_text({"payload": {"meta": "x"}, "render": " visible legacy "}),
+            "visible legacy",
+        )
+        self.assertEqual(
+            record_text({"payload": {"text": None}, "render": "visible fallback"}),
+            "visible fallback",
+        )
+        self.assertEqual(record_text({"payload": {"text": 123}}), "")
+        self.assertEqual(record_text({"payload": " raw legacy payload "}), "raw legacy payload")
+        self.assertEqual(
+            record_text({"payload": "raw fallback", "text": "normative root"}),
+            "normative root",
+        )
+        self.assertEqual(
+            record_text({"payload": {"render": "payload render"}, "text": "root text"}),
+            "root text",
+        )
 
     def test_mixed_legacy_shapes_remain_retrievable_after_upgrade(self) -> None:
         facts = [
@@ -255,6 +287,25 @@ class MemoryStoreTests(unittest.TestCase):
             scanned = retrieve(self.store, "memory budget", 200)
             self.assertEqual(indexed["selected"], scanned["selected"])
             self.assertEqual(indexed["used_bytes"], scanned["used_bytes"])
+
+    def test_semantically_tampered_index_falls_back_explicitly(self) -> None:
+        self.store.commit(expected_current_hash=self.root_revision, checkpoint_patch={}, facts=[
+            {"id": "f-001", "payload": {"text": "memory critical decision"}},
+        ])
+        built = build_index(self.store)
+        if built["index"]:
+            path = self.store.root / built["index"]
+            con = sqlite3.connect(path)
+            try:
+                con.execute("DELETE FROM facts_fts WHERE id = ?", ("f-001",))
+                con.commit()
+            finally:
+                con.close()
+            result = retrieve(self.store, "critical", 200, profile=INDEX_PROFILE)
+            self.assertEqual(result["profile"], SCAN_PROFILE)
+            self.assertEqual(result["degradation"], "index_hash_mismatch")
+            self.assertEqual([item["id"] for item in result["selected"]], ["f-001"])
+            self.assertFalse(verify_index_deep(self.store)["ok"])
 
     def test_doctor_counts_legacy_index_temporary(self) -> None:
         legacy = self.store.root / "indexes" / ".build-leftover.sqlite"

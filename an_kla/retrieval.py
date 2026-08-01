@@ -6,7 +6,13 @@ import re
 import sqlite3
 from typing import Any, Mapping
 
-from .index import INDEX_PROFILE, detect_fts5, index_resolution, record_text
+from .index import (
+    INDEX_PROFILE,
+    detect_fts5,
+    index_integrity_status,
+    index_resolution,
+    record_text,
+)
 from .store import MemoryStore
 
 
@@ -61,6 +67,8 @@ def retrieve(
         raise ValueError("negative_budget")
     if fixed_overhead_bytes < 0 or per_record_overhead_bytes < 0:
         raise ValueError("negative_overhead")
+    if fixed_overhead_bytes > budget:
+        raise ValueError("fixed_overhead_exceeds_budget")
     if profile not in SUPPORTED_PROFILES:
         raise ValueError("unsupported_retrieval_profile")
     snapshot = store.snapshot()
@@ -92,13 +100,17 @@ def retrieve(
             resolution = index_resolution(store, snapshot.revision_id)
             degradation = resolution.status
             if resolution.path is not None:
-                narrowed = _narrow_with_index(resolution.path, snapshot.revision_id, clause)
-                if narrowed is None:
-                    degradation = "index_unresolvable"
+                integrity = index_integrity_status(resolution.path)
+                if integrity != "none":
+                    degradation = integrity
                 else:
-                    ranked = [item for item in ranked if item[1] in narrowed]
-                    actual_profile = INDEX_PROFILE
-                    degradation = "none"
+                    narrowed = _narrow_with_index(resolution.path, snapshot.revision_id, clause)
+                    if narrowed is None:
+                        degradation = "index_unresolvable"
+                    else:
+                        ranked = [item for item in ranked if item[1] in narrowed]
+                        actual_profile = INDEX_PROFILE
+                        degradation = "none"
     selected: list[dict[str, Any]] = []
     used = fixed_overhead_bytes
     for score, identifier, _record, rendered in ranked:
