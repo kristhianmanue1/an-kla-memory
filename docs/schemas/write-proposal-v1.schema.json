@@ -30,7 +30,11 @@
     },
     "record": {
       "type": "object",
-      "minProperties": 1
+      "minProperties": 1,
+      "required": ["id"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1}
+      }
     },
     "lineage": {
       "type": "object",

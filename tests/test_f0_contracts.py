@@ -40,6 +40,7 @@ class F0ContractTests(unittest.TestCase):
         self.assertNotIn("decay", representations)
         self.assertNotIn("supersede", representations)
         self.assertNotIn("refute", representations)
+        self.assertIn("id", schema["properties"]["record"]["required"])
 
     def test_write_authority_is_a_separate_scoped_object(self) -> None:
         proposal = load_schema("write-proposal-v1.schema.json")
@@ -48,6 +49,8 @@ class F0ContractTests(unittest.TestCase):
         self.assertIn("proposal_sha256", authority["required"])
         self.assertIn("scope", authority["required"])
         self.assertIn("operations", authority["properties"]["scope"]["required"])
+        verified_rule = authority["properties"]["evidence"]["items"]["allOf"][0]
+        self.assertIn("sha256", verified_rule["then"]["required"])
         self.assertEqual(
             authority["properties"]["authority_class"]["enum"],
             [
@@ -105,7 +108,7 @@ class F0ContractTests(unittest.TestCase):
             "representation_accepted",
         ):
             self.assertIn(f"`{code}`", text)
-        self.assertIn("siguen pendientes", " ".join(text.split()))
+        self.assertIn("integración transaccional sigue pendiente", " ".join(text.split()))
 
     def test_cost_terminal_codes_and_host_boundary_are_frozen(self) -> None:
         text = (ROOT / "docs" / "architecture" / "0008-cost-model-v1.md").read_text(
