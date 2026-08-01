@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:write-proposal:v1",
+  "title": "AN-KLA WriteProposal v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "base_revision",
+    "stream",
+    "operation",
+    "requested_representation",
+    "record",
+    "lineage"
+  ],
+  "properties": {
+    "schema": {"const": "an-kla/write-proposal-v1"},
+    "base_revision": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "stream": {
+      "enum": ["facts", "events", "episodes"]
+    },
+    "operation": {
+      "enum": ["add", "supersede", "refute", "decay"]
+    },
+    "requested_representation": {
+      "enum": ["full", "summary"]
+    },
+    "record": {
+      "type": "object",
+      "minProperties": 1
+    },
+    "lineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["derived_from_retrieval", "refs"],
+      "properties": {
+        "derived_from_retrieval": {"type": "boolean"},
+        "refs": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/reference"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": {
+          "enum": ["artifact", "event", "fact", "episode", "revision", "external"]
+        },
+        "id": {"type": "string", "minLength": 1},
+        "sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    }
+  }
+}
