@@ -94,11 +94,19 @@ Códigos iniciales reservados:
 | `derived_authority_capped` | diagnóstico |
 | `derived_from_retrieval` | diagnóstico |
 | `summary_preferred` | selección |
+| `summary_required_for_authority_ceiling` | `skip`; requiere nueva propuesta |
 | `full_required_for_exception` | selección |
 | `no_durable_value` | `skip` |
 
 Añadir o cambiar razones modifica `policy_fingerprint`. No se reinterpretan
 decisiones históricas bajo un perfil nuevo.
+
+La política es pura y no sintetiza texto. Si una propuesta solicita `full` pero
+su autoridad efectiva sólo permite `summary`, devuelve `skip` con
+`summary_required_for_authority_ceiling`. El llamador debe producir y presentar
+otra `WriteProposal` cuyo `record` sea ya el resumen exacto y cuya
+`requested_representation` sea `summary`. Así el plan nunca afirma haber
+resumido bytes que realmente conserva completos.
 
 ## Huellas canónicas
 

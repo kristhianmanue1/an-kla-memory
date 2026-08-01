@@ -94,6 +94,7 @@ class F0ContractTests(unittest.TestCase):
             "write_authority_scope_mismatch",
             "write_content_hash_mismatch",
             "write_lifecycle_as_representation",
+            "summary_required_for_authority_ceiling",
         ):
             self.assertIn(f"`{code}`", text)
         self.assertIn("siguen pendientes", " ".join(text.split()))
