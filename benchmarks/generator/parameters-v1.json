@@ -1,0 +1,12 @@
+{
+  "schema": "an-kla/synthetic-parameters-v1",
+  "note": "Parámetros iniciales sintéticos; no derivan ni exportan contenido histórico.",
+  "families": [
+    "rule_exception",
+    "supersession",
+    "lexical_distractor",
+    "required_together",
+    "harmful_alone",
+    "invalid_provenance"
+  ]
+}

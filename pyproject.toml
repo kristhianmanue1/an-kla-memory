@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "an-kla-memory"
+version = "0.1.0a0"
+description = "Local revisioned memory for AI-agent projects"
+requires-python = ">=3.9"
+
+[tool.setuptools]
+packages = ["an_kla"]
