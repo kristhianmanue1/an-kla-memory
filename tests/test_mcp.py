@@ -4,6 +4,7 @@ import json
 import tempfile
 import unittest
 
+from an_kla import VERSION
 from an_kla.mcp import PROTOCOL_VERSION, ReadOnlyMcp, _safe_error
 from an_kla.store import MemoryStore, StoreError
 
@@ -25,6 +26,7 @@ class McpProtocolTests(unittest.TestCase):
     def test_initialize_requires_supported_protocol(self) -> None:
         ok = self.server.handle({"jsonrpc":"2.0", "id":1, "method":"initialize", "params":{"protocolVersion":PROTOCOL_VERSION}})
         self.assertEqual(ok["result"]["protocolVersion"], PROTOCOL_VERSION)
+        self.assertEqual(ok["result"]["serverInfo"]["version"], VERSION)
         rejected = self.server.handle({"jsonrpc":"2.0", "id":2, "method":"initialize", "params":{"protocolVersion":"1999-01-01"}})
         self.assertEqual(rejected["error"]["message"], "unsupported_protocol_version")
 

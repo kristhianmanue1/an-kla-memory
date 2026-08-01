@@ -9,6 +9,7 @@ from typing import Any, Mapping
 
 from .retrieval import retrieve
 from .store import IntegrityError, MemoryStore, StoreError
+from .version import VERSION
 
 PROTOCOL_VERSION = "2025-11-25"
 SAFE_ERROR_CODES = frozenset({
@@ -119,7 +120,7 @@ class ReadOnlyMcp:
             params = request.get("params", {})
             if not isinstance(params, Mapping) or params.get("protocolVersion") != PROTOCOL_VERSION:
                 return {"jsonrpc":"2.0","id":request_id,"error":{"code":-32602,"message":"unsupported_protocol_version"}}
-            return {"jsonrpc":"2.0","id":request_id,"result":{"protocolVersion":PROTOCOL_VERSION,"capabilities":{"tools":{"listChanged":False}},"serverInfo":{"name":"an-kla-read","version":"0.1.0a0"}}}
+            return {"jsonrpc":"2.0","id":request_id,"result":{"protocolVersion":PROTOCOL_VERSION,"capabilities":{"tools":{"listChanged":False}},"serverInfo":{"name":"an-kla-read","version":VERSION}}}
         if method == "tools/list": return {"jsonrpc":"2.0","id":request_id,"result":{"tools":self.tools()}}
         if method == "tools/call":
             params = request.get("params", {})

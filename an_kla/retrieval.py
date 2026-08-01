@@ -11,6 +11,8 @@ from .store import MemoryStore
 
 
 TOKEN = re.compile(r"[\w]+", re.UNICODE)
+SCAN_PROFILE = "scan-fallback/v1"
+SUPPORTED_PROFILES = frozenset({SCAN_PROFILE, INDEX_PROFILE})
 
 
 def _terms(text: str) -> set[str]:
@@ -47,6 +49,7 @@ def retrieve(
     *,
     fixed_overhead_bytes: int = 0,
     per_record_overhead_bytes: int = 0,
+    profile: str = SCAN_PROFILE,
 ) -> dict[str, Any]:
     """Retrieve deterministically, reserving any caller-owned envelope cost.
 
@@ -58,6 +61,8 @@ def retrieve(
         raise ValueError("negative_budget")
     if fixed_overhead_bytes < 0 or per_record_overhead_bytes < 0:
         raise ValueError("negative_overhead")
+    if profile not in SUPPORTED_PROFILES:
+        raise ValueError("unsupported_retrieval_profile")
     snapshot = store.snapshot()
     query_terms = _terms(query)
     ranked: list[tuple[int, str, Mapping[str, Any], str]] = []
@@ -77,10 +82,10 @@ def retrieve(
         identifier = str(record["id"])
         ranked.append((score, identifier, record, rendered))
     ranked.sort(key=lambda item: (-item[0], item[1]))
-    profile = "scan-fallback/v1"
+    actual_profile = SCAN_PROFILE
     degradation = "none"
     clause = _match_clause(query)
-    if query_terms and clause:
+    if profile == INDEX_PROFILE and query_terms and clause:
         if not detect_fts5():
             degradation = "fts5_unavailable"
         else:
@@ -92,7 +97,7 @@ def retrieve(
                     degradation = "index_unresolvable"
                 else:
                     ranked = [item for item in ranked if item[1] in narrowed]
-                    profile = INDEX_PROFILE
+                    actual_profile = INDEX_PROFILE
                     degradation = "none"
     selected: list[dict[str, Any]] = []
     used = fixed_overhead_bytes
@@ -109,7 +114,8 @@ def retrieve(
     return {
         "schema": "an-kla/retrieval-result-v1",
         "revision": snapshot.revision_id,
-        "profile": profile,
+        "requested_profile": profile,
+        "profile": actual_profile,
         "degradation": degradation,
         "budget_bytes": budget,
         "used_bytes": used,

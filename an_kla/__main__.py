@@ -7,9 +7,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .index import build_index, detect_fts5, verify_index_deep
+from .index import INDEX_PROFILE, build_index, detect_fts5, verify_index_deep
 from .evaluation import evaluate_retrieval
-from .retrieval import retrieve
+from .retrieval import SCAN_PROFILE, retrieve
 from .store import ConcurrentUpdateError, MemoryStore, StoreError
 
 
@@ -32,6 +32,9 @@ def main() -> None:
     retrieve_cmd = sub.add_parser("retrieve")
     retrieve_cmd.add_argument("--query", required=True)
     retrieve_cmd.add_argument("--budget", type=int, required=True)
+    retrieve_cmd.add_argument(
+        "--profile", choices=(SCAN_PROFILE, INDEX_PROFILE), default=SCAN_PROFILE
+    )
     evaluate_cmd = sub.add_parser("evaluate")
     evaluate_cmd.add_argument("--queries", required=True)
     evaluate_cmd.add_argument("--budget", type=int, required=True)
@@ -58,7 +61,7 @@ def main() -> None:
     elif args.command == "rebuild-index":
         result = build_index(store, revision_id=args.revision)
     elif args.command == "retrieve":
-        result = retrieve(store, args.query, args.budget)
+        result = retrieve(store, args.query, args.budget, profile=args.profile)
     elif args.command == "evaluate":
         result = evaluate_retrieval(store, args.queries, args.budget)
     else:

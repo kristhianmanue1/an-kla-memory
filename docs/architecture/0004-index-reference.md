@@ -22,10 +22,11 @@ Cada perfil de índice usa:
 
 El archivo contiene el identificador SHA-256 del único SQLite activo. Se
 actualiza atómicamente sólo después de escribir y hashear el objeto inmutable.
-La recuperación resuelve exclusivamente esa referencia, verifica el hash del
-archivo y comprueba que los metadatos del índice declaren la misma revisión.
-Un índice inexistente, corrupto o no referenciado produce fallback explícito a
-`scan-fallback/v1`.
+El perfil `scan-fallback/v1` es el predeterminado y no consulta FTS5. Sólo cuando
+el llamador solicita `sqlite-fts5/v1`, la recuperación resuelve exclusivamente
+esa referencia y comprueba que los metadatos del índice declaren la misma
+revisión. Un índice inexistente, corrupto o no referenciado produce fallback
+explícito a `scan-fallback/v1`.
 
 El resultado declara `degradation`: `fts5_unavailable` si la plataforma no
 ofrece FTS5, `index_unavailable` si aún no existe referencia para la revisión,
@@ -52,4 +53,7 @@ siendo trabajo posterior y requieren un migrador explícito.
 Para tokens ASCII compatibles, FTS5 sólo estrecha candidatos y debe conservar
 los registros seleccionados y el presupuesto del scan. Los diagnósticos de
 exclusión pueden diferir porque el índice descarta un candidato antes de que el
-selector léxico le asigne una causa.
+selector léxico le asigne una causa. Esta equivalencia limitada no se extrapola
+al tokenizador Unicode completo: antes de promover FTS5 a perfil predeterminado
+se requiere un banco comparativo que detecte divergencias de normalización y
+tokenización.
