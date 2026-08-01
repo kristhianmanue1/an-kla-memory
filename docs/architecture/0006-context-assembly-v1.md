@@ -13,6 +13,10 @@ consulta. El checkpoint y la sección de información nueva son indivisibles y
 obligatorios en la envolvente; el valor de información nueva puede ser nulo
 cuando el cliente no lo suministra. Los registros recuperados llenan el
 presupuesto restante en el orden determinista del recuperador.
+El ensamblador reserva primero el peor caso del diagnóstico de exclusiones y
+libera esos bytes conforme acepta registros; así el crecimiento del propio
+diagnóstico no obliga a expulsar al final un registro sin reconsiderar los que
+habían sido saltados.
 
 La operación primero fija la revisión devuelta por recuperación y después lee
 el checkpoint de esa misma revisión inmutable. Por tanto, una actualización

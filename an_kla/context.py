@@ -38,12 +38,15 @@ def assemble_context(
     snapshot = store.snapshot(source["revision"])
     candidates = source["selected"]
     records: list[dict[str, Any]] = []
-    budget_excluded = 0
+    # Reserve the largest possible diagnostic before selecting.  Decreasing
+    # this count as records enter keeps every intermediate payload feasible and
+    # avoids evicting a record at the end without reconsidering skipped items.
+    budget_excluded = len(candidates)
 
     def build(used: int = 0) -> dict[str, Any]:
         exclusions = dict(source["excluded_summary"])
         if budget_excluded:
-            exclusions["budget"] = budget_excluded
+            exclusions["budget"] = exclusions.get("budget", 0) + budget_excluded
         return {
             "schema": "an-kla/context-assembly-v1",
             "profile": ASSEMBLY_PROFILE,
@@ -75,6 +78,7 @@ def assemble_context(
         raise ValueError("budget_too_small_for_required_context")
 
     for item in candidates:
+        budget_excluded -= 1
         records.append(
             {"id": item["id"], "text": item["render"], "score": item["score"]}
         )
@@ -84,10 +88,6 @@ def assemble_context(
             budget_excluded += 1
 
     payload, measured = encode_exact()
-    while measured > budget and records:
-        records.pop()
-        budget_excluded += 1
-        payload, measured = encode_exact()
     if measured > budget:
         raise ValueError("budget_too_small_for_required_context")
     return payload

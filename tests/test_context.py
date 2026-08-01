@@ -79,6 +79,29 @@ class ContextAssemblyTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "budget_too_small_for_required_context"):
             assemble_context(self.store, "memoria", 100, new_information="ñ" * 100)
 
+    def test_diagnostic_growth_does_not_evict_without_reconsideration(self) -> None:
+        lengths = [39, 102, 167, 13, 19, 211, 138, 25, 94, 150, 15, 233, 130, 55, 10, 23, 112, 108]
+        with tempfile.TemporaryDirectory() as root:
+            store = MemoryStore(root)
+            initial = store.initialize()
+            store.commit(
+                expected_current_hash=initial,
+                checkpoint_patch={"goal": "g"},
+                facts=[
+                    {
+                        "id": f"f-{index:03}",
+                        "payload": {"text": "memoria " + "x" * length},
+                    }
+                    for index, length in enumerate(lengths)
+                ],
+            )
+            result = assemble_context(store, "memoria", 534)
+        selected = {
+            item["id"] for item in result["sections"]["retrieved_records"]
+        }
+        self.assertIn("f-014", selected)
+        self.assertLessEqual(result["used_bytes"], 534)
+
     def test_output_is_canonical_json_serializable(self) -> None:
         result = assemble_context(self.store, "memoria", 900)
         self.assertEqual(json.loads(canonical_json(result)), result)
