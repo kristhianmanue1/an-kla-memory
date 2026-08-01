@@ -208,7 +208,7 @@ class MemoryStoreTests(unittest.TestCase):
             {"id": "f-002", "payload": {"text": "memoria muy larga para el límite"}},
         ])
         server = ReadOnlyMcp(self.temp.name)
-        payload = server.call("an_kla_retrieve", {"query": "memoria", "budget_bytes": 300})
+        payload = server.call("an_kla_retrieve", {"query": "memoria", "budget_bytes": 400})
         encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
         self.assertEqual(len(encoded), payload["used_bytes"])
         self.assertLessEqual(payload["used_bytes"], payload["budget_bytes"])

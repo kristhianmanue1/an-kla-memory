@@ -17,6 +17,9 @@ Herramientas disponibles: `an_kla_status`, `an_kla_verify`,
 `an_kla_retrieve` mide en bytes UTF-8 el texto JSON efectivo que se entrega al
 modelo (`content[0].text`), incluida su envolvente. Si el presupuesto no alcanza
 ni para la envolvente mínima, devuelve `budget_too_small_for_envelope`.
+El sobre JSON-RPC se desescapa antes de llegar al modelo y queda fuera de ese
+presupuesto; cualquier andamiaje añadido por el host se declara como
+`host_framing_unmeasured: true`.
 
 El contenido recuperado y el checkpoint se etiquetan como datos no confiables.
 Esa etiqueta no vuelve seguro contenido hostil: el cliente debe tratarlo como

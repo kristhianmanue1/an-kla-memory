@@ -11,6 +11,15 @@ from .retrieval import retrieve
 from .store import IntegrityError, MemoryStore, StoreError
 
 PROTOCOL_VERSION = "2025-11-25"
+SAFE_ERROR_CODES = frozenset({
+    "memory_not_initialized", "negative_budget", "budget_too_small_for_envelope",
+    "invalid_retrieve_arguments", "invalid_tool_arguments", "unknown_tool",
+    "unsupported_protocol_version", "payload_size_not_converged",
+    "current_missing", "current_invalid_length", "current_invalid_syntax",
+    "revision_hash_mismatch", "revision_schema_invalid", "object_missing",
+    "object_hash_mismatch", "object_json_invalid", "object_not_canonical",
+    "duplicate_or_missing_facts_id",
+})
 
 
 def _json(value: Any) -> str:
@@ -19,7 +28,9 @@ def _json(value: Any) -> str:
 
 def _safe_error(exc: Exception) -> str:
     if isinstance(exc, (IntegrityError, StoreError, ValueError)):
-        return str(exc).split(":", 1)[0]
+        code = str(exc).split(":", 1)[0]
+        if code in SAFE_ERROR_CODES:
+            return code
     return "internal_error"
 
 
@@ -46,6 +57,7 @@ class ReadOnlyMcp:
             if budget_excluded:
                 exclusions["budget"] = budget_excluded
             return {"schema": "an-kla/mcp-retrieve-v1", "untrusted_memory_data": True,
+                    "host_framing_unmeasured": True,
                     "revision": source["revision"], "budget_bytes": budget,
                     "used_bytes": used, "excluded_summary": exclusions, "records": selected}
 
@@ -57,7 +69,7 @@ class ReadOnlyMcp:
                 if measured == used:
                     return payload, measured
                 used = measured
-            return build(used), len(_json(build(used)).encode("utf-8"))
+            raise ValueError("payload_size_not_converged")
 
         for item in candidates:
             selected.append({"id": item["id"], "text": item["render"], "score": item["score"]})
@@ -101,8 +113,12 @@ class ReadOnlyMcp:
         if request.get("jsonrpc") != "2.0":
             return {"jsonrpc":"2.0","id":request.get("id"),"error":{"code":-32600,"message":"invalid_request"}}
         method, request_id = request.get("method"), request.get("id")
-        if method == "notifications/initialized": return None
+        if (isinstance(method, str) and method.startswith("notifications/")) or "id" not in request:
+            return None
         if method == "initialize":
+            params = request.get("params", {})
+            if not isinstance(params, Mapping) or params.get("protocolVersion") != PROTOCOL_VERSION:
+                return {"jsonrpc":"2.0","id":request_id,"error":{"code":-32602,"message":"unsupported_protocol_version"}}
             return {"jsonrpc":"2.0","id":request_id,"result":{"protocolVersion":PROTOCOL_VERSION,"capabilities":{"tools":{"listChanged":False}},"serverInfo":{"name":"an-kla-read","version":"0.1.0a0"}}}
         if method == "tools/list": return {"jsonrpc":"2.0","id":request_id,"result":{"tools":self.tools()}}
         if method == "tools/call":

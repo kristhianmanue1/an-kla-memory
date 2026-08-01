@@ -51,13 +51,15 @@ en un servidor independiente, opt-in, y toda mutación exigirá
 
 ### Contrato de presupuesto
 
-El presupuesto de `retrieve` DEBE medir el resultado que el cliente recibirá,
-no sólo el texto de cada registro. Antes de seleccionar, el adaptador debe
-reservar el coste UTF-8 de su envolvente raíz y el coste por registro, o usar
-un renderizador canónico de transporte que el recuperador pueda presupuestar.
-`used_bytes` debe representar exactamente ese payload presupuestado. La
-etiqueta de datos no confiables se emitirá una vez en la raíz, no repetida por
-registro.
+El presupuesto de `retrieve` DEBE medir el bloque de contenido UTF-8 que el
+host entrega al modelo (`content[0].text`), no sólo el texto de cada registro.
+El sobre JSON-RPC de transporte queda explícitamente fuera: el cliente lo
+desescapa antes de entregar el contenido al modelo. El adaptador debe medir
+su envolvente raíz y cada registro mediante un renderizador canónico.
+`used_bytes` debe representar exactamente ese bloque de contenido. La etiqueta
+de datos no confiables se emitirá una vez en la raíz, no repetida por registro.
+El resultado declara `host_framing_unmeasured: true`, porque el servidor no
+puede medir marcadores o tokens adicionales que el host pudiera añadir.
 
 La prueba de aceptación incluirá caracteres UTF-8 y verificará que la
 serialización efectiva de la respuesta no excede `budget_bytes`.
@@ -114,6 +116,10 @@ usan marcadores de comentario como mecanismo de propiedad.
    afirma que el servidor MCP los resuelva anticipadamente.
 5. Las pruebas existentes permanecen verdes y se añaden pruebas de contrato
    MCP antes de exponer el adaptador.
+
+6. La alfa puede escanear el corpus completo. Antes de soportar ingesta masiva
+   o G3, la recuperación MCP deberá usar un índice ligado a la revisión o una
+   compuerta explícita de tamaño de corpus.
 
 ## Consecuencias
 
