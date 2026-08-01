@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 from typing import Any, Mapping
 
+from .context import assemble_context
 from .retrieval import retrieve
 from .store import IntegrityError, MemoryStore, StoreError
 from .version import VERSION
@@ -20,6 +21,9 @@ SAFE_ERROR_CODES = frozenset({
     "revision_hash_mismatch", "revision_schema_invalid", "object_missing",
     "object_hash_mismatch", "object_json_invalid", "object_not_canonical",
     "duplicate_or_missing_facts_id",
+    "invalid_context_arguments", "invalid_context_query",
+    "invalid_context_budget", "invalid_new_information",
+    "budget_too_small_for_required_context",
 })
 
 
@@ -92,6 +96,7 @@ class ReadOnlyMcp:
             {"name": "an_kla_doctor", "description": "Diagnóstico saneado sin rutas locales.", "inputSchema": empty},
             {"name": "an_kla_get_checkpoint", "description": "Checkpoint como datos no confiables.", "inputSchema": empty},
             {"name": "an_kla_retrieve", "description": "Recupera datos no confiables bajo presupuesto UTF-8 exacto.", "inputSchema": {"type":"object","properties":{"query":{"type":"string"},"budget_bytes":{"type":"integer","minimum":0}},"required":["query","budget_bytes"],"additionalProperties":False}},
+            {"name": "an_kla_assemble_context", "description": "Ensambla checkpoint, información nueva y memoria bajo un presupuesto UTF-8 global.", "inputSchema": {"type":"object","properties":{"query":{"type":"string"},"budget_bytes":{"type":"integer","minimum":0},"new_information":{"type":"string"}},"required":["query","budget_bytes"],"additionalProperties":False}},
         ]
 
     def call(self, name: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
@@ -108,6 +113,22 @@ class ReadOnlyMcp:
             if not isinstance(query, str) or not isinstance(budget, int) or isinstance(budget, bool):
                 raise ValueError("invalid_retrieve_arguments")
             return self._retrieve_payload(query, budget)
+        if name == "an_kla_assemble_context":
+            query, budget = arguments.get("query"), arguments.get("budget_bytes")
+            new_information = arguments.get("new_information")
+            if (
+                not isinstance(query, str)
+                or not isinstance(budget, int)
+                or isinstance(budget, bool)
+                or (new_information is not None and not isinstance(new_information, str))
+            ):
+                raise ValueError("invalid_context_arguments")
+            return assemble_context(
+                self.store,
+                query,
+                budget,
+                new_information=new_information,
+            )
         raise ValueError("unknown_tool")
 
     def handle(self, request: Mapping[str, Any]) -> dict[str, Any] | None:
