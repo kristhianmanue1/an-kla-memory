@@ -4,11 +4,13 @@ import tempfile
 import unittest
 from pathlib import Path
 import multiprocessing
+import json
 
 from an_kla.evaluation import evaluate_retrieval
 from an_kla.index import build_index
 from an_kla.retrieval import retrieve
-from an_kla.store import ConcurrentUpdateError, IntegrityError, MemoryStore
+from an_kla.mcp import ReadOnlyMcp
+from an_kla.store import ConcurrentUpdateError, IntegrityError, LockBusyError, MemoryStore
 
 
 def _concurrent_writer(project_root: str, expected: str, event_id: str, queue: multiprocessing.Queue) -> None:
@@ -22,6 +24,8 @@ def _concurrent_writer(project_root: str, expected: str, event_id: str, queue: m
         queue.put(("committed", result))
     except ConcurrentUpdateError:
         queue.put(("conflict", None))
+    except LockBusyError:
+        queue.put(("busy", None))
 
 
 class MemoryStoreTests(unittest.TestCase):
@@ -124,6 +128,22 @@ class MemoryStoreTests(unittest.TestCase):
         self.assertLessEqual(result["used_bytes"], 20)
         self.assertEqual([item["id"] for item in result["selected"]], ["f-001"])
 
+    def test_retrieval_reserves_transport_overhead_and_explains_exclusions(self) -> None:
+        self.store.commit(
+            expected_current_hash=self.root_revision,
+            checkpoint_patch={},
+            facts=[
+                {"id": "f-001", "payload": {"text": "memoria corta"}},
+                {"id": "f-002", "payload": {"text": "memoria demasiado extensa"}},
+                {"id": "f-003", "status": "eliminada", "payload": {"text": "memoria"}},
+                {"id": "f-004", "payload": {"text": "distractor"}},
+            ],
+        )
+        result = retrieve(self.store, "memoria", 30, fixed_overhead_bytes=8, per_record_overhead_bytes=4)
+        self.assertEqual(result["used_bytes"], 25)
+        self.assertEqual([item["id"] for item in result["selected"]], ["f-001"])
+        self.assertEqual(result["excluded_summary"], {"inactive": 1, "zero_score": 1, "budget": 1})
+
     def test_index_is_bound_to_revision_when_fts_is_available(self) -> None:
         revision = self.store.commit(
             expected_current_hash=self.root_revision,
@@ -135,7 +155,7 @@ class MemoryStoreTests(unittest.TestCase):
         if result["index"]:
             self.assertIn(revision[7:], result["index"])
 
-    def test_two_processes_commit_once_and_one_conflicts(self) -> None:
+    def test_two_processes_commit_once_and_one_terminal_result(self) -> None:
         queue: multiprocessing.Queue = multiprocessing.Queue()
         processes = [
             multiprocessing.Process(target=_concurrent_writer, args=(self.temp.name, self.root_revision, f"e-00{index}", queue))
@@ -148,9 +168,9 @@ class MemoryStoreTests(unittest.TestCase):
             self.assertEqual(process.exitcode, 0)
         outcomes = [queue.get(timeout=2)[0] for _ in processes]
         self.assertEqual(outcomes.count("committed"), 1)
-        self.assertEqual(outcomes.count("conflict"), 1)
+        self.assertEqual(outcomes.count("conflict") + outcomes.count("busy"), 1)
 
-    def test_twenty_processes_commit_once_and_nineteen_conflict(self) -> None:
+    def test_twenty_processes_commit_once_and_nineteen_terminal_results(self) -> None:
         queue: multiprocessing.Queue = multiprocessing.Queue()
         processes = [
             multiprocessing.Process(target=_concurrent_writer, args=(self.temp.name, self.root_revision, f"e-{index:03d}", queue))
@@ -163,7 +183,7 @@ class MemoryStoreTests(unittest.TestCase):
             self.assertEqual(process.exitcode, 0)
         outcomes = [queue.get(timeout=2)[0] for _ in processes]
         self.assertEqual(outcomes.count("committed"), 1)
-        self.assertEqual(outcomes.count("conflict"), 19)
+        self.assertEqual(outcomes.count("conflict") + outcomes.count("busy"), 19)
 
     def test_synthetic_evaluation_uses_revisioned_retrieval(self) -> None:
         self.store.commit(
@@ -184,6 +204,18 @@ class MemoryStoreTests(unittest.TestCase):
         self.assertEqual(report["current"], self.root_revision)
         self.assertEqual(report["action"], "none_current_authoritative")
 
+    def test_mcp_retrieval_measures_exact_utf8_payload(self) -> None:
+        self.store.commit(expected_current_hash=self.root_revision, checkpoint_patch={}, facts=[
+            {"id": "f-001", "payload": {"text": "memoria ágil"}},
+            {"id": "f-002", "payload": {"text": "memoria muy larga para el límite"}},
+        ])
+        server = ReadOnlyMcp(self.temp.name)
+        payload = server.call("an_kla_retrieve", {"query": "memoria", "budget_bytes": 400})
+        encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        self.assertEqual(len(encoded), payload["used_bytes"])
+        self.assertLessEqual(payload["used_bytes"], payload["budget_bytes"])
+        self.assertTrue(payload["untrusted_memory_data"])
+        self.assertRaises(ValueError, server.call, "an_kla_retrieve", {"query": "memoria", "budget_bytes": 1})
 
 if __name__ == "__main__":
     unittest.main()

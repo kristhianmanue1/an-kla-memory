@@ -41,6 +41,9 @@ la memoria. El cliente debe fijar una única raíz de proyecto al iniciar el
 proceso; el servidor DEBE rechazar una raíz sin `.an-kla/` y DEBE rechazar un
 workspace multi-raíz como función no soportada.
 
+La alfa soporta exactamente la revisión MCP `2025-11-25`; rechaza una
+inicialización con otra revisión en vez de negociar compatibilidad parcial.
+
 Las primeras herramientas candidatas son `status`, `verify`, `doctor`
 saneado, `retrieve`, `get_checkpoint` y `get_revision`. No se expondrán los
 streams completos de facts, events o episodes como recursos MCP.
@@ -51,16 +54,18 @@ en un servidor independiente, opt-in, y toda mutación exigirá
 
 ### Contrato de presupuesto
 
-El presupuesto de `retrieve` DEBE medir el resultado que el cliente recibirá,
-no sólo el texto de cada registro. Antes de seleccionar, el adaptador debe
-reservar el coste UTF-8 de su envolvente raíz y el coste por registro, o usar
-un renderizador canónico de transporte que el recuperador pueda presupuestar.
-`used_bytes` debe representar exactamente ese payload presupuestado. La
-etiqueta de datos no confiables se emitirá una vez en la raíz, no repetida por
-registro.
+El presupuesto de `retrieve` DEBE medir el bloque de contenido UTF-8 que el
+host entrega al modelo (`content[0].text`), no sólo el texto de cada registro.
+El sobre JSON-RPC de transporte queda explícitamente fuera: el cliente lo
+desescapa antes de entregar el contenido al modelo. El adaptador debe medir
+su envolvente raíz y cada registro mediante un renderizador canónico.
+`used_bytes` debe representar exactamente ese bloque de contenido. La etiqueta
+de datos no confiables se emitirá una vez en la raíz, no repetida por registro.
+El resultado declara `host_framing_unmeasured: true`, porque el servidor no
+puede medir marcadores o tokens adicionales que el host pudiera añadir.
 
-La prueba de aceptación incluirá caracteres UTF-8 y verificará que la
-serialización efectiva de la respuesta no excede `budget_bytes`.
+La prueba de aceptación incluirá caracteres UTF-8 y verificará que el bloque
+de contenido entregado al modelo no excede `budget_bytes`.
 
 ### Datos no confiables y escritura futura
 
@@ -108,12 +113,35 @@ usan marcadores de comentario como mecanismo de propiedad.
 2. La interfaz de lectura sanea diagnósticos y rechaza raíz ausente o ambigua.
 3. Una prueba demuestra que `read_current()` abre y cierra `CURRENT` antes de
    cualquier lectura posterior; otra se ejecutará en Windows antes de declarar
-   compatibilidad con ese sistema.
+   compatibilidad con ese sistema. La prueba fuerza un reemplazo mientras un
+   lector MCP permanece ocioso entre solicitudes; no pretende modelar una
+   carrera no determinista durante una recuperación en vuelo.
 4. La documentación declara que aún no hay GC. Antes de introducir GC o
    compactación, se diseñan leases de lectores y pruebas de retención; no se
    afirma que el servidor MCP los resuelva anticipadamente.
 5. Las pruebas existentes permanecen verdes y se añaden pruebas de contrato
    MCP antes de exponer el adaptador.
+
+6. La alfa puede escanear el corpus completo. Antes de soportar ingesta masiva
+   o G3, la recuperación MCP deberá usar un índice ligado a la revisión o una
+   compuerta explícita de tamaño de corpus.
+
+## Durabilidad por plataforma
+
+`verify` y `doctor` declaran `durability_profile`. En POSIX se usa
+`posix-fsync-dir/v1`; en Windows se declara `windows-no-dir-fsync/v1`, porque
+la alfa no puede sincronizar el rename de directorio con la misma primitiva.
+La integridad de contenido y el CAS siguen aplicando, pero no se afirma igual
+garantía de persistencia ante caída súbita.
+
+## Contención de escritores
+
+En Windows el lock usa espera no bloqueante con backoff y límite de 10 s.
+`LockBusyError` es un resultado terminal y reintentable: el escritor no obtuvo
+el lock y no participó en la comparación CAS. `ConcurrentUpdateError` significa
+que sí participó y perdió la carrera de `CURRENT`. Las pruebas concurrentes
+aceptan ambos resultados, exigen exactamente un commit y no aceptan procesos
+abortados.
 
 ## Consecuencias
 

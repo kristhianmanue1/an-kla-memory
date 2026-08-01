@@ -12,6 +12,7 @@ from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
+import time
 import uuid
 from typing import Any, Iterable, Iterator, Mapping
 
@@ -67,6 +68,10 @@ class MemoryStore:
     @property
     def current_path(self) -> Path:
         return self.root / "refs" / "CURRENT"
+
+    @property
+    def durability_profile(self) -> str:
+        return "windows-no-dir-fsync/v1" if os.name == "nt" else "posix-fsync-dir/v1"
 
     def initialize(self) -> str:
         """Create an empty root revision, or return the existing revision."""
@@ -226,6 +231,7 @@ class MemoryStore:
             "revision": snapshot.revision_id,
             "revision_number": snapshot.manifest["revision"],
             "counts": {stream: len(snapshot.records[stream]) for stream in STREAMS},
+            "durability_profile": self.durability_profile,
         }
 
     def recover(self) -> dict[str, Any]:
@@ -265,6 +271,7 @@ class MemoryStore:
             "status": status,
             "quarantine_objects": len(objects),
             "quarantine_bytes": sum(path.stat().st_size for path in objects),
+            "durability_profile": self.durability_profile,
         }
 
     @contextmanager
@@ -273,15 +280,39 @@ class MemoryStore:
         try:
             import fcntl  # type: ignore
         except ImportError:
-            lock_dir = self.root / ".write.lock-dir"
             try:
-                lock_dir.mkdir()
-            except FileExistsError as exc:
-                raise LockBusyError("write_lock_busy") from exc
-            try:
-                yield
-            finally:
-                lock_dir.rmdir()
+                import msvcrt  # type: ignore
+            except ImportError:
+                lock_dir = self.root / ".write.lock-dir"
+                try:
+                    lock_dir.mkdir()
+                except FileExistsError as exc:
+                    raise LockBusyError("write_lock_busy") from exc
+                try:
+                    yield
+                finally:
+                    lock_dir.rmdir()
+                return
+            lock_path = self.root / ".write.lock"
+            with lock_path.open("a+b") as handle:
+                if handle.seek(0, os.SEEK_END) == 0:
+                    handle.write(b"0")
+                    handle.flush()
+                handle.seek(0)
+                deadline = time.monotonic() + 10.0
+                while True:
+                    try:
+                        msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                        break
+                    except OSError as exc:
+                        if time.monotonic() >= deadline:
+                            raise LockBusyError("write_lock_busy") from exc
+                        time.sleep(0.05)
+                try:
+                    yield
+                finally:
+                    handle.seek(0)
+                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
             return
         lock_path = self.root / ".write.lock"
         with lock_path.open("a+b") as handle:
@@ -367,7 +398,8 @@ class MemoryStore:
         # Objects are unreferenced until a valid manifest becomes CURRENT.  O_EXCL
         # prevents an existing object from being overwritten.
         try:
-            descriptor = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
+            descriptor = os.open(target, flags, 0o644)
         except FileExistsError:
             if target.read_bytes() != payload:
                 self._quarantine_conflict(target)
