@@ -2,10 +2,12 @@
 
 ## Estado
 
-Aceptada como contrato de F0. El núcleo puro candidato se implementa en
-`an_kla/write_policy.py`; su integración transaccional sigue pendiente. Hasta
-fusionar F1 y completar F2, este ADR no atribuye la compuerta al camino de
-escritura vigente.
+Aceptada. El núcleo puro está en `an_kla/write_policy.py` y la integración
+transaccional candidata de F2 en `MemoryStore.plan_write()` y
+`MemoryStore.commit_write_plan()`. La API histórica `commit()` se conserva por
+compatibilidad y queda explícitamente fuera de la garantía de
+`write-policy/v1`; el comando histórico `write` devuelve la degradación
+`legacy_write_bypasses_write_policy`.
 
 ## Contexto
 
@@ -147,12 +149,12 @@ registros planeados. Cada registro planeado conserva `stream`, `operation`,
 `representation` y los bytes JSON del registro.
 El campo exterior `plan_fingerprint` no forma parte del núcleo.
 
-## Integración transaccional futura
+## Integración transaccional
 
-F1 implementará evaluación pura sin I/O. F2 integrará
-`commit_write_plan(plan, proposal, authority, decision)`; los cuatro objetos se
-reciben para recalcular y revaluar, no sólo para comparar hashes. La secuencia
-dentro del lock será:
+F1 implementa evaluación pura sin I/O. F2 integra
+`commit_write_plan(expected_current_hash, plan, proposal, authority, decision)`;
+los cuatro objetos se reciben para recalcular y revaluar, no sólo para comparar
+hashes. La secuencia dentro del lock es:
 
 1. releer `CURRENT`;
 2. comparar con `base_revision` y `expected_current_hash`;
@@ -171,12 +173,32 @@ La API pura candidata de F1 queda formada por:
 - `policy_configuration()` y `policy_fingerprint()`.
 
 Estas funciones no leen reloj, entorno, filesystem, red o aleatoriedad. F2
-consumirá la misma API dentro de la sección crítica; no mantendrá una segunda
+consume la misma API dentro de la sección crítica; no mantiene una segunda
 implementación parcial de la política.
 
 Un plan preparado contra otra revisión se rechaza con
 `write_plan_base_changed`; no se actualiza implícitamente. Un plan alterado se
 rechaza antes del journal.
+
+`plan_write()` lee `CURRENT`, produce la decisión y el plan, y no crea objetos,
+journals ni revisiones. `commit_write_plan()` relee `CURRENT` bajo el lock,
+compara el CAS explícito, reconstruye el plan mediante el núcleo puro y sólo
+entonces prepara la transacción.
+
+Toda decisión aceptada añade al plan un evento determinista
+`write_policy_decision`. El evento conserva hashes, perfil, clase efectiva,
+decisión y razones; no copia emisor, evidencia ni contenido. Como el evento
+forma parte de `records` y de `planned_records_sha256`, no se añade por un canal
+lateral. Una decisión `skip` no mueve `CURRENT` ni crea un evento o journal: un
+candidato rechazado no puede forzar crecimiento durable.
+
+El CLI ofrece `plan-write` y `commit-write-plan`. La salida exacta del primero
+se entrega al segundo mediante `--planning-result`. Como el CLI actual no tiene
+un resolver externo, rechaza archivos que afirmen `tool_observed` o
+`channel_confirmed` con `cli_privileged_authority_unresolved`. Las clases
+privilegiadas sólo pueden llegar a la API de Python desde una integración que
+controle el canal fuera del contenido candidato. Esta frontera no prueba aún
+identidad criptográfica.
 
 ## Códigos terminales congelados para F1/F2
 

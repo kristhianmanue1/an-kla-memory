@@ -437,6 +437,27 @@ def build_write_plan(
                 "record": deepcopy(proposal["record"]),
             }
         )
+        records.append(
+            {
+                "stream": "events",
+                "operation": "add",
+                "representation": "summary",
+                "record": {
+                    "schema": "an-kla/event-v1",
+                    "id": "e-write-policy-" + checked_decision["proposal_sha256"][7:],
+                    "type": "write_policy_decision",
+                    "payload": {
+                        "authority_class": authority["authority_class"],
+                        "authority_sha256": checked_decision["authority_sha256"],
+                        "decision": checked_decision["decision"],
+                        "policy_fingerprint": checked_decision["policy_fingerprint"],
+                        "policy_profile": checked_decision["policy_profile"],
+                        "proposal_sha256": checked_decision["proposal_sha256"],
+                        "reason_codes": deepcopy(checked_decision["reason_codes"]),
+                    },
+                },
+            }
+        )
     core = {
         "base_revision": proposal["base_revision"],
         "proposal_sha256": checked_decision["proposal_sha256"],

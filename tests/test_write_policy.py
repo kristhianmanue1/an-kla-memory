@@ -188,6 +188,11 @@ class WritePolicyTests(unittest.TestCase):
         self.assertEqual(plan["core"]["decision"], "write-summary")
         self.assertEqual(plan["records"][0]["operation"], "add")
         self.assertEqual(plan["records"][0]["representation"], "summary")
+        self.assertEqual(plan["records"][1]["stream"], "events")
+        self.assertEqual(
+            plan["records"][1]["record"]["type"], "write_policy_decision"
+        )
+        self.assertNotIn("issuer", plan["records"][1]["record"]["payload"])
         self.assertEqual(plan["core"]["planned_records_sha256"], digest_json(plan["records"]))
         self.assertEqual(plan["plan_fingerprint"], digest_json(plan["core"]))
         decision = evaluate_write(candidate, auth)

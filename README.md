@@ -30,6 +30,12 @@ python3 -m an_kla assemble-context \
 La salida completa, no sólo los registros recuperados, queda acotada en bytes
 UTF-8. Consulta [ADR-0006](docs/architecture/0006-context-assembly-v1.md).
 
+La rama de desarrollo incluye además la escritura gobernada en dos pasos
+`plan-write` / `commit-write-plan`. El plan se reconstruye dentro del lock antes
+de mover `CURRENT`; consulta la
+[guía del CLI de escritura](docs/write-policy-cli.md). El comando histórico
+`write` se conserva por compatibilidad, pero no ofrece esta garantía.
+
 Lee [AN-KLA.md](AN-KLA.md) antes de instalar o integrar AN-KLA en otro proyecto.
 
 ## Fundamentos matemáticos

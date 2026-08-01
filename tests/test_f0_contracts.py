@@ -108,7 +108,10 @@ class F0ContractTests(unittest.TestCase):
             "representation_accepted",
         ):
             self.assertIn(f"`{code}`", text)
-        self.assertIn("integración transaccional sigue pendiente", " ".join(text.split()))
+        normalized = " ".join(text.split())
+        self.assertIn("`MemoryStore.commit_write_plan()`", normalized)
+        self.assertIn("`legacy_write_bypasses_write_policy`", normalized)
+        self.assertNotIn("integración transaccional sigue pendiente", normalized)
 
     def test_cost_terminal_codes_and_host_boundary_are_frozen(self) -> None:
         text = (ROOT / "docs" / "architecture" / "0008-cost-model-v1.md").read_text(
