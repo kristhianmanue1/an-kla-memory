@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 from typing import Any, Mapping
 
+from .canonical import exact_sized_payload
 from .context import assemble_context
 from .retrieval import retrieve
 from .store import IntegrityError, MemoryStore, StoreError
@@ -45,6 +46,8 @@ class ReadOnlyMcp:
         self.store = MemoryStore(self.root)
         if not self.store.current_path.exists():
             raise ValueError("memory_not_initialized")
+        self._initialize_responded = False
+        self._initialized = False
 
     def _retrieve_payload(self, query: str, budget: int) -> dict[str, Any]:
         if budget < 0:
@@ -66,23 +69,13 @@ class ReadOnlyMcp:
                     "revision": source["revision"], "budget_bytes": budget,
                     "used_bytes": used, "excluded_summary": exclusions, "records": selected}
 
-        def encode_exact() -> tuple[dict[str, Any], int]:
-            used = 0
-            for _ in range(4):
-                payload = build(used)
-                measured = len(_json(payload).encode("utf-8"))
-                if measured == used:
-                    return payload, measured
-                used = measured
-            raise ValueError("payload_size_not_converged")
-
         for item in candidates:
             selected.append({"id": item["id"], "text": item["render"], "score": item["score"]})
-            _payload, measured = encode_exact()
+            _payload, measured = exact_sized_payload(build)
             if measured > budget:
                 selected.pop()
                 budget_excluded += 1
-        payload, measured = encode_exact()
+        payload, measured = exact_sized_payload(build)
         if measured > budget:
             raise ValueError("budget_too_small_for_envelope")
         return payload
@@ -135,13 +128,21 @@ class ReadOnlyMcp:
         if request.get("jsonrpc") != "2.0":
             return {"jsonrpc":"2.0","id":request.get("id"),"error":{"code":-32600,"message":"invalid_request"}}
         method, request_id = request.get("method"), request.get("id")
+        if method == "notifications/initialized":
+            if self._initialize_responded:
+                self._initialized = True
+            return None
         if (isinstance(method, str) and method.startswith("notifications/")) or "id" not in request:
             return None
         if method == "initialize":
             params = request.get("params", {})
-            if not isinstance(params, Mapping) or params.get("protocolVersion") != PROTOCOL_VERSION:
+            requested = params.get("protocolVersion") if isinstance(params, Mapping) else None
+            if not isinstance(requested, str) or not requested:
                 return {"jsonrpc":"2.0","id":request_id,"error":{"code":-32602,"message":"unsupported_protocol_version"}}
+            self._initialize_responded = True
             return {"jsonrpc":"2.0","id":request_id,"result":{"protocolVersion":PROTOCOL_VERSION,"capabilities":{"tools":{"listChanged":False}},"serverInfo":{"name":"an-kla-read","version":VERSION}}}
+        if not self._initialized:
+            return {"jsonrpc":"2.0","id":request_id,"error":{"code":-32002,"message":"server_not_initialized"}}
         if method == "tools/list": return {"jsonrpc":"2.0","id":request_id,"result":{"tools":self.tools()}}
         if method == "tools/call":
             params = request.get("params", {})
