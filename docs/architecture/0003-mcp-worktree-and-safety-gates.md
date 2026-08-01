@@ -41,6 +41,9 @@ la memoria. El cliente debe fijar una única raíz de proyecto al iniciar el
 proceso; el servidor DEBE rechazar una raíz sin `.an-kla/` y DEBE rechazar un
 workspace multi-raíz como función no soportada.
 
+La alfa soporta exactamente la revisión MCP `2025-11-25`; rechaza una
+inicialización con otra revisión en vez de negociar compatibilidad parcial.
+
 Las primeras herramientas candidatas son `status`, `verify`, `doctor`
 saneado, `retrieve`, `get_checkpoint` y `get_revision`. No se expondrán los
 streams completos de facts, events o episodes como recursos MCP.
@@ -61,8 +64,8 @@ de datos no confiables se emitirá una vez en la raíz, no repetida por registro
 El resultado declara `host_framing_unmeasured: true`, porque el servidor no
 puede medir marcadores o tokens adicionales que el host pudiera añadir.
 
-La prueba de aceptación incluirá caracteres UTF-8 y verificará que la
-serialización efectiva de la respuesta no excede `budget_bytes`.
+La prueba de aceptación incluirá caracteres UTF-8 y verificará que el bloque
+de contenido entregado al modelo no excede `budget_bytes`.
 
 ### Datos no confiables y escritura futura
 
@@ -120,6 +123,14 @@ usan marcadores de comentario como mecanismo de propiedad.
 6. La alfa puede escanear el corpus completo. Antes de soportar ingesta masiva
    o G3, la recuperación MCP deberá usar un índice ligado a la revisión o una
    compuerta explícita de tamaño de corpus.
+
+## Durabilidad por plataforma
+
+`verify` y `doctor` declaran `durability_profile`. En POSIX se usa
+`posix-fsync-dir/v1`; en Windows se declara `windows-no-dir-fsync/v1`, porque
+la alfa no puede sincronizar el rename de directorio con la misma primitiva.
+La integridad de contenido y el CAS siguen aplicando, pero no se afirma igual
+garantía de persistencia ante caída súbita.
 
 ## Consecuencias
 

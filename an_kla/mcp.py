@@ -98,7 +98,7 @@ class ReadOnlyMcp:
             return self.store.verify()
         if name == "an_kla_doctor":
             report = self.store.doctor()
-            return {key: report[key] for key in ("schema", "current_ok", "current_error", "quarantine_objects", "quarantine_bytes")}
+            return {key: report[key] for key in ("schema", "current_ok", "current_error", "quarantine_objects", "quarantine_bytes", "durability_profile")}
         if name == "an_kla_get_checkpoint":
             snapshot = self.store.snapshot()
             return {"schema":"an-kla/mcp-checkpoint-v1", "untrusted_memory_data":True, "revision":snapshot.revision_id, "checkpoint":snapshot.checkpoint}

@@ -12,6 +12,7 @@ from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
+import time
 import uuid
 from typing import Any, Iterable, Iterator, Mapping
 
@@ -67,6 +68,10 @@ class MemoryStore:
     @property
     def current_path(self) -> Path:
         return self.root / "refs" / "CURRENT"
+
+    @property
+    def durability_profile(self) -> str:
+        return "windows-no-dir-fsync/v1" if os.name == "nt" else "posix-fsync-dir/v1"
 
     def initialize(self) -> str:
         """Create an empty root revision, or return the existing revision."""
@@ -226,6 +231,7 @@ class MemoryStore:
             "revision": snapshot.revision_id,
             "revision_number": snapshot.manifest["revision"],
             "counts": {stream: len(snapshot.records[stream]) for stream in STREAMS},
+            "durability_profile": self.durability_profile,
         }
 
     def recover(self) -> dict[str, Any]:
@@ -265,6 +271,7 @@ class MemoryStore:
             "status": status,
             "quarantine_objects": len(objects),
             "quarantine_bytes": sum(path.stat().st_size for path in objects),
+            "durability_profile": self.durability_profile,
         }
 
     @contextmanager
@@ -288,11 +295,19 @@ class MemoryStore:
                 return
             lock_path = self.root / ".write.lock"
             with lock_path.open("a+b") as handle:
+                if handle.seek(0, os.SEEK_END) == 0:
+                    handle.write(b"0")
+                    handle.flush()
                 handle.seek(0)
-                handle.write(b"0")
-                handle.flush()
-                handle.seek(0)
-                msvcrt.locking(handle.fileno(), msvcrt.LK_LOCK, 1)
+                deadline = time.monotonic() + 10.0
+                while True:
+                    try:
+                        msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+                        break
+                    except OSError as exc:
+                        if time.monotonic() >= deadline:
+                            raise LockBusyError("write_lock_busy") from exc
+                        time.sleep(0.05)
                 try:
                     yield
                 finally:
