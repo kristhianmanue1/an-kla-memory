@@ -17,6 +17,13 @@ class ReleaseMetadataTests(unittest.TestCase):
         self.assertIsNotNone(match)
         self.assertEqual(match.group(1), VERSION)
 
+    def test_pep639_license_metadata_uses_supported_backend(self) -> None:
+        payload = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        self.assertIn('requires = ["setuptools>=77"]', payload)
+        self.assertIn('license = "Apache-2.0"', payload)
+        self.assertIn('license-files = ["LICENSE"]', payload)
+        self.assertNotIn("license = {", payload)
+
 
 if __name__ == "__main__":
     unittest.main()
