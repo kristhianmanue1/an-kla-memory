@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from .canonical import canonical_json
+from .canonical import exact_sized_payload
 from .retrieval import retrieve
 from .store import MemoryStore
 
@@ -56,6 +56,11 @@ def assemble_context(
             "revision": source["revision"],
             "budget_bytes": budget,
             "used_bytes": used,
+            "section_provenance": {
+                "working_state": "memory_store",
+                "new_information": "caller",
+                "retrieved_records": "memory_store",
+            },
             "sections": {
                 "working_state": snapshot.checkpoint,
                 "new_information": new_information,
@@ -64,17 +69,7 @@ def assemble_context(
             "excluded_summary": exclusions,
         }
 
-    def encode_exact() -> tuple[dict[str, Any], int]:
-        used = 0
-        for _ in range(4):
-            payload = build(used)
-            measured = len(canonical_json(payload))
-            if measured == used:
-                return payload, measured
-            used = measured
-        raise ValueError("payload_size_not_converged")
-
-    _required, required_size = encode_exact()
+    _required, required_size = exact_sized_payload(build)
     if required_size > budget:
         raise ValueError("budget_too_small_for_required_context")
 
@@ -83,12 +78,12 @@ def assemble_context(
         records.append(
             {"id": item["id"], "text": item["render"], "score": item["score"]}
         )
-        _payload, measured = encode_exact()
+        _payload, measured = exact_sized_payload(build)
         if measured > budget:
             records.pop()
             budget_excluded += 1
 
-    payload, measured = encode_exact()
+    payload, measured = exact_sized_payload(build)
     if measured > budget:
         raise ValueError("budget_too_small_for_required_context")
     return payload

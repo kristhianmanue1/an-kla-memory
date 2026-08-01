@@ -44,6 +44,8 @@ class ContextAssemblyTests(unittest.TestCase):
         self.assertEqual(result["sections"]["working_state"]["goal"], "decidir ágilmente")
         self.assertEqual(result["sections"]["new_information"], "entrada nueva ñ")
         self.assertTrue(result["host_framing_unmeasured"])
+        self.assertEqual(result["section_provenance"]["working_state"], "memory_store")
+        self.assertEqual(result["section_provenance"]["new_information"], "caller")
 
     def test_assembly_is_bound_to_one_immutable_revision(self) -> None:
         result = assemble_context(self.store, "memoria", 1000)
@@ -115,12 +117,12 @@ class ContextAssemblyTests(unittest.TestCase):
                     for index, length in enumerate(lengths)
                 ],
             )
-            result = assemble_context(store, "memoria", 571)
+            result = assemble_context(store, "memoria", 687)
         selected = {
             item["id"] for item in result["sections"]["retrieved_records"]
         }
         self.assertIn("f-014", selected)
-        self.assertLessEqual(result["used_bytes"], 571)
+        self.assertLessEqual(result["used_bytes"], 687)
 
     def test_output_is_canonical_json_serializable(self) -> None:
         result = assemble_context(self.store, "memoria", 900)

@@ -11,6 +11,11 @@ El cliente MCP inicia el proceso y envía JSON-RPC por entrada estándar. La sal
 estándar queda reservada exclusivamente para JSON-RPC; los diagnósticos no deben
 incluir rutas absolutas ni secretos.
 
+Durante `initialize`, si el cliente solicita otra revisión del protocolo, el
+servidor responde con la única revisión que soporta (`2025-11-25`) y deja al
+cliente decidir si continúa. Ninguna herramienta se descubre ni ejecuta hasta
+recibir `notifications/initialized`.
+
 Herramientas disponibles: `an_kla_status`, `an_kla_verify`,
 `an_kla_doctor`, `an_kla_get_checkpoint` y `an_kla_retrieve`. No hay escritura.
 
@@ -27,7 +32,10 @@ El sobre JSON-RPC se desescapa antes de llegar al modelo y queda fuera de ese
 presupuesto; cualquier andamiaje añadido por el host se declara como
 `host_framing_unmeasured: true`.
 
-El contenido recuperado y el checkpoint se etiquetan como datos no confiables.
+El contenido recuperado, el checkpoint y la información aportada por el caller
+se etiquetan como datos no confiables. `section_provenance` conserva además el
+origen de cada sección (`memory_store` o `caller`); el campo global `revision`
+liga las secciones de memoria a una revisión inmutable.
 Esa etiqueta no vuelve seguro contenido hostil: el cliente debe tratarlo como
 datos y nunca como instrucciones.
 
