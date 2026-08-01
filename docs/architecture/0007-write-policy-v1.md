@@ -161,6 +161,19 @@ dentro del lock será:
 5. escribir journal y objetos;
 6. sustituir `CURRENT` una sola vez.
 
+La API pura candidata de F1 queda formada por:
+
+- `validate_write_proposal()` y `validate_write_authority()`;
+- `evaluate_write()`;
+- `validate_write_decision()`;
+- `build_write_plan()` y `validate_write_plan()`;
+- `verify_write_plan()`;
+- `policy_configuration()` y `policy_fingerprint()`.
+
+Estas funciones no leen reloj, entorno, filesystem, red o aleatoriedad. F2
+consumirá la misma API dentro de la sección crítica; no mantendrá una segunda
+implementación parcial de la política.
+
 Un plan preparado contra otra revisión se rechaza con
 `write_plan_base_changed`; no se actualiza implícitamente. Un plan alterado se
 rechaza antes del journal.
