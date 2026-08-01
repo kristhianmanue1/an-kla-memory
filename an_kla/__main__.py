@@ -7,9 +7,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .index import build_index, detect_fts5
+from .index import INDEX_PROFILE, build_index, detect_fts5, verify_index_deep
 from .evaluation import evaluate_retrieval
-from .retrieval import retrieve
+from .retrieval import SCAN_PROFILE, retrieve
 from .store import ConcurrentUpdateError, MemoryStore, StoreError
 
 
@@ -24,13 +24,17 @@ def main() -> None:
     sub.add_parser("init")
     sub.add_parser("status")
     sub.add_parser("verify")
-    sub.add_parser("doctor")
+    doctor_cmd = sub.add_parser("doctor")
+    doctor_cmd.add_argument("--deep-index", action="store_true")
     sub.add_parser("recover")
     index_cmd = sub.add_parser("rebuild-index")
     index_cmd.add_argument("--revision", default=None)
     retrieve_cmd = sub.add_parser("retrieve")
     retrieve_cmd.add_argument("--query", required=True)
     retrieve_cmd.add_argument("--budget", type=int, required=True)
+    retrieve_cmd.add_argument(
+        "--profile", choices=(SCAN_PROFILE, INDEX_PROFILE), default=SCAN_PROFILE
+    )
     evaluate_cmd = sub.add_parser("evaluate")
     evaluate_cmd.add_argument("--queries", required=True)
     evaluate_cmd.add_argument("--budget", type=int, required=True)
@@ -50,12 +54,14 @@ def main() -> None:
         result = store.verify()
     elif args.command == "doctor":
         result = {**store.doctor(), "fts5": detect_fts5(), "memory_exists": store.current_path.exists()}
+        if args.deep_index:
+            result["index_deep"] = verify_index_deep(store)
     elif args.command == "recover":
         result = store.recover()
     elif args.command == "rebuild-index":
         result = build_index(store, revision_id=args.revision)
     elif args.command == "retrieve":
-        result = retrieve(store, args.query, args.budget)
+        result = retrieve(store, args.query, args.budget, profile=args.profile)
     elif args.command == "evaluate":
         result = evaluate_retrieval(store, args.queries, args.budget)
     else:

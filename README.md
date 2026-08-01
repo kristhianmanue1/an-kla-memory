@@ -4,8 +4,9 @@ AN-KLA Memory es una memoria local para proyectos con agentes de IA. Su primera
 alfa implementa una memoria única, revisiones inmutables, recuperación lexical
 bajo presupuesto, y un punto lógico de commit mediante `.an-kla/memory/refs/CURRENT`.
 
-Estado: alfa local, no publicada. La disponibilidad jurídica del nombre sigue
-pendiente de revisión antes de cualquier distribución comercial.
+Estado: alfa pública en GitHub, todavía no publicada en un índice de paquetes.
+La disponibilidad jurídica del nombre sigue pendiente de revisión antes de
+cualquier distribución comercial.
 
 ## Inicio rápido
 
@@ -13,6 +14,7 @@ pendiente de revisión antes de cualquier distribución comercial.
 python3 -m an_kla init
 python3 -m an_kla status
 python3 -m an_kla verify
+python3 -m an_kla retrieve --query "estado del proyecto" --budget 1200
 ```
 
 Lee [AN-KLA.md](AN-KLA.md) antes de instalar o integrar AN-KLA en otro proyecto.
@@ -23,6 +25,11 @@ La separación entre teoremas condicionales, garantías implementadas y trabajo
 pendiente se documenta en [Fundamentos matemáticos de AN-KLA Memory](docs/mathematical-foundations.md).
 La decisión arquitectónica asociada está en
 [ADR-0005](docs/architecture/0005-mathematical-alignment.md).
+
+La recuperación usa `scan-fallback/v1` de forma predeterminada. El perfil
+experimental `sqlite-fts5/v1` sólo se activa explícitamente y requiere construir
+un índice ligado a la revisión actual; consulta
+[ADR-0004](docs/architecture/0004-index-reference.md).
 
 ## Límites de la alfa
 
