@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "an-kla-read": {
+      "type": "stdio",
+      "command": "python3",
+      "args": [
+        "-m",
+        "an_kla.mcp",
+        "--project-root",
+        "${workspaceFolder}"
+      ]
+    }
+  }
+}
