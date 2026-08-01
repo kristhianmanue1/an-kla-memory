@@ -49,6 +49,28 @@ _POLICY_CONFIGURATION = {
     "schema": "an-kla/write-policy-config-v1",
     "profile": WRITE_POLICY_PROFILE,
     "supported_operations": ["add"],
+    "reason_codes": [
+        "authority_scope_mismatch",
+        "channel_confirmation_resolved",
+        "derived_authority_capped",
+        "derived_from_retrieval",
+        "operation_not_supported",
+        "representation_accepted",
+        "self_asserted_authority_ignored",
+        "summary_required_for_authority_ceiling",
+        "tool_evidence_verified",
+        "unresolved_authority",
+    ],
+    "terminal_error_codes": [
+        "invalid_write_authority",
+        "invalid_write_decision",
+        "invalid_write_plan",
+        "invalid_write_proposal",
+        "write_content_hash_mismatch",
+        "write_plan_base_changed",
+        "write_plan_hash_mismatch",
+        "write_policy_fingerprint_mismatch",
+    ],
     "derived_authority": {
         "allowed_operations": ["add"],
         "maximum_representation": "summary",
@@ -435,6 +457,27 @@ def build_write_plan(
                 "operation": proposal["operation"],
                 "representation": proposal["requested_representation"],
                 "record": deepcopy(proposal["record"]),
+            }
+        )
+        records.append(
+            {
+                "stream": "events",
+                "operation": "add",
+                "representation": "summary",
+                "record": {
+                    "schema": "an-kla/event-v1",
+                    "id": "e-write-policy-" + checked_decision["proposal_sha256"][7:],
+                    "type": "write_policy_decision",
+                    "payload": {
+                        "authority_class": authority["authority_class"],
+                        "authority_sha256": checked_decision["authority_sha256"],
+                        "decision": checked_decision["decision"],
+                        "policy_fingerprint": checked_decision["policy_fingerprint"],
+                        "policy_profile": checked_decision["policy_profile"],
+                        "proposal_sha256": checked_decision["proposal_sha256"],
+                        "reason_codes": deepcopy(checked_decision["reason_codes"]),
+                    },
+                },
             }
         )
     core = {

@@ -17,6 +17,12 @@ import uuid
 from typing import Any, Iterable, Iterator, Mapping
 
 from .canonical import bare_digest, canonical_json, digest_bytes, digest_json
+from .write_policy import (
+    WritePolicyError,
+    build_write_plan,
+    evaluate_write,
+    verify_write_plan,
+)
 
 
 STREAMS = ("facts", "events", "episodes")
@@ -155,7 +161,12 @@ class MemoryStore:
         events: Iterable[Mapping[str, Any]] = (),
         episodes: Iterable[Mapping[str, Any]] = (),
     ) -> str:
-        """Commit a complete child revision or raise without moving CURRENT."""
+        """Commit a child revision through the compatible unguarded API.
+
+        New agent-facing integrations should use :meth:`plan_write` followed by
+        :meth:`commit_write_plan`.  This method remains available for internal
+        maintenance and compatibility with the alpha API.
+        """
         self._make_layout()
         pending = {
             "facts": [dict(row) for row in facts],
@@ -168,61 +179,198 @@ class MemoryStore:
                 raise ConcurrentUpdateError(
                     f"current_changed:expected={expected_current_hash}:actual={observed}"
                 )
-            base = self.snapshot(observed)
-            assigned = self._assign_records(base, pending)
-            checkpoint = _deep_merge(base.checkpoint, checkpoint_patch)
-            checkpoint["revision"] = int(base.manifest["revision"]) + 1
-            checkpoint["base_event_id"] = (
-                assigned["events"][-1]["id"] if assigned["events"] else base.checkpoint.get("base_event_id")
+            return self._commit_locked(
+                observed=observed,
+                checkpoint_patch=checkpoint_patch,
+                pending=pending,
             )
-            txid = str(uuid.uuid4())
-            self._write_transaction(txid, {"stage": "prepared", "parent": observed})
-            segment_ids: dict[str, list[str]] = {}
-            for stream in STREAMS:
-                existing = list(base.manifest.get(f"{stream}_segments", []))
-                if assigned[stream]:
-                    existing.append(self._write_segment(stream, assigned[stream]))
-                segment_ids[stream] = existing
-            checkpoint_id = self._write_json_object("checkpoints", checkpoint)
-            manifest = {
-                "schema": "an-kla/revision-v1",
-                "revision": checkpoint["revision"],
-                "parent": observed,
-                "facts_segments": segment_ids["facts"],
-                "events_segments": segment_ids["events"],
-                "episodes_segments": segment_ids["episodes"],
-                "checkpoint": checkpoint_id,
-                "transaction_id": txid,
-                "canonicalization": "canonical-json/v1",
-                "integrity_claim": "content_identity_not_truth_or_authorship",
+
+    def plan_write(
+        self,
+        proposal: Mapping[str, Any],
+        authority: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Build a policy decision and exact plan without mutating the store."""
+
+        observed = self.read_current()
+        decision = evaluate_write(proposal, authority)
+        if proposal["base_revision"] != observed:
+            raise WritePolicyError("write_plan_base_changed")
+        plan = build_write_plan(proposal, authority, decision)
+        return {
+            "schema": "an-kla/write-planning-result-v1",
+            "current_revision": observed,
+            "decision": decision,
+            "plan": plan,
+        }
+
+    def commit_write_plan(
+        self,
+        *,
+        expected_current_hash: str,
+        plan: Mapping[str, Any],
+        proposal: Mapping[str, Any],
+        authority: Mapping[str, Any],
+        decision: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Revalidate and commit one exact write plan under the store lock."""
+
+        self._make_layout()
+        with self.write_lock():
+            observed = self.read_current()
+            if observed != expected_current_hash:
+                raise WritePolicyError("write_plan_base_changed")
+
+            # Callers retain their dictionaries and may share them with other
+            # threads.  Snapshot every object while holding the store lock and
+            # use only those detached values after verification; otherwise a
+            # mutation between verify_write_plan() and pending construction
+            # could change the bytes that reach the segment.
+            checked_plan = deepcopy(plan)
+            checked_proposal = deepcopy(proposal)
+            checked_authority = deepcopy(authority)
+            checked_decision = deepcopy(decision)
+
+            # All policy validation intentionally occurs again inside the same
+            # critical section that can move CURRENT.  The pure module remains
+            # the only implementation of the policy.
+            verify_write_plan(
+                checked_plan,
+                checked_proposal,
+                checked_authority,
+                checked_decision,
+            )
+            if (
+                checked_proposal["base_revision"] != observed
+                or checked_authority["base_revision"] != observed
+                or checked_plan["core"]["base_revision"] != observed
+            ):
+                raise WritePolicyError("write_plan_base_changed")
+
+            if checked_decision["decision"] == "skip":
+                return {
+                    "schema": "an-kla/write-commit-result-v1",
+                    "committed": False,
+                    "revision": observed,
+                    "decision": "skip",
+                    "reason_codes": deepcopy(checked_decision["reason_codes"]),
+                    "plan_fingerprint": checked_plan["plan_fingerprint"],
+                }
+
+            pending: dict[str, list[dict[str, Any]]] = {
+                "facts": [],
+                "events": [],
+                "episodes": [],
             }
-            self._validate_manifest(manifest)
-            candidate = self._write_json_object("revisions", manifest)
-            intent_id = self._write_ref_log({
+            for item in checked_plan["records"]:
+                # verify_write_plan rebuilt this exact list and policy/v1 only
+                # supports add.  Keep the check local so a future policy cannot
+                # accidentally route lifecycle operations through append.
+                if item["operation"] != "add":
+                    raise WritePolicyError("invalid_write_plan")
+                pending[item["stream"]].append(deepcopy(item["record"]))
+
+            policy_metadata = {
+                "schema": "an-kla/write-policy-transaction-v1",
+                "plan_fingerprint": checked_plan["plan_fingerprint"],
+                "proposal_sha256": checked_decision["proposal_sha256"],
+                "authority_sha256": checked_decision["authority_sha256"],
+                "policy_fingerprint": checked_decision["policy_fingerprint"],
+                "decision": checked_decision["decision"],
+                "reason_codes": deepcopy(checked_decision["reason_codes"]),
+            }
+            revision = self._commit_locked(
+                observed=observed,
+                checkpoint_patch={},
+                pending=pending,
+                policy_metadata=policy_metadata,
+            )
+            return {
+                "schema": "an-kla/write-commit-result-v1",
+                "committed": True,
+                "revision": revision,
+                "decision": checked_decision["decision"],
+                "reason_codes": deepcopy(checked_decision["reason_codes"]),
+                "plan_fingerprint": checked_plan["plan_fingerprint"],
+            }
+
+    def _commit_locked(
+        self,
+        *,
+        observed: str,
+        checkpoint_patch: Mapping[str, Any],
+        pending: Mapping[str, list[dict[str, Any]]],
+        policy_metadata: Mapping[str, Any] | None = None,
+    ) -> str:
+        """Write a child revision while the caller holds ``write_lock``."""
+
+        base = self.snapshot(observed)
+        assigned = self._assign_records(base, pending)
+        checkpoint = _deep_merge(base.checkpoint, checkpoint_patch)
+        checkpoint["revision"] = int(base.manifest["revision"]) + 1
+        checkpoint["base_event_id"] = (
+            assigned["events"][-1]["id"]
+            if assigned["events"]
+            else base.checkpoint.get("base_event_id")
+        )
+        txid = str(uuid.uuid4())
+        prepared = {"stage": "prepared", "parent": observed}
+        if policy_metadata is not None:
+            prepared["write_policy"] = deepcopy(dict(policy_metadata))
+        self._write_transaction(txid, prepared)
+        segment_ids: dict[str, list[str]] = {}
+        for stream in STREAMS:
+            existing = list(base.manifest.get(f"{stream}_segments", []))
+            if assigned[stream]:
+                existing.append(self._write_segment(stream, assigned[stream]))
+            segment_ids[stream] = existing
+        checkpoint_id = self._write_json_object("checkpoints", checkpoint)
+        manifest = {
+            "schema": "an-kla/revision-v1",
+            "revision": checkpoint["revision"],
+            "parent": observed,
+            "facts_segments": segment_ids["facts"],
+            "events_segments": segment_ids["events"],
+            "episodes_segments": segment_ids["episodes"],
+            "checkpoint": checkpoint_id,
+            "transaction_id": txid,
+            "canonicalization": "canonical-json/v1",
+            "integrity_claim": "content_identity_not_truth_or_authorship",
+        }
+        self._validate_manifest(manifest)
+        candidate = self._write_json_object("revisions", manifest)
+        intent_id = self._write_ref_log(
+            {
                 "schema": "an-kla/ref-log-v1",
                 "kind": "intent",
                 "transaction_id": txid,
                 "parent": observed,
                 "candidate": candidate,
-            })
-            if self.read_current() != expected_current_hash:
-                raise ConcurrentUpdateError("current_changed_before_commit")
-            self._replace_current(candidate)
-            self._write_transaction(txid, {"stage": "committed", "parent": observed, "candidate": candidate})
-            try:
-                self._write_ref_log({
+            }
+        )
+        if self.read_current() != observed:
+            raise ConcurrentUpdateError("current_changed_before_commit")
+        self._replace_current(candidate)
+        committed = {"stage": "committed", "parent": observed, "candidate": candidate}
+        if policy_metadata is not None:
+            committed["write_policy"] = deepcopy(dict(policy_metadata))
+        self._write_transaction(txid, committed)
+        try:
+            self._write_ref_log(
+                {
                     "schema": "an-kla/ref-log-v1",
                     "kind": "observed_commit",
                     "transaction_id": txid,
                     "parent": observed,
                     "candidate": candidate,
                     "intent": intent_id,
-                })
-            except OSError:
-                # The commit is already authoritative.  The missing diagnostic
-                # object is visible through doctor, never grounds a rollback.
-                pass
-            return candidate
+                }
+            )
+        except OSError:
+            # The commit is already authoritative.  The missing diagnostic
+            # object is visible through doctor, never grounds a rollback.
+            pass
+        return candidate
 
     def verify(self) -> dict[str, Any]:
         snapshot = self.snapshot()

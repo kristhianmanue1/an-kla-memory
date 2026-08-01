@@ -188,6 +188,11 @@ class WritePolicyTests(unittest.TestCase):
         self.assertEqual(plan["core"]["decision"], "write-summary")
         self.assertEqual(plan["records"][0]["operation"], "add")
         self.assertEqual(plan["records"][0]["representation"], "summary")
+        self.assertEqual(plan["records"][1]["stream"], "events")
+        self.assertEqual(
+            plan["records"][1]["record"]["type"], "write_policy_decision"
+        )
+        self.assertNotIn("issuer", plan["records"][1]["record"]["payload"])
         self.assertEqual(plan["core"]["planned_records_sha256"], digest_json(plan["records"]))
         self.assertEqual(plan["plan_fingerprint"], digest_json(plan["core"]))
         decision = evaluate_write(candidate, auth)
@@ -287,6 +292,37 @@ class WritePolicyTests(unittest.TestCase):
         second = policy_configuration()
         self.assertEqual(second["supported_operations"], ["add"])
         self.assertEqual(policy_fingerprint(), digest_json(second))
+
+    def test_policy_fingerprint_binds_reason_and_terminal_code_catalogs(self) -> None:
+        configuration = policy_configuration()
+        self.assertEqual(
+            configuration["reason_codes"],
+            [
+                "authority_scope_mismatch",
+                "channel_confirmation_resolved",
+                "derived_authority_capped",
+                "derived_from_retrieval",
+                "operation_not_supported",
+                "representation_accepted",
+                "self_asserted_authority_ignored",
+                "summary_required_for_authority_ceiling",
+                "tool_evidence_verified",
+                "unresolved_authority",
+            ],
+        )
+        self.assertEqual(
+            configuration["terminal_error_codes"],
+            [
+                "invalid_write_authority",
+                "invalid_write_decision",
+                "invalid_write_plan",
+                "invalid_write_proposal",
+                "write_content_hash_mismatch",
+                "write_plan_base_changed",
+                "write_plan_hash_mismatch",
+                "write_policy_fingerprint_mismatch",
+            ],
+        )
 
     def test_module_has_no_io_or_nondeterministic_imports(self) -> None:
         path = Path(__file__).resolve().parents[1] / "an_kla" / "write_policy.py"

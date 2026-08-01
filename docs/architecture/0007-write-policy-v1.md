@@ -2,10 +2,12 @@
 
 ## Estado
 
-Aceptada como contrato de F0. El núcleo puro candidato se implementa en
-`an_kla/write_policy.py`; su integración transaccional sigue pendiente. Hasta
-fusionar F1 y completar F2, este ADR no atribuye la compuerta al camino de
-escritura vigente.
+Aceptada. El núcleo puro está en `an_kla/write_policy.py` y la integración
+transaccional candidata de F2 en `MemoryStore.plan_write()` y
+`MemoryStore.commit_write_plan()`. La API histórica `commit()` se conserva por
+compatibilidad y queda explícitamente fuera de la garantía de
+`write-policy/v1`; el comando histórico `write` devuelve la degradación
+`legacy_write_bypasses_write_policy`.
 
 ## Contexto
 
@@ -101,11 +103,10 @@ exacta y evita reutilizar la autoridad sobre otro contenido.
 perfil de política y su fingerprint determinan qué razones reconoce una
 implementación.
 
-Códigos iniciales reservados:
+Códigos emitidos por `write-policy/v1`:
 
 | Código | Clase |
 |---|---|
-| `invalid_proposal` | rechazo |
 | `authority_scope_mismatch` | rechazo |
 | `unresolved_authority` | rechazo o techo |
 | `self_asserted_authority_ignored` | diagnóstico |
@@ -114,14 +115,14 @@ Códigos iniciales reservados:
 | `tool_evidence_verified` | elegibilidad |
 | `channel_confirmation_resolved` | elegibilidad |
 | `representation_accepted` | elegibilidad |
-| `summary_preferred` | selección |
 | `summary_required_for_authority_ceiling` | `skip`; requiere nueva propuesta |
-| `full_required_for_exception` | selección |
-| `no_durable_value` | `skip` |
 | `operation_not_supported` | `skip` hasta implementar su semántica |
 
-Añadir o cambiar razones modifica `policy_fingerprint`. No se reinterpretan
-decisiones históricas bajo un perfil nuevo.
+El catálogo ordenado forma parte de `_POLICY_CONFIGURATION`; añadir, retirar o
+cambiar razones modifica `policy_fingerprint`. No se reinterpretan decisiones
+históricas bajo un perfil nuevo. `summary_preferred`,
+`full_required_for_exception` y `no_durable_value` permanecen como nombres de
+diseño no implementados y no se atribuyen al perfil v1.
 
 La política es pura y no sintetiza texto. Si una propuesta solicita `full` pero
 su autoridad efectiva sólo permite `summary`, devuelve `skip` con
@@ -147,12 +148,12 @@ registros planeados. Cada registro planeado conserva `stream`, `operation`,
 `representation` y los bytes JSON del registro.
 El campo exterior `plan_fingerprint` no forma parte del núcleo.
 
-## Integración transaccional futura
+## Integración transaccional
 
-F1 implementará evaluación pura sin I/O. F2 integrará
-`commit_write_plan(plan, proposal, authority, decision)`; los cuatro objetos se
-reciben para recalcular y revaluar, no sólo para comparar hashes. La secuencia
-dentro del lock será:
+F1 implementa evaluación pura sin I/O. F2 integra
+`commit_write_plan(expected_current_hash, plan, proposal, authority, decision)`;
+los cuatro objetos se reciben para recalcular y revaluar, no sólo para comparar
+hashes. La secuencia dentro del lock es:
 
 1. releer `CURRENT`;
 2. comparar con `base_revision` y `expected_current_hash`;
@@ -171,14 +172,34 @@ La API pura candidata de F1 queda formada por:
 - `policy_configuration()` y `policy_fingerprint()`.
 
 Estas funciones no leen reloj, entorno, filesystem, red o aleatoriedad. F2
-consumirá la misma API dentro de la sección crítica; no mantendrá una segunda
+consume la misma API dentro de la sección crítica; no mantiene una segunda
 implementación parcial de la política.
 
 Un plan preparado contra otra revisión se rechaza con
 `write_plan_base_changed`; no se actualiza implícitamente. Un plan alterado se
 rechaza antes del journal.
 
-## Códigos terminales congelados para F1/F2
+`plan_write()` lee `CURRENT`, produce la decisión y el plan, y no crea objetos,
+journals ni revisiones. `commit_write_plan()` relee `CURRENT` bajo el lock,
+compara el CAS explícito, reconstruye el plan mediante el núcleo puro y sólo
+entonces prepara la transacción.
+
+Toda decisión aceptada añade al plan un evento determinista
+`write_policy_decision`. El evento conserva hashes, perfil, clase efectiva,
+decisión y razones; no copia emisor, evidencia ni contenido. Como el evento
+forma parte de `records` y de `planned_records_sha256`, no se añade por un canal
+lateral. Una decisión `skip` no mueve `CURRENT` ni crea un evento o journal: un
+candidato rechazado no puede forzar crecimiento durable.
+
+El CLI ofrece `plan-write` y `commit-write-plan`. La salida exacta del primero
+se entrega al segundo mediante `--planning-result`. Como el CLI actual no tiene
+un resolver externo, rechaza archivos que afirmen `tool_observed` o
+`channel_confirmed` con `cli_privileged_authority_unresolved`. Las clases
+privilegiadas sólo pueden llegar a la API de Python desde una integración que
+controle el canal fuera del contenido candidato. Esta frontera no prueba aún
+identidad criptográfica.
+
+## Códigos terminales implementados para F1/F2
 
 - `invalid_write_proposal`
 - `invalid_write_authority`
@@ -186,14 +207,19 @@ rechaza antes del journal.
 - `invalid_write_plan`
 - `write_plan_hash_mismatch`
 - `write_plan_base_changed`
-- `write_authority_scope_mismatch`
 - `write_policy_fingerprint_mismatch`
 - `write_content_hash_mismatch`
+
+Este catálogo ordenado también forma parte de `_POLICY_CONFIGURATION`. Los
+siguientes códigos se reservaron en F0 pero el perfil v1 no los emite:
+
+- `write_authority_scope_mismatch`
 - `write_representation_invalid`
 - `write_lifecycle_as_representation`
 
-Los códigos son estables; el texto humano puede evolucionar. Nuevos códigos
-requieren actualizar el perfil y las pruebas de contrato.
+Los códigos implementados son estables; el texto humano puede evolucionar.
+Nuevos códigos requieren actualizar la configuración, su fingerprint y las
+pruebas de contrato.
 
 ## Seguridad y no objetivos
 

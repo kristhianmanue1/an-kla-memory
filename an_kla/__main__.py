@@ -17,7 +17,36 @@ from .store import ConcurrentUpdateError, MemoryStore, StoreError
 
 
 def _json(path: str) -> Any:
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    try:
+        payload = Path(path).read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        raise ValueError("input_json_unreadable") from None
+    try:
+        return json.loads(payload)
+    except json.JSONDecodeError:
+        raise ValueError("input_json_invalid") from None
+
+
+def _cli_authority(value: Any) -> Any:
+    """Fail closed when a JSON file claims authority the CLI cannot resolve."""
+
+    if isinstance(value, dict) and value.get("authority_class") in {
+        "tool_observed",
+        "channel_confirmed",
+    }:
+        raise ValueError("cli_privileged_authority_unresolved")
+    return value
+
+
+def _planning_result(value: Any, expected_current: str) -> tuple[Any, Any]:
+    if (
+        not isinstance(value, dict)
+        or set(value) != {"schema", "current_revision", "decision", "plan"}
+        or value.get("schema") != "an-kla/write-planning-result-v1"
+        or value.get("current_revision") != expected_current
+    ):
+        raise ValueError("invalid_write_planning_result")
+    return value["decision"], value["plan"]
 
 
 def main() -> None:
@@ -45,12 +74,26 @@ def main() -> None:
     evaluate_cmd = sub.add_parser("evaluate")
     evaluate_cmd.add_argument("--queries", required=True)
     evaluate_cmd.add_argument("--budget", type=int, required=True)
-    write_cmd = sub.add_parser("write")
+    write_cmd = sub.add_parser(
+        "write", help="API alfa heredada; omite write-policy/v1 y emite deprecación."
+    )
     write_cmd.add_argument("--expected-current", required=True)
     write_cmd.add_argument("--checkpoint-patch", required=True)
     write_cmd.add_argument("--facts", default="")
     write_cmd.add_argument("--events", default="")
     write_cmd.add_argument("--episodes", default="")
+    plan_write_cmd = sub.add_parser(
+        "plan-write", help="Planificar sin mutar; autoridad privilegiada requiere adaptador externo."
+    )
+    plan_write_cmd.add_argument("--proposal", required=True)
+    plan_write_cmd.add_argument("--authority", required=True)
+    commit_plan_cmd = sub.add_parser(
+        "commit-write-plan", help="Revalidar y escribir un plan exacto bajo el lock."
+    )
+    commit_plan_cmd.add_argument("--expected-current", required=True)
+    commit_plan_cmd.add_argument("--proposal", required=True)
+    commit_plan_cmd.add_argument("--authority", required=True)
+    commit_plan_cmd.add_argument("--planning-result", required=True)
     args = parser.parse_args()
     store = MemoryStore(args.project_root)
     if args.command == "init":
@@ -78,7 +121,7 @@ def main() -> None:
         )
     elif args.command == "evaluate":
         result = evaluate_retrieval(store, args.queries, args.budget)
-    else:
+    elif args.command == "write":
         result = {
             "revision": store.commit(
                 expected_current_hash=args.expected_current,
@@ -86,8 +129,25 @@ def main() -> None:
                 facts=_json(args.facts) if args.facts else (),
                 events=_json(args.events) if args.events else (),
                 episodes=_json(args.episodes) if args.episodes else (),
-            )
+            ),
+            "deprecation": "legacy_write_bypasses_write_policy",
         }
+    elif args.command == "plan-write":
+        result = store.plan_write(
+            _json(args.proposal),
+            _cli_authority(_json(args.authority)),
+        )
+    else:
+        decision, plan = _planning_result(
+            _json(args.planning_result), args.expected_current
+        )
+        result = store.commit_write_plan(
+            expected_current_hash=args.expected_current,
+            proposal=_json(args.proposal),
+            authority=_cli_authority(_json(args.authority)),
+            decision=decision,
+            plan=plan,
+        )
     if args.command == "assemble-context":
         sys.stdout.buffer.write(canonical_json(result))
     else:
