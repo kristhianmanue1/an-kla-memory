@@ -36,14 +36,13 @@ class ContextAssemblyCliTests(unittest.TestCase):
                     "800",
                 ],
                 cwd=Path(__file__).resolve().parents[1],
-                text=True,
                 capture_output=True,
                 timeout=30,
                 check=True,
             )
             payload = json.loads(completed.stdout)
             self.assertEqual(
-                payload["used_bytes"], len(completed.stdout.encode("utf-8"))
+                payload["used_bytes"], len(completed.stdout)
             )
             self.assertLessEqual(payload["used_bytes"], 800)
 
