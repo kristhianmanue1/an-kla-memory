@@ -34,11 +34,12 @@ ROOT = Path(__file__).resolve().parents[1]
 class PureContextBlockTests(unittest.TestCase):
     def test_repository_contract_and_managed_block_match_templates(self) -> None:
         self.assertEqual(
-            (ROOT / "AN-KLA.md").read_text(encoding="utf-8"), DETAILED_CONTRACT
+            (ROOT / "AN-KLA.md").read_text(encoding="utf-8").replace("\r\n", "\n"),
+            DETAILED_CONTRACT,
         )
         parsed = parse_managed_block((ROOT / "AGENTS.md").read_text(encoding="utf-8"))
         self.assertIsNotNone(parsed)
-        self.assertEqual(parsed.payload, COMPACT_PAYLOAD)
+        self.assertEqual(parsed.payload.replace("\r\n", "\n"), COMPACT_PAYLOAD)
 
     def test_compact_payload_stays_small_and_delegates_detail(self) -> None:
         self.assertLessEqual(len(COMPACT_PAYLOAD.encode("utf-8")), 800)
@@ -126,8 +127,23 @@ class ContextFilesystemTests(unittest.TestCase):
             self.assertFalse(manifest["contract_created_by_an_kla"])
             apply_context_plan(root, plan_context_change(root, "uninstall"))
             self.assertEqual(
-                (root / "AN-KLA.md").read_text(encoding="utf-8"), DETAILED_CONTRACT
+                (root / "AN-KLA.md")
+                .read_text(encoding="utf-8")
+                .replace("\r\n", "\n"),
+                DETAILED_CONTRACT,
             )
+
+    def test_crlf_contract_is_equivalent_and_its_physical_bytes_are_preserved(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            contract = root / "AN-KLA.md"
+            crlf = DETAILED_CONTRACT.replace("\n", "\r\n").encode("utf-8")
+            contract.write_bytes(crlf)
+            plan = plan_context_change(root, "install")
+            self.assertEqual(plan["base_contract_sha256"], plan["result_contract_sha256"])
+            apply_context_plan(root, plan)
+            self.assertEqual(contract.read_bytes(), crlf)
+            self.assertTrue(context_status(root)["ok"])
 
     def test_preexisting_empty_agents_file_survives_uninstall(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

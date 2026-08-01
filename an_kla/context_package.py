@@ -157,6 +157,10 @@ def managed_payload_sha256(payload: str = COMPACT_PAYLOAD) -> str:
     return _sha(_canonical_payload(payload).encode("utf-8"))
 
 
+def _contract_equivalent(text: str | None) -> bool:
+    return text is not None and _canonical_payload(text) == DETAILED_CONTRACT
+
+
 def _marker(prefix: str, metadata: dict[str, Any]) -> str:
     body = json.dumps(metadata, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
     return prefix + body + _MARKER_SUFFIX
@@ -377,14 +381,20 @@ def plan_context_change(
         action = "preserve_empty"
     result_bytes = None if result_text is None else result_text.encode("utf-8")
     contract_path = root / CONTRACT_RELATIVE
-    contract_bytes, _ = _read_utf8(contract_path)
+    contract_bytes, contract_text = _read_utf8(contract_path)
     expected_contract = DETAILED_CONTRACT.encode("utf-8")
-    if operation in {"install", "update"} and contract_bytes not in {None, expected_contract}:
+    if (
+        operation in {"install", "update"}
+        and contract_bytes is not None
+        and not _contract_equivalent(contract_text)
+    ):
         raise ContextPackageError("managed_contract_modified")
     if operation in {"install", "update"}:
-        result_contract_sha = _sha(expected_contract)
+        result_contract_sha = (
+            _sha(expected_contract) if contract_bytes is None else _sha(contract_bytes)
+        )
     elif (
-        contract_bytes == expected_contract
+        _contract_equivalent(contract_text)
         and manifest
         and manifest.get("contract_created_by_an_kla") is True
     ):
@@ -549,6 +559,7 @@ def apply_context_plan(project_root: str | Path, plan: dict[str, Any]) -> dict[s
         if manifest is not None and manifest.get("target") != target:
             raise ContextPackageError("context_manifest_target_mismatch")
         contract_path = root / CONTRACT_RELATIVE
+        contract_before_bytes, contract_before_text = _read_utf8(contract_path)
         if (
             operation in {"install", "update"}
             and action == "noop"
@@ -557,7 +568,7 @@ def apply_context_plan(project_root: str | Path, plan: dict[str, Any]) -> dict[s
             and manifest.get("template_version") == TEMPLATE_VERSION
             and contract_path.is_file()
             and not contract_path.is_symlink()
-            and contract_path.read_bytes() == DETAILED_CONTRACT.encode("utf-8")
+            and _contract_equivalent(contract_before_text)
         ):
             return {
                 "schema": "an-kla/context-apply-result/v1",
@@ -582,7 +593,11 @@ def apply_context_plan(project_root: str | Path, plan: dict[str, Any]) -> dict[s
                 original_backup = backup_path.relative_to(root).as_posix()
 
             contract_path = root / CONTRACT_RELATIVE
-            _atomic_write(contract_path, DETAILED_CONTRACT.encode("utf-8"), 0o644)
+            if contract_before_bytes is None:
+                _atomic_write(contract_path, DETAILED_CONTRACT.encode("utf-8"), 0o644)
+                installed_contract_bytes = DETAILED_CONTRACT.encode("utf-8")
+            else:
+                installed_contract_bytes = contract_before_bytes
             result_bytes = result_text.encode("utf-8") if result_text is not None else b""
             mode = stat.S_IMODE(target_path.stat().st_mode) if target_path.exists() else 0o644
             _atomic_write(target_path, result_bytes, mode)
@@ -593,7 +608,7 @@ def apply_context_plan(project_root: str | Path, plan: dict[str, Any]) -> dict[s
                 "template_version": TEMPLATE_VERSION,
                 "managed_content_sha256": managed_payload_sha256(),
                 "target_sha256": _sha(result_bytes),
-                "contract_sha256": _sha(DETAILED_CONTRACT.encode("utf-8")),
+                "contract_sha256": _sha(installed_contract_bytes),
                 "original_target_sha256": original_sha,
                 "original_backup": original_backup,
                 "file_created_by_an_kla": before_bytes is None if not manifest else bool(
@@ -631,9 +646,9 @@ def apply_context_plan(project_root: str | Path, plan: dict[str, Any]) -> dict[s
                 mode = stat.S_IMODE(target_path.stat().st_mode)
                 _atomic_write(target_path, result_text.encode("utf-8"), mode)
             contract_path = root / CONTRACT_RELATIVE
-            contract_bytes, _ = _read_utf8(contract_path)
+            contract_bytes, contract_text = _read_utf8(contract_path)
             if (
-                contract_bytes == DETAILED_CONTRACT.encode("utf-8")
+                _contract_equivalent(contract_text)
                 and manifest
                 and manifest.get("contract_created_by_an_kla") is True
             ):
@@ -671,8 +686,9 @@ def context_status(project_root: str | Path, target: str = "AGENTS.md") -> dict[
         diagnostics.append(str(exc))
     contract_path = root / CONTRACT_RELATIVE
     contract_error = False
+    contract_text: str | None = None
     try:
-        contract_bytes, _ = _read_utf8(contract_path)
+        contract_bytes, contract_text = _read_utf8(contract_path)
     except ContextPackageError as exc:
         contract_bytes = None
         contract_error = True
@@ -687,9 +703,9 @@ def context_status(project_root: str | Path, target: str = "AGENTS.md") -> dict[
         diagnostics.append("context_template_outdated")
     if contract_bytes is None and block and not contract_error:
         diagnostics.append("managed_contract_missing")
-    elif contract_bytes == DETAILED_CONTRACT.encode("utf-8") and block is None:
+    elif _contract_equivalent(contract_text) and block is None:
         diagnostics.append("orphan_managed_contract")
-    elif contract_bytes is not None and contract_bytes != DETAILED_CONTRACT.encode("utf-8"):
+    elif contract_bytes is not None and not _contract_equivalent(contract_text):
         diagnostics.append("managed_contract_modified")
     if manifest and target_bytes is not None and manifest.get("target_sha256") != _sha(target_bytes):
         warnings.append("context_target_changed_outside_managed_block")

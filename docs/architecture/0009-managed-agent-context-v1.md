@@ -51,6 +51,11 @@ normalizado a LF. La huella detecta deriva; no es firma ni prueba de autoridad.
 El instalador falla cerrado ante contenido alterado, marcadores duplicados,
 anidados, incompletos, indentados o situados dentro de una cerca de código.
 
+El contrato referenciado también se compara con saltos de línea normalizados a
+LF, pero el CAS conserva la huella de sus bytes físicos. Así un checkout CRLF de
+Windows no se confunde con una edición y tampoco se reescribe sólo para cambiar
+su convención de fin de línea.
+
 El contenido exterior al bloque se conserva. Un destino existente se respalda
 por contenido antes de la primera instalación y sus permisos se preservan.
 
