@@ -47,6 +47,7 @@ class F0ContractTests(unittest.TestCase):
         self.assertNotIn("authority_class", proposal["properties"])
         self.assertIn("proposal_sha256", authority["required"])
         self.assertIn("scope", authority["required"])
+        self.assertIn("operations", authority["properties"]["scope"]["required"])
         self.assertEqual(
             authority["properties"]["authority_class"]["enum"],
             [

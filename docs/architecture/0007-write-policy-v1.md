@@ -76,6 +76,11 @@ El objeto `WriteAuthority` llega como argumento separado. Si el contenido de
 datos y emite `self_asserted_authority_ignored`. Nunca los copia al resultado
 resuelto como prueba.
 
+El alcance de autoridad enumera streams, representaciones y operaciones. Una
+autorización para `add` no permite `supersede`, `refute` o `decay`, aunque el
+resto de sus campos coincida. El hash de propuesta liga además la combinación
+exacta y evita reutilizar la autoridad sobre otro contenido.
+
 ## Decisión y razones
 
 `WriteDecision.decision` es una de `skip`, `write-full` o `write-summary`.

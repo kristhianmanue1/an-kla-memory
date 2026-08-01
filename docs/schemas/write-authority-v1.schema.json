@@ -53,7 +53,7 @@
     "scope": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["streams", "representations"],
+      "required": ["streams", "representations", "operations"],
       "properties": {
         "streams": {
           "type": "array",
@@ -66,6 +66,12 @@
           "minItems": 1,
           "uniqueItems": true,
           "items": {"enum": ["full", "summary"]}
+        },
+        "operations": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"enum": ["add", "supersede", "refute", "decay"]}
         }
       }
     }
