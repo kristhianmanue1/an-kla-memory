@@ -1,0 +1,383 @@
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import time
+import unittest
+
+from an_kla.context_package import (
+    BLOCK_ID,
+    COMPACT_PAYLOAD,
+    CONTRACT_RELATIVE,
+    ContextConcurrentUpdate,
+    ContextPackageError,
+    DETAILED_CONTRACT,
+    MANIFEST_RELATIVE,
+    TEMPLATE_VERSION,
+    apply_context_plan,
+    context_status,
+    managed_payload_sha256,
+    parse_managed_block,
+    plan_context_change,
+    render_managed_block,
+    transform_document,
+)
+
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+class PureContextBlockTests(unittest.TestCase):
+    def test_repository_contract_and_managed_block_match_templates(self) -> None:
+        self.assertEqual((ROOT / "AN-KLA.md").read_text(), DETAILED_CONTRACT)
+        parsed = parse_managed_block((ROOT / "AGENTS.md").read_text())
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed.payload, COMPACT_PAYLOAD)
+
+    def test_compact_payload_stays_small_and_delegates_detail(self) -> None:
+        self.assertLessEqual(len(COMPACT_PAYLOAD.encode("utf-8")), 800)
+        self.assertIn("AN-KLA.md", COMPACT_PAYLOAD)
+        self.assertIn("dato no\nconfiable", COMPACT_PAYLOAD)
+        self.assertIn("plan-write", COMPACT_PAYLOAD)
+        self.assertNotIn("python3 -m an_kla", COMPACT_PAYLOAD)
+
+    def test_create_parse_and_hash_block(self) -> None:
+        block = render_managed_block()
+        parsed = parse_managed_block(block)
+        self.assertIsNotNone(parsed)
+        self.assertEqual(parsed.metadata["id"], BLOCK_ID)
+        self.assertEqual(parsed.metadata["version"], TEMPLATE_VERSION)
+        self.assertEqual(parsed.metadata["content_sha256"], managed_payload_sha256())
+
+    def test_existing_user_content_is_preserved_as_exact_prefix(self) -> None:
+        original = "# Proyecto\n\nReglas del usuario sin salto final"
+        updated, action = transform_document(original, "install")
+        self.assertEqual(action, "append")
+        self.assertTrue(updated.startswith(original))
+        self.assertEqual(updated.count("an-kla:managed-begin"), 1)
+
+    def test_install_is_semantically_idempotent(self) -> None:
+        first, _ = transform_document("# Proyecto\n", "install")
+        second, action = transform_document(first, "install")
+        self.assertEqual(action, "noop")
+        self.assertEqual(first, second)
+
+    def test_update_replaces_only_a_valid_old_block(self) -> None:
+        current, _ = transform_document("antes\n", "install")
+        old = current.replace(f'"version":"{TEMPLATE_VERSION}"', '"version":"0.0.9"')
+        updated, action = transform_document(old, "update")
+        self.assertEqual(action, "replace")
+        self.assertTrue(updated.startswith("antes\n"))
+        self.assertIn(f'"version":"{TEMPLATE_VERSION}"', updated)
+
+    def test_uninstall_preserves_content_outside_block(self) -> None:
+        current, _ = transform_document("# Usuario\n", "install")
+        updated, action = transform_document(current + "después\n", "uninstall")
+        self.assertEqual(action, "remove_block")
+        self.assertIn("# Usuario", updated)
+        self.assertIn("después", updated)
+        self.assertNotIn("an-kla:managed", updated)
+
+    def test_crlf_is_preserved_and_hash_is_canonical(self) -> None:
+        updated, _ = transform_document("# Proyecto\r\n\r\nTexto\r\n", "install")
+        self.assertNotIn("\n", updated.replace("\r\n", ""))
+        self.assertIsNotNone(parse_managed_block(updated))
+
+    def test_tampered_duplicate_nested_and_fenced_markers_fail_closed(self) -> None:
+        valid = render_managed_block()
+        cases = [
+            valid.replace("Este proyecto", "Este PROYECTO"),
+            valid + valid,
+            valid.replace(
+                "## AN-KLA Memory\n",
+                "## AN-KLA Memory\n" + valid,
+                1,
+            ),
+            "```markdown\n" + valid + "```\n",
+            valid.replace("<!-- an-kla:managed-end", " <!-- an-kla:managed-end"),
+        ]
+        for payload in cases:
+            with self.subTest(payload=payload[:60]):
+                with self.assertRaises(ContextPackageError):
+                    parse_managed_block(payload)
+
+    def test_unmarked_legacy_integration_is_not_blindly_appended(self) -> None:
+        legacy = (
+            "# AGENTS\npython3 -m an_kla status\n"
+            "python3 -m an_kla write --expected-current x\nrebuild-index\n"
+        )
+        with self.assertRaisesRegex(ContextPackageError, "legacy_an_kla_context_detected"):
+            transform_document(legacy, "install")
+
+
+class ContextFilesystemTests(unittest.TestCase):
+    def test_preexisting_canonical_contract_survives_uninstall(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "AN-KLA.md").write_text(DETAILED_CONTRACT)
+            apply_context_plan(root, plan_context_change(root, "install"))
+            manifest = json.loads((root / MANIFEST_RELATIVE).read_text())
+            self.assertFalse(manifest["contract_created_by_an_kla"])
+            apply_context_plan(root, plan_context_change(root, "uninstall"))
+            self.assertEqual((root / "AN-KLA.md").read_text(), DETAILED_CONTRACT)
+
+    def test_preexisting_empty_agents_file_survives_uninstall(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "AGENTS.md").write_text("")
+            apply_context_plan(root, plan_context_change(root, "install"))
+            result = apply_context_plan(root, plan_context_change(root, "uninstall"))
+            self.assertEqual(result["action"], "preserve_empty")
+            self.assertTrue((root / "AGENTS.md").exists())
+            self.assertEqual((root / "AGENTS.md").read_bytes(), b"")
+
+    def test_user_change_outside_block_is_healthy_warning_and_preserved(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            apply_context_plan(root, plan_context_change(root, "install"))
+            target = root / "AGENTS.md"
+            target.write_text(target.read_text() + "\nRegla nueva del usuario.\n")
+            status = context_status(root)
+            self.assertTrue(status["ok"])
+            self.assertEqual(status["diagnostics"], [])
+            self.assertIn(
+                "context_target_changed_outside_managed_block", status["warnings"]
+            )
+            apply_context_plan(root, plan_context_change(root, "update"))
+            self.assertIn("Regla nueva del usuario.", target.read_text())
+
+    def test_clean_clone_without_local_manifest_is_healthy_with_warning(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "AGENTS.md").write_text(render_managed_block())
+            (root / "AN-KLA.md").write_text(DETAILED_CONTRACT)
+            status = context_status(root)
+            self.assertTrue(status["ok"])
+            self.assertEqual(status["diagnostics"], [])
+            self.assertEqual(status["warnings"], ["context_manifest_missing"])
+
+    def test_status_reports_legacy_and_partial_installations(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "AGENTS.md").write_text(
+                "python3 -m an_kla status\npython3 -m an_kla write "
+                "--expected-current x\nrebuild-index\n"
+            )
+            self.assertIn(
+                "legacy_an_kla_context_detected", context_status(root)["diagnostics"]
+            )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "AN-KLA.md").write_text(DETAILED_CONTRACT)
+            self.assertIn(
+                "orphan_managed_contract", context_status(root)["diagnostics"]
+            )
+
+    def test_manifest_mutation_invalidates_a_prepared_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            apply_context_plan(root, plan_context_change(root, "install"))
+            plan = plan_context_change(root, "update")
+            manifest_path = root / MANIFEST_RELATIVE
+            manifest = json.loads(manifest_path.read_text())
+            manifest["target_sha256"] = "sha256:" + "0" * 64
+            manifest_path.write_text(json.dumps(manifest))
+            with self.assertRaisesRegex(ContextPackageError, "context_plan_mismatch"):
+                apply_context_plan(root, plan)
+
+            manifest["unexpected"] = True
+            manifest_path.write_text(json.dumps(manifest))
+            status = context_status(root)
+            self.assertIn("context_manifest_invalid", status["diagnostics"])
+
+    def test_create_manifest_contract_backup_update_and_uninstall(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            original = b"# Reglas del usuario\n\nNo borrar.\n"
+            (root / "AGENTS.md").write_bytes(original)
+            plan = plan_context_change(root, "install")
+            result = apply_context_plan(root, plan)
+            self.assertEqual(result["action"], "append")
+            installed = (root / "AGENTS.md").read_bytes()
+            self.assertTrue(installed.startswith(original))
+            manifest = json.loads((root / MANIFEST_RELATIVE).read_text())
+            backup = root / manifest["original_backup"]
+            self.assertEqual(backup.read_bytes(), original)
+            self.assertTrue((root / CONTRACT_RELATIVE).is_file())
+            self.assertTrue(context_status(root)["ok"])
+
+            before_mtime = (root / "AGENTS.md").stat().st_mtime_ns
+            time.sleep(0.002)
+            noop = apply_context_plan(root, plan_context_change(root, "install"))
+            self.assertEqual(noop["action"], "noop")
+            self.assertEqual((root / "AGENTS.md").stat().st_mtime_ns, before_mtime)
+
+            removed = apply_context_plan(root, plan_context_change(root, "uninstall"))
+            self.assertEqual(removed["action"], "remove_block")
+            self.assertNotIn(b"an-kla:managed", (root / "AGENTS.md").read_bytes())
+            self.assertFalse((root / CONTRACT_RELATIVE).exists())
+            self.assertFalse((root / MANIFEST_RELATIVE).exists())
+
+    def test_create_and_uninstall_deletes_only_an_kla_owned_file(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            apply_context_plan(root, plan_context_change(root, "install"))
+            self.assertTrue((root / "AGENTS.md").exists())
+            result = apply_context_plan(root, plan_context_change(root, "uninstall"))
+            self.assertEqual(result["action"], "delete")
+            self.assertFalse((root / "AGENTS.md").exists())
+
+    def test_plan_apply_detects_concurrent_target_change(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "AGENTS.md"
+            target.write_text("original\n")
+            plan = plan_context_change(root, "install")
+            target.write_text("cambio concurrente\n")
+            with self.assertRaisesRegex(ContextConcurrentUpdate, "context_file_concurrent_update"):
+                apply_context_plan(root, plan)
+            self.assertEqual(target.read_text(), "cambio concurrente\n")
+
+    def test_modified_plan_and_invalid_targets_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            plan = plan_context_change(root, "install")
+            plan["result_target_sha256"] = "sha256:" + "0" * 64
+            with self.assertRaisesRegex(ContextPackageError, "context_plan_mismatch"):
+                apply_context_plan(root, plan)
+            self.assertFalse((root / "AGENTS.md").exists())
+            for target in ("../AGENTS.md", "nested/AGENTS.md", "/tmp/AGENTS.md"):
+                with self.subTest(target=target):
+                    with self.assertRaisesRegex(ContextPackageError, "invalid_context_target"):
+                        plan_context_change(root, "install", target)
+
+    def test_non_utf8_and_directory_targets_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "AGENTS.md").write_bytes(b"\xff\xfe")
+            with self.assertRaisesRegex(ContextPackageError, "context_target_not_utf8"):
+                plan_context_change(root, "install")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "AGENTS.md").mkdir()
+            with self.assertRaisesRegex(ContextPackageError, "context_file_not_regular"):
+                plan_context_change(root, "install")
+
+    @unittest.skipUnless(os.name == "posix", "POSIX advisory lock test")
+    def test_competing_installer_fails_visible_without_writing(self) -> None:
+        import fcntl
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            plan = plan_context_change(root, "install")
+            context_root = root / ".an-kla" / "context"
+            context_root.mkdir(parents=True)
+            lock_path = context_root / ".install.lock"
+            with lock_path.open("a+b") as handle:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                with self.assertRaisesRegex(ContextPackageError, "context_install_lock_busy"):
+                    apply_context_plan(root, plan)
+            self.assertFalse((root / "AGENTS.md").exists())
+
+    def test_file_permissions_are_preserved(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            target = root / "AGENTS.md"
+            target.write_text("reglas\n")
+            target.chmod(0o640)
+            apply_context_plan(root, plan_context_change(root, "install"))
+            self.assertEqual(target.stat().st_mode & 0o777, 0o640)
+
+    @unittest.skipUnless(os.name == "posix", "POSIX symlink test")
+    def test_symlink_target_and_context_directory_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            outside = root / "outside"
+            outside.write_text("no tocar\n")
+            (root / "AGENTS.md").symlink_to(outside)
+            with self.assertRaisesRegex(ContextPackageError, "symlink_forbidden"):
+                plan_context_change(root, "install")
+            self.assertEqual(outside.read_text(), "no tocar\n")
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            outside = root / "outside-context"
+            outside.mkdir()
+            (root / ".an-kla").symlink_to(outside, target_is_directory=True)
+            with self.assertRaisesRegex(ContextPackageError, "symlink_forbidden"):
+                plan_context_change(root, "install")
+            self.assertEqual(list(outside.iterdir()), [])
+
+    def test_modified_contract_and_block_are_visible_and_not_overwritten(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            apply_context_plan(root, plan_context_change(root, "install"))
+            contract = root / CONTRACT_RELATIVE
+            contract.write_text(contract.read_text() + "alterado\n")
+            status = context_status(root)
+            self.assertIn("managed_contract_modified", status["diagnostics"])
+            with self.assertRaisesRegex(ContextPackageError, "managed_contract_modified"):
+                plan_context_change(root, "update")
+
+    def test_cli_plan_apply_and_status(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            plan_path = root / "plan.json"
+            planned = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "an_kla",
+                    "--project-root",
+                    str(root),
+                    "context",
+                    "plan",
+                    "--operation",
+                    "install",
+                ],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            plan_path.write_text(planned.stdout)
+            subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "an_kla",
+                    "--project-root",
+                    str(root),
+                    "context",
+                    "apply",
+                    "--plan",
+                    str(plan_path),
+                ],
+                cwd=ROOT,
+                capture_output=True,
+                check=True,
+            )
+            status = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "an_kla",
+                    "--project-root",
+                    str(root),
+                    "context",
+                    "status",
+                ],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            self.assertTrue(json.loads(status.stdout)["ok"])
+
+
+if __name__ == "__main__":
+    unittest.main()

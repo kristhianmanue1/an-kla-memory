@@ -1,4 +1,4 @@
-"""AN-KLA Memory alpha."""
+"""AN-KLA Memory beta."""
 
 from .context import ASSEMBLY_PROFILE, assemble_context
 from .store import MemoryStore, StoreError

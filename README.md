@@ -1,10 +1,10 @@
 # AN-KLA Memory
 
-AN-KLA Memory es una memoria local para proyectos con agentes de IA. Su primera
-alfa implementa una memoria única, revisiones inmutables, recuperación lexical
+AN-KLA Memory es una memoria local para proyectos con agentes de IA. La beta
+implementa una memoria única, revisiones inmutables, recuperación lexical
 bajo presupuesto, y un punto lógico de commit mediante `.an-kla/memory/refs/CURRENT`.
 
-Estado: alfa pública en GitHub, todavía no publicada en un índice de paquetes.
+Estado: beta pública en GitHub, todavía no publicada en un índice de paquetes.
 La disponibilidad jurídica del nombre sigue pendiente de revisión antes de
 cualquier distribución comercial.
 
@@ -38,6 +38,24 @@ de mover `CURRENT`; consulta la
 
 Lee [AN-KLA.md](AN-KLA.md) antes de instalar o integrar AN-KLA en otro proyecto.
 
+## Contexto compacto para agentes
+
+AN-KLA puede añadir un segmento delimitado a un `AGENTS.md` existente sin
+adueñarse del resto del archivo. El bloque breve apunta a `AN-KLA.md`; manifiesto
+y respaldos locales viven bajo `.an-kla/context/`.
+
+```bash
+python3 -m an_kla --project-root . context plan \
+  --operation install > an-kla-context-plan.json
+python3 -m an_kla --project-root . context apply \
+  --plan an-kla-context-plan.json
+python3 -m an_kla --project-root . context status
+```
+
+También existe el atajo explícito `context install`. Consulta la
+[guía de integración](docs/context-package.md) y
+[ADR-0009](docs/architecture/0009-managed-agent-context-v1.md).
+
 ## Fundamentos matemáticos
 
 La separación entre teoremas condicionales, garantías implementadas y trabajo
@@ -50,15 +68,16 @@ experimental `sqlite-fts5/v1` sólo se activa explícitamente y requiere constru
 un índice ligado a la revisión actual; consulta
 [ADR-0004](docs/architecture/0004-index-reference.md).
 
-## Límites de la alfa
+## Límites de la beta
 
 - admite una sola memoria activa;
 - no coordina varios equipos;
 - no prueba identidad, autoría ni verdad;
 - no publica telemetría;
-- no implementa aún instaladores de adaptadores ni multi-memoria.
+- instala un bloque neutral en `AGENTS.md`, pero aún no adapta archivos de
+  proveedores ni implementa multi-memoria;
 - conserva objetos conflictivos en cuarentena diagnóstica; no ejecuta GC ni
-  compactación en la alfa.
+  compactación en la beta.
 
 ## Licencia
 

@@ -1,4 +1,4 @@
-"""Deterministic alpha retrieval with a byte budget."""
+"""Deterministic beta retrieval with a byte budget."""
 
 from __future__ import annotations
 

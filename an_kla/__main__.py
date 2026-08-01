@@ -1,4 +1,4 @@
-"""Command-line interface for the AN-KLA alpha."""
+"""Command-line interface for the AN-KLA beta."""
 
 from __future__ import annotations
 
@@ -10,6 +10,11 @@ from typing import Any
 
 from .canonical import canonical_json
 from .context import assemble_context
+from .context_package import (
+    apply_context_plan,
+    context_status,
+    plan_context_change,
+)
 from .index import INDEX_PROFILE, build_index, detect_fts5, verify_index_deep
 from .evaluation import evaluate_retrieval
 from .retrieval import SCAN_PROFILE, retrieve
@@ -50,7 +55,7 @@ def _planning_result(value: Any, expected_current: str) -> tuple[Any, Any]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="AN-KLA Memory alpha")
+    parser = argparse.ArgumentParser(description="AN-KLA Memory beta")
     parser.add_argument("--project-root", default=".")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("init")
@@ -94,9 +99,42 @@ def main() -> None:
     commit_plan_cmd.add_argument("--proposal", required=True)
     commit_plan_cmd.add_argument("--authority", required=True)
     commit_plan_cmd.add_argument("--planning-result", required=True)
+    context_cmd = sub.add_parser(
+        "context", help="Administrar únicamente el bloque AN-KLA en AGENTS.md."
+    )
+    context_sub = context_cmd.add_subparsers(dest="context_command", required=True)
+    context_status_cmd = context_sub.add_parser("status")
+    context_status_cmd.add_argument("--target", default="AGENTS.md")
+    context_plan_cmd = context_sub.add_parser("plan")
+    context_plan_cmd.add_argument(
+        "--operation", choices=("install", "update", "uninstall"), required=True
+    )
+    context_plan_cmd.add_argument("--target", default="AGENTS.md")
+    context_apply_cmd = context_sub.add_parser("apply")
+    context_apply_cmd.add_argument("--plan", required=True)
+    for operation in ("install", "update", "uninstall"):
+        operation_cmd = context_sub.add_parser(operation)
+        operation_cmd.add_argument("--target", default="AGENTS.md")
     args = parser.parse_args()
     store = MemoryStore(args.project_root)
-    if args.command == "init":
+    if args.command == "context":
+        if args.context_command == "status":
+            result = context_status(args.project_root, args.target)
+        elif args.context_command == "plan":
+            result = plan_context_change(
+                args.project_root, args.operation, args.target
+            )
+        elif args.context_command == "apply":
+            result = apply_context_plan(args.project_root, _json(args.plan))
+        else:
+            plan = plan_context_change(
+                args.project_root, args.context_command, args.target
+            )
+            result = {
+                "plan": plan,
+                "result": apply_context_plan(args.project_root, plan),
+            }
+    elif args.command == "init":
         result: Any = {"revision": store.initialize()}
     elif args.command == "status":
         result = store.verify()

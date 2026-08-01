@@ -1,4 +1,4 @@
-"""Read-only MCP server over stdio; intentionally dependency-free for alpha."""
+"""Read-only MCP server over stdio; intentionally dependency-free for beta."""
 from __future__ import annotations
 
 import argparse

@@ -102,7 +102,7 @@ cli_privileged_authority_unresolved
 
 Esas clases se reservan para adaptadores que invoquen la API de Python después
 de resolver autoridad desde configuración y estado externos al candidato. Esta
-alfa no afirma identidad criptográfica.
+beta no afirma identidad criptográfica.
 
 Los fallos al leer JSON se devuelven como `input_json_unreadable` o
 `input_json_invalid`; no incluyen rutas absolutas ni contenido candidato.
