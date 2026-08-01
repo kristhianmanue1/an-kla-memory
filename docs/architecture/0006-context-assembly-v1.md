@@ -2,7 +2,8 @@
 
 ## Estado
 
-En implementación experimental. No forma parte de una versión etiquetada.
+Implementada experimentalmente en la línea de desarrollo. No forma parte de
+una versión etiquetada.
 
 ## Decisión
 

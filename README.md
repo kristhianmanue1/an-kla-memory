@@ -17,8 +17,8 @@ python3 -m an_kla verify
 python3 -m an_kla retrieve --query "estado del proyecto" --budget 1200
 ```
 
-La rama experimental `feat/context-assembly-v1` añade una operación global de
-lectura:
+La versión de desarrollo incluye la operación experimental de lectura
+`context-assembly/v1`:
 
 ```bash
 python3 -m an_kla assemble-context \

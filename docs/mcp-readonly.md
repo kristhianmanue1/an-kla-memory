@@ -14,7 +14,7 @@ incluir rutas absolutas ni secretos.
 Herramientas disponibles: `an_kla_status`, `an_kla_verify`,
 `an_kla_doctor`, `an_kla_get_checkpoint` y `an_kla_retrieve`. No hay escritura.
 
-La rama experimental de `context-assembly/v1` añade
+El perfil experimental `context-assembly/v1` añade
 `an_kla_assemble_context`. Esta operación entrega checkpoint, información nueva
 y registros recuperados en una sola envolvente con presupuesto UTF-8 global.
 Las secciones obligatorias no se truncan: un presupuesto insuficiente produce
