@@ -124,6 +124,22 @@ class MemoryStoreTests(unittest.TestCase):
         self.assertLessEqual(result["used_bytes"], 20)
         self.assertEqual([item["id"] for item in result["selected"]], ["f-001"])
 
+    def test_retrieval_reserves_transport_overhead_and_explains_exclusions(self) -> None:
+        self.store.commit(
+            expected_current_hash=self.root_revision,
+            checkpoint_patch={},
+            facts=[
+                {"id": "f-001", "payload": {"text": "memoria corta"}},
+                {"id": "f-002", "payload": {"text": "memoria demasiado extensa"}},
+                {"id": "f-003", "status": "eliminada", "payload": {"text": "memoria"}},
+                {"id": "f-004", "payload": {"text": "distractor"}},
+            ],
+        )
+        result = retrieve(self.store, "memoria", 30, fixed_overhead_bytes=8, per_record_overhead_bytes=4)
+        self.assertEqual(result["used_bytes"], 25)
+        self.assertEqual([item["id"] for item in result["selected"]], ["f-001"])
+        self.assertEqual(result["excluded_summary"], {"inactive": 1, "zero_score": 1, "budget": 1})
+
     def test_index_is_bound_to_revision_when_fts_is_available(self) -> None:
         revision = self.store.commit(
             expected_current_hash=self.root_revision,
