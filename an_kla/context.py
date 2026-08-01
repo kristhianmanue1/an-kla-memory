@@ -50,6 +50,7 @@ def assemble_context(
         return {
             "schema": "an-kla/context-assembly-v1",
             "profile": ASSEMBLY_PROFILE,
+            "canonicalization": "canonical-json/v1",
             "untrusted_memory_data": True,
             "host_framing_unmeasured": True,
             "revision": source["revision"],

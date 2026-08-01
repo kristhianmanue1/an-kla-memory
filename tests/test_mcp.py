@@ -61,6 +61,12 @@ class McpProtocolTests(unittest.TestCase):
         self.assertLessEqual(payload["used_bytes"], 700)
         self.assertEqual(payload["sections"]["new_information"], "dato ñ")
 
+    def test_context_assembly_budget_failure_is_a_stable_tool_error(self) -> None:
+        response = self.server.handle({"jsonrpc":"2.0", "id":6, "method":"tools/call", "params":{"name":"an_kla_assemble_context", "arguments":{"query":"memoria", "budget_bytes":1}}})
+        self.assertTrue(response["result"]["isError"])
+        payload = json.loads(response["result"]["content"][0]["text"])
+        self.assertEqual(payload["error"], "budget_too_small_for_required_context")
+
 
 if __name__ == "__main__":
     unittest.main()

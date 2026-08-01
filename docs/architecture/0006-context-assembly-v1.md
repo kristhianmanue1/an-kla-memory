@@ -28,6 +28,11 @@ registros. Si la envolvente y sus secciones obligatorias no caben, la operación
 falla con `budget_too_small_for_required_context`: no trunca ni resume estado
 silenciosamente. El framing añadido por un host permanece fuera de la medición
 y se declara mediante `host_framing_unmeasured: true`.
+La salida declara `canonicalization: canonical-json/v1`. CLI y MCP emiten
+exactamente esa serialización; un consumidor directo de la API Python debe usar
+la misma canonicalización si pretende conservar la igualdad de `used_bytes`.
+La garantía se aplica a una envolvente exitosa, no al mensaje de error que
+informa que el presupuesto era insuficiente.
 
 ## Alcance y límites
 

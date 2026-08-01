@@ -38,6 +38,7 @@ class ContextAssemblyTests(unittest.TestCase):
         )
         encoded = canonical_json(result)
         self.assertEqual(result["profile"], ASSEMBLY_PROFILE)
+        self.assertEqual(result["canonicalization"], "canonical-json/v1")
         self.assertEqual(result["used_bytes"], len(encoded))
         self.assertLessEqual(len(encoded), 700)
         self.assertEqual(result["sections"]["working_state"]["goal"], "decidir ágilmente")
@@ -80,7 +81,26 @@ class ContextAssemblyTests(unittest.TestCase):
             assemble_context(self.store, "memoria", 100, new_information="ñ" * 100)
 
     def test_diagnostic_growth_does_not_evict_without_reconsideration(self) -> None:
-        lengths = [39, 102, 167, 13, 19, 211, 138, 25, 94, 150, 15, 233, 130, 55, 10, 23, 112, 108]
+        lengths = [
+            39,
+            102,
+            167,
+            13,
+            19,
+            211,
+            138,
+            25,
+            94,
+            150,
+            15,
+            233,
+            130,
+            55,
+            10,
+            23,
+            112,
+            108,
+        ]
         with tempfile.TemporaryDirectory() as root:
             store = MemoryStore(root)
             initial = store.initialize()
@@ -95,12 +115,12 @@ class ContextAssemblyTests(unittest.TestCase):
                     for index, length in enumerate(lengths)
                 ],
             )
-            result = assemble_context(store, "memoria", 534)
+            result = assemble_context(store, "memoria", 571)
         selected = {
             item["id"] for item in result["sections"]["retrieved_records"]
         }
         self.assertIn("f-014", selected)
-        self.assertLessEqual(result["used_bytes"], 534)
+        self.assertLessEqual(result["used_bytes"], 571)
 
     def test_output_is_canonical_json_serializable(self) -> None:
         result = assemble_context(self.store, "memoria", 900)
