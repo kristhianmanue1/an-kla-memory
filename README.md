@@ -120,6 +120,11 @@ autoritativo. La decisión completa está en
 - Git, sólo cuando se instala directamente desde GitHub;
 - un entorno virtual por proyecto.
 
+En macOS, la guía [Desarrollo con Python en macOS](docs/development-macos.md)
+documenta la separación entre el intérprete de desarrollo (3.12, en `.venv/`)
+y el mínimo soportado (3.9, comprobación de compatibilidad), y cómo
+comprobar el entorno antes de trabajar.
+
 AN-KLA no requiere servicios externos ni dependencias Python en tiempo de
 ejecución.
 
