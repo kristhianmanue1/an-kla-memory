@@ -17,6 +17,19 @@ python3 -m an_kla verify
 python3 -m an_kla retrieve --query "estado del proyecto" --budget 1200
 ```
 
+La versión de desarrollo incluye la operación experimental de lectura
+`context-assembly/v1`:
+
+```bash
+python3 -m an_kla assemble-context \
+  --query "estado del proyecto" \
+  --new-information "solicitud actual" \
+  --budget 2400
+```
+
+La salida completa, no sólo los registros recuperados, queda acotada en bytes
+UTF-8. Consulta [ADR-0006](docs/architecture/0006-context-assembly-v1.md).
+
 Lee [AN-KLA.md](AN-KLA.md) antes de instalar o integrar AN-KLA en otro proyecto.
 
 ## Fundamentos matemáticos
