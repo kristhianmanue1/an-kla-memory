@@ -17,7 +17,14 @@ from .store import ConcurrentUpdateError, MemoryStore, StoreError
 
 
 def _json(path: str) -> Any:
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    try:
+        payload = Path(path).read_text(encoding="utf-8")
+    except (OSError, UnicodeError):
+        raise ValueError("input_json_unreadable") from None
+    try:
+        return json.loads(payload)
+    except json.JSONDecodeError:
+        raise ValueError("input_json_invalid") from None
 
 
 def _cli_authority(value: Any) -> Any:
@@ -31,11 +38,12 @@ def _cli_authority(value: Any) -> Any:
     return value
 
 
-def _planning_result(value: Any) -> tuple[Any, Any]:
+def _planning_result(value: Any, expected_current: str) -> tuple[Any, Any]:
     if (
         not isinstance(value, dict)
         or set(value) != {"schema", "current_revision", "decision", "plan"}
         or value.get("schema") != "an-kla/write-planning-result-v1"
+        or value.get("current_revision") != expected_current
     ):
         raise ValueError("invalid_write_planning_result")
     return value["decision"], value["plan"]
@@ -130,7 +138,9 @@ def main() -> None:
             _cli_authority(_json(args.authority)),
         )
     else:
-        decision, plan = _planning_result(_json(args.planning_result))
+        decision, plan = _planning_result(
+            _json(args.planning_result), args.expected_current
+        )
         result = store.commit_write_plan(
             expected_current_hash=args.expected_current,
             proposal=_json(args.proposal),

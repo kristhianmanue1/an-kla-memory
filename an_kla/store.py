@@ -221,25 +221,40 @@ class MemoryStore:
             if observed != expected_current_hash:
                 raise WritePolicyError("write_plan_base_changed")
 
+            # Callers retain their dictionaries and may share them with other
+            # threads.  Snapshot every object while holding the store lock and
+            # use only those detached values after verification; otherwise a
+            # mutation between verify_write_plan() and pending construction
+            # could change the bytes that reach the segment.
+            checked_plan = deepcopy(plan)
+            checked_proposal = deepcopy(proposal)
+            checked_authority = deepcopy(authority)
+            checked_decision = deepcopy(decision)
+
             # All policy validation intentionally occurs again inside the same
             # critical section that can move CURRENT.  The pure module remains
             # the only implementation of the policy.
-            verify_write_plan(plan, proposal, authority, decision)
+            verify_write_plan(
+                checked_plan,
+                checked_proposal,
+                checked_authority,
+                checked_decision,
+            )
             if (
-                proposal["base_revision"] != observed
-                or authority["base_revision"] != observed
-                or plan["core"]["base_revision"] != observed
+                checked_proposal["base_revision"] != observed
+                or checked_authority["base_revision"] != observed
+                or checked_plan["core"]["base_revision"] != observed
             ):
                 raise WritePolicyError("write_plan_base_changed")
 
-            if decision["decision"] == "skip":
+            if checked_decision["decision"] == "skip":
                 return {
                     "schema": "an-kla/write-commit-result-v1",
                     "committed": False,
                     "revision": observed,
                     "decision": "skip",
-                    "reason_codes": deepcopy(decision["reason_codes"]),
-                    "plan_fingerprint": plan["plan_fingerprint"],
+                    "reason_codes": deepcopy(checked_decision["reason_codes"]),
+                    "plan_fingerprint": checked_plan["plan_fingerprint"],
                 }
 
             pending: dict[str, list[dict[str, Any]]] = {
@@ -247,7 +262,7 @@ class MemoryStore:
                 "events": [],
                 "episodes": [],
             }
-            for item in plan["records"]:
+            for item in checked_plan["records"]:
                 # verify_write_plan rebuilt this exact list and policy/v1 only
                 # supports add.  Keep the check local so a future policy cannot
                 # accidentally route lifecycle operations through append.
@@ -257,12 +272,12 @@ class MemoryStore:
 
             policy_metadata = {
                 "schema": "an-kla/write-policy-transaction-v1",
-                "plan_fingerprint": plan["plan_fingerprint"],
-                "proposal_sha256": decision["proposal_sha256"],
-                "authority_sha256": decision["authority_sha256"],
-                "policy_fingerprint": decision["policy_fingerprint"],
-                "decision": decision["decision"],
-                "reason_codes": deepcopy(decision["reason_codes"]),
+                "plan_fingerprint": checked_plan["plan_fingerprint"],
+                "proposal_sha256": checked_decision["proposal_sha256"],
+                "authority_sha256": checked_decision["authority_sha256"],
+                "policy_fingerprint": checked_decision["policy_fingerprint"],
+                "decision": checked_decision["decision"],
+                "reason_codes": deepcopy(checked_decision["reason_codes"]),
             }
             revision = self._commit_locked(
                 observed=observed,
@@ -274,9 +289,9 @@ class MemoryStore:
                 "schema": "an-kla/write-commit-result-v1",
                 "committed": True,
                 "revision": revision,
-                "decision": decision["decision"],
-                "reason_codes": deepcopy(decision["reason_codes"]),
-                "plan_fingerprint": plan["plan_fingerprint"],
+                "decision": checked_decision["decision"],
+                "reason_codes": deepcopy(checked_decision["reason_codes"]),
+                "plan_fingerprint": checked_plan["plan_fingerprint"],
             }
 
     def _commit_locked(

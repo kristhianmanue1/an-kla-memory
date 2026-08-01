@@ -86,6 +86,10 @@ Un cambio en cualquiera de los objetos falla antes de preparar el journal. Si
 la decisión es `skip`, el resultado declara `committed: false` y la memoria no
 cambia.
 
+La envolvente también liga `current_revision` al valor de
+`--expected-current`. Aunque la revisión ya está incluida en el plan, el CLI no
+ignora ni acepta una copia exterior alterada.
+
 ## Frontera de autoridad del CLI
 
 Un archivo JSON no demuestra que una herramienta observó algo ni que otro
@@ -99,6 +103,9 @@ cli_privileged_authority_unresolved
 Esas clases se reservan para adaptadores que invoquen la API de Python después
 de resolver autoridad desde configuración y estado externos al candidato. Esta
 alfa no afirma identidad criptográfica.
+
+Los fallos al leer JSON se devuelven como `input_json_unreadable` o
+`input_json_invalid`; no incluyen rutas absolutas ni contenido candidato.
 
 ## API heredada
 

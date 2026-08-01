@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 from an_kla.canonical import digest_json
 from an_kla.store import LockBusyError, MemoryStore
-from an_kla.write_policy import WritePolicyError
+from an_kla.write_policy import WritePolicyError, verify_write_plan as pure_verify_write_plan
 
 
 DIGEST_B = "sha256:" + "b" * 64
@@ -170,6 +170,26 @@ class WriteCommitTests(unittest.TestCase):
             )
         self.assertEqual(self.store.read_current(), self.root_revision)
         self.assertEqual(list((self.store.root / "transactions").glob("*.json")), [])
+
+    def test_caller_mutation_after_verification_cannot_change_written_bytes(self) -> None:
+        candidate, auth, planning = self.planning()
+
+        def verify_then_mutate(plan, proposal, authority, decision):
+            pure_verify_write_plan(plan, proposal, authority, decision)
+            planning["plan"]["records"][0]["record"]["payload"]["text"] = (
+                "mutado despues de verificar"
+            )
+
+        with patch("an_kla.store.verify_write_plan", side_effect=verify_then_mutate):
+            result = self.store.commit_write_plan(
+                expected_current_hash=self.root_revision,
+                proposal=candidate,
+                authority=auth,
+                decision=planning["decision"],
+                plan=planning["plan"],
+            )
+        written = self.store.snapshot(result["revision"]).records["facts"][0]
+        self.assertEqual(written["payload"]["text"], "memoria durable")
 
     def test_failure_before_current_keeps_base_and_retry_can_commit(self) -> None:
         candidate, auth, planning = self.planning()
@@ -351,6 +371,71 @@ class WriteCommitCliTests(unittest.TestCase):
             self.assertNotEqual(completed.returncode, 0)
             self.assertIn(b"cli_privileged_authority_unresolved", completed.stderr)
             self.assertEqual(store.read_current(), base)
+
+    def test_cli_rejects_tampered_planning_result_revision(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            store = MemoryStore(root)
+            base = store.initialize()
+            candidate = proposal(base)
+            auth = authority(candidate)
+            planning = store.plan_write(candidate, auth)
+            planning["current_revision"] = "sha256:" + "c" * 64
+            proposal_path = Path(root) / "proposal.json"
+            authority_path = Path(root) / "authority.json"
+            planning_path = Path(root) / "planning.json"
+            proposal_path.write_text(json.dumps(candidate), encoding="utf-8")
+            authority_path.write_text(json.dumps(auth), encoding="utf-8")
+            planning_path.write_text(json.dumps(planning), encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "an_kla",
+                    "--project-root",
+                    root,
+                    "commit-write-plan",
+                    "--expected-current",
+                    base,
+                    "--proposal",
+                    str(proposal_path),
+                    "--authority",
+                    str(authority_path),
+                    "--planning-result",
+                    str(planning_path),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                capture_output=True,
+                timeout=30,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn(b"invalid_write_planning_result", completed.stderr)
+            self.assertEqual(store.read_current(), base)
+
+    def test_cli_input_error_does_not_disclose_path(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            store = MemoryStore(root)
+            store.initialize()
+            secret_path = Path(root) / "private-candidate-name.json"
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "an_kla",
+                    "--project-root",
+                    root,
+                    "plan-write",
+                    "--proposal",
+                    str(secret_path),
+                    "--authority",
+                    str(secret_path),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                capture_output=True,
+                timeout=30,
+            )
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn(b"input_json_unreadable", completed.stderr)
+            self.assertNotIn(str(secret_path).encode(), completed.stderr)
 
 
 if __name__ == "__main__":

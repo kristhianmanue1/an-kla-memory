@@ -103,11 +103,10 @@ exacta y evita reutilizar la autoridad sobre otro contenido.
 perfil de política y su fingerprint determinan qué razones reconoce una
 implementación.
 
-Códigos iniciales reservados:
+Códigos emitidos por `write-policy/v1`:
 
 | Código | Clase |
 |---|---|
-| `invalid_proposal` | rechazo |
 | `authority_scope_mismatch` | rechazo |
 | `unresolved_authority` | rechazo o techo |
 | `self_asserted_authority_ignored` | diagnóstico |
@@ -116,14 +115,14 @@ Códigos iniciales reservados:
 | `tool_evidence_verified` | elegibilidad |
 | `channel_confirmation_resolved` | elegibilidad |
 | `representation_accepted` | elegibilidad |
-| `summary_preferred` | selección |
 | `summary_required_for_authority_ceiling` | `skip`; requiere nueva propuesta |
-| `full_required_for_exception` | selección |
-| `no_durable_value` | `skip` |
 | `operation_not_supported` | `skip` hasta implementar su semántica |
 
-Añadir o cambiar razones modifica `policy_fingerprint`. No se reinterpretan
-decisiones históricas bajo un perfil nuevo.
+El catálogo ordenado forma parte de `_POLICY_CONFIGURATION`; añadir, retirar o
+cambiar razones modifica `policy_fingerprint`. No se reinterpretan decisiones
+históricas bajo un perfil nuevo. `summary_preferred`,
+`full_required_for_exception` y `no_durable_value` permanecen como nombres de
+diseño no implementados y no se atribuyen al perfil v1.
 
 La política es pura y no sintetiza texto. Si una propuesta solicita `full` pero
 su autoridad efectiva sólo permite `summary`, devuelve `skip` con
@@ -200,7 +199,7 @@ privilegiadas sólo pueden llegar a la API de Python desde una integración que
 controle el canal fuera del contenido candidato. Esta frontera no prueba aún
 identidad criptográfica.
 
-## Códigos terminales congelados para F1/F2
+## Códigos terminales implementados para F1/F2
 
 - `invalid_write_proposal`
 - `invalid_write_authority`
@@ -208,14 +207,19 @@ identidad criptográfica.
 - `invalid_write_plan`
 - `write_plan_hash_mismatch`
 - `write_plan_base_changed`
-- `write_authority_scope_mismatch`
 - `write_policy_fingerprint_mismatch`
 - `write_content_hash_mismatch`
+
+Este catálogo ordenado también forma parte de `_POLICY_CONFIGURATION`. Los
+siguientes códigos se reservaron en F0 pero el perfil v1 no los emite:
+
+- `write_authority_scope_mismatch`
 - `write_representation_invalid`
 - `write_lifecycle_as_representation`
 
-Los códigos son estables; el texto humano puede evolucionar. Nuevos códigos
-requieren actualizar el perfil y las pruebas de contrato.
+Los códigos implementados son estables; el texto humano puede evolucionar.
+Nuevos códigos requieren actualizar la configuración, su fingerprint y las
+pruebas de contrato.
 
 ## Seguridad y no objetivos
 
