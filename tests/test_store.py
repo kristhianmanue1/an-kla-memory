@@ -7,7 +7,7 @@ import multiprocessing
 import json
 
 from an_kla.evaluation import evaluate_retrieval
-from an_kla.index import build_index, resolve_index
+from an_kla.index import build_index, detect_fts5, resolve_index
 from an_kla.retrieval import retrieve
 from an_kla.mcp import ReadOnlyMcp
 from an_kla.store import ConcurrentUpdateError, IntegrityError, LockBusyError, MemoryStore
@@ -152,10 +152,14 @@ class MemoryStoreTests(unittest.TestCase):
         )
         result = build_index(self.store)
         self.assertEqual(result["revision"], revision)
-        if result["index"]:
+        if detect_fts5():
+            self.assertIsNotNone(result["index"])
+            self.assertEqual(result["profile"], "sqlite-fts5/v1")
             self.assertIn(revision[7:], result["index"])
             self.assertEqual(resolve_index(self.store, revision), self.store.root / result["index"])
             self.assertIn("CURRENT", result["index_reference"])
+        else:
+            self.assertIsNone(result["index"])
 
     def test_retrieval_excludes_fact_without_supported_text(self) -> None:
         self.store.commit(expected_current_hash=self.root_revision, checkpoint_patch={}, facts=[

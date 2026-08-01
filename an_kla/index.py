@@ -29,8 +29,8 @@ def detect_fts5() -> bool:
         con = sqlite3.connect(":memory:")
         try:
             con.execute("CREATE VIRTUAL TABLE probe USING fts5(text)")
-            con.execute("INSERT INTO probe(text) VALUES ('an-kla')")
-            return bool(con.execute("SELECT rowid FROM probe WHERE probe MATCH 'an-kla'").fetchone())
+            con.execute("INSERT INTO probe(text) VALUES ('ankla')")
+            return bool(con.execute("SELECT rowid FROM probe WHERE probe MATCH 'ankla'").fetchone())
         finally:
             con.close()
     except sqlite3.DatabaseError:
