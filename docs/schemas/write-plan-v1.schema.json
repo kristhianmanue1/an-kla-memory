@@ -15,6 +15,7 @@
         "proposal_sha256",
         "authority_sha256",
         "policy_fingerprint",
+        "decision",
         "decision_sha256",
         "planned_records_sha256"
       ],
@@ -23,6 +24,7 @@
         "proposal_sha256": {"$ref": "#/$defs/digest"},
         "authority_sha256": {"$ref": "#/$defs/digest"},
         "policy_fingerprint": {"$ref": "#/$defs/digest"},
+        "decision": {"enum": ["skip", "write-full", "write-summary"]},
         "decision_sha256": {"$ref": "#/$defs/digest"},
         "planned_records_sha256": {"$ref": "#/$defs/digest"}
       }
@@ -32,9 +34,11 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["stream", "record"],
+        "required": ["stream", "operation", "representation", "record"],
         "properties": {
           "stream": {"enum": ["facts", "events", "episodes"]},
+          "operation": {"enum": ["add", "supersede", "refute", "decay"]},
+          "representation": {"enum": ["full", "summary"]},
           "record": {"type": "object", "minProperties": 1}
         }
       }

@@ -93,6 +93,9 @@ Códigos iniciales reservados:
 | `self_asserted_authority_ignored` | diagnóstico |
 | `derived_authority_capped` | diagnóstico |
 | `derived_from_retrieval` | diagnóstico |
+| `tool_evidence_verified` | elegibilidad |
+| `channel_confirmation_resolved` | elegibilidad |
+| `representation_accepted` | elegibilidad |
 | `summary_preferred` | selección |
 | `summary_required_for_authority_ceiling` | `skip`; requiere nueva propuesta |
 | `full_required_for_exception` | selección |
@@ -120,13 +123,17 @@ plan_fingerprint = SHA256(canonical_json(WritePlan.core))
 ```
 
 `WritePlan.core` liga como mínimo revisión base, hash de propuesta, hash de
-autoridad, fingerprint de política, decisión y hash de los registros planeados.
+autoridad, fingerprint de política, decisión, hash de la decisión y hash de los
+registros planeados. Cada registro planeado conserva `stream`, `operation`,
+`representation` y los bytes JSON del registro.
 El campo exterior `plan_fingerprint` no forma parte del núcleo.
 
 ## Integración transaccional futura
 
-F1 implementará evaluación pura sin I/O. F2 integrará un commit de plan con
-esta secuencia dentro del lock:
+F1 implementará evaluación pura sin I/O. F2 integrará
+`commit_write_plan(plan, proposal, authority, decision)`; los cuatro objetos se
+reciben para recalcular y revaluar, no sólo para comparar hashes. La secuencia
+dentro del lock será:
 
 1. releer `CURRENT`;
 2. comparar con `base_revision` y `expected_current_hash`;

@@ -68,7 +68,11 @@ class F0ContractTests(unittest.TestCase):
         core = schema["properties"]["core"]
         self.assertIn("plan_fingerprint", schema["required"])
         self.assertNotIn("plan_fingerprint", core["properties"])
+        self.assertIn("decision", core["required"])
         self.assertIn("planned_records_sha256", core["required"])
+        planned = schema["properties"]["records"]["items"]
+        self.assertIn("operation", planned["required"])
+        self.assertIn("representation", planned["required"])
 
     def test_cost_contract_keeps_bytes_and_tokens_distinct(self) -> None:
         schema = load_schema("cost-certificate-v1.schema.json")
@@ -95,6 +99,9 @@ class F0ContractTests(unittest.TestCase):
             "write_content_hash_mismatch",
             "write_lifecycle_as_representation",
             "summary_required_for_authority_ceiling",
+            "tool_evidence_verified",
+            "channel_confirmation_resolved",
+            "representation_accepted",
         ):
             self.assertIn(f"`{code}`", text)
         self.assertIn("siguen pendientes", " ".join(text.split()))
