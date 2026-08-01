@@ -9,5 +9,5 @@ La cuarentena es solo diagnóstica en esta fase: admite hasta 128 objetos o 64 M
 y no ejecuta garbage collection automático. Los leases existen como directorio
 reservado, pero no son necesarios hasta que se diseñe compactación.
 
-La licencia y la disponibilidad jurídica del nombre AN-KLA se revisarán antes de
-publicar o distribuir el proyecto.
+El proyecto usa Apache License 2.0. La disponibilidad jurídica del nombre
+AN-KLA se revisará antes de cualquier distribución comercial o registro de marca.
