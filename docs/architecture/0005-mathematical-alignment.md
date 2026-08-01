@@ -53,6 +53,7 @@ a su rama de trabajo hasta que se integre o se descarte.
 
 ## Referencias
 
+- [Fundamentos matemáticos](../mathematical-foundations.md)
 - [ADR-0001: revisión content-addressed y CURRENT](0001-revision-commit.md)
 - [ADR-0002: alcance alfa](0002-alpha-scope.md)
 - [ADR-0003: compuertas MCP](0003-mcp-worktree-and-safety-gates.md)

@@ -17,6 +17,13 @@ python3 -m an_kla verify
 
 Lee [AN-KLA.md](AN-KLA.md) antes de instalar o integrar AN-KLA en otro proyecto.
 
+## Fundamentos matemáticos
+
+La separación entre teoremas condicionales, garantías implementadas y trabajo
+pendiente se documenta en [Fundamentos matemáticos de AN-KLA Memory](docs/mathematical-foundations.md).
+La decisión arquitectónica asociada está en
+[ADR-0005](docs/architecture/0005-mathematical-alignment.md).
+
 ## Límites de la alfa
 
 - admite una sola memoria activa;
