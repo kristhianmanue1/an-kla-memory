@@ -1,83 +1,150 @@
 # AN-KLA Memory
 
-AN-KLA Memory es una memoria local para proyectos con agentes de IA. La beta
-implementa una memoria única, revisiones inmutables, recuperación lexical
-bajo presupuesto, y un punto lógico de commit mediante `.an-kla/memory/refs/CURRENT`.
+AN-KLA Memory es una memoria local para proyectos con agentes de IA. Conserva
+hechos, eventos, episodios y el estado de trabajo en revisiones inmutables;
+recupera contexto bajo presupuesto y expone una escritura gobernada mediante
+un plan verificable.
 
-Estado: beta pública en GitHub, todavía no publicada en un índice de paquetes.
-La disponibilidad jurídica del nombre sigue pendiente de revisión antes de
-cualquier distribución comercial.
+La beta se distribuye desde GitHub, no desde PyPI. Usa siempre una etiqueta
+exacta: no instales `main` ni otra referencia móvil. La versión del código es
+`0.1.0b1` y su etiqueta de distribución es `v0.1.0-beta.1`.
 
-## Inicio rápido
+## Requisitos
+
+- Python 3.9 o posterior; Python 3.12 es la versión recomendada para desarrollo;
+- Git, sólo cuando se instala directamente desde GitHub;
+- un entorno virtual por proyecto.
+
+AN-KLA no requiere servicios externos ni dependencias Python en tiempo de
+ejecución.
+
+## Instalación nueva en un proyecto consumidor
+
+Desde la raíz del proyecto consumidor en macOS o Linux:
 
 ```bash
-python3 -m an_kla init
-python3 -m an_kla status
-python3 -m an_kla verify
-python3 -m an_kla retrieve --query "estado del proyecto" --budget 1200
+python3.12 -m venv .venv
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/python -m pip install \
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.1"
+.venv/bin/python -m an_kla --version
+.venv/bin/python -m an_kla --project-root . init
+.venv/bin/python -m an_kla --project-root . context plan --operation install
+.venv/bin/python -m an_kla --project-root . context install
+.venv/bin/python -m an_kla --project-root . context status
+.venv/bin/python -m an_kla --project-root . verify
+git diff -- AGENTS.md AN-KLA.md
 ```
 
-La versión de desarrollo incluye la operación experimental de lectura
-`context-assembly/v1`:
+En Windows PowerShell, crea el entorno con `py -3.12 -m venv .venv` y sustituye
+`.venv/bin/python` por `.venv\\Scripts\\python.exe`.
+
+Los pasos son deliberadamente distintos:
+
+1. `pip install` instala el programa;
+2. `init` crea la memoria local `.an-kla/memory/`;
+3. `context plan` muestra la mutación prevista sin aplicarla;
+4. `context install` reconstruye, revalida y aplica el plan bajo lock;
+5. `context status` y `verify` comprueban la integración y la memoria.
+
+Revisa y versiona `AGENTS.md` y `AN-KLA.md`. `.an-kla/` es estado local y no
+debe incorporarse al repositorio comercial salvo una decisión explícita del
+proyecto.
+
+## Actualizar desde otra beta
+
+Primero registra la línea base:
 
 ```bash
-python3 -m an_kla assemble-context \
+.venv/bin/python -m an_kla --version
+.venv/bin/python -m an_kla --project-root . context status
+.venv/bin/python -m an_kla --project-root . verify
+```
+
+Después instala la nueva etiqueta exacta y actualiza por separado el contrato
+de contexto:
+
+```bash
+.venv/bin/python -m pip install --upgrade \
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.1"
+.venv/bin/python -m an_kla --version
+.venv/bin/python -m an_kla --project-root . context status
+.venv/bin/python -m an_kla --project-root . context plan --operation update
+.venv/bin/python -m an_kla --project-root . context update
+git diff -- AGENTS.md AN-KLA.md
+.venv/bin/python -m an_kla --project-root . context status
+.venv/bin/python -m an_kla --project-root . verify
+```
+
+Una plantilla anterior reconocida por huella puede migrarse aunque falte el
+manifiesto local. AN-KLA respalda el `AN-KLA.md` anterior en un directorio
+identificado por contenido bajo `.an-kla/context/backups/`. Si el bloque o el
+contrato fueron modificados localmente, la actualización falla en cerrado y no
+sobrescribe esos cambios.
+
+Las integraciones alfa sin marcadores no se migran automáticamente. Sigue el
+procedimiento manual de la [guía de integración](docs/context-package.md).
+
+## Desinstalar o volver atrás
+
+`context uninstall` retira únicamente la integración administrada; no elimina
+la memoria ni desinstala el paquete:
+
+```bash
+.venv/bin/python -m an_kla --project-root . context plan --operation uninstall
+.venv/bin/python -m an_kla --project-root . context uninstall
+git diff -- AGENTS.md AN-KLA.md
+```
+
+Después, si lo deseas, desinstala el programa con
+`.venv/bin/python -m pip uninstall an-kla-memory`. AN-KLA nunca borra
+automáticamente `.an-kla/memory/`.
+
+Para volver a una versión anterior, reinstala una etiqueta exacta y restaura
+los archivos rastreados sólo después de revisar el diff y el respaldo local.
+No existe una migración automática regresiva del formato de memoria.
+
+## Uso diario
+
+```bash
+.venv/bin/python -m an_kla --project-root . status
+.venv/bin/python -m an_kla --project-root . verify
+.venv/bin/python -m an_kla --project-root . retrieve \
+  --query "estado del proyecto" --budget 1200
+.venv/bin/python -m an_kla --project-root . assemble-context \
   --query "estado del proyecto" \
   --new-information "solicitud actual" \
   --budget 2400
 ```
 
-La salida completa, no sólo los registros recuperados, queda acotada en bytes
-UTF-8. Consulta [ADR-0006](docs/architecture/0006-context-assembly-v1.md).
+La salida completa de `context-assembly/v1` queda acotada en bytes UTF-8;
+consulta [ADR-0006](docs/architecture/0006-context-assembly-v1.md). La escritura
+nueva debe usar `plan-write` y `commit-write-plan`, descritos en la
+[guía de escritura gobernada](docs/write-policy-cli.md). El comando histórico
+`write` se conserva sólo por compatibilidad y no ofrece esa garantía.
 
-La rama de desarrollo incluye además la escritura gobernada en dos pasos
-`plan-write` / `commit-write-plan`. El plan se reconstruye dentro del lock antes
-de mover `CURRENT`; consulta la
-[guía del CLI de escritura](docs/write-policy-cli.md). El comando histórico
-`write` se conserva por compatibilidad, pero no ofrece esta garantía.
-
-Lee [AN-KLA.md](AN-KLA.md) antes de instalar o integrar AN-KLA en otro proyecto.
-
-## Contexto compacto para agentes
-
-AN-KLA puede añadir un segmento delimitado a un `AGENTS.md` existente sin
-adueñarse del resto del archivo. El bloque breve apunta a `AN-KLA.md`; manifiesto
-y respaldos locales viven bajo `.an-kla/context/`.
+## Desarrollo del motor
 
 ```bash
-python3 -m an_kla --project-root . context plan \
-  --operation install > an-kla-context-plan.json
-python3 -m an_kla --project-root . context apply \
-  --plan an-kla-context-plan.json
-python3 -m an_kla --project-root . context status
+git clone https://github.com/kristhianmanue1/an-kla-memory.git
+cd an-kla-memory
+python3.12 -m venv .venv
+.venv/bin/python -m pip install -e .
+.venv/bin/python -m unittest discover -s tests -v
 ```
 
-También existe el atajo explícito `context install`. Consulta la
-[guía de integración](docs/context-package.md) y
-[ADR-0009](docs/architecture/0009-managed-agent-context-v1.md).
-
-## Fundamentos matemáticos
-
-La separación entre teoremas condicionales, garantías implementadas y trabajo
-pendiente se documenta en [Fundamentos matemáticos de AN-KLA Memory](docs/mathematical-foundations.md).
-La decisión arquitectónica asociada está en
-[ADR-0005](docs/architecture/0005-mathematical-alignment.md).
-
-La recuperación usa `scan-fallback/v1` de forma predeterminada. El perfil
-experimental `sqlite-fts5/v1` sólo se activa explícitamente y requiere construir
-un índice ligado a la revisión actual; consulta
-[ADR-0004](docs/architecture/0004-index-reference.md).
+Consulta [AN-KLA.md](AN-KLA.md), los [fundamentos matemáticos](docs/mathematical-foundations.md)
+y las decisiones de arquitectura en `docs/architecture/`.
 
 ## Límites de la beta
 
 - admite una sola memoria activa;
-- no coordina varios equipos;
+- el lock de escritura es local y no coordina varias máquinas;
 - no prueba identidad, autoría ni verdad;
 - no publica telemetría;
-- instala un bloque neutral en `AGENTS.md`, pero aún no adapta archivos de
-  proveedores ni implementa multi-memoria;
-- conserva objetos conflictivos en cuarentena diagnóstica; no ejecuta GC ni
-  compactación en la beta.
+- administra sólo el `AGENTS.md` raíz y no adapta archivos de proveedores;
+- conserva objetos conflictivos en cuarentena, pero no ejecuta GC ni
+  compactación.
 
 ## Licencia
 

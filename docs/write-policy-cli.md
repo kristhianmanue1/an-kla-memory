@@ -47,19 +47,23 @@ Los objetos normativos completos se describen en
 
 ## Planificar sin mutación
 
+El resultado debe ir a un archivo efímero **nuevo**, no rastreado y con permisos
+privados. Sustituye `RUTA_NUEVA` por una ruta que hayas comprobado que no existe;
+la redirección del shell por sí sola no protege contra sobrescrituras:
+
 ```bash
 .venv/bin/python -m an_kla \
   --project-root . \
   plan-write \
   --proposal proposal.json \
-  --authority authority.json > planning-result.json
+  --authority authority.json > RUTA_NUEVA
 ```
 
 Si el `base_revision` ya no es `CURRENT`, termina con
 `write_plan_base_changed`. Una planificación correcta no crea revisión,
 journal, segmento ni evento.
 
-La envolvente `planning-result.json` contiene la decisión y el plan exactos.
+La envolvente guardada en `RUTA_NUEVA` contiene la decisión y el plan exactos.
 Debe tratarse como un artefacto ligado a contenido, no como autorización.
 
 ## Confirmar el plan exacto
@@ -71,7 +75,7 @@ Debe tratarse como un artefacto ligado a contenido, no como autorización.
   --expected-current sha256:REVISION_ACTUAL \
   --proposal proposal.json \
   --authority authority.json \
-  --planning-result planning-result.json
+  --planning-result RUTA_NUEVA
 ```
 
 Dentro del lock se comprueban nuevamente:

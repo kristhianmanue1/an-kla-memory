@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -29,6 +30,7 @@ from an_kla.context_package import (
 
 
 ROOT = Path(__file__).resolve().parents[1]
+OLD_CONTEXT_FIXTURE = ROOT / "tests" / "fixtures" / "context-v0.1.0"
 
 
 class PureContextBlockTests(unittest.TestCase):
@@ -149,6 +151,77 @@ class PureContextBlockTests(unittest.TestCase):
 
 
 class ContextFilesystemTests(unittest.TestCase):
+    def test_known_previous_template_updates_without_local_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shutil.copyfile(OLD_CONTEXT_FIXTURE / "AGENTS.md", root / "AGENTS.md")
+            shutil.copyfile(OLD_CONTEXT_FIXTURE / "AN-KLA.md", root / "AN-KLA.md")
+
+            before = context_status(root)
+            self.assertFalse(before["ok"])
+            self.assertIn("context_template_outdated", before["diagnostics"])
+            self.assertNotIn("managed_contract_modified", before["diagnostics"])
+
+            plan = plan_context_change(root, "update")
+            self.assertNotEqual(
+                plan["base_contract_sha256"], plan["result_contract_sha256"]
+            )
+            result = apply_context_plan(root, plan)
+            self.assertEqual(result["action"], "replace")
+            self.assertIn(
+                "No borrar esta sección.",
+                (root / "AGENTS.md").read_text(encoding="utf-8"),
+            )
+            self.assertEqual(
+                (root / "AN-KLA.md").read_text(encoding="utf-8"),
+                DETAILED_CONTRACT,
+            )
+            self.assertTrue(context_status(root)["ok"])
+            self.assertTrue(
+                any(
+                    path.name == "AN-KLA.md"
+                    for path in (root / ".an-kla" / "context" / "backups").rglob(
+                        "AN-KLA.md"
+                    )
+                )
+            )
+
+    def test_modified_previous_contract_cannot_use_known_update_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shutil.copyfile(OLD_CONTEXT_FIXTURE / "AGENTS.md", root / "AGENTS.md")
+            old_contract = (OLD_CONTEXT_FIXTURE / "AN-KLA.md").read_text(
+                encoding="utf-8"
+            )
+            (root / "AN-KLA.md").write_text(
+                old_contract + "\nInstrucción local no registrada.\n",
+                encoding="utf-8",
+            )
+            status = context_status(root)
+            self.assertIn("managed_contract_modified", status["diagnostics"])
+            with self.assertRaisesRegex(
+                ContextPackageError, "managed_contract_modified"
+            ):
+                plan_context_change(root, "update")
+
+    def test_known_previous_crlf_contract_updates_preserving_newline_style(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            shutil.copyfile(OLD_CONTEXT_FIXTURE / "AGENTS.md", root / "AGENTS.md")
+            old_contract = (OLD_CONTEXT_FIXTURE / "AN-KLA.md").read_text(
+                encoding="utf-8"
+            )
+            (root / "AN-KLA.md").write_bytes(
+                old_contract.replace("\n", "\r\n").encode("utf-8")
+            )
+            apply_context_plan(root, plan_context_change(root, "update"))
+            updated = (root / "AN-KLA.md").read_bytes()
+            self.assertNotIn(b"\n", updated.replace(b"\r\n", b""))
+            self.assertEqual(
+                updated.decode("utf-8").replace("\r\n", "\n"), DETAILED_CONTRACT
+            )
+            self.assertTrue(context_status(root)["ok"])
+
     def test_preexisting_canonical_contract_survives_uninstall(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

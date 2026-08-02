@@ -19,6 +19,7 @@ from .index import INDEX_PROFILE, build_index, detect_fts5, verify_index_deep
 from .evaluation import evaluate_retrieval
 from .retrieval import SCAN_PROFILE, retrieve
 from .store import ConcurrentUpdateError, MemoryStore, StoreError
+from .version import VERSION
 
 
 def _json(path: str) -> Any:
@@ -56,6 +57,7 @@ def _planning_result(value: Any, expected_current: str) -> tuple[Any, Any]:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="AN-KLA Memory beta")
+    parser.add_argument("--version", action="version", version=f"an-kla-memory {VERSION}")
     parser.add_argument("--project-root", default=".")
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("init")

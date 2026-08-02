@@ -32,8 +32,9 @@ python3 -m an_kla --project-root . context status
 
 Si informa `managed_contract_modified`, `managed_block_modified`,
 `managed_block_structure_invalid`, `orphan_managed_contract` o
-`legacy_an_kla_context_detected`, reporta el diagnóstico. No repares, reinstales
-ni sobrescribas automáticamente instrucciones modificadas.
+`legacy_an_kla_context_detected`, reporta el diagnóstico. Si informa
+`context_template_outdated`, revisa y ejecuta el flujo explícito de actualización.
+No repares, reinstales ni sobrescribas automáticamente instrucciones modificadas.
 
 ## Protocolo de retoma
 
@@ -152,7 +153,7 @@ válido y no crea revisión, evento ni journal.
 python3 -m an_kla --project-root . commit-write-plan \
   --expected-current "<revision sha256 exacta>" \
   --proposal proposal.json --authority authority.json \
-  --planning-result planning-result.json
+  --planning-result RUTA_NUEVA
 ```
 
 El valor entre ángulos es un marcador documental, nunca un literal. Entrega los

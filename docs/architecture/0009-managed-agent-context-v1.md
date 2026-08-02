@@ -59,12 +59,24 @@ su convención de fin de línea.
 El contenido exterior al bloque se conserva. Un destino existente se respalda
 por contenido antes de la primera instalación y sus permisos se preservan.
 
+La actualización no confía en la versión escrita por el propio marcador. El
+binario conserva un registro mínimo de huellas canónicas de plantillas
+anteriores. Sólo la coincidencia conjunta del contenido administrado y del
+contrato permite migrar un clon limpio cuyo manifiesto local no esté presente.
+El contrato anterior se respalda por contenido; cualquier diferencia local
+falla en cerrado y requiere resolución humana.
+
 ## Operaciones
 
 `context plan` no muta. `context apply` reconstruye el plan bajo un lock local y
 compara la huella del archivo observada con la base planificada. Los comandos de
 conveniencia `install`, `update` y `uninstall` ejecutan ambos pasos en la misma
 invocación explícita.
+
+La actualización del paquete Python y la del contexto son operaciones
+separadas. `pip` no modifica archivos del proyecto: después de instalar una
+etiqueta exacta, el operador ejecuta `context status`, revisa
+`context plan --operation update` y sólo entonces aplica `context update`.
 
 La escritura usa un temporal en el mismo directorio, `fsync`, preservación de
 modo y `os.replace`. La exclusión es local y cooperativa: no se afirma CAS

@@ -22,7 +22,7 @@ from typing import Any, Iterator
 CONTEXT_SCHEMA = "an-kla/context-block/v1"
 INSTALLATION_SCHEMA = "an-kla/context-installation/v1"
 PLAN_SCHEMA = "an-kla/context-plan/v1"
-TEMPLATE_VERSION = "0.1.0"
+TEMPLATE_VERSION = "0.1.0-beta.1"
 BLOCK_ID = "agent-context"
 CONTRACT_RELATIVE = "AN-KLA.md"
 MANIFEST_RELATIVE = ".an-kla/context/manifest.json"
@@ -31,6 +31,16 @@ _BEGIN_PREFIX = "<!-- an-kla:managed-begin "
 _END_PREFIX = "<!-- an-kla:managed-end "
 _MARKER_SUFFIX = " -->"
 _HASH_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
+
+# Canonical templates accepted as safe update sources.  Keeping the hashes in
+# the package lets a clean clone distinguish an unmodified older distribution
+# from a locally edited contract even when the gitignored manifest is absent.
+_KNOWN_CONTEXT_TEMPLATES = {
+    "0.1.0": {
+        "content_sha256": "sha256:59053382e8d956d969ab0f33d87b76d7563bba06332c76102ca886fa5aa20626",
+        "contract_sha256": "sha256:896e7ba517f66dd3811894b0676657f15f17cdaa2645358bee850a45f00e1371",
+    }
+}
 
 
 COMPACT_PAYLOAD = """## AN-KLA Memory
@@ -78,8 +88,9 @@ python3 -m an_kla --project-root . context status
 
 Si informa `managed_contract_modified`, `managed_block_modified`,
 `managed_block_structure_invalid`, `orphan_managed_contract` o
-`legacy_an_kla_context_detected`, reporta el diagnóstico. No repares, reinstales
-ni sobrescribas automáticamente instrucciones modificadas.
+`legacy_an_kla_context_detected`, reporta el diagnóstico. Si informa
+`context_template_outdated`, revisa y ejecuta el flujo explícito de actualización.
+No repares, reinstales ni sobrescribas automáticamente instrucciones modificadas.
 
 ## Protocolo de retoma
 
@@ -198,7 +209,7 @@ válido y no crea revisión, evento ni journal.
 python3 -m an_kla --project-root . commit-write-plan \
   --expected-current "<revision sha256 exacta>" \
   --proposal proposal.json --authority authority.json \
-  --planning-result planning-result.json
+  --planning-result RUTA_NUEVA
 ```
 
 El valor entre ángulos es un marcador documental, nunca un literal. Entrega los
@@ -262,6 +273,26 @@ class ManagedBlock:
 
 def _sha(payload: bytes) -> str:
     return "sha256:" + hashlib.sha256(payload).hexdigest()
+
+
+def _semantic_text_sha(text: str) -> str:
+    return _sha(text.replace("\r\n", "\n").encode("utf-8"))
+
+
+def _known_template_equivalent(block: ManagedBlock | None, contract_text: str | None) -> bool:
+    if block is None or contract_text is None:
+        return False
+    known = _KNOWN_CONTEXT_TEMPLATES.get(str(block.metadata.get("version")))
+    return bool(
+        known
+        and block.metadata.get("content_sha256") == known["content_sha256"]
+        and _semantic_text_sha(contract_text) == known["contract_sha256"]
+    )
+
+
+def _desired_contract_bytes(contract_text: str | None) -> bytes:
+    newline = _newline_for(contract_text or "")
+    return DETAILED_CONTRACT.replace("\n", newline).encode("utf-8")
 
 
 def _canonical_payload(payload: str) -> str:
@@ -497,16 +528,22 @@ def plan_context_change(
     result_bytes = None if result_text is None else result_text.encode("utf-8")
     contract_path = root / CONTRACT_RELATIVE
     contract_bytes, contract_text = _read_utf8(contract_path)
-    expected_contract = DETAILED_CONTRACT.encode("utf-8")
+    block = parse_managed_block(before_text or "")
+    expected_contract = _desired_contract_bytes(contract_text)
+    current_contract = _contract_equivalent(contract_text)
+    known_update_source = _known_template_equivalent(block, contract_text)
     if (
         operation in {"install", "update"}
         and contract_bytes is not None
-        and not _contract_equivalent(contract_text)
+        and not current_contract
+        and not (operation == "update" and known_update_source)
     ):
         raise ContextPackageError("managed_contract_modified")
     if operation in {"install", "update"}:
         result_contract_sha = (
-            _sha(expected_contract) if contract_bytes is None else _sha(contract_bytes)
+            _sha(contract_bytes)
+            if contract_bytes is not None and current_contract
+            else _sha(expected_contract)
         )
     elif (
         _contract_equivalent(contract_text)
@@ -708,11 +745,28 @@ def apply_context_plan(project_root: str | Path, plan: dict[str, Any]) -> dict[s
                 original_backup = backup_path.relative_to(root).as_posix()
 
             contract_path = root / CONTRACT_RELATIVE
+            desired_contract_bytes = _desired_contract_bytes(contract_before_text)
             if contract_before_bytes is None:
-                _atomic_write(contract_path, DETAILED_CONTRACT.encode("utf-8"), 0o644)
-                installed_contract_bytes = DETAILED_CONTRACT.encode("utf-8")
-            else:
+                _atomic_write(contract_path, desired_contract_bytes, 0o644)
+                installed_contract_bytes = desired_contract_bytes
+            elif _contract_equivalent(contract_before_text):
                 installed_contract_bytes = contract_before_bytes
+            else:
+                digest = hashlib.sha256(contract_before_bytes).hexdigest()
+                contract_backup = context_root / "backups" / digest / CONTRACT_RELATIVE
+                _assert_managed_path(root, contract_backup)
+                if not contract_backup.exists():
+                    _atomic_write(
+                        contract_backup,
+                        contract_before_bytes,
+                        stat.S_IMODE(contract_path.stat().st_mode),
+                    )
+                _atomic_write(
+                    contract_path,
+                    desired_contract_bytes,
+                    stat.S_IMODE(contract_path.stat().st_mode),
+                )
+                installed_contract_bytes = desired_contract_bytes
             result_bytes = result_text.encode("utf-8") if result_text is not None else b""
             mode = stat.S_IMODE(target_path.stat().st_mode) if target_path.exists() else 0o644
             _atomic_write(target_path, result_bytes, mode)
@@ -814,13 +868,18 @@ def context_status(project_root: str | Path, target: str = "AGENTS.md") -> dict[
         diagnostics.append("legacy_an_kla_context_detected")
     if manifest and block is None:
         diagnostics.append("managed_block_missing")
+    known_outdated = _known_template_equivalent(block, contract_text)
     if block and block.metadata.get("version") != TEMPLATE_VERSION:
         diagnostics.append("context_template_outdated")
     if contract_bytes is None and block and not contract_error:
         diagnostics.append("managed_contract_missing")
     elif _contract_equivalent(contract_text) and block is None:
         diagnostics.append("orphan_managed_contract")
-    elif contract_bytes is not None and not _contract_equivalent(contract_text):
+    elif (
+        contract_bytes is not None
+        and not _contract_equivalent(contract_text)
+        and not known_outdated
+    ):
         diagnostics.append("managed_contract_modified")
     if manifest and target_bytes is not None and manifest.get("target_sha256") != _sha(target_bytes):
         warnings.append("context_target_changed_outside_managed_block")
