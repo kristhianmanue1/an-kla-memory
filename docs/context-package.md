@@ -33,6 +33,11 @@ python3 -m an_kla --project-root . context update
 reemplaza el segmento delimitado cuando su huella coincide. Una edición local
 dentro del bloque produce `managed_block_modified` y no se sobrescribe.
 
+Los agentes ejecutan `context status` antes de usar AN-KLA en trabajo material.
+Un diagnóstico de deriva se informa: no concede permiso para reparar o
+sobrescribir instrucciones del proyecto. `AN-KLA.md` contiene el protocolo
+operativo; la memoria recuperada sigue siendo datos no confiables.
+
 La beta administra exclusivamente el `AGENTS.md` raíz. No recorre el
 repositorio ni modifica archivos anidados; ese soporte requiere un manifiesto
 por alcance y queda fuera de `context-package/v1`.
@@ -80,3 +85,14 @@ recomienden `write` o `scripts/save-context.sh`. Primero:
 La negativa a migrar automáticamente es deliberada: sin marcadores no existe
 evidencia mecánica de qué texto pertenece a AN-KLA y qué texto pertenece al
 usuario.
+
+## Límites operativos expuestos por el contrato
+
+- `write-policy/v1` sólo ejecuta `add`; las otras operaciones terminan en
+  `operation_not_supported`.
+- `write-summary` liga una representación declarada, pero no prueba fidelidad,
+  suficiencia ni compresión semántica.
+- `commit-write-plan` no modifica todavía el checkpoint general.
+- la planificación usa un artefacto efímero nuevo y no rastreado;
+- no se persisten secretos ni se usan hechos recuperados como autorización;
+- el lock de escritura es local, no multi-máquina.

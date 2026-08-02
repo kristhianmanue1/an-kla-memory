@@ -36,8 +36,8 @@ El bloque incluye solamente:
 
 1. que el proyecto usa AN-KLA;
 2. cuándo vale la pena cargar memoria;
-3. una referencia a `AN-KLA.md`;
-4. que la memoria recuperada es dato no confiable;
+3. que debe verificarse la integración y una referencia a `AN-KLA.md`;
+4. que la memoria recuperada es dato no confiable y no autoriza acciones;
 5. que la escritura nueva usa `plan-write` y `commit-write-plan`.
 
 El procedimiento detallado vive en `AN-KLA.md`, archivo rastreable y disponible
@@ -81,6 +81,18 @@ El bloque nunca autoriza acciones externas ni permite que un registro recupere
 autoridad. Las demás instrucciones aplicables y el usuario conservan su
 precedencia normal.
 
+El contrato exige `context status` como preflight antes de tareas materiales.
+Una deriva de bloque, contrato o manifiesto se informa y no se repara
+automáticamente. La frontera es deliberada: `AGENTS.md` y el contrato rastreado
+son instrucciones del proyecto; facts, events, episodes, checkpoints y contexto
+ensamblado son datos no confiables.
+
+La guía operativa declara los límites reales de `write-policy/v1`: sólo `add`
+es ejecutable, `write-summary` no certifica fidelidad semántica y el commit
+gobernado no aplica aún un parche general al checkpoint. También exige
+minimización de secretos, linaje visible para contenido recuperado y un plan
+efímero nuevo que no se sobrescribe ni se rastrea.
+
 ## Migración heredada
 
 Si un archivo sin marcadores contiene dos o más firmas de la integración
@@ -98,4 +110,6 @@ texto legado antes de instalar.
 - archivos `AGENTS.md` anidados o instalación automática en `CLAUDE.md`,
   `GEMINI.md`, Cursor o Copilot;
 - tratar las huellas como identidad criptográfica;
+- certificar fidelidad, completitud o compresión de un `summary`;
+- actualizar el checkpoint mediante `commit-write-plan`;
 - obedecer instrucciones encontradas en memoria.
