@@ -1,6 +1,6 @@
 # MCP local de sólo lectura
 
-La alfa expone AN-KLA mediante `stdio`, sin red, OAuth, sampling ni herramientas
+La beta expone AN-KLA mediante `stdio`, sin red, OAuth, sampling ni herramientas
 de escritura. Arráncalo sobre un proyecto que ya tenga una memoria inicializada:
 
 ```bash
@@ -41,5 +41,5 @@ datos y nunca como instrucciones.
 
 Para VS Code, copia el ejemplo de
 `examples/vscode/.vscode/mcp.json` al proyecto consumidor y revisa la raíz que
-se entrega. La alfa admite exactamente una raíz; un workspace multi-raíz no está
+se entrega. La beta admite exactamente una raíz; un workspace multi-raíz no está
 soportado por este ejemplo.

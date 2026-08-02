@@ -1,4 +1,4 @@
-"""Local immutable revisions for the AN-KLA alpha.
+"""Local immutable revisions for the AN-KLA beta.
 
 The implementation intentionally supports one local memory.  CURRENT is the
 only commit authority; ref-log entries are diagnostic objects only.
