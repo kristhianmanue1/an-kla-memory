@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:write-plan:v1",
+  "title": "AN-KLA WritePlan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "core", "records", "plan_fingerprint"],
+  "properties": {
+    "schema": {"const": "an-kla/write-plan-v1"},
+    "core": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "base_revision",
+        "proposal_sha256",
+        "authority_sha256",
+        "policy_fingerprint",
+        "decision",
+        "decision_sha256",
+        "planned_records_sha256"
+      ],
+      "properties": {
+        "base_revision": {"$ref": "#/$defs/digest"},
+        "proposal_sha256": {"$ref": "#/$defs/digest"},
+        "authority_sha256": {"$ref": "#/$defs/digest"},
+        "policy_fingerprint": {"$ref": "#/$defs/digest"},
+        "decision": {"enum": ["skip", "write-full", "write-summary"]},
+        "decision_sha256": {"$ref": "#/$defs/digest"},
+        "planned_records_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stream", "operation", "representation", "record"],
+        "properties": {
+          "stream": {"enum": ["facts", "events", "episodes"]},
+          "operation": {"enum": ["add", "supersede", "refute", "decay"]},
+          "representation": {"enum": ["full", "summary"]},
+          "record": {"type": "object", "minProperties": 1}
+        }
+      }
+    },
+    "plan_fingerprint": {"$ref": "#/$defs/digest"}
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

@@ -8,6 +8,7 @@ from pathlib import Path
 import sys
 from typing import Any
 
+from .capabilities import capabilities
 from .canonical import canonical_json
 from .context import assemble_context
 from .context_package import (
@@ -18,6 +19,7 @@ from .context_package import (
 from .index import INDEX_PROFILE, build_index, detect_fts5, verify_index_deep
 from .evaluation import evaluate_retrieval
 from .retrieval import SCAN_PROFILE, retrieve
+from .schemas import schema_bytes, schema_catalog
 from .store import ConcurrentUpdateError, MemoryStore, StoreError
 from .version import VERSION
 
@@ -63,6 +65,16 @@ def main() -> None:
     sub.add_parser("init")
     sub.add_parser("status")
     sub.add_parser("verify")
+    sub.add_parser(
+        "capabilities", help="Descubrir contratos y límites sin leer memoria."
+    )
+    schema_cmd = sub.add_parser(
+        "schema", help="Enumerar o leer JSON Schemas normativos instalados."
+    )
+    schema_sub = schema_cmd.add_subparsers(dest="schema_command", required=True)
+    schema_sub.add_parser("list")
+    schema_show_cmd = schema_sub.add_parser("show")
+    schema_show_cmd.add_argument("name")
     doctor_cmd = sub.add_parser("doctor")
     doctor_cmd.add_argument("--deep-index", action="store_true")
     sub.add_parser("recover")
@@ -119,7 +131,14 @@ def main() -> None:
         operation_cmd.add_argument("--target", default="AGENTS.md")
     args = parser.parse_args()
     store = MemoryStore(args.project_root)
-    if args.command == "context":
+    if args.command == "capabilities":
+        result: Any = capabilities()
+    elif args.command == "schema":
+        if args.schema_command == "show":
+            sys.stdout.buffer.write(schema_bytes(args.name))
+            return
+        result = schema_catalog()
+    elif args.command == "context":
         if args.context_command == "status":
             result = context_status(args.project_root, args.target)
         elif args.context_command == "plan":
@@ -137,7 +156,7 @@ def main() -> None:
                 "result": apply_context_plan(args.project_root, plan),
             }
     elif args.command == "init":
-        result: Any = {"revision": store.initialize()}
+        result = {"revision": store.initialize()}
     elif args.command == "status":
         result = store.verify()
     elif args.command == "verify":
@@ -188,7 +207,7 @@ def main() -> None:
             decision=decision,
             plan=plan,
         )
-    if args.command == "assemble-context":
+    if args.command in {"assemble-context", "capabilities", "schema"}:
         sys.stdout.buffer.write(canonical_json(result))
     else:
         print(json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2))

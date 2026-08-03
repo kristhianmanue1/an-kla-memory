@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:write-decision:v1",
+  "title": "AN-KLA WriteDecision v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "proposal_sha256",
+    "authority_sha256",
+    "policy_profile",
+    "policy_fingerprint",
+    "decision",
+    "reason_codes"
+  ],
+  "properties": {
+    "schema": {"const": "an-kla/write-decision-v1"},
+    "proposal_sha256": {"$ref": "#/$defs/digest"},
+    "authority_sha256": {"$ref": "#/$defs/digest"},
+    "policy_profile": {"const": "write-policy/v1"},
+    "policy_fingerprint": {"$ref": "#/$defs/digest"},
+    "decision": {"enum": ["skip", "write-full", "write-summary"]},
+    "reason_codes": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9_]*$"
+      }
+    }
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

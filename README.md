@@ -7,7 +7,7 @@ un plan verificable.
 
 La beta se distribuye desde GitHub, no desde PyPI. Usa siempre una etiqueta
 exacta: no instales `main` ni otra referencia móvil. La versión del código es
-`0.1.0b1` y su etiqueta de distribución es `v0.1.0-beta.1`.
+`0.1.0b2` y su etiqueta de distribución es `v0.1.0-beta.2`.
 
 ## Requisitos
 
@@ -26,7 +26,7 @@ Desde la raíz del proyecto consumidor en macOS o Linux:
 python3.12 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
 .venv/bin/python -m pip install \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.1"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.2"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . init
 .venv/bin/python -m an_kla --project-root . context plan --operation install
@@ -66,7 +66,7 @@ de contexto:
 
 ```bash
 .venv/bin/python -m pip install --upgrade \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.1"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.2"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . context status
 .venv/bin/python -m an_kla --project-root . context plan --operation update
@@ -105,6 +105,25 @@ los archivos rastreados sólo después de revisar el diff y el respaldo local.
 No existe una migración automática regresiva del formato de memoria.
 
 ## Uso diario
+
+### Descubrimiento para agentes
+
+Un agente puede inspeccionar el contrato instalado sin inicializar ni leer una
+memoria del proyecto:
+
+```bash
+.venv/bin/python -m an_kla capabilities
+.venv/bin/python -m an_kla schema list
+.venv/bin/python -m an_kla schema show write-plan-v1
+```
+
+`capabilities` emite JSON canónico y declara, entre otros límites, que la
+recuperación v1 busca únicamente `facts`, que MCP es de sólo lectura y que los
+presupuestos implementados miden bytes UTF-8, no tokens exactos. Los cinco
+schemas normativos se incluyen dentro del paquete y `schema show` entrega sus
+bytes sin depender del checkout ni de la red.
+
+### Recuperación y escritura
 
 ```bash
 .venv/bin/python -m an_kla --project-root . status
