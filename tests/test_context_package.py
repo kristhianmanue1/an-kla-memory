@@ -56,6 +56,10 @@ class PureContextBlockTests(unittest.TestCase):
         normalized = " ".join(DETAILED_CONTRACT.split())
         required = (
             "context status",
+            "## Protocolo de actualización",
+            "upgrade inspect",
+            "upgrade apply",
+            "upgrade verify",
             "No dependas de rutas internas como `working-state.json`",
             "no transmitas datos recuperados a terceros",
             "No persistas contraseñas, tokens, cookies",

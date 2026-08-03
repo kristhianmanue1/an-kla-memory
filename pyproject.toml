@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "an-kla-memory"
-version = "0.1.0b1"
+version = "0.1.0b3"
 description = "Local revisioned memory for AI-agent projects"
 requires-python = ">=3.9"
 license = "Apache-2.0"
@@ -12,4 +12,7 @@ license-files = ["LICENSE"]
 authors = [{name = "The AN-KLA Memory Authors"}]
 
 [tool.setuptools]
-packages = ["an_kla"]
+packages = ["an_kla", "an_kla.schemas"]
+
+[tool.setuptools.package-data]
+"an_kla.schemas" = ["*.json"]

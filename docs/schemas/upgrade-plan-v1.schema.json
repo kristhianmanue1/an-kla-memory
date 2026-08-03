@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:upgrade-plan:v1",
+  "title": "AN-KLA UpgradePlan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "core", "context_plan", "plan_fingerprint"],
+  "properties": {
+    "schema": {"const": "an-kla/upgrade-plan-v1"},
+    "core": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "profile",
+        "target_release",
+        "installed_version",
+        "package_action",
+        "context_operation",
+        "context_target",
+        "context_template_version",
+        "context_plan_sha256"
+      ],
+      "properties": {
+        "profile": {"const": "project-context-upgrade/v1"},
+        "target_release": {"type": "string", "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+(?:-(alpha|beta|rc)\\.[0-9]+)?$"},
+        "installed_version": {"type": "string", "minLength": 1},
+        "package_action": {"const": "already_installed"},
+        "context_operation": {"enum": ["install", "update"]},
+        "context_target": {"const": "AGENTS.md"},
+        "context_template_version": {"type": "string", "minLength": 1},
+        "context_plan_sha256": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "context_plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schema",
+        "operation",
+        "target",
+        "action",
+        "base_target_sha256",
+        "result_target_sha256",
+        "base_contract_sha256",
+        "base_manifest_sha256",
+        "result_contract_sha256",
+        "managed_content_sha256",
+        "template_version"
+      ],
+      "properties": {
+        "schema": {"const": "an-kla/context-plan/v1"},
+        "operation": {"enum": ["install", "update"]},
+        "target": {"const": "AGENTS.md"},
+        "action": {"enum": ["create", "append", "noop", "replace"]},
+        "base_target_sha256": {"$ref": "#/$defs/digest_or_missing"},
+        "result_target_sha256": {"$ref": "#/$defs/digest"},
+        "base_contract_sha256": {"$ref": "#/$defs/digest_or_missing"},
+        "base_manifest_sha256": {"$ref": "#/$defs/digest_or_missing"},
+        "result_contract_sha256": {"$ref": "#/$defs/digest"},
+        "managed_content_sha256": {"$ref": "#/$defs/digest"},
+        "template_version": {"type": "string", "minLength": 1}
+      }
+    },
+    "plan_fingerprint": {"$ref": "#/$defs/digest"}
+  },
+  "$defs": {
+    "digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "digest_or_missing": {
+      "oneOf": [
+        {"$ref": "#/$defs/digest"},
+        {"const": "missing"}
+      ]
+    }
+  }
+}

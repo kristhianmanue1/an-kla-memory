@@ -11,6 +11,8 @@ class ReleaseTagTests(unittest.TestCase):
 
     def test_future_release_phases_are_supported(self) -> None:
         self.assertEqual(normalized_release_tag("v0.1.0-beta.1"), "0.1.0b1")
+        self.assertEqual(normalized_release_tag("v0.1.0-beta.2"), "0.1.0b2")
+        self.assertEqual(normalized_release_tag("v0.1.0-beta.3"), "0.1.0b3")
         self.assertEqual(normalized_release_tag("v1.0.0-rc.2"), "1.0.0rc2")
         self.assertEqual(normalized_release_tag("v1.0.0"), "1.0.0")
 
