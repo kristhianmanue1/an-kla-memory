@@ -21,6 +21,7 @@ from .evaluation import evaluate_retrieval
 from .retrieval import SCAN_PROFILE, retrieve
 from .schemas import schema_bytes, schema_catalog
 from .store import ConcurrentUpdateError, MemoryStore, StoreError
+from .upgrade import apply_upgrade, inspect_upgrade, verify_upgrade
 from .version import VERSION
 
 
@@ -129,6 +130,19 @@ def main() -> None:
     for operation in ("install", "update", "uninstall"):
         operation_cmd = context_sub.add_parser(operation)
         operation_cmd.add_argument("--target", default="AGENTS.md")
+    upgrade_cmd = sub.add_parser(
+        "upgrade", help="Planificar y verificar la integración de una versión instalada."
+    )
+    upgrade_sub = upgrade_cmd.add_subparsers(dest="upgrade_command", required=True)
+    upgrade_inspect_cmd = upgrade_sub.add_parser("inspect")
+    upgrade_inspect_cmd.add_argument("--target", required=True)
+    upgrade_inspect_cmd.add_argument("--context-target", default="AGENTS.md")
+    upgrade_apply_cmd = upgrade_sub.add_parser("apply")
+    upgrade_apply_cmd.add_argument("expected_fingerprint")
+    upgrade_apply_cmd.add_argument("--plan", required=True)
+    upgrade_verify_cmd = upgrade_sub.add_parser("verify")
+    upgrade_verify_cmd.add_argument("--target", required=True)
+    upgrade_verify_cmd.add_argument("--context-target", default="AGENTS.md")
     args = parser.parse_args()
     store = MemoryStore(args.project_root)
     if args.command == "capabilities":
@@ -155,6 +169,21 @@ def main() -> None:
                 "plan": plan,
                 "result": apply_context_plan(args.project_root, plan),
             }
+    elif args.command == "upgrade":
+        if args.upgrade_command == "inspect":
+            result = inspect_upgrade(
+                args.project_root, args.target, args.context_target
+            )
+        elif args.upgrade_command == "apply":
+            result = apply_upgrade(
+                args.project_root,
+                _json(args.plan),
+                args.expected_fingerprint,
+            )
+        else:
+            result = verify_upgrade(
+                args.project_root, args.target, args.context_target
+            )
     elif args.command == "init":
         result = {"revision": store.initialize()}
     elif args.command == "status":
@@ -207,7 +236,7 @@ def main() -> None:
             decision=decision,
             plan=plan,
         )
-    if args.command in {"assemble-context", "capabilities", "schema"}:
+    if args.command in {"assemble-context", "capabilities", "schema", "upgrade"}:
         sys.stdout.buffer.write(canonical_json(result))
     else:
         print(json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2))

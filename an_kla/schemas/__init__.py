@@ -11,6 +11,7 @@ from ..canonical import digest_bytes
 
 SCHEMA_FILES = {
     "cost-certificate-v1": "cost-certificate-v1.schema.json",
+    "upgrade-plan-v1": "upgrade-plan-v1.schema.json",
     "write-authority-v1": "write-authority-v1.schema.json",
     "write-decision-v1": "write-decision-v1.schema.json",
     "write-plan-v1": "write-plan-v1.schema.json",

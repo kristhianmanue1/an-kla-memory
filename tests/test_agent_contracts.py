@@ -19,6 +19,7 @@ SOURCE_SCHEMAS = ROOT / "docs" / "schemas"
 class InstalledSchemaTests(unittest.TestCase):
     expected_names = (
         "cost-certificate-v1",
+        "upgrade-plan-v1",
         "write-authority-v1",
         "write-decision-v1",
         "write-plan-v1",
@@ -75,6 +76,8 @@ class AgentCapabilityTests(unittest.TestCase):
         self.assertTrue(first["mcp"]["read_only"])
         self.assertFalse(first["limits"]["writable_mcp"])
         self.assertFalse(first["cost"]["exact_tokens"])
+        self.assertFalse(first["upgrade"]["package_self_update"])
+        self.assertTrue(first["upgrade"]["requires_exact_installed_target"])
         self.assertEqual(
             [item["name"] for item in first["schemas"]], list(schema_names())
         )

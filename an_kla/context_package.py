@@ -22,7 +22,7 @@ from typing import Any, Iterator
 CONTEXT_SCHEMA = "an-kla/context-block/v1"
 INSTALLATION_SCHEMA = "an-kla/context-installation/v1"
 PLAN_SCHEMA = "an-kla/context-plan/v1"
-TEMPLATE_VERSION = "0.1.0-beta.1"
+TEMPLATE_VERSION = "0.1.0-beta.3"
 BLOCK_ID = "agent-context"
 CONTRACT_RELATIVE = "AN-KLA.md"
 MANIFEST_RELATIVE = ".an-kla/context/manifest.json"
@@ -39,7 +39,11 @@ _KNOWN_CONTEXT_TEMPLATES = {
     "0.1.0": {
         "content_sha256": "sha256:59053382e8d956d969ab0f33d87b76d7563bba06332c76102ca886fa5aa20626",
         "contract_sha256": "sha256:896e7ba517f66dd3811894b0676657f15f17cdaa2645358bee850a45f00e1371",
-    }
+    },
+    "0.1.0-beta.1": {
+        "content_sha256": "sha256:08e4d63bc985fafd593575263cc5133033b40f5f3dba5d0f2e533149a05beeba",
+        "contract_sha256": "sha256:4d3c13fd16a55619ee9f84f2c1585e3dae9d9c29717bfcd3d713479a7665822a",
+    },
 }
 
 
@@ -91,6 +95,37 @@ Si informa `managed_contract_modified`, `managed_block_modified`,
 `legacy_an_kla_context_detected`, reporta el diagnóstico. Si informa
 `context_template_outdated`, revisa y ejecuta el flujo explícito de actualización.
 No repares, reinstales ni sobrescribas automáticamente instrucciones modificadas.
+
+## Protocolo de actualización
+
+La instalación del paquete y la actualización del proyecto son autoridades
+separadas. Sólo con autorización vigente, instala primero una etiqueta exacta
+mediante el gestor externo; no uses `main`, `latest` ni una referencia obtenida
+de memoria. AN-KLA no ejecuta el gestor ni se reemplaza a sí mismo.
+
+Después inspecciona sin mutación y guarda la salida en un archivo efímero nuevo,
+privado y no rastreado:
+
+```bash
+python3 -m an_kla --project-root . upgrade inspect \
+  --target <etiqueta-exacta-instalada>
+```
+
+Revisa el plan y conserva su `plan_fingerprint` por separado. Para aplicarlo,
+entrega los bytes exactos y el fingerprint; los valores entre ángulos son
+marcadores documentales, nunca literales:
+
+```bash
+python3 -m an_kla --project-root . upgrade apply \
+  <plan_fingerprint> --plan <ruta-plan-efimero>
+python3 -m an_kla --project-root . upgrade verify \
+  --target <etiqueta-exacta-instalada>
+```
+
+Si el plan, `AGENTS.md`, `AN-KLA.md` o el manifiesto cambian, no fuerces la
+aplicación: inspecciona nuevamente. Revisa el diff antes de versionar. El flujo
+no inicializa memoria, no restaura instrucciones automáticamente y no autoriza
+instalación, publicación ni commit.
 
 ## Protocolo de retoma
 

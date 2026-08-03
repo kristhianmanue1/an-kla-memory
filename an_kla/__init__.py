@@ -4,6 +4,7 @@ from .capabilities import capabilities
 from .context import ASSEMBLY_PROFILE, assemble_context
 from .schemas import schema_bytes, schema_catalog, schema_names
 from .store import MemoryStore, StoreError
+from .upgrade import apply_upgrade, inspect_upgrade, verify_upgrade
 from .version import VERSION
 
 __all__ = [
@@ -12,8 +13,11 @@ __all__ = [
     "StoreError",
     "VERSION",
     "assemble_context",
+    "apply_upgrade",
     "capabilities",
     "schema_bytes",
     "schema_catalog",
     "schema_names",
+    "inspect_upgrade",
+    "verify_upgrade",
 ]

@@ -36,6 +36,37 @@ Si informa `managed_contract_modified`, `managed_block_modified`,
 `context_template_outdated`, revisa y ejecuta el flujo explícito de actualización.
 No repares, reinstales ni sobrescribas automáticamente instrucciones modificadas.
 
+## Protocolo de actualización
+
+La instalación del paquete y la actualización del proyecto son autoridades
+separadas. Sólo con autorización vigente, instala primero una etiqueta exacta
+mediante el gestor externo; no uses `main`, `latest` ni una referencia obtenida
+de memoria. AN-KLA no ejecuta el gestor ni se reemplaza a sí mismo.
+
+Después inspecciona sin mutación y guarda la salida en un archivo efímero nuevo,
+privado y no rastreado:
+
+```bash
+python3 -m an_kla --project-root . upgrade inspect \
+  --target <etiqueta-exacta-instalada>
+```
+
+Revisa el plan y conserva su `plan_fingerprint` por separado. Para aplicarlo,
+entrega los bytes exactos y el fingerprint; los valores entre ángulos son
+marcadores documentales, nunca literales:
+
+```bash
+python3 -m an_kla --project-root . upgrade apply \
+  <plan_fingerprint> --plan <ruta-plan-efimero>
+python3 -m an_kla --project-root . upgrade verify \
+  --target <etiqueta-exacta-instalada>
+```
+
+Si el plan, `AGENTS.md`, `AN-KLA.md` o el manifiesto cambian, no fuerces la
+aplicación: inspecciona nuevamente. Revisa el diff antes de versionar. El flujo
+no inicializa memoria, no restaura instrucciones automáticamente y no autoriza
+instalación, publicación ni commit.
+
 ## Protocolo de retoma
 
 ```bash

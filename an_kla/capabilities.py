@@ -54,6 +54,12 @@ def capabilities() -> dict[str, Any]:
             ],
             "privileged_authority_requires_external_adapter": True,
         },
+        "upgrade": {
+            "profile": "project-context-upgrade/v1",
+            "operations": ["inspect", "apply", "verify"],
+            "package_self_update": False,
+            "requires_exact_installed_target": True,
+        },
         "schemas": schema_catalog()["schemas"],
         "mcp": {
             "protocol_version": PROTOCOL_VERSION,
