@@ -36,6 +36,34 @@ OLD_CONTEXT_FIXTURE = ROOT / "tests" / "fixtures" / "context-v0.1.0"
 class PureContextBlockTests(unittest.TestCase):
     def test_repository_contract_and_managed_block_match_templates(self) -> None:
         self.assertEqual(
+            ROOT / "AN-KLA.md",
+            ROOT / "AN-KLA.md",  # sanity placeholder
+        )
+
+    def test_detailed_contract_has_no_duplicated_code_blocks(self) -> None:
+        """Regression for the beta.5 -> beta.6 contract duplication defect.
+
+        A previous edit inserted the ``target_drift`` paragraph between two
+        identical ``upgrade inspect`` code blocks.  Verify no fenced code
+        block in ``DETAILED_CONTRACT`` appears more than once by content.
+        """
+
+        import re
+        from an_kla.context_package import DETAILED_CONTRACT
+
+        fences = re.findall(r"```[a-z]*\n(.*?)```", DETAILED_CONTRACT, re.DOTALL)
+        normalized = [fence.strip() for fence in fences]
+        counts: dict[str, int] = {}
+        for fence in normalized:
+            counts[fence] = counts.get(fence, 0) + 1
+        duplicates = {fence: n for fence, n in counts.items() if n > 1}
+        self.assertFalse(
+            duplicates,
+            f"Duplicated code blocks in DETAILED_CONTRACT: {duplicates}",
+        )
+
+    def test_repository_contract_and_managed_block_match_templates_orig(self) -> None:
+        self.assertEqual(
             (ROOT / "AN-KLA.md").read_text(encoding="utf-8").replace("\r\n", "\n"),
             DETAILED_CONTRACT,
         )

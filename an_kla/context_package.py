@@ -22,7 +22,7 @@ from typing import Any, Iterator
 CONTEXT_SCHEMA = "an-kla/context-block/v1"
 INSTALLATION_SCHEMA = "an-kla/context-installation/v1"
 PLAN_SCHEMA = "an-kla/context-plan/v1"
-TEMPLATE_VERSION = "0.1.0-beta.5"
+TEMPLATE_VERSION = "0.1.0-beta.6"
 BLOCK_ID = "agent-context"
 CONTRACT_RELATIVE = "AN-KLA.md"
 MANIFEST_RELATIVE = ".an-kla/context/manifest.json"
@@ -51,6 +51,10 @@ _KNOWN_CONTEXT_TEMPLATES = {
     "0.1.0-beta.4": {
         "content_sha256": "sha256:08e4d63bc985fafd593575263cc5133033b40f5f3dba5d0f2e533149a05beeba",
         "contract_sha256": "sha256:6d949ef2c3e6b3df60cb6a339583ef5435dc6f61a19277569e6f69f294c44eb4",
+    },
+    "0.1.0-beta.5": {
+        "content_sha256": "sha256:08e4d63bc985fafd593575263cc5133033b40f5f3dba5d0f2e533149a05beeba",
+        "contract_sha256": "sha256:48596b9ee7bc35f03f40ded24578d2c6f70553997a811c24a2c2f5d05c63d6fd",
     },
 }
 
@@ -138,28 +142,27 @@ python3 -m an_kla --project-root . upgrade inspect \
   --target <etiqueta-exacta-instalada>
 ```
 
-Si el plan reporta `target_drift.outside_managed_block: true`, revisa
-manualmente el diff entre el `manifest_target_sha256_at_install` (baseline al
-instalar) y `observed_target_sha256` (estado actual del archivo). El contenido
-fuera-del-bloque actual se promoverá a la nueva baseline al aplicar;
-`apply --confirm-target-drift` confirma explícitamente esa absorción. Sin el
-flag, `apply` falla cerrado con `target_drift_requires_confirmation`.
-
-```bash
-python3 -m an_kla --project-root . upgrade inspect \
-  --target <etiqueta-exacta-instalada>
-```
-
-Revisa el plan y conserva su `plan_fingerprint` por separado. Para aplicarlo,
-entrega los bytes exactos y el fingerprint; los valores entre ángulos son
-marcadores documentales, nunca literales:
+Revisa el plan y conserva su `plan_fingerprint` por separado. Si el plan
+reporta `target_drift.outside_managed_block: true`, revisa manualmente el diff
+entre `manifest_target_sha256_at_install` (baseline al instalar) y
+`observed_target_sha256` (estado actual); el contenido fuera-del-bloque actual
+se promoverá a la nueva baseline al aplicar. `apply --confirm-target-drift`
+confirma explícitamente esa absorción; sin el flag, `apply` falla cerrado con
+`target_drift_requires_confirmation`. Los valores entre ángulos son marcadores
+documentales, nunca literales:
 
 ```bash
 python3 -m an_kla --project-root . upgrade apply \
-  <plan_fingerprint> --plan <ruta-plan-efimero>
+  <plan_fingerprint> --plan <ruta-plan-efimero> [--confirm-target-drift]
 python3 -m an_kla --project-root . upgrade verify \
   --target <etiqueta-exacta-instalada>
+python3 -m an_kla --project-root . rebuild-index
 ```
+
+`rebuild-index` regenera el FTS5 multi-stream para la revisión vigente; tras
+beta.4 el motor refresca el índice best-effort tras cada commit, pero el
+flujo de upgrade recomienda ejecutarlo explícitamente para descartar índices
+obsoletos acumulados por versiones anteriores.
 
 Si el plan, `AGENTS.md`, `AN-KLA.md` o el manifiesto cambian, no fuerces la
 aplicación: inspecciona nuevamente. Revisa el diff antes de versionar. El flujo

@@ -1,7 +1,7 @@
 # AN-KLA Memory
 
 [![CI](https://github.com/kristhianmanue1/an-kla-memory/actions/workflows/test.yml/badge.svg)](https://github.com/kristhianmanue1/an-kla-memory/actions/workflows/test.yml)
-[![Version](https://img.shields.io/badge/version-0.1.0--beta.5-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.5)
+[![Version](https://img.shields.io/badge/version-0.1.0--beta.6-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.6)
 [![Python](https://img.shields.io/badge/python-3.9%20%7C%203.12-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 [![Beta](https://img.shields.io/badge/status-local%20beta-orange)](https://github.com/kristhianmanue1/an-kla-memory/releases)
@@ -13,7 +13,7 @@ un plan verificable.
 
 La beta se distribuye desde GitHub, no desde PyPI. Usa siempre una etiqueta
 exacta: no instales `main` ni otra referencia móvil. La versión del código es
-`0.1.0b5` y su etiqueta de distribución es `v0.1.0-beta.5`.
+`0.1.0b6` y su etiqueta de distribución es `v0.1.0-beta.6`.
 
 ## Tabla de contenidos
 
@@ -48,7 +48,7 @@ Desde la raíz del proyecto consumidor en macOS o Linux:
 python3.12 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
 .venv/bin/python -m pip install \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.5"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.6"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . init
 .venv/bin/python -m an_kla --project-root . context plan --operation install
@@ -88,7 +88,7 @@ de contexto:
 
 ```bash
 .venv/bin/python -m pip install --upgrade \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.5"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.6"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . context status
 .venv/bin/python -m an_kla --project-root . context plan --operation update
@@ -166,7 +166,7 @@ puede inspeccionar la actualización de la integración sin mutar el proyecto:
 
 ```bash
 .venv/bin/python -m an_kla --project-root . upgrade inspect \
-  --target v0.1.0-beta.5 > RUTA_EFIMERA_NUEVA
+  --target v0.1.0-beta.6 > RUTA_EFIMERA_NUEVA
 ```
 
 El agente debe conservar por separado el `plan_fingerprint` devuelto, revisar
@@ -176,7 +176,7 @@ el plan y aplicar exactamente esos bytes:
 .venv/bin/python -m an_kla --project-root . upgrade apply \
   <plan_fingerprint> --plan RUTA_EFIMERA_NUEVA
 .venv/bin/python -m an_kla --project-root . upgrade verify \
-  --target v0.1.0-beta.5
+  --target v0.1.0-beta.6
 git diff -- AGENTS.md AN-KLA.md
 ```
 

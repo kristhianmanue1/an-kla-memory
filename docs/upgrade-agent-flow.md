@@ -23,7 +23,7 @@ gestor del entorno. No se admite `main`, `latest` ni otra referencia móvil.
 
 ```bash
 python -m an_kla --project-root . upgrade inspect \
-  --target v0.1.0-beta.5 > RUTA_EFIMERA_NUEVA
+  --target v0.1.0-beta.6 > RUTA_EFIMERA_NUEVA
 ```
 
 `inspect` exige que la etiqueta normalizada coincida con la versión ejecutada.
@@ -73,7 +73,7 @@ inicializa `.an-kla/memory`.
 
 ```bash
 python -m an_kla --project-root . upgrade verify \
-  --target v0.1.0-beta.5
+  --target v0.1.0-beta.6
 git diff -- AGENTS.md AN-KLA.md
 ```
 
