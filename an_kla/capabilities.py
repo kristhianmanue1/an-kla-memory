@@ -63,6 +63,8 @@ def capabilities() -> dict[str, Any]:
         "update_check": {
             "enabled": True,
             "source": "github_releases_api_read_only",
+            "source_endpoint": "/releases?per_page=1",
+            "source_endpoint_note": "Excludes /releases/latest because GitHub filters pre-releases there.",
             "cached_for_seconds": 86400,
             "opt_out_env": "AN_KLA_NO_UPDATE_CHECK",
             "ci_skip_env": ["CI", "GITHUB_ACTIONS", "AN_KLA_DISABLE_UPDATE_CHECK"],

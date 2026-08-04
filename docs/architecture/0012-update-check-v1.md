@@ -42,7 +42,9 @@ pip, npm, poetry y gh cumplen los 10; AN-KLA cumple 9 plenos y uno matizado
 
 Se añade `an_kla/update_check.py` con estas garantías:
 
-- **Source:** `https://api.github.com/repos/kristhianmanue1/an-kla-memory/releases/latest`
+- **Source:** `https://api.github.com/repos/kristhianmanue1/an-kla-memory/releases?per_page=1`
+  (la ruta `/releases/latest` **excluye prereleases** por diseño de GitHub,
+  lo que haría invisibles todas las betas al hook).
 - **Cache:** `~/.cache/an-kla/update-check.json` (respeta `XDG_CACHE_HOME` y
   `LOCALAPPDATA` en Windows), TTL 24h.
 - **Skip automático:** `CI`, `GITHUB_ACTIONS`, `AN_KLA_DISABLE_UPDATE_CHECK`,

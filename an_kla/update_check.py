@@ -20,7 +20,10 @@ from .version import VERSION, is_newer_release, normalized_release_tag
 
 
 RELEASE_INDEX_URL = (
-    "https://api.github.com/repos/kristhianmanue1/an-kla-memory/releases/latest"
+    # ``/releases/latest`` excludes pre-releases by GitHub design, which would
+    # make every beta invisible to the hook.  ``/releases?per_page=1`` returns
+    # the most recent release regardless of pre-release flag.
+    "https://api.github.com/repos/kristhianmanue1/an-kla-memory/releases?per_page=1"
 )
 INSTALL_HINT = (
     "git+https://github.com/kristhianmanue1/an-kla-memory.git"
@@ -123,6 +126,12 @@ def _fetch_latest_release() -> dict[str, Any] | None:
         value = json.loads(payload.decode("utf-8"))
     except (ValueError, UnicodeDecodeError):
         return None
+    # ``/releases?per_page=1`` returns a list; ``/releases/latest`` returned
+    # an object.  Normalize to the single most recent release object.
+    if isinstance(value, list):
+        if not value:
+            return None
+        value = value[0]
     if not isinstance(value, dict):
         return None
     tag = value.get("tag_name")
