@@ -70,6 +70,18 @@ python3 -m an_kla --project-root . upgrade inspect \
   --target <etiqueta-exacta-instalada>
 ```
 
+Si el plan reporta `target_drift.outside_managed_block: true`, revisa
+manualmente el diff entre el `manifest_target_sha256_at_install` (baseline al
+instalar) y `observed_target_sha256` (estado actual del archivo). El contenido
+fuera-del-bloque actual se promoverá a la nueva baseline al aplicar;
+`apply --confirm-target-drift` confirma explícitamente esa absorción. Sin el
+flag, `apply` falla cerrado con `target_drift_requires_confirmation`.
+
+```bash
+python3 -m an_kla --project-root . upgrade inspect \
+  --target <etiqueta-exacta-instalada>
+```
+
 Revisa el plan y conserva su `plan_fingerprint` por separado. Para aplicarlo,
 entrega los bytes exactos y el fingerprint; los valores entre ángulos son
 marcadores documentales, nunca literales:

@@ -15,7 +15,7 @@ from an_kla.upgrade import apply_upgrade, inspect_upgrade, verify_upgrade
 
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGET = "v0.1.0-beta.4"
+TARGET = "v0.1.0-beta.5"
 
 
 class UpgradeContractTests(unittest.TestCase):
@@ -174,6 +174,78 @@ class UpgradeContractTests(unittest.TestCase):
             self.assertIn("an-kla error: unsupported_upgrade_target", completed.stderr)
             self.assertNotIn(str(root), completed.stderr)
             self.assertFalse((root / ".an-kla").exists())
+
+
+class TargetDriftTests(unittest.TestCase):
+    """ADR-0017: target drift transparency in upgrade flow (issue #12)."""
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        # Install context first so a manifest baseline exists.
+        plan = inspect_upgrade(self.root, TARGET)
+        apply_upgrade(self.root, plan, plan["plan_fingerprint"])
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def test_inspect_reports_no_drift_when_target_unchanged(self) -> None:
+        plan = inspect_upgrade(self.root, TARGET)
+        drift = plan["core"]["target_drift"]
+        self.assertFalse(drift["outside_managed_block"])
+        self.assertFalse(drift["will_be_absorbed_by_apply"])
+        self.assertEqual(
+            drift["manifest_target_sha256_at_install"],
+            drift["observed_target_sha256"],
+        )
+
+    def test_inspect_reports_target_drift_when_target_changed(self) -> None:
+        # Edit AGENTS.md outside the managed block.
+        agents = self.root / "AGENTS.md"
+        agents.write_bytes(agents.read_bytes() + b"\n## Mis notas internas\n\nnota\n")
+        plan = inspect_upgrade(self.root, TARGET)
+        drift = plan["core"]["target_drift"]
+        self.assertTrue(drift["outside_managed_block"])
+        self.assertTrue(drift["will_be_absorbed_by_apply"])
+        self.assertNotEqual(
+            drift["manifest_target_sha256_at_install"],
+            drift["observed_target_sha256"],
+        )
+
+    def test_apply_fails_closed_without_confirm_flag_on_drift(self) -> None:
+        agents = self.root / "AGENTS.md"
+        agents.write_bytes(agents.read_bytes() + b"\n## notas\n")
+        plan = inspect_upgrade(self.root, TARGET)
+        with self.assertRaises(ValueError) as ctx:
+            apply_upgrade(self.root, plan, plan["plan_fingerprint"])
+        self.assertIn("target_drift_requires_confirmation", str(ctx.exception))
+
+    def test_apply_declares_target_drift_absorbed_with_confirm(self) -> None:
+        agents = self.root / "AGENTS.md"
+        original_sha = agents.read_bytes()
+        agents.write_bytes(original_sha + b"\n## notas fuera del bloque\n\ncontenido\n")
+        plan = inspect_upgrade(self.root, TARGET)
+        result = apply_upgrade(
+            self.root,
+            plan,
+            plan["plan_fingerprint"],
+            confirm_target_drift=True,
+        )
+        self.assertTrue(result["ok"])
+        self.assertIn(
+            "target_drift_absorbed_into_new_baseline",
+            result.get("warnings", []),
+        )
+        self.assertTrue(result["target_drift"]["outside_managed_block"])
+        self.assertNotEqual(
+            result["target_drift"]["manifest_target_sha256_at_install"],
+            result["target_drift"]["observed_target_sha256"],
+        )
+
+    def test_inspect_emits_v2_schema_with_target_drift_field(self) -> None:
+        plan = inspect_upgrade(self.root, TARGET)
+        self.assertEqual(plan["schema"], "an-kla/upgrade-plan-v2")
+        self.assertIn("target_drift", plan["core"])
 
 
 if __name__ == "__main__":

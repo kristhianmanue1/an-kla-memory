@@ -135,5 +135,75 @@ class IndexV2Tests(unittest.TestCase):
         self.assertEqual(ids, {"f-ix-1", "e-ix-1", "ep-ix-1"})
 
 
+class IndexableTextTests(unittest.TestCase):
+    """ADR-0018: explicit ``indexable_text`` field (issue #14 opción C)."""
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.store = MemoryStore(self.temp.name)
+        self.base = self.store.initialize()
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def test_record_text_prefers_indexable_text(self):
+        from an_kla.index import record_text
+        record = {
+            "id": "r-1",
+            "payload": {
+                "indexable_text": "indice explicito",
+                "text": "texto natural",
+            },
+        }
+        self.assertEqual(record_text(record), "indice explicito")
+
+    def test_record_text_falls_back_to_text_when_no_indexable_text(self):
+        from an_kla.index import record_text
+        record = {"id": "r-1", "payload": {"text": "texto natural"}}
+        self.assertEqual(record_text(record), "texto natural")
+
+    def test_record_text_finds_indexable_text_at_record_level(self):
+        from an_kla.index import record_text
+        record = {"id": "r-1", "indexable_text": "en el record", "payload": {}}
+        self.assertEqual(record_text(record), "en el record")
+
+    def test_record_text_returns_empty_when_no_supported_field(self):
+        from an_kla.index import record_text
+        record = {"id": "r-1", "payload": {"outcome": "ok", "type": "lesson"}}
+        self.assertEqual(record_text(record), "")
+
+    def test_build_index_covers_structural_record_with_indexable_text(self):
+        # Commit a record with only structural fields + indexable_text.
+        self.store.commit(
+            expected_current_hash=self.base,
+            checkpoint_patch={},
+            events=[
+                {
+                    "id": "e-structural-1",
+                    "schema": "an-kla/event-v1",
+                    "type": "test_event",
+                    "timestamp": "2026-08-04T00:00:00Z",
+                    "payload": {
+                        "outcome": "ok",
+                        "indexable_text": "evento estructural con indice explicito",
+                    },
+                }
+            ],
+        )
+        out = build_index(self.store)
+        # The event was indexed because indexable_text was present.
+        self.assertEqual(out["indexed_per_stream"]["events"], 1)
+        # And it is retrievable via INDEX_PROFILE.
+        result = retrieve(
+            self.store,
+            "indice explicito",
+            5000,
+            profile=INDEX_PROFILE,
+            streams=("events",),
+        )
+        ids = [s["id"] for s in result["selected"]]
+        self.assertEqual(ids, ["e-structural-1"])
+
+
 if __name__ == "__main__":
     unittest.main()

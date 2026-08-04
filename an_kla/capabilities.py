@@ -25,6 +25,8 @@ def capabilities() -> dict[str, Any]:
         },
         "retrieval": {
             "default_profile": SCAN_PROFILE,
+            "indexable_text_field": "indexable_text",
+            "indexable_text_priority": "first of indexable_text, text, render, summary, p",
             "profiles": [
                 {
                     "name": SCAN_PROFILE,

@@ -22,7 +22,7 @@ from typing import Any, Iterator
 CONTEXT_SCHEMA = "an-kla/context-block/v1"
 INSTALLATION_SCHEMA = "an-kla/context-installation/v1"
 PLAN_SCHEMA = "an-kla/context-plan/v1"
-TEMPLATE_VERSION = "0.1.0-beta.4"
+TEMPLATE_VERSION = "0.1.0-beta.5"
 BLOCK_ID = "agent-context"
 CONTRACT_RELATIVE = "AN-KLA.md"
 MANIFEST_RELATIVE = ".an-kla/context/manifest.json"
@@ -47,6 +47,10 @@ _KNOWN_CONTEXT_TEMPLATES = {
     "0.1.0-beta.3": {
         "content_sha256": "sha256:08e4d63bc985fafd593575263cc5133033b40f5f3dba5d0f2e533149a05beeba",
         "contract_sha256": "sha256:65a6ec74387607dcf55e7ca4d695b5d5f481139245a1f705dbf758a10f361906",
+    },
+    "0.1.0-beta.4": {
+        "content_sha256": "sha256:08e4d63bc985fafd593575263cc5133033b40f5f3dba5d0f2e533149a05beeba",
+        "contract_sha256": "sha256:6d949ef2c3e6b3df60cb6a339583ef5435dc6f61a19277569e6f69f294c44eb4",
     },
 }
 
@@ -128,6 +132,18 @@ de memoria. AN-KLA no ejecuta el gestor ni se reemplaza a sí mismo.
 
 Después inspecciona sin mutación y guarda la salida en un archivo efímero nuevo,
 privado y no rastreado:
+
+```bash
+python3 -m an_kla --project-root . upgrade inspect \
+  --target <etiqueta-exacta-instalada>
+```
+
+Si el plan reporta `target_drift.outside_managed_block: true`, revisa
+manualmente el diff entre el `manifest_target_sha256_at_install` (baseline al
+instalar) y `observed_target_sha256` (estado actual del archivo). El contenido
+fuera-del-bloque actual se promoverá a la nueva baseline al aplicar;
+`apply --confirm-target-drift` confirma explícitamente esa absorción. Sin el
+flag, `apply` falla cerrado con `target_drift_requires_confirmation`.
 
 ```bash
 python3 -m an_kla --project-root . upgrade inspect \

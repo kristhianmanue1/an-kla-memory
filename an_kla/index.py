@@ -27,10 +27,16 @@ class IndexResolution:
 
 
 def record_text(record: dict[str, Any]) -> str:
-    """Return the first supported non-empty string in normative priority."""
+    """Return the first supported non-empty string in normative priority.
+
+    Priority: ``indexable_text`` > ``text`` > ``render`` > ``summary`` > ``p``.
+    ``indexable_text`` is the writer's explicit declaration of what FTS should
+    index (see ADR-0018); the other fields are inspected as fallbacks so the
+    beta contract that selected ``text|render|summary|p`` keeps working.
+    """
     payload = record.get("payload")
     containers = (payload, record) if isinstance(payload, dict) else (record,)
-    for field in ("text", "render", "summary", "p"):
+    for field in ("indexable_text", "text", "render", "summary", "p"):
         for container in containers:
             value = container.get(field)
             if isinstance(value, str) and value.strip():

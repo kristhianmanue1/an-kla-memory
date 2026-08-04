@@ -161,6 +161,11 @@ def main() -> None:
     upgrade_apply_cmd = upgrade_sub.add_parser("apply")
     upgrade_apply_cmd.add_argument("expected_fingerprint")
     upgrade_apply_cmd.add_argument("--plan", required=True)
+    upgrade_apply_cmd.add_argument(
+        "--confirm-target-drift",
+        action="store_true",
+        help="Confirmar absorción de drift fuera-del-bloque (requerido si inspect lo reporta).",
+    )
     upgrade_verify_cmd = upgrade_sub.add_parser("verify")
     upgrade_verify_cmd.add_argument("--target", required=True)
     upgrade_verify_cmd.add_argument("--context-target", default="AGENTS.md")
@@ -219,6 +224,7 @@ def main() -> None:
                 args.project_root,
                 _json(args.plan),
                 args.expected_fingerprint,
+                confirm_target_drift=args.confirm_target_drift,
             )
         else:
             result = verify_upgrade(
