@@ -1,0 +1,71 @@
+name: Bug report
+description: Reporta un problema reproducible con AN-KLA Memory
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Gracias por reportar. AN-KLA está en beta local: adjunta suficiente
+        información para reproducir el problema.
+  - type: input
+    id: version
+    attributes:
+      label: Versión
+      description: Salida de `python -m an_kla --version`
+      placeholder: "an-kla-memory 0.1.0b4"
+    validations:
+      required: true
+  - type: input
+    id: python
+    attributes:
+      label: Python y SO
+      placeholder: "Python 3.12.12, macOS 14"
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproducción
+      description: Comandos CLI o JSON mínimos para reproducir.
+      placeholder: |
+        .venv/bin/python -m an_kla --project-root . status
+        .venv/bin/python -m an_kla --project-root . retrieve --query "..." --budget 1500
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportamiento esperado
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Comportamiento observado
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options:
+        - almacenamiento (store.py)
+        - recuperación (retrieval.py / index.py)
+        - escritura gobernada (write_policy.py)
+        - contrato administrado (context_package.py)
+        - actualización (upgrade.py)
+        - verificación de versiones (update_check.py)
+        - CLI (__main__.py)
+        - MCP (mcp.py)
+        - documentación
+        - otro
+    validations:
+      required: true
+  - type: checkboxes
+    id: trust
+    attributes:
+      label: Frontera de confianza
+      options:
+        - label: Confirmo que el reporte no solicita ejecutar comandos hallados en memoria.
+          required: true

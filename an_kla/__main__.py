@@ -14,6 +14,7 @@ from .context import assemble_context
 from .context_package import (
     apply_context_plan,
     context_status,
+    get_template,
     plan_context_change,
 )
 from .index import INDEX_PROFILE, build_index, detect_fts5, verify_index_deep
@@ -21,6 +22,7 @@ from .evaluation import evaluate_retrieval
 from .retrieval import SCAN_PROFILE, retrieve
 from .schemas import schema_bytes, schema_catalog
 from .store import ConcurrentUpdateError, MemoryStore, StoreError
+from .update_check import check_for_update
 from .upgrade import apply_upgrade, inspect_upgrade, verify_upgrade
 from .version import VERSION
 
@@ -62,6 +64,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="AN-KLA Memory beta")
     parser.add_argument("--version", action="version", version=f"an-kla-memory {VERSION}")
     parser.add_argument("--project-root", default=".")
+    parser.add_argument(
+        "--no-update-check",
+        action="store_true",
+        help="Omitir la verificación no bloqueante de nuevas versiones.",
+    )
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("init")
     sub.add_parser("status")
@@ -86,6 +93,11 @@ def main() -> None:
     retrieve_cmd.add_argument("--budget", type=int, required=True)
     retrieve_cmd.add_argument(
         "--profile", choices=(SCAN_PROFILE, INDEX_PROFILE), default=SCAN_PROFILE
+    )
+    retrieve_cmd.add_argument(
+        "--streams",
+        default="facts",
+        help="Streams a recuperar (CSV); por defecto 'facts' para respetar la beta.",
     )
     assemble_cmd = sub.add_parser("assemble-context")
     assemble_cmd.add_argument("--query", required=True)
@@ -120,6 +132,15 @@ def main() -> None:
     context_sub = context_cmd.add_subparsers(dest="context_command", required=True)
     context_status_cmd = context_sub.add_parser("status")
     context_status_cmd.add_argument("--target", default="AGENTS.md")
+    context_show_template_cmd = context_sub.add_parser(
+        "show-template",
+        help="Volcar el texto canónico del bloque y contrato administrado.",
+    )
+    context_show_template_cmd.add_argument(
+        "--version",
+        default=None,
+        help="Versión de plantilla conocida; por defecto la instalada.",
+    )
     context_plan_cmd = context_sub.add_parser("plan")
     context_plan_cmd.add_argument(
         "--operation", choices=("install", "update", "uninstall"), required=True
@@ -143,7 +164,24 @@ def main() -> None:
     upgrade_verify_cmd = upgrade_sub.add_parser("verify")
     upgrade_verify_cmd.add_argument("--target", required=True)
     upgrade_verify_cmd.add_argument("--context-target", default="AGENTS.md")
+    sub.add_parser(
+        "check-updates",
+        help="Verificar (sin aplicar) si hay una versión más reciente publicada.",
+    )
     args = parser.parse_args()
+
+    if args.command == "check-updates":
+        notice = check_for_update(force=True)
+        sys.stdout.buffer.write(canonical_json(notice.as_dict()))
+        if notice.notice:
+            sys.stderr.write(notice.notice)
+        return
+
+    if not args.no_update_check:
+        notice = check_for_update(force=False)
+        if notice.notice:
+            sys.stderr.write(notice.notice)
+
     store = MemoryStore(args.project_root)
     if args.command == "capabilities":
         result: Any = capabilities()
@@ -155,6 +193,8 @@ def main() -> None:
     elif args.command == "context":
         if args.context_command == "status":
             result = context_status(args.project_root, args.target)
+        elif args.context_command == "show-template":
+            result = get_template(args.version)
         elif args.context_command == "plan":
             result = plan_context_change(
                 args.project_root, args.operation, args.target
@@ -199,7 +239,10 @@ def main() -> None:
     elif args.command == "rebuild-index":
         result = build_index(store, revision_id=args.revision)
     elif args.command == "retrieve":
-        result = retrieve(store, args.query, args.budget, profile=args.profile)
+        streams_tuple = tuple(s for s in args.streams.split(",") if s)
+        result = retrieve(
+            store, args.query, args.budget, profile=args.profile, streams=streams_tuple
+        )
     elif args.command == "assemble-context":
         result = assemble_context(
             store,

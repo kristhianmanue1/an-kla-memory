@@ -13,12 +13,17 @@ from .index import (
     index_resolution,
     record_text,
 )
-from .store import MemoryStore
+from .store import MemoryStore, STREAMS
 
 
 TOKEN = re.compile(r"[\w]+", re.UNICODE)
 SCAN_PROFILE = "scan-fallback/v1"
 SUPPORTED_PROFILES = frozenset({SCAN_PROFILE, INDEX_PROFILE})
+# Default keeps the historical beta contract so existing consumers (e.g.
+# argos-epistemic) keep seeing ``streams_searched == ["facts"]``.  Multi-stream
+# retrieval is opt-in via the ``streams`` argument.
+DEFAULT_STREAMS = ("facts",)
+EXCLUDED_DETAIL_CAP = 50
 
 
 def _terms(text: str) -> set[str]:
@@ -34,14 +39,28 @@ def _match_clause(query: str) -> str | None:
     return " OR ".join(f'"{token}"' for token in tokens) if tokens else None
 
 
-def _narrow_with_index(index_path: Any, revision_id: str, clause: str) -> set[str] | None:
+def _narrow_with_index(
+    index_path: Any, revision_id: str, clause: str, streams: tuple[str, ...]
+) -> set[str] | None:
     try:
         con = sqlite3.connect(f"file:{index_path}?mode=ro", uri=True)
         try:
             claimed = con.execute("SELECT value FROM metadata WHERE key = ?", ("revision",)).fetchone()
             if not claimed or claimed[0] != revision_id:
                 return None
-            return {str(row[0]) for row in con.execute("SELECT id FROM facts_fts WHERE facts_fts MATCH ?", (clause,))}
+            narrowed: set[str] = set()
+            for stream in streams:
+                table = f"{stream}_fts"
+                try:
+                    rows = con.execute(
+                        f"SELECT id FROM {table} WHERE {table} MATCH ?", (clause,)
+                    ).fetchall()
+                except sqlite3.DatabaseError:
+                    # Index v1 only exposed ``facts_fts``; missing tables for
+                    # other streams degrade to scan for those streams.
+                    continue
+                narrowed.update(str(row[0]) for row in rows)
+            return narrowed
         finally:
             con.close()
     except sqlite3.DatabaseError:
@@ -56,13 +75,19 @@ def retrieve(
     fixed_overhead_bytes: int = 0,
     per_record_overhead_bytes: int = 0,
     profile: str = SCAN_PROFILE,
+    streams: tuple[str, ...] | list[str] | None = None,
 ) -> dict[str, Any]:
     """Retrieve deterministically, reserving any caller-owned envelope cost.
 
     ``fixed_overhead_bytes`` and ``per_record_overhead_bytes`` let a transport
     reserve its JSON wrapper before selection.  They must be conservative: the
     transport remains responsible for proving its serialized response fits.
+
+    ``streams`` selects which record streams are scanned.  Defaults to
+    ``("facts",)`` to preserve the historical beta contract; pass e.g.
+    ``("facts", "events", "episodes")`` for multi-stream retrieval.
     """
+
     if budget < 0:
         raise ValueError("negative_budget")
     if fixed_overhead_bytes < 0 or per_record_overhead_bytes < 0:
@@ -71,24 +96,56 @@ def retrieve(
         raise ValueError("fixed_overhead_exceeds_budget")
     if profile not in SUPPORTED_PROFILES:
         raise ValueError("unsupported_retrieval_profile")
+    selected_streams = tuple(streams) if streams is not None else DEFAULT_STREAMS
+    if not selected_streams or any(s not in STREAMS for s in selected_streams):
+        raise ValueError("unsupported_retrieval_stream")
+    # De-duplicate while preserving caller order: ``--streams facts,facts``
+    # must not produce duplicate records in the output.
+    seen_streams: set[str] = set()
+    deduped: list[str] = []
+    for s in selected_streams:
+        if s not in seen_streams:
+            seen_streams.add(s)
+            deduped.append(s)
+    selected_streams = tuple(deduped)
     snapshot = store.snapshot()
     query_terms = _terms(query)
-    ranked: list[tuple[int, str, Mapping[str, Any], str]] = []
-    excluded = {"inactive": 0, "zero_score": 0, "budget": 0, "invalid_record": 0, "no_text": 0}
-    for record in snapshot.records["facts"]:
-        if record.get("status", record.get("nu", "vigente")) not in {"vigente", "active", None}:
-            excluded["inactive"] += 1
-            continue
-        if not record.get("id"):
-            excluded["invalid_record"] += 1
-            continue
-        rendered = _render(record)
-        if not rendered:
-            excluded["no_text"] += 1
-            continue
-        score = len(query_terms & _terms(rendered))
-        identifier = str(record["id"])
-        ranked.append((score, identifier, record, rendered))
+    ranked: list[tuple[int, str, Mapping[str, Any], str, str]] = []
+    excluded: dict[str, int] = {
+        "inactive": 0,
+        "zero_score": 0,
+        "budget": 0,
+        "invalid_record": 0,
+        "no_text": 0,
+    }
+    # Track IDs for every exclusion reason so the operator can debug silent
+    # drops uniformly; counters without an entry here simply aren't tracked.
+    excluded_detail: dict[str, list[str]] = {
+        "inactive": [],
+        "zero_score": [],
+        "budget": [],
+        "invalid_record": [],
+        "no_text": [],
+    }
+    for stream in selected_streams:
+        for record in snapshot.records[stream]:
+            if record.get("status", record.get("nu", "vigente")) not in {"vigente", "active", None}:
+                excluded["inactive"] += 1
+                if len(excluded_detail["inactive"]) < EXCLUDED_DETAIL_CAP:
+                    excluded_detail["inactive"].append(str(record.get("id", "")))
+                continue
+            if not record.get("id"):
+                excluded["invalid_record"] += 1
+                continue
+            rendered = _render(record)
+            if not rendered:
+                excluded["no_text"] += 1
+                if len(excluded_detail["no_text"]) < EXCLUDED_DETAIL_CAP:
+                    excluded_detail["no_text"].append(str(record["id"]))
+                continue
+            score = len(query_terms & _terms(rendered))
+            identifier = str(record["id"])
+            ranked.append((score, identifier, record, rendered, stream))
     ranked.sort(key=lambda item: (-item[0], item[1]))
     actual_profile = SCAN_PROFILE
     degradation = "none"
@@ -104,12 +161,14 @@ def retrieve(
                 if integrity != "none":
                     degradation = integrity
                 else:
-                    narrowed = _narrow_with_index(resolution.path, snapshot.revision_id, clause)
+                    narrowed = _narrow_with_index(
+                        resolution.path, snapshot.revision_id, clause, selected_streams
+                    )
                     if narrowed is None:
                         degradation = "index_unresolvable"
                     elif any(
                         score > 0 and identifier not in narrowed
-                        for score, identifier, _record, _rendered in ranked
+                        for score, identifier, _record, _rendered, _stream in ranked
                     ):
                         degradation = "index_candidate_mismatch"
                     else:
@@ -118,28 +177,52 @@ def retrieve(
                         degradation = "none"
     selected: list[dict[str, Any]] = []
     used = fixed_overhead_bytes
-    for score, identifier, _record, rendered in ranked:
+    for score, identifier, _record, rendered, stream in ranked:
         cost = len(rendered.encode("utf-8")) + per_record_overhead_bytes
         if score == 0:
             excluded["zero_score"] += 1
+            if len(excluded_detail["zero_score"]) < EXCLUDED_DETAIL_CAP:
+                excluded_detail["zero_score"].append(identifier)
             continue
         if used + cost > budget:
             excluded["budget"] += 1
+            if len(excluded_detail["budget"]) < EXCLUDED_DETAIL_CAP:
+                excluded_detail["budget"].append(identifier)
             continue
-        selected.append({"id": identifier, "score": score, "render": rendered, "cost_bytes": cost})
+        selected.append({
+            "id": identifier,
+            "stream": stream,
+            "score": score,
+            "render": rendered,
+            "cost_bytes": cost,
+        })
         used += cost
+    excluded_summary = {key: value for key, value in excluded.items() if value}
+    truncated: dict[str, bool] = {}
+    visible_detail: dict[str, list[str]] = {}
+    for key, ids in excluded_detail.items():
+        if not ids:
+            continue
+        truncated[key] = excluded[key] > len(ids)
+        visible_detail[key] = ids
     return {
         "schema": "an-kla/retrieval-result-v1",
         "revision": snapshot.revision_id,
         "requested_profile": profile,
         "profile": actual_profile,
         "degradation": degradation,
+        "streams_searched": list(selected_streams),
         "budget_bytes": budget,
         "used_bytes": used,
         "reserved_overhead_bytes": {
             "fixed": fixed_overhead_bytes,
             "per_record": per_record_overhead_bytes,
         },
-        "excluded_summary": {key: value for key, value in excluded.items() if value},
+        "excluded_summary": excluded_summary,
+        "excluded_detail": {
+            "ids": visible_detail,
+            "truncated": truncated,
+            "cap": EXCLUDED_DETAIL_CAP,
+        },
         "selected": selected,
     }

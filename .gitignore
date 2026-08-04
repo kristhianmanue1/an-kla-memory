@@ -3,3 +3,12 @@ __pycache__/
 .an-kla/
 .pytest_cache/
 .venv/
+.DS_Store
+**/.DS_Store
+*.egg-info/
+build/
+dist/
+.tox/
+.coverage
+.mypy_cache/
+.ruff_cache/

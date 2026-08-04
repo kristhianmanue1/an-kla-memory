@@ -11,10 +11,13 @@ from dataclasses import dataclass
 from typing import Any
 
 from .canonical import bare_digest
-from .store import MemoryStore
+from .store import MemoryStore, STREAMS
 
 INDEX_PROFILE = "sqlite-fts5/v1"
 INDEX_DIR_NAME = "sqlite-fts5-v1"
+INDEX_VERSION = "2"
+INDEX_VERSION_KEY = "index_version"
+INDEX_SCHEMA = "an-kla/index-v2"
 
 
 @dataclass(frozen=True)
@@ -69,22 +72,32 @@ def build_index(store: MemoryStore, *, revision_id: str | None = None) -> dict[s
         con = sqlite3.connect(temporary)
         try:
             con.execute("CREATE TABLE metadata(key TEXT PRIMARY KEY, value TEXT NOT NULL)")
-            con.execute("CREATE VIRTUAL TABLE facts_fts USING fts5(id UNINDEXED, text)")
+            for stream in STREAMS:
+                con.execute(
+                    f"CREATE VIRTUAL TABLE {stream}_fts USING fts5(id UNINDEXED, text)"
+                )
             con.executemany(
                 "INSERT INTO metadata VALUES (?,?)",
                 [
-                    ("schema", "an-kla/index-v1"),
+                    ("schema", INDEX_SCHEMA),
                     ("revision", snapshot.revision_id),
                     ("profile", "sqlite-fts5/v1"),
+                    (INDEX_VERSION_KEY, INDEX_VERSION),
                 ],
             )
             skipped_no_text = 0
-            for record in snapshot.records["facts"]:
-                text = record_text(dict(record))
-                if not text:
-                    skipped_no_text += 1
-                    continue
-                con.execute("INSERT INTO facts_fts VALUES (?,?)", (record["id"], text))
+            indexed_per_stream: dict[str, int] = {stream: 0 for stream in STREAMS}
+            for stream in STREAMS:
+                for record in snapshot.records[stream]:
+                    text = record_text(dict(record))
+                    if not text:
+                        skipped_no_text += 1
+                        continue
+                    con.execute(
+                        f"INSERT INTO {stream}_fts VALUES (?,?)",
+                        (record["id"], text),
+                    )
+                    indexed_per_stream[stream] += 1
             con.commit()
         finally:
             con.close()
@@ -102,11 +115,27 @@ def build_index(store: MemoryStore, *, revision_id: str | None = None) -> dict[s
             "index": str(target.relative_to(store.root)),
             "index_hash": index_hash,
             "index_reference": str(reference.relative_to(store.root)),
+            "index_version": INDEX_VERSION,
+            "indexed_per_stream": indexed_per_stream,
             "skipped_no_text": skipped_no_text,
         }
     finally:
         if temporary.exists():
             temporary.unlink()
+
+
+def _read_metadata(path: Path, key: str) -> str | None:
+    try:
+        con = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
+        try:
+            row = con.execute(
+                "SELECT value FROM metadata WHERE key = ?", (key,)
+            ).fetchone()
+            return str(row[0]) if row else None
+        finally:
+            con.close()
+    except sqlite3.DatabaseError:
+        return None
 
 
 def index_resolution(store: MemoryStore, revision_id: str) -> IndexResolution:
@@ -123,9 +152,17 @@ def index_resolution(store: MemoryStore, revision_id: str) -> IndexResolution:
         identifier = raw[:-1].decode("ascii") if raw.endswith(b"\n") else ""
         bare_digest(identifier)
         target = directory / (bare_digest(identifier) + ".sqlite")
-        return IndexResolution(target if target.is_file() else None, "none" if target.is_file() else "index_unresolvable")
+        if not target.is_file():
+            return IndexResolution(None, "index_unresolvable")
     except (UnicodeDecodeError, ValueError):
         return IndexResolution(None, "index_unresolvable")
+    # An index built with the v1 layout only exposed ``facts_fts``.  Multi-
+    # stream queries against such an index silently miss episodes/events; we
+    # report it as obsolete and return no path so callers fall back to scan.
+    version = _read_metadata(target, INDEX_VERSION_KEY)
+    if version != INDEX_VERSION:
+        return IndexResolution(None, "index_obsolete")
+    return IndexResolution(target, "none")
 
 
 def resolve_index(store: MemoryStore, revision_id: str) -> Path | None:

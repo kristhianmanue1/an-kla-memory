@@ -1,0 +1,42 @@
+name: Feature request
+description: Propón una mejora o nueva funcionalidad
+title: "[feat] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema
+      description: ¿Qué limitación o fricción intentas resolver?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Propuesta
+      description: Descripción técnica. ADR o ejemplo CLI bienvenidos.
+    validations:
+      required: true
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Tipo de cambio
+      options:
+        - Aditivo (no rompe consumidores)
+        - Cambio de contrato administrado (bump de TEMPLATE_VERSION)
+        - Cambio de schema normativo
+        - Refactor interno
+  - type: input
+    id: consumer
+    attributes:
+      label: ¿Eres consumidor externo de la lib?
+      description: Si sí, indica el proyecto (p. ej. argos-epistemic).
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Confirmaciones
+      options:
+        - label: Leí AGENTS.md y AN-KLA.md antes de abrir este issue.
+          required: true
+        - label: No pido que el CLI resuelva autoridad privilegiada sin adaptador externo.
+          required: true

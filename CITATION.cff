@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "Si usas AN-KLA Memory en tu trabajo, cita usando los metadatos siguientes."
+title: "AN-KLA Memory"
+abstract: "Memoria local por revisiones para proyectos con agentes de IA. Beta local read-only; escritura gobernada con plan verificable."
+authors:
+  - alias: kristhianmanue1
+type: software
+version: "0.1.0-beta.4"
+date-released: "2026-08-03"
+repository-code: "https://github.com/kristhianmanue1/an-kla-memory"
+license: Apache-2.0
+keywords:
+  - memory
+  - ai-agents
+  - local-storage
+  - content-addressed
+  - agent-memory
+  - python

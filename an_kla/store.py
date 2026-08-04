@@ -179,11 +179,13 @@ class MemoryStore:
                 raise ConcurrentUpdateError(
                     f"current_changed:expected={expected_current_hash}:actual={observed}"
                 )
-            return self._commit_locked(
+            candidate = self._commit_locked(
                 observed=observed,
                 checkpoint_patch=checkpoint_patch,
                 pending=pending,
             )
+        self._maybe_reindex(observed, candidate)
+        return candidate
 
     def plan_write(
         self,
@@ -285,14 +287,15 @@ class MemoryStore:
                 pending=pending,
                 policy_metadata=policy_metadata,
             )
-            return {
-                "schema": "an-kla/write-commit-result-v1",
-                "committed": True,
-                "revision": revision,
-                "decision": checked_decision["decision"],
-                "reason_codes": deepcopy(checked_decision["reason_codes"]),
-                "plan_fingerprint": checked_plan["plan_fingerprint"],
-            }
+        self._maybe_reindex(observed, revision)
+        return {
+            "schema": "an-kla/write-commit-result-v1",
+            "committed": True,
+            "revision": revision,
+            "decision": checked_decision["decision"],
+            "reason_codes": deepcopy(checked_decision["reason_codes"]),
+            "plan_fingerprint": checked_plan["plan_fingerprint"],
+        }
 
     def _commit_locked(
         self,
@@ -643,3 +646,29 @@ class MemoryStore:
                 raise IntegrityError("manifest_segments_invalid")
             for identifier in values:
                 bare_digest(str(identifier))
+
+    def _maybe_reindex(self, parent_revision: str, candidate_revision: str) -> None:
+        """Best-effort refresh of the derived FTS5 cache after a commit.
+
+        Runs *outside* the write lock because the index is a derived cache
+        whose authority is the (revision, hash) pair, never the commit
+        pointer.  Failures are silent: a missing or stale index simply
+        degrades retrieval to the scan profile.
+        """
+
+        try:
+            from .index import build_index, index_resolution
+        except ImportError:
+            return
+        try:
+            parent = index_resolution(self, parent_revision)
+            if parent.path is None:
+                return
+        except Exception:
+            return
+        try:
+            build_index(self, revision_id=candidate_revision)
+        except Exception:
+            # The commit is already authoritative.  A failed cache refresh is
+            # visible through ``doctor`` and never blocks retrieval.
+            pass

@@ -22,7 +22,7 @@ from typing import Any, Iterator
 CONTEXT_SCHEMA = "an-kla/context-block/v1"
 INSTALLATION_SCHEMA = "an-kla/context-installation/v1"
 PLAN_SCHEMA = "an-kla/context-plan/v1"
-TEMPLATE_VERSION = "0.1.0-beta.3"
+TEMPLATE_VERSION = "0.1.0-beta.4"
 BLOCK_ID = "agent-context"
 CONTRACT_RELATIVE = "AN-KLA.md"
 MANIFEST_RELATIVE = ".an-kla/context/manifest.json"
@@ -43,6 +43,10 @@ _KNOWN_CONTEXT_TEMPLATES = {
     "0.1.0-beta.1": {
         "content_sha256": "sha256:08e4d63bc985fafd593575263cc5133033b40f5f3dba5d0f2e533149a05beeba",
         "contract_sha256": "sha256:4d3c13fd16a55619ee9f84f2c1585e3dae9d9c29717bfcd3d713479a7665822a",
+    },
+    "0.1.0-beta.3": {
+        "content_sha256": "sha256:08e4d63bc985fafd593575263cc5133033b40f5f3dba5d0f2e533149a05beeba",
+        "contract_sha256": "sha256:65a6ec74387607dcf55e7ca4d695b5d5f481139245a1f705dbf758a10f361906",
     },
 }
 
@@ -95,6 +99,25 @@ Si informa `managed_contract_modified`, `managed_block_modified`,
 `legacy_an_kla_context_detected`, reporta el diagnóstico. Si informa
 `context_template_outdated`, revisa y ejecuta el flujo explícito de actualización.
 No repares, reinstales ni sobrescribas automáticamente instrucciones modificadas.
+
+## Verificación no bloqueante de versiones
+
+Al iniciar, el CLI consulta (só lectura, sin aplicar) la release más reciente
+publicada en `api.github.com/repos/kristhianmanue1/an-kla-memory/releases/latest`,
+cachea el resultado por 24 h en `~/.cache/an-kla/update-check.json` (respeta
+`XDG_CACHE_HOME` y `LOCALAPPDATA`) y, si existe una versión más reciente, imprime
+el aviso a **stderr** con el comando `pip` sugerido. El aviso nunca va a stdout
+para no contaminar la salida programática.
+
+El hook se omite cuando alguna de estas variables de entorno está activa: `CI`,
+`GITHUB_ACTIONS`, `AN_KLA_DISABLE_UPDATE_CHECK`, `AN_KLA_NO_UPDATE_CHECK=1`. El
+flag global `--no-update-check` desactiva la verificación para esa invocación. El
+subcomando `check-updates` fuerza una re-validación ignorando la caché y los
+saltos automáticos (excepto el fallo de red, siempre silencioso).
+
+AN-KLA **no ejecuta el gestor de paquetes ni se reemplaza a sí mismo**: el aviso
+es informativo y el operador decide si aplicar la sugerencia. La función
+`capabilities()` declara el comportamiento en el bloque `update_check`.
 
 ## Protocolo de actualización
 
@@ -340,6 +363,45 @@ def managed_payload_sha256(payload: str = COMPACT_PAYLOAD) -> str:
 
 def _contract_equivalent(text: str | None) -> bool:
     return text is not None and _canonical_payload(text) == DETAILED_CONTRACT
+
+
+def get_template(version: str | None = None) -> dict[str, Any]:
+    """Expose the canonical managed-block text for inspection or manual repair.
+
+    For the installed ``TEMPLATE_VERSION`` the full payload and contract text
+    are returned.  For historical versions listed in ``_KNOWN_CONTEXT_TEMPLATES``
+    only the recorded hashes are returned; the source text of those releases
+    remains retrievable via Git history of the corresponding tag.
+    """
+
+    target = TEMPLATE_VERSION if version is None else str(version)
+    if target != TEMPLATE_VERSION and target not in _KNOWN_CONTEXT_TEMPLATES:
+        raise ValueError("unknown_template_version")
+    known_versions = sorted(set(_KNOWN_CONTEXT_TEMPLATES) | {TEMPLATE_VERSION})
+    if target == TEMPLATE_VERSION:
+        return {
+            "schema": "an-kla/context-template-v1",
+            "version": TEMPLATE_VERSION,
+            "current": True,
+            "compact_payload": COMPACT_PAYLOAD,
+            "detailed_contract": DETAILED_CONTRACT,
+            "content_sha256": managed_payload_sha256(),
+            "contract_sha256": _semantic_text_sha(DETAILED_CONTRACT),
+            "known_versions": known_versions,
+        }
+    known = _KNOWN_CONTEXT_TEMPLATES[target]
+    return {
+        "schema": "an-kla/context-template-v1",
+        "version": target,
+        "current": False,
+        "content_sha256": known["content_sha256"],
+        "contract_sha256": known["contract_sha256"],
+        "note": (
+            "Source text for historical templates is not bundled; recover it "
+            "from the corresponding release tag in Git history."
+        ),
+        "known_versions": known_versions,
+    }
 
 
 def _marker(prefix: str, metadata: dict[str, Any]) -> str:

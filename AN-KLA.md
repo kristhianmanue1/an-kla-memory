@@ -36,6 +36,25 @@ Si informa `managed_contract_modified`, `managed_block_modified`,
 `context_template_outdated`, revisa y ejecuta el flujo explícito de actualización.
 No repares, reinstales ni sobrescribas automáticamente instrucciones modificadas.
 
+## Verificación no bloqueante de versiones
+
+Al iniciar, el CLI consulta (só lectura, sin aplicar) la release más reciente
+publicada en `api.github.com/repos/kristhianmanue1/an-kla-memory/releases/latest`,
+cachea el resultado por 24 h en `~/.cache/an-kla/update-check.json` (respeta
+`XDG_CACHE_HOME` y `LOCALAPPDATA`) y, si existe una versión más reciente, imprime
+el aviso a **stderr** con el comando `pip` sugerido. El aviso nunca va a stdout
+para no contaminar la salida programática.
+
+El hook se omite cuando alguna de estas variables de entorno está activa: `CI`,
+`GITHUB_ACTIONS`, `AN_KLA_DISABLE_UPDATE_CHECK`, `AN_KLA_NO_UPDATE_CHECK=1`. El
+flag global `--no-update-check` desactiva la verificación para esa invocación. El
+subcomando `check-updates` fuerza una re-validación ignorando la caché y los
+saltos automáticos (excepto el fallo de red, siempre silencioso).
+
+AN-KLA **no ejecuta el gestor de paquetes ni se reemplaza a sí mismo**: el aviso
+es informativo y el operador decide si aplicar la sugerencia. La función
+`capabilities()` declara el comportamiento en el bloque `update_check`.
+
 ## Protocolo de actualización
 
 La instalación del paquete y la actualización del proyecto son autoridades

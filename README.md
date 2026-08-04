@@ -1,5 +1,11 @@
 # AN-KLA Memory
 
+[![CI](https://github.com/kristhianmanue1/an-kla-memory/actions/workflows/test.yml/badge.svg)](https://github.com/kristhianmanue1/an-kla-memory/actions/workflows/test.yml)
+[![Version](https://img.shields.io/badge/version-0.1.0--beta.4-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.4)
+[![Python](https://img.shields.io/badge/python-3.9%20%7C%203.12-blue)](https://www.python.org/downloads/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
+[![Beta](https://img.shields.io/badge/status-local%20beta-orange)](https://github.com/kristhianmanue1/an-kla-memory/releases)
+
 AN-KLA Memory es una memoria local para proyectos con agentes de IA. Conserva
 hechos, eventos, episodios y el estado de trabajo en revisiones inmutables;
 recupera contexto bajo presupuesto y expone una escritura gobernada mediante
@@ -7,7 +13,23 @@ un plan verificable.
 
 La beta se distribuye desde GitHub, no desde PyPI. Usa siempre una etiqueta
 exacta: no instales `main` ni otra referencia móvil. La versión del código es
-`0.1.0b3` y su etiqueta de distribución es `v0.1.0-beta.3`.
+`0.1.0b4` y su etiqueta de distribución es `v0.1.0-beta.4`.
+
+## Tabla de contenidos
+
+- [Requisitos](#requisitos)
+- [Instalación nueva en un proyecto consumidor](#instalación-nueva-en-un-proyecto-consumidor)
+- [Actualizar desde otra beta](#actualizar-desde-otra-beta)
+- [Desinstalar o volver atrás](#desinstalar-o-volver-atrás)
+- [Uso diario](#uso-diario)
+  - [Descubrimiento para agentes](#descubrimiento-para-agentes)
+  - [Verificación no bloqueante de versiones](#verificación-no-bloqueante-de-versiones)
+  - [Actualización gobernada del proyecto](#actualización-gobernada-del-proyecto)
+  - [Recuperación y escritura](#recuperación-y-escritura)
+- [Desarrollo del motor](#desarrollo-del-motor)
+- [Límites de la beta](#límites-de-la-beta)
+- [Documentación](#documentación)
+- [Licencia](#licencia)
 
 ## Requisitos
 
@@ -26,7 +48,7 @@ Desde la raíz del proyecto consumidor en macOS o Linux:
 python3.12 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
 .venv/bin/python -m pip install \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.3"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.4"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . init
 .venv/bin/python -m an_kla --project-root . context plan --operation install
@@ -66,7 +88,7 @@ de contexto:
 
 ```bash
 .venv/bin/python -m pip install --upgrade \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.3"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.4"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . context status
 .venv/bin/python -m an_kla --project-root . context plan --operation update
@@ -115,13 +137,27 @@ memoria del proyecto:
 .venv/bin/python -m an_kla capabilities
 .venv/bin/python -m an_kla schema list
 .venv/bin/python -m an_kla schema show write-plan-v1
+.venv/bin/python -m an_kla --project-root . context show-template
+.venv/bin/python -m an_kla --project-root . context show-template --version 0.1.0-beta.3
 ```
 
 `capabilities` emite JSON canónico y declara, entre otros límites, que la
-recuperación v1 busca únicamente `facts`, que MCP es de sólo lectura y que los
-presupuestos implementados miden bytes UTF-8, no tokens exactos. Los cinco
-schemas normativos se incluyen dentro del paquete y `schema show` entrega sus
-bytes sin depender del checkout ni de la red.
+recuperación v1 busca únicamente `facts` por defecto, que MCP es de sólo lectura
+y que los presupuestos implementados miden bytes UTF-8, no tokens exactos. Los
+cinco schemas normativos se incluyen dentro del paquete y `schema show` entrega
+sus bytes sin depender del checkout ni de la red. `context show-template` vuelca
+el texto canónico del bloque administrado y del contrato detallado de la versión
+instalada (o los hashes de plantillas históricas conocidas) para diagnóstico o
+reparación manual.
+
+### Verificación no bloqueante de versiones
+
+Al iniciar, el CLI consulta la release más reciente publicada en GitHub
+(sólo lectura, sin aplicar) y, si existe una versión más nueva, imprime el aviso
+a **stderr** junto con el comando `pip` sugerido. AN-KLA **no se actualiza a sí
+mismo**: el operador decide. El hook se omite en CI (`CI`, `GITHUB_ACTIONS`) y
+con `AN_KLA_NO_UPDATE_CHECK=1`; el flag `--no-update-check` desactiva la
+verificación por invocación, y `check-updates` fuerza una re-validación.
 
 ### Actualización gobernada del proyecto
 
@@ -130,7 +166,7 @@ puede inspeccionar la actualización de la integración sin mutar el proyecto:
 
 ```bash
 .venv/bin/python -m an_kla --project-root . upgrade inspect \
-  --target v0.1.0-beta.3 > RUTA_EFIMERA_NUEVA
+  --target v0.1.0-beta.4 > RUTA_EFIMERA_NUEVA
 ```
 
 El agente debe conservar por separado el `plan_fingerprint` devuelto, revisar
@@ -140,7 +176,7 @@ el plan y aplicar exactamente esos bytes:
 .venv/bin/python -m an_kla --project-root . upgrade apply \
   <plan_fingerprint> --plan RUTA_EFIMERA_NUEVA
 .venv/bin/python -m an_kla --project-root . upgrade verify \
-  --target v0.1.0-beta.3
+  --target v0.1.0-beta.4
 git diff -- AGENTS.md AN-KLA.md
 ```
 
@@ -158,11 +194,18 @@ contenido de `context-package/v1`. Consulta la
 .venv/bin/python -m an_kla --project-root . verify
 .venv/bin/python -m an_kla --project-root . retrieve \
   --query "estado del proyecto" --budget 1200
+.venv/bin/python -m an_kla --project-root . retrieve \
+  --query "lecciones aprendidas" --budget 2000 --streams facts,episodes,events
 .venv/bin/python -m an_kla --project-root . assemble-context \
   --query "estado del proyecto" \
   --new-information "solicitud actual" \
   --budget 2400
 ```
+
+`retrieve` admite el flag `--streams` (CSV; por defecto `facts` para respetar la
+beta). El resultado incluye `excluded_detail.ids` (truncado a 50 IDs por razón)
+cuando los registros se excluyen por `budget`, `zero_score`, `inactive`,
+`no_text` o `invalid_record`.
 
 La salida completa de `context-assembly/v1` queda acotada en bytes UTF-8;
 consulta [ADR-0006](docs/architecture/0006-context-assembly-v1.md). La escritura
@@ -188,10 +231,23 @@ y las decisiones de arquitectura en `docs/architecture/`.
 - admite una sola memoria activa;
 - el lock de escritura es local y no coordina varias máquinas;
 - no prueba identidad, autoría ni verdad;
-- no publica telemetría;
+- el hook de verificación de versiones consulta (sólo lectura) la API pública
+  de GitHub Releases; puede desactivarse con `AN_KLA_NO_UPDATE_CHECK=1` o
+  `--no-update-check` (ver [ADR-0012](docs/architecture/0012-update-check-v1.md));
+  no envía telemetría más allá del User-Agent HTTP;
 - administra sólo el `AGENTS.md` raíz y no adapta archivos de proveedores;
 - conserva objetos conflictivos en cuarentena, pero no ejecuta GC ni
   compactación.
+
+## Documentación
+
+- [Contrato del agente](AN-KLA.md) — desarrollo del bloque administrado.
+- [Documentación evergreen](docs/README.md) — índice de la carpeta `docs/`.
+- [ADRs](docs/architecture/) — decisiones arquitectónicas numeradas.
+- [Notas de release](docs/releases/) — changelog por etiqueta.
+- [Contribuir](CONTRIBUTING.md) — flujo de PRs, tests, community files.
+- [Seguridad](SECURITY.md) — política de reporte y modelo de confianza.
+- [ Código de conducta](CODE_OF_CONDUCT.md) — expectativas de participación.
 
 ## Licencia
 
