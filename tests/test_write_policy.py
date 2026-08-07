@@ -516,6 +516,32 @@ class SupersedePolicyTests(unittest.TestCase):
             validate_write_proposal(bad)
         self.assertEqual(caught.exception.detail, "supersedes:self_reference_forbidden")
 
+    def test_supersede_with_non_dict_record_raises_stable_error(self) -> None:
+        # Regression (adversarial): record not a dict must surface as the stable
+        # invalid_write_proposal code (detail record:not_object), never an
+        # AttributeError leaking from the self-reference check.
+        bad = proposal(operation="supersede", representation="summary")
+        bad["record"] = None
+        bad["supersedes"] = "f-old"
+        with self.assertRaises(WritePolicyError) as caught:
+            validate_write_proposal(bad)
+        self.assertEqual(caught.exception.code, "invalid_write_proposal")
+        self.assertEqual(caught.exception.detail, "record:not_object")
+
+    def test_validate_write_plan_rejects_supersede_self_reference(self) -> None:
+        candidate = proposal(operation="supersede", representation="summary")
+        candidate["supersedes"] = "f-old"
+        plan = build_write_plan(
+            candidate, authority(candidate, authority_class="model_derived")
+        )
+        plan["records"][0]["supersedes"] = plan["records"][0]["record"]["id"]
+        with self.assertRaises(WritePolicyError) as caught:
+            validate_write_plan(plan)
+        self.assertEqual(caught.exception.code, "invalid_write_plan")
+        self.assertEqual(
+            caught.exception.detail, "records[]:supersedes:self_reference_forbidden"
+        )
+
     def test_build_write_plan_carries_supersedes_to_planned_item(self) -> None:
         candidate = self._supersede_proposal()
         plan = build_write_plan(candidate, authority(candidate, authority_class="model_derived"))

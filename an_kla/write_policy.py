@@ -200,6 +200,13 @@ def validate_write_proposal(proposal: Mapping[str, Any]) -> None:
         raise WritePolicyError(code, "operation")
     if proposal["requested_representation"] not in _REPRESENTATIONS:
         raise WritePolicyError(code, "requested_representation")
+    # Validate record shape BEFORE the co-occurrence block: the self-reference
+    # check reads record["id"], which must already be a stable non-empty string.
+    record = proposal["record"]
+    if not isinstance(record, dict) or not record:
+        raise WritePolicyError(code, "record:not_object")
+    if not isinstance(record.get("id"), str) or not record["id"]:
+        raise WritePolicyError(code, "record.id")
     # Co-occurrence contract (ADR-0019): operation=supersede <-> supersedes
     # present.  supersedes names the target id (unique within stream) and must
     # not self-reference the new record.
@@ -207,15 +214,10 @@ def validate_write_proposal(proposal: Mapping[str, Any]) -> None:
         supersedes = proposal.get("supersedes")
         if not isinstance(supersedes, str) or not supersedes:
             raise WritePolicyError(code, "supersedes:missing_for_supersede")
-        if supersedes == proposal["record"].get("id"):
+        if supersedes == record["id"]:
             raise WritePolicyError(code, "supersedes:self_reference_forbidden")
     elif "supersedes" in proposal:
         raise WritePolicyError(code, "supersedes:present_without_supersede")
-    record = proposal["record"]
-    if not isinstance(record, dict) or not record:
-        raise WritePolicyError(code, "record:not_object")
-    if not isinstance(record.get("id"), str) or not record["id"]:
-        raise WritePolicyError(code, "record.id")
     lineage = proposal["lineage"]
     if not isinstance(lineage, dict):
         raise WritePolicyError(code, "lineage:not_object")
@@ -610,6 +612,8 @@ def validate_write_plan(plan: Mapping[str, Any]) -> None:
         if item["operation"] == "supersede":
             if not isinstance(item.get("supersedes"), str) or not item["supersedes"]:
                 raise WritePolicyError(code, "records[]:supersedes:missing_for_supersede")
+            if item["supersedes"] == item["record"].get("id"):
+                raise WritePolicyError(code, "records[]:supersedes:self_reference_forbidden")
         elif "supersedes" in item:
             raise WritePolicyError(code, "records[]:supersedes:present_without_supersede")
     _validate_json_value(plan, code, "plan:invalid_json")
