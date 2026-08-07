@@ -45,8 +45,10 @@ class CheckForUpdateTests(unittest.TestCase):
             pass
 
     def test_skip_when_opt_out_env_set(self):
+        # clear=True aísla de GITHUB_ACTIONS/CI inyectados por el runner de CI;
+        # sin esto, el entorno real filtra el reason esperado (regresión en CI).
         with mock.patch.dict(
-            "os.environ", {"AN_KLA_NO_UPDATE_CHECK": "1", "CI": ""}
+            "os.environ", {"AN_KLA_NO_UPDATE_CHECK": "1"}, clear=True
         ):
             notice = update_check.check_for_update(
                 force=False, cache_path=self.cache_file
@@ -55,11 +57,22 @@ class CheckForUpdateTests(unittest.TestCase):
         self.assertIsNone(notice.latest_release_tag)
 
     def test_skip_when_ci_env_set(self):
-        with mock.patch.dict("os.environ", {"CI": "true"}):
+        with mock.patch.dict("os.environ", {"CI": "true"}, clear=True):
             notice = update_check.check_for_update(
                 force=False, cache_path=self.cache_file
             )
         self.assertEqual(notice.status, "skipped_by_env:CI")
+
+    def test_skip_when_github_actions_env_set(self):
+        # GitHub Actions inyecta GITHUB_ACTIONS=true; debe contar como CI y
+        # reportarse explicitamente (cubre el caso que rompia el test en CI).
+        with mock.patch.dict(
+            "os.environ", {"GITHUB_ACTIONS": "true"}, clear=True
+        ):
+            notice = update_check.check_for_update(
+                force=False, cache_path=self.cache_file
+            )
+        self.assertEqual(notice.status, "skipped_by_env:GITHUB_ACTIONS")
 
     def test_fetch_failure_returns_advisory_status(self):
         with mock.patch.dict("os.environ", {}, clear=True):
