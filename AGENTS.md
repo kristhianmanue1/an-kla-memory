@@ -23,7 +23,7 @@ revisa issues y PRs abiertos: `gh issue list --state open`, `gh pr list
 Reporta con evidencia, no afirmación: comando ejecutado → resultado real,
 nunca "ya lo verifiqué". Cierra cada respuesta de trabajo no trivial con
 estado (`OK`/`PARCIAL`/`BLOQ`) y, si aplica, la decisión que le pides al
-maintainer.
+maintainer. Plantilla de reporte en `docs/agent-report-template.md`.
 
 Todo release beta pasa por ronda adversarial antes de publicarse (ver
 `docs/releases/*-adversarial.md` para ejemplos; plantilla en
