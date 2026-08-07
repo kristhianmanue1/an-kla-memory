@@ -28,6 +28,11 @@
     "requested_representation": {
       "enum": ["full", "summary"]
     },
+    "supersedes": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Target record id to mark 'sustituida'. Required iff operation=supersede (co-occurrence enforced by the policy core); forbidden otherwise. Id is unique within the stream."
+    },
     "record": {
       "type": "object",
       "minProperties": 1,

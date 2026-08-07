@@ -331,7 +331,7 @@ class WritePolicyTests(unittest.TestCase):
         first = policy_configuration()
         first["supported_operations"].append("refute")
         second = policy_configuration()
-        self.assertEqual(second["supported_operations"], ["add"])
+        self.assertEqual(second["supported_operations"], ["add", "supersede"])
         self.assertEqual(policy_fingerprint(), digest_json(second))
 
     def test_policy_fingerprint_binds_reason_and_terminal_code_catalogs(self) -> None:
@@ -348,6 +348,7 @@ class WritePolicyTests(unittest.TestCase):
                 "representation_accepted",
                 "self_asserted_authority_ignored",
                 "summary_required_for_authority_ceiling",
+                "supersede_requires_non_derived_authority",
                 "tool_evidence_verified",
                 "unresolved_authority",
             ],
@@ -355,6 +356,7 @@ class WritePolicyTests(unittest.TestCase):
         self.assertEqual(
             configuration["terminal_error_codes"],
             [
+                "invalid_supersede_target",
                 "invalid_write_authority",
                 "invalid_write_decision",
                 "invalid_write_plan",
@@ -460,6 +462,71 @@ class ErrorDetailTests(unittest.TestCase):
         self.assertEqual(err.code, "write_policy_fingerprint_mismatch")
         self.assertIsNone(err.detail)
         self.assertEqual(str(err), "write_policy_fingerprint_mismatch")
+
+
+class SupersedePolicyTests(unittest.TestCase):
+    """ADR-0019: operation=supersede policy core (PR-A, pure policy layer)."""
+
+    def _supersede_proposal(self, target_id: str = "f-old") -> dict:
+        candidate = proposal(operation="supersede", representation="summary")
+        candidate["supersedes"] = target_id
+        return candidate
+
+    def test_model_derived_supersede_summary_is_accepted(self) -> None:
+        candidate = self._supersede_proposal()
+        result = evaluate_write(
+            candidate, authority(candidate, authority_class="model_derived")
+        )
+        self.assertEqual(result["decision"], "write-summary")
+
+    def test_channel_confirmed_supersede_full_is_accepted(self) -> None:
+        candidate = proposal(operation="supersede", representation="full")
+        candidate["supersedes"] = "f-old"
+        result = evaluate_write(candidate, authority(candidate))
+        self.assertEqual(result["decision"], "write-full")
+
+    def test_derived_from_retrieval_cannot_supersede(self) -> None:
+        # ADR-0019 decision 4: derived_from_retrieval must not silence a current
+        # fact (memory-recovered data is untrusted).
+        candidate = self._supersede_proposal()
+        result = evaluate_write(
+            candidate, authority(candidate, authority_class="derived_from_retrieval")
+        )
+        self.assertEqual(result["decision"], "skip")
+        self.assertIn("supersede_requires_non_derived_authority", result["reason_codes"])
+
+    def test_supersede_requires_supersedes_field(self) -> None:
+        bad = proposal(operation="supersede", representation="summary")  # no supersedes
+        with self.assertRaises(WritePolicyError) as caught:
+            validate_write_proposal(bad)
+        self.assertEqual(caught.exception.code, "invalid_write_proposal")
+        self.assertEqual(caught.exception.detail, "supersedes:missing_for_supersede")
+
+    def test_supersedes_forbidden_without_supersede_operation(self) -> None:
+        bad = proposal()
+        bad["supersedes"] = "f-old"
+        with self.assertRaises(WritePolicyError) as caught:
+            validate_write_proposal(bad)
+        self.assertEqual(caught.exception.detail, "supersedes:present_without_supersede")
+
+    def test_supersedes_self_reference_forbidden(self) -> None:
+        bad = proposal(operation="supersede", representation="summary")
+        bad["supersedes"] = bad["record"]["id"]
+        with self.assertRaises(WritePolicyError) as caught:
+            validate_write_proposal(bad)
+        self.assertEqual(caught.exception.detail, "supersedes:self_reference_forbidden")
+
+    def test_build_write_plan_carries_supersedes_to_planned_item(self) -> None:
+        candidate = self._supersede_proposal()
+        plan = build_write_plan(candidate, authority(candidate, authority_class="model_derived"))
+        target_items = [r for r in plan["records"] if r["stream"] == candidate["stream"]]
+        self.assertEqual(len(target_items), 1)
+        self.assertEqual(target_items[0]["operation"], "supersede")
+        self.assertEqual(target_items[0]["supersedes"], "f-old")
+        # The audit event stays an `add` and carries no supersedes.
+        events = [r for r in plan["records"] if r["stream"] == "events"]
+        self.assertEqual(len(events), 1)
+        self.assertNotIn("supersedes", events[0])
 
 
 if __name__ == "__main__":
