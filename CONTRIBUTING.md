@@ -51,7 +51,9 @@ python3.12 -m venv .venv
 Changes that affect storage, retrieval, concurrency, or public contracts
 require an Architecture Decision Record (ADR) under `docs/architecture/`. Use
 the next free number and follow the structure of existing ADRs (Context,
-Decision, Consequences).
+Decision, Consequences). Engineering practices (adversarial pre-code round,
+pre-implementation spike, ADR-before-code, release sequencing, local CI) are
+described in [`docs/practicas-ingenieria.md`](docs/practicas-ingenieria.md).
 
 ## Pull request flow
 
