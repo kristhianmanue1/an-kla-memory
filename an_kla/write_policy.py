@@ -83,11 +83,19 @@ _POLICY_CONFIGURATION = {
 
 
 class WritePolicyError(ValueError):
-    """A stable terminal error raised before any storage operation."""
+    """A stable terminal error raised before any storage operation.
 
-    def __init__(self, code: str) -> None:
+    ``code`` is the stable, machine-readable contract (frozen per code).  The
+    optional ``detail`` is informative and evolutive: it names the offending
+    field/reason to aid operators, but it is NOT a stability contract and may
+    change as the policy refines.  ``str(error)`` keeps equaling ``code`` so
+    existing consumers and tests are unaffected.
+    """
+
+    def __init__(self, code: str, detail: str | None = None) -> None:
         super().__init__(code)
         self.code = code
+        self.detail = detail
 
 
 def policy_configuration() -> dict[str, Any]:
@@ -101,30 +109,34 @@ def policy_fingerprint() -> str:
 
 
 def _require_exact_keys(
-    value: Mapping[str, Any], required: set[str], optional: set[str], code: str
+    value: Mapping[str, Any],
+    required: set[str],
+    optional: set[str],
+    code: str,
+    detail: str,
 ) -> None:
     keys = set(value)
     if not required.issubset(keys) or not keys.issubset(required | optional):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, detail)
 
 
 def _is_digest(value: Any) -> bool:
     return isinstance(value, str) and bool(_DIGEST.fullmatch(value))
 
 
-def _validate_json_value(value: Any, code: str) -> None:
+def _validate_json_value(value: Any, code: str, detail: str) -> None:
     nodes = 0
 
     def visit(item: Any, depth: int) -> None:
         nonlocal nodes
         nodes += 1
         if nodes > _MAX_JSON_NODES or depth > _MAX_JSON_DEPTH:
-            raise WritePolicyError(code)
+            raise WritePolicyError(code, detail)
         if item is None or isinstance(item, (str, bool, int)):
             return
         if isinstance(item, float):
             if not math.isfinite(item):
-                raise WritePolicyError(code)
+                raise WritePolicyError(code, detail)
             return
         if isinstance(item, list):
             for child in item:
@@ -132,35 +144,35 @@ def _validate_json_value(value: Any, code: str) -> None:
             return
         if isinstance(item, dict):
             if any(not isinstance(key, str) for key in item):
-                raise WritePolicyError(code)
+                raise WritePolicyError(code, detail)
             for key in sorted(item):
                 visit(item[key], depth + 1)
             return
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, detail)
 
     visit(value, 0)
     try:
         canonical_json(value)
     except (TypeError, ValueError, OverflowError) as exc:
-        raise WritePolicyError(code) from exc
+        raise WritePolicyError(code, detail) from exc
 
 
-def _validate_reference(value: Any, code: str) -> None:
+def _validate_reference(value: Any, code: str, detail: str) -> None:
     if not isinstance(value, dict):
-        raise WritePolicyError(code)
-    _require_exact_keys(value, {"kind", "id"}, {"sha256"}, code)
+        raise WritePolicyError(code, detail)
+    _require_exact_keys(value, {"kind", "id"}, {"sha256"}, code, detail)
     if value["kind"] not in {"artifact", "event", "fact", "episode", "revision", "external"}:
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, detail)
     if not isinstance(value["id"], str) or not value["id"]:
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, detail)
     if "sha256" in value and not _is_digest(value["sha256"]):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, detail)
 
 
 def validate_write_proposal(proposal: Mapping[str, Any]) -> None:
     code = "invalid_write_proposal"
     if not isinstance(proposal, dict):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "proposal:not_object")
     _require_exact_keys(
         proposal,
         {
@@ -174,64 +186,65 @@ def validate_write_proposal(proposal: Mapping[str, Any]) -> None:
         },
         set(),
         code,
+        "proposal:keys",
     )
     if proposal["schema"] != "an-kla/write-proposal-v1":
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "proposal:schema")
     if not _is_digest(proposal["base_revision"]):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "base_revision:not_digest")
     if proposal["stream"] not in _STREAMS:
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "stream")
     if proposal["operation"] not in _OPERATIONS:
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "operation")
     if proposal["requested_representation"] not in _REPRESENTATIONS:
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "requested_representation")
     record = proposal["record"]
     if not isinstance(record, dict) or not record:
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "record:not_object")
     if not isinstance(record.get("id"), str) or not record["id"]:
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "record.id")
     lineage = proposal["lineage"]
     if not isinstance(lineage, dict):
-        raise WritePolicyError(code)
-    _require_exact_keys(lineage, {"derived_from_retrieval", "refs"}, set(), code)
+        raise WritePolicyError(code, "lineage:not_object")
+    _require_exact_keys(lineage, {"derived_from_retrieval", "refs"}, set(), code, "lineage:keys")
     if not isinstance(lineage["derived_from_retrieval"], bool):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "lineage.derived_from_retrieval:not_bool")
     if not isinstance(lineage["refs"], list):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "lineage.refs:not_list")
     for reference in lineage["refs"]:
-        _validate_reference(reference, code)
-    _validate_json_value(proposal, code)
+        _validate_reference(reference, code, "lineage.refs[]:invalid")
+    _validate_json_value(proposal, code, "proposal:invalid_json")
 
 
-def _validate_evidence(value: Any, code: str) -> None:
+def _validate_evidence(value: Any, code: str, detail: str) -> None:
     if not isinstance(value, dict):
-        raise WritePolicyError(code)
-    _require_exact_keys(value, {"kind", "id", "resolution"}, {"sha256"}, code)
+        raise WritePolicyError(code, detail)
+    _require_exact_keys(value, {"kind", "id", "resolution"}, {"sha256"}, code, detail)
     if value["kind"] not in {"artifact", "event", "revision", "external"}:
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, detail)
     if not isinstance(value["id"], str) or not value["id"]:
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, detail)
     if value["resolution"] not in {"verified", "unresolved", "invalid"}:
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, detail)
     if "sha256" in value and not _is_digest(value["sha256"]):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, detail)
     if value["resolution"] == "verified" and "sha256" not in value:
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, detail)
 
 
-def _validate_scope_list(value: Any, allowed: frozenset[str], code: str) -> None:
+def _validate_scope_list(value: Any, allowed: frozenset[str], code: str, detail: str) -> None:
     if not isinstance(value, list) or not value:
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, detail)
     if any(not isinstance(item, str) or item not in allowed for item in value):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, detail)
     if len(value) != len(set(value)):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, detail)
 
 
 def validate_write_authority(authority: Mapping[str, Any]) -> None:
     code = "invalid_write_authority"
     if not isinstance(authority, dict):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "authority:not_object")
     _require_exact_keys(
         authority,
         {
@@ -245,27 +258,28 @@ def validate_write_authority(authority: Mapping[str, Any]) -> None:
         },
         set(),
         code,
+        "authority:keys",
     )
     if authority["schema"] != "an-kla/write-authority-v1":
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "authority:schema")
     if not _is_digest(authority["proposal_sha256"]) or not _is_digest(
         authority["base_revision"]
     ):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "proposal_sha256|base_revision:not_digest")
     if authority["authority_class"] not in _AUTHORITY_CLASSES:
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "authority_class")
     issuer = authority["issuer"]
     if not isinstance(issuer, dict):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "issuer:not_object")
     _require_exact_keys(
-        issuer, {"kind", "id", "configuration_fingerprint"}, set(), code
+        issuer, {"kind", "id", "configuration_fingerprint"}, set(), code, "issuer:keys"
     )
     if issuer["kind"] not in {"tool", "channel", "model", "resolver", "unknown"}:
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "issuer.kind")
     if not isinstance(issuer["id"], str) or not issuer["id"]:
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "issuer.id")
     if not _is_digest(issuer["configuration_fingerprint"]):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "issuer.configuration_fingerprint:not_digest")
     allowed_issuer_kinds = {
         "tool_observed": {"tool"},
         "channel_confirmed": {"channel"},
@@ -274,22 +288,22 @@ def validate_write_authority(authority: Mapping[str, Any]) -> None:
         "unresolved": {"unknown", "resolver"},
     }
     if issuer["kind"] not in allowed_issuer_kinds[authority["authority_class"]]:
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "issuer.kind:authority_class_mismatch")
     evidence = authority["evidence"]
     if not isinstance(evidence, list):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "evidence:not_list")
     for item in evidence:
-        _validate_evidence(item, code)
+        _validate_evidence(item, code, "evidence[]:invalid")
     scope = authority["scope"]
     if not isinstance(scope, dict):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "scope:not_object")
     _require_exact_keys(
-        scope, {"streams", "representations", "operations"}, set(), code
+        scope, {"streams", "representations", "operations"}, set(), code, "scope:keys"
     )
-    _validate_scope_list(scope["streams"], _STREAMS, code)
-    _validate_scope_list(scope["representations"], _REPRESENTATIONS, code)
-    _validate_scope_list(scope["operations"], _OPERATIONS, code)
-    _validate_json_value(authority, code)
+    _validate_scope_list(scope["streams"], _STREAMS, code, "scope.streams")
+    _validate_scope_list(scope["representations"], _REPRESENTATIONS, code, "scope.representations")
+    _validate_scope_list(scope["operations"], _OPERATIONS, code, "scope.operations")
+    _validate_json_value(authority, code, "authority:invalid_json")
 
 
 def _contains_self_asserted_authority(value: Any) -> bool:
@@ -391,7 +405,7 @@ def evaluate_write(
 def validate_write_decision(decision: Mapping[str, Any]) -> None:
     code = "invalid_write_decision"
     if not isinstance(decision, dict):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "decision:not_object")
     _require_exact_keys(
         decision,
         {
@@ -405,19 +419,20 @@ def validate_write_decision(decision: Mapping[str, Any]) -> None:
         },
         set(),
         code,
+        "decision:keys",
     )
     if decision["schema"] != "an-kla/write-decision-v1":
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "decision:schema")
     if not _is_digest(decision["proposal_sha256"]) or not _is_digest(
         decision["authority_sha256"]
     ):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "proposal_sha256|authority_sha256:not_digest")
     if decision["policy_profile"] != WRITE_POLICY_PROFILE or not _is_digest(
         decision["policy_fingerprint"]
     ):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "policy_profile|policy_fingerprint")
     if decision["decision"] not in {"skip", "write-full", "write-summary"}:
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "decision")
     reasons = decision["reason_codes"]
     if (
         not isinstance(reasons, list)
@@ -425,8 +440,8 @@ def validate_write_decision(decision: Mapping[str, Any]) -> None:
         or any(not isinstance(item, str) or not _REASON_CODE.fullmatch(item) for item in reasons)
         or reasons != sorted(set(reasons))
     ):
-        raise WritePolicyError(code)
-    _validate_json_value(decision, code)
+        raise WritePolicyError(code, "reason_codes")
+    _validate_json_value(decision, code, "decision:invalid_json")
 
 
 def _verified_decision(
@@ -509,15 +524,17 @@ def build_write_plan(
 def validate_write_plan(plan: Mapping[str, Any]) -> None:
     code = "invalid_write_plan"
     if not isinstance(plan, dict):
-        raise WritePolicyError(code)
-    _require_exact_keys(plan, {"schema", "core", "records", "plan_fingerprint"}, set(), code)
+        raise WritePolicyError(code, "plan:not_object")
+    _require_exact_keys(
+        plan, {"schema", "core", "records", "plan_fingerprint"}, set(), code, "plan:keys"
+    )
     if plan["schema"] != "an-kla/write-plan-v1" or not _is_digest(
         plan["plan_fingerprint"]
     ):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "plan:schema|plan_fingerprint")
     core = plan["core"]
     if not isinstance(core, dict):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "core:not_object")
     _require_exact_keys(
         core,
         {
@@ -531,6 +548,7 @@ def validate_write_plan(plan: Mapping[str, Any]) -> None:
         },
         set(),
         code,
+        "core:keys",
     )
     for field in (
         "base_revision",
@@ -541,25 +559,29 @@ def validate_write_plan(plan: Mapping[str, Any]) -> None:
         "planned_records_sha256",
     ):
         if not _is_digest(core[field]):
-            raise WritePolicyError(code)
+            raise WritePolicyError(code, f"core.{field}:not_digest")
     if core["decision"] not in {"skip", "write-full", "write-summary"}:
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "core.decision")
     records = plan["records"]
     if not isinstance(records, list):
-        raise WritePolicyError(code)
+        raise WritePolicyError(code, "records:not_list")
     for item in records:
         if not isinstance(item, dict):
-            raise WritePolicyError(code)
+            raise WritePolicyError(code, "records[]:not_object")
         _require_exact_keys(
-            item, {"stream", "operation", "representation", "record"}, set(), code
+            item,
+            {"stream", "operation", "representation", "record"},
+            set(),
+            code,
+            "records[]:keys",
         )
         if item["stream"] not in _STREAMS or item["operation"] not in _OPERATIONS:
-            raise WritePolicyError(code)
+            raise WritePolicyError(code, "records[]:stream|operation")
         if item["representation"] not in _REPRESENTATIONS:
-            raise WritePolicyError(code)
+            raise WritePolicyError(code, "records[]:representation")
         if not isinstance(item["record"], dict) or not item["record"]:
-            raise WritePolicyError(code)
-    _validate_json_value(plan, code)
+            raise WritePolicyError(code, "records[].record:not_object")
+    _validate_json_value(plan, code, "plan:invalid_json")
 
 
 def verify_write_plan(

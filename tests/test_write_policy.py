@@ -382,5 +382,85 @@ class WritePolicyTests(unittest.TestCase):
         )
 
 
+class ErrorDetailTests(unittest.TestCase):
+    """``WritePolicyError.detail`` names the offending field (issue #18).
+
+    ``code`` and ``str(error)`` stay equal to the stable code; ``detail`` is the
+    informative, evolutive part.
+    """
+
+    def _assert_detail(self, code: str, expected_detail: str, callback) -> None:
+        with self.assertRaises(WritePolicyError) as caught:
+            callback()
+        err = caught.exception
+        self.assertEqual(err.code, code)
+        self.assertEqual(str(err), code)
+        self.assertEqual(err.detail, expected_detail)
+
+    def test_proposal_stream_detail(self) -> None:
+        bad = proposal()
+        bad["stream"] = "not-a-stream"
+        self._assert_detail("invalid_write_proposal", "stream", lambda: validate_write_proposal(bad))
+
+    def test_proposal_base_revision_detail(self) -> None:
+        bad = proposal()
+        bad["base_revision"] = "sha256:short"
+        self._assert_detail(
+            "invalid_write_proposal", "base_revision:not_digest", lambda: validate_write_proposal(bad)
+        )
+
+    def test_proposal_record_id_detail(self) -> None:
+        bad = proposal()
+        bad["record"] = {"id": ""}
+        self._assert_detail("invalid_write_proposal", "record.id", lambda: validate_write_proposal(bad))
+
+    def test_proposal_keys_detail(self) -> None:
+        bad = proposal()
+        bad["extra_key"] = "noise"
+        self._assert_detail(
+            "invalid_write_proposal", "proposal:keys", lambda: validate_write_proposal(bad)
+        )
+
+    def test_proposal_lineage_detail(self) -> None:
+        bad = proposal()
+        bad["lineage"]["derived_from_retrieval"] = "not-bool"
+        self._assert_detail(
+            "invalid_write_proposal",
+            "lineage.derived_from_retrieval:not_bool",
+            lambda: validate_write_proposal(bad),
+        )
+
+    def test_authority_class_detail(self) -> None:
+        bad = authority(proposal())
+        bad["authority_class"] = "privileged"
+        self._assert_detail(
+            "invalid_write_authority", "authority_class", lambda: validate_write_authority(bad)
+        )
+
+    def test_authority_issuer_mismatch_detail(self) -> None:
+        bad = authority(proposal(), authority_class="model_derived")
+        bad["issuer"]["kind"] = "channel"
+        self._assert_detail(
+            "invalid_write_authority",
+            "issuer.kind:authority_class_mismatch",
+            lambda: validate_write_authority(bad),
+        )
+
+    def test_authority_scope_streams_detail(self) -> None:
+        bad = authority(proposal())
+        bad["scope"]["streams"] = ["not-a-stream"]
+        self._assert_detail(
+            "invalid_write_authority", "scope.streams", lambda: validate_write_authority(bad)
+        )
+
+    def test_error_without_detail_is_backward_compatible(self) -> None:
+        # Codes that already name a single cause are raised without detail; the
+        # constructor keeps ``.detail is None`` and ``str == code`` for them.
+        err = WritePolicyError("write_policy_fingerprint_mismatch")
+        self.assertEqual(err.code, "write_policy_fingerprint_mismatch")
+        self.assertIsNone(err.detail)
+        self.assertEqual(str(err), "write_policy_fingerprint_mismatch")
+
+
 if __name__ == "__main__":
     unittest.main()
