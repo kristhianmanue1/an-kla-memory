@@ -46,10 +46,8 @@ REGLAS = [
 # evidencia aparece en la salida y el issue referenciado debe cerrarse para
 # retirar la excepción.
 TECH_DEBT = {
-    "an_kla/context_package.py": (
-        1100,
-        "concentración histórica; partición planeada (issue #23)",
-    ),
+    # context_package.py (era 1011) se partió en #23 extrayendo el texto
+    # canónico a context_text.py; ahora cumple el límite de 800 sin gracia.
 }
 
 
