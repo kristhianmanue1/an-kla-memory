@@ -76,6 +76,15 @@ def build_index(store: MemoryStore, *, revision_id: str | None = None) -> dict[s
             indexed_per_stream: dict[str, int] = {stream: 0 for stream in STREAMS}
             for stream in STREAMS:
                 for record in snapshot.records[stream]:
+                    # ADR-0019 (PR-B): skip superseded records so the FTS stays
+                    # consistent with snapshot()'s vigency overlay and with
+                    # retrieve()'s filter (retrieval.py inactive predicate).
+                    if record.get("status", record.get("nu", "vigente")) not in {
+                        "vigente",
+                        "active",
+                        None,
+                    }:
+                        continue
                     text = record_text(dict(record))
                     if not text:
                         skipped_no_text += 1

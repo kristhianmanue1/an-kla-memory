@@ -11,6 +11,7 @@ import unittest
 from unittest.mock import patch
 
 from an_kla.canonical import digest_json
+from an_kla.retrieval import retrieve
 from an_kla.store import LockBusyError, MemoryStore
 from an_kla.write_policy import WritePolicyError, verify_write_plan as pure_verify_write_plan
 
@@ -436,6 +437,160 @@ class WriteCommitCliTests(unittest.TestCase):
             self.assertNotEqual(completed.returncode, 0)
             self.assertIn(b"input_json_unreadable", completed.stderr)
             self.assertNotIn(str(secret_path).encode(), completed.stderr)
+
+
+class SupersedeStoreTests(unittest.TestCase):
+    """ADR-0019 (PR-B): supersede storage — overlay, CAS inmutability, guards."""
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.store = MemoryStore(self.temp.name)
+        self.root_revision = self.store.initialize()
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def _add(self, base: str, record_id: str) -> str:
+        candidate = proposal(base, record_id, representation="summary")
+        candidate["record"]["indexable_text"] = record_id
+        auth = authority(candidate)
+        planning = self.store.plan_write(candidate, auth)
+        result = self.store.commit_write_plan(
+            expected_current_hash=base,
+            plan=planning["plan"],
+            proposal=candidate,
+            authority=auth,
+            decision=planning["decision"],
+        )
+        return result["revision"]
+
+    def _supersede(self, base: str, new_id: str, target_id: str) -> str:
+        candidate = {
+            "schema": "an-kla/write-proposal-v1",
+            "base_revision": base,
+            "stream": "facts",
+            "operation": "supersede",
+            "requested_representation": "summary",
+            "record": {"id": new_id, "indexable_text": new_id, "summary": new_id},
+            "lineage": {"derived_from_retrieval": False, "refs": []},
+            "supersedes": target_id,
+        }
+        auth = authority(candidate)
+        planning = self.store.plan_write(candidate, auth)
+        result = self.store.commit_write_plan(
+            expected_current_hash=base,
+            plan=planning["plan"],
+            proposal=candidate,
+            authority=auth,
+            decision=planning["decision"],
+        )
+        return result["revision"]
+
+    def _facts(self) -> dict:
+        return {r["id"]: r for r in self.store.snapshot().records["facts"]}
+
+    def test_supersede_marks_target_sustituida_and_new_vigente(self) -> None:
+        rev1 = self._add(self.root_revision, "f-old")
+        rev2 = self._supersede(rev1, "f-new", "f-old")
+        facts = self._facts()
+        self.assertEqual(facts["f-old"].get("status"), "sustituida")
+        self.assertNotIn("status", facts["f-new"])
+        manifest = self.store.snapshot(rev2).manifest
+        self.assertEqual(
+            manifest["supersedes_map"],
+            [{"stream": "facts", "target_id": "f-old", "sustituida_por": "f-new"}],
+        )
+
+    def test_supersede_keeps_target_segment_immutable(self) -> None:
+        rev1 = self._add(self.root_revision, "f-old")
+        manifest_before = self.store.snapshot(rev1).manifest
+        target_segment = manifest_before["facts_segments"][0]
+        rows_before = self.store._read_segment("facts", target_segment)
+        self._supersede(rev1, "f-new", "f-old")
+        # Segment content is content-addressed and immutable: same segment id is
+        # still referenced by the child manifest and yields identical rows.
+        rows_after = self.store._read_segment("facts", target_segment)
+        self.assertEqual(rows_before, rows_after)
+        self.assertIn(target_segment, self.store.snapshot().manifest["facts_segments"])
+
+    def test_supersede_chain_accumulates_map(self) -> None:
+        rev1 = self._add(self.root_revision, "A")
+        rev2 = self._supersede(rev1, "B", "A")
+        rev3 = self._supersede(rev2, "C", "B")
+        facts = self._facts()
+        self.assertEqual(facts["A"].get("status"), "sustituida")
+        self.assertEqual(facts["B"].get("status"), "sustituida")
+        self.assertNotIn("status", facts["C"])
+        # Cumulative map: both entries preserved in revision C.
+        entries = self.store.snapshot(rev3).manifest["supersedes_map"]
+        self.assertEqual(
+            {(e["target_id"], e["sustituida_por"]) for e in entries},
+            {("A", "B"), ("B", "C")},
+        )
+
+    def test_supersede_missing_target_is_terminal(self) -> None:
+        rev1 = self._add(self.root_revision, "f-old")
+        with self.assertRaises(WritePolicyError) as caught:
+            self._supersede(rev1, "f-new", "f-never-existed")
+        self.assertEqual(caught.exception.code, "invalid_supersede_target")
+        self.assertEqual(caught.exception.detail, "target_missing")
+        # No CURRENT moved, no side effects.
+        self.assertEqual(self.store.read_current(), rev1)
+
+    def test_supersede_already_sustituida_target_is_terminal(self) -> None:
+        rev1 = self._add(self.root_revision, "A")
+        rev2 = self._supersede(rev1, "B", "A")
+        with self.assertRaises(WritePolicyError) as caught:
+            self._supersede(rev2, "C", "A")  # A is already sustituida
+        self.assertEqual(caught.exception.code, "invalid_supersede_target")
+        self.assertEqual(caught.exception.detail, "target_not_vigente")
+        self.assertEqual(self.store.read_current(), rev2)
+
+    def test_retrieve_excludes_sustituida_target(self) -> None:
+        rev1 = self._add(self.root_revision, "f-old")
+        self._supersede(rev1, "f-new", "f-old")
+        result = retrieve(self.store, query="f", budget=2000)
+        ids = [str(r.get("id", "")) for r in result["selected"]]
+        self.assertNotIn("f-old", ids)
+        self.assertIn("f-new", ids)
+
+    def test_supersede_target_in_other_stream_is_missing(self) -> None:
+        # The guard resolves the target within item["stream"] only; a target id
+        # that exists in a different stream does not match (axes are not
+        # interchangeable, ADR-0019 decision 3).
+        rev1 = self._add(self.root_revision, "f-old")
+        # Seed an event sharing the id, then supersede it as a fact: must miss.
+        evt_base = rev1
+        evt_candidate = {
+            "schema": "an-kla/write-proposal-v1",
+            "base_revision": evt_base,
+            "stream": "events",
+            "operation": "add",
+            "requested_representation": "summary",
+            "record": {"id": "shared-id", "indexable_text": "evt"},
+            "lineage": {"derived_from_retrieval": False, "refs": []},
+        }
+        evt_auth = authority(evt_candidate)
+        evt_planning = self.store.plan_write(evt_candidate, evt_auth)
+        rev2 = self.store.commit_write_plan(
+            expected_current_hash=evt_base,
+            plan=evt_planning["plan"],
+            proposal=evt_candidate,
+            authority=evt_auth,
+            decision=evt_planning["decision"],
+        )["revision"]
+        with self.assertRaises(WritePolicyError) as caught:
+            self._supersede(rev2, "f-new", "shared-id")  # shared-id lives in events, not facts
+        self.assertEqual(caught.exception.code, "invalid_supersede_target")
+        self.assertEqual(caught.exception.detail, "target_missing")
+
+    def test_add_only_revision_has_no_supersedes_map_field(self) -> None:
+        # Backwards-compat: a plain add revision omits the field entirely
+        # (byte-identical to pre-PR-B); snapshot reads it as no-op overlay.
+        rev1 = self._add(self.root_revision, "f-old")
+        manifest = self.store.snapshot(rev1).manifest
+        self.assertNotIn("supersedes_map", manifest)
+        self.assertNotIn("status", self._facts()["f-old"])
 
 
 if __name__ == "__main__":
