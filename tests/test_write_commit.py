@@ -658,5 +658,25 @@ class ContextDiagnosticsTests(unittest.TestCase):
         )
 
 
+    def test_managed_block_modified_surfaces_in_context_diagnostics(self) -> None:
+        # ADR-0020 §Test de regresión #2: a tampered managed block must show up
+        # in context_diagnostics of the commit (not only via separate context
+        # status). Install the contract, mutate the block payload, then commit.
+        from an_kla.context_package import apply_context_plan, plan_context_change
+
+        plan = plan_context_change(self.temp.name, "install")
+        apply_context_plan(self.temp.name, plan)
+        agents = Path(self.temp.name) / "AGENTS.md"
+        text = agents.read_text(encoding="utf-8")
+        agents.write_text(
+            text.replace("## AN-KLA Memory", "## AN-KLA Memory TAMPERED"),
+            encoding="utf-8",
+        )
+        result = self._commit_add()
+        self.assertIn(
+            "managed_block_modified", result["context_diagnostics"]["diagnostics"]
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
