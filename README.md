@@ -1,7 +1,7 @@
 # AN-KLA Memory
 
 [![CI](https://github.com/kristhianmanue1/an-kla-memory/actions/workflows/test.yml/badge.svg)](https://github.com/kristhianmanue1/an-kla-memory/actions/workflows/test.yml)
-[![Version](https://img.shields.io/badge/version-0.1.0--beta.7-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.8)
+[![Version](https://img.shields.io/badge/version-0.1.0--beta.8-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.8)
 [![Python](https://img.shields.io/badge/python-3.9%20%7C%203.12-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 [![Beta](https://img.shields.io/badge/status-local%20beta-orange)](https://github.com/kristhianmanue1/an-kla-memory/releases)
