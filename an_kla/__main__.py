@@ -295,4 +295,6 @@ if __name__ == "__main__":
     try:
         main()
     except (StoreError, ConcurrentUpdateError, ValueError, OSError) as exc:
-        raise SystemExit(f"an-kla error: {exc}")
+        detail = getattr(exc, "detail", None)
+        suffix = f" ({detail})" if detail else ""
+        raise SystemExit(f"an-kla error: {exc}{suffix}")
