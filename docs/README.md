@@ -32,6 +32,7 @@ diffícil de revertir.
 | 0016 | [auto-reindex-post-commit](architecture/0016-auto-reindex-post-commit.md) | Reindexado best-effort tras commit |
 | 0017 | [target-drift-transparency](architecture/0017-target-drift-transparency.md) | Transparencia de target drift en upgrade |
 | 0018 | [indexable-text-field](architecture/0018-indexable-text-field.md) | Campo explícito `indexable_text` para FTS |
+| 0019 | [governed-supersede](architecture/0019-governed-supersede.md) | Operación `supersede` gobernada |
 
 ### Documentación normativa
 
