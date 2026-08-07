@@ -49,7 +49,7 @@ _MAX_JSON_NODES = 10_000
 _POLICY_CONFIGURATION = {
     "schema": "an-kla/write-policy-config-v1",
     "profile": WRITE_POLICY_PROFILE,
-    "supported_operations": ["add"],
+    "supported_operations": ["add", "supersede"],
     "reason_codes": [
         "authority_scope_mismatch",
         "channel_confirmation_resolved",
@@ -60,10 +60,12 @@ _POLICY_CONFIGURATION = {
         "representation_accepted",
         "self_asserted_authority_ignored",
         "summary_required_for_authority_ceiling",
+        "supersede_requires_non_derived_authority",
         "tool_evidence_verified",
         "unresolved_authority",
     ],
     "terminal_error_codes": [
+        "invalid_supersede_target",
         "invalid_write_authority",
         "invalid_write_decision",
         "invalid_write_plan",
@@ -74,7 +76,7 @@ _POLICY_CONFIGURATION = {
         "write_policy_fingerprint_mismatch",
     ],
     "derived_authority": {
-        "allowed_operations": ["add"],
+        "allowed_operations": ["add", "supersede"],
         "maximum_representation": "summary",
     },
     "require_verified_tool_evidence": True,
@@ -184,7 +186,7 @@ def validate_write_proposal(proposal: Mapping[str, Any]) -> None:
             "record",
             "lineage",
         },
-        set(),
+        {"supersedes"},
         code,
         "proposal:keys",
     )
@@ -198,11 +200,24 @@ def validate_write_proposal(proposal: Mapping[str, Any]) -> None:
         raise WritePolicyError(code, "operation")
     if proposal["requested_representation"] not in _REPRESENTATIONS:
         raise WritePolicyError(code, "requested_representation")
+    # Validate record shape BEFORE the co-occurrence block: the self-reference
+    # check reads record["id"], which must already be a stable non-empty string.
     record = proposal["record"]
     if not isinstance(record, dict) or not record:
         raise WritePolicyError(code, "record:not_object")
     if not isinstance(record.get("id"), str) or not record["id"]:
         raise WritePolicyError(code, "record.id")
+    # Co-occurrence contract (ADR-0019): operation=supersede <-> supersedes
+    # present.  supersedes names the target id (unique within stream) and must
+    # not self-reference the new record.
+    if proposal["operation"] == "supersede":
+        supersedes = proposal.get("supersedes")
+        if not isinstance(supersedes, str) or not supersedes:
+            raise WritePolicyError(code, "supersedes:missing_for_supersede")
+        if supersedes == record["id"]:
+            raise WritePolicyError(code, "supersedes:self_reference_forbidden")
+    elif "supersedes" in proposal:
+        raise WritePolicyError(code, "supersedes:present_without_supersede")
     lineage = proposal["lineage"]
     if not isinstance(lineage, dict):
         raise WritePolicyError(code, "lineage:not_object")
@@ -379,6 +394,15 @@ def evaluate_write(
         reasons.add("channel_confirmation_resolved")
     else:
         reasons.add("derived_authority_capped")
+        # ADR-0019: supersede mutates vigency (hides the target from retrieve);
+        # derived_from_retrieval is memory-recovered data and must not silence a
+        # current fact.  model_derived may supersede; derived_from_retrieval may not.
+        if (
+            proposal["operation"] == "supersede"
+            and authority_class == "derived_from_retrieval"
+        ):
+            reasons.add("supersede_requires_non_derived_authority")
+            return _decision(proposal_sha256, authority_sha256, "skip", reasons)
         if proposal["operation"] not in _POLICY_CONFIGURATION["derived_authority"][
             "allowed_operations"
         ]:
@@ -475,14 +499,17 @@ def build_write_plan(
     checked_decision = _verified_decision(proposal, authority, decision)
     records: list[dict[str, Any]] = []
     if checked_decision["decision"] != "skip":
-        records.append(
-            {
-                "stream": proposal["stream"],
-                "operation": proposal["operation"],
-                "representation": proposal["requested_representation"],
-                "record": deepcopy(proposal["record"]),
-            }
-        )
+        planned_item = {
+            "stream": proposal["stream"],
+            "operation": proposal["operation"],
+            "representation": proposal["requested_representation"],
+            "record": deepcopy(proposal["record"]),
+        }
+        # ADR-0019: carry the supersede target so the store knows what to mark
+        # "sustituida".  Present only for operation=supersede (co-occurrence).
+        if proposal["operation"] == "supersede":
+            planned_item["supersedes"] = proposal["supersedes"]
+        records.append(planned_item)
         records.append(
             {
                 "stream": "events",
@@ -571,7 +598,7 @@ def validate_write_plan(plan: Mapping[str, Any]) -> None:
         _require_exact_keys(
             item,
             {"stream", "operation", "representation", "record"},
-            set(),
+            {"supersedes"},
             code,
             "records[]:keys",
         )
@@ -581,6 +608,14 @@ def validate_write_plan(plan: Mapping[str, Any]) -> None:
             raise WritePolicyError(code, "records[]:representation")
         if not isinstance(item["record"], dict) or not item["record"]:
             raise WritePolicyError(code, "records[].record:not_object")
+        # ADR-0019: supersedes travels in the planned item only for supersede.
+        if item["operation"] == "supersede":
+            if not isinstance(item.get("supersedes"), str) or not item["supersedes"]:
+                raise WritePolicyError(code, "records[]:supersedes:missing_for_supersede")
+            if item["supersedes"] == item["record"].get("id"):
+                raise WritePolicyError(code, "records[]:supersedes:self_reference_forbidden")
+        elif "supersedes" in item:
+            raise WritePolicyError(code, "records[]:supersedes:present_without_supersede")
     _validate_json_value(plan, code, "plan:invalid_json")
 
 
