@@ -150,6 +150,27 @@ class MemoryStore:
                     seen.add(record_id)
                     rows.append(row)
             records[stream] = tuple(rows)
+        # ADR-0019 (PR-B): vigencia observable por overlay. ``supersedes_map`` is
+        # cumulative (inherited from the parent revision); each target is marked
+        # ``status="sustituida"`` in memory without rewriting the immutable
+        # segment (``O_EXCL``). Old revisions without the field read as ``[]``
+        # -> no-op overlay (backwards-compatible: byte-identical to today).
+        targets: set[tuple[str, str]] = set()
+        for entry in manifest.get("supersedes_map", []):
+            stream = entry.get("stream") if isinstance(entry, dict) else None
+            target_id = entry.get("target_id") if isinstance(entry, dict) else None
+            if stream in STREAMS and isinstance(target_id, str) and target_id:
+                targets.add((stream, target_id))
+        if targets:
+            overlaid: dict[str, tuple[Mapping[str, Any], ...]] = {}
+            for stream, rows in records.items():
+                overlaid[stream] = tuple(
+                    {**row, "status": "sustituida"}
+                    if (stream, str(row.get("id", ""))) in targets
+                    else row
+                    for row in rows
+                )
+            records = overlaid
         return Snapshot(revision_id, manifest, checkpoint, records)
 
     def commit(
@@ -259,18 +280,65 @@ class MemoryStore:
                     "plan_fingerprint": checked_plan["plan_fingerprint"],
                 }
 
+            # ADR-0019 (PR-B): resolve supersede targets against the authoritative
+            # snapshot under the lock, before any object/journal is written. A
+            # failure here raises invalid_supersede_target (terminal) with no
+            # side effects (no orphan objects, no prepared journal).
+            pending_supersedes: list[dict[str, str]] = []
+            if any(item["operation"] == "supersede" for item in checked_plan["records"]):
+                base_snapshot = self.snapshot(observed)
+                for item in checked_plan["records"]:
+                    if item["operation"] != "supersede":
+                        continue
+                    stream = item["stream"]
+                    target_id = item["supersedes"]
+                    # self-ref is already enforced by the policy core
+                    # (write_policy.py); keep a defense-in-depth check here.
+                    if target_id == item["record"]["id"]:
+                        raise WritePolicyError("invalid_supersede_target", "self_reference")
+                    target = next(
+                        (
+                            r
+                            for r in base_snapshot.records[stream]
+                            if str(r.get("id", "")) == target_id
+                        ),
+                        None,
+                    )
+                    if target is None:
+                        raise WritePolicyError("invalid_supersede_target", "target_missing")
+                    if target.get("status", target.get("nu", "vigente")) not in {
+                        "vigente",
+                        "active",
+                        None,
+                    }:
+                        raise WritePolicyError(
+                            "invalid_supersede_target", "target_not_vigente"
+                        )
+                    pending_supersedes.append(
+                        {
+                            "stream": stream,
+                            "target_id": target_id,
+                            "sustituida_por": str(item["record"]["id"]),
+                        }
+                    )
+
             pending: dict[str, list[dict[str, Any]]] = {
                 "facts": [],
                 "events": [],
                 "episodes": [],
             }
             for item in checked_plan["records"]:
-                # verify_write_plan rebuilt this exact list and policy/v1 only
-                # supports add.  Keep the check local so a future policy cannot
-                # accidentally route lifecycle operations through append.
-                if item["operation"] != "add":
+                # The policy core (write_policy.py) is the only implementation of
+                # the policy; refute/decay never reach here (they skip). add and
+                # supersede both append the new record to its stream; supersede
+                # additionally records the target's vigency flip above.
+                op = item["operation"]
+                if op == "add":
+                    pending[item["stream"]].append(deepcopy(item["record"]))
+                elif op == "supersede":
+                    pending[item["stream"]].append(deepcopy(item["record"]))
+                else:
                     raise WritePolicyError("invalid_write_plan")
-                pending[item["stream"]].append(deepcopy(item["record"]))
 
             policy_metadata = {
                 "schema": "an-kla/write-policy-transaction-v1",
@@ -286,6 +354,7 @@ class MemoryStore:
                 checkpoint_patch={},
                 pending=pending,
                 policy_metadata=policy_metadata,
+                supersedes=pending_supersedes or None,
             )
         self._maybe_reindex(observed, revision)
         return {
@@ -304,6 +373,7 @@ class MemoryStore:
         checkpoint_patch: Mapping[str, Any],
         pending: Mapping[str, list[dict[str, Any]]],
         policy_metadata: Mapping[str, Any] | None = None,
+        supersedes: list[dict[str, str]] | None = None,
     ) -> str:
         """Write a child revision while the caller holds ``write_lock``."""
 
@@ -328,6 +398,12 @@ class MemoryStore:
                 existing.append(self._write_segment(stream, assigned[stream]))
             segment_ids[stream] = existing
         checkpoint_id = self._write_json_object("checkpoints", checkpoint)
+        # ADR-0019 (PR-B): supersedes_map is cumulative — inherit the parent's
+        # entries and append this revision's. Omit the field entirely when empty
+        # so the root/empty revision stays byte-identical to today (backwards
+        # compatibility for readers and for test_initial_current_is_canonical).
+        inherited = list(base.manifest.get("supersedes_map", []))
+        new_map = [*inherited, *(list(supersedes) if supersedes else [])]
         manifest = {
             "schema": "an-kla/revision-v1",
             "revision": checkpoint["revision"],
@@ -340,6 +416,8 @@ class MemoryStore:
             "canonicalization": "canonical-json/v1",
             "integrity_claim": "content_identity_not_truth_or_authorship",
         }
+        if new_map:
+            manifest["supersedes_map"] = new_map
         self._validate_manifest(manifest)
         candidate = self._write_json_object("revisions", manifest)
         intent_id = self._write_ref_log(
@@ -646,6 +724,26 @@ class MemoryStore:
                 raise IntegrityError("manifest_segments_invalid")
             for identifier in values:
                 bare_digest(str(identifier))
+        # ADR-0019 (PR-B): validate the supersede map shape (defense in depth).
+        # Absent on legacy revisions; present since supersede was introduced.
+        supersede_map = manifest.get("supersedes_map")
+        if supersede_map is not None:
+            if not isinstance(supersede_map, list):
+                raise IntegrityError("manifest_supersedes_map_invalid")
+            for entry in supersede_map:
+                if not isinstance(entry, dict):
+                    raise IntegrityError("manifest_supersedes_map_invalid")
+                stream = entry.get("stream")
+                target_id = entry.get("target_id")
+                sustituida_por = entry.get("sustituida_por")
+                if (
+                    stream not in STREAMS
+                    or not isinstance(target_id, str)
+                    or not target_id
+                    or not isinstance(sustituida_por, str)
+                    or not sustituida_por
+                ):
+                    raise IntegrityError("manifest_supersedes_map_invalid")
 
     def _maybe_reindex(self, parent_revision: str, candidate_revision: str) -> None:
         """Best-effort refresh of the derived FTS5 cache after a commit.
