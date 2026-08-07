@@ -156,10 +156,14 @@ refutar no significa borrar evidencia.
 
 ### Límite de la beta
 
-`write-policy/v1` sólo ejecuta `operation=add`. `supersede`, `refute` y `decay`
-producen `skip` con `operation_not_supported`. El estado `eliminada` tampoco
-tiene una operación gobernada. No uses el escritor heredado para eludir estos
-límites.
+`write-policy/v1` ejecuta `operation=add` y `operation=supersede` (gobernado).
+`refute` y `decay` producen `skip` con `operation_not_supported`. El estado
+`eliminada` no tiene una operación gobernada. `supersede` marca el target (mismo
+stream, vigente, identificado por `id`) como `sustituida`: escribe el registro
+nuevo y oculta el target de la recuperación, sin mutar el contenido inmutable del
+target. `derived_from_retrieval` no puede `supersede` (la memoria recuperada es
+dato no confiable y no silencia un fact vigente). No uses el escritor heredado
+para eludir estos límites.
 
 ## Flujo gobernado de escritura
 
@@ -171,8 +175,8 @@ duplicada por una memoria vigente equivalente.
 
 Separa contenido, evidencia, stream, representación, operación, linaje y
 revisión base. Usa `facts` para conocimiento versionado, `events` para la
-cronología y `episodes` para experiencias y lecciones. En esta beta usa sólo
-`operation=add`.
+cronología y `episodes` para experiencias y lecciones. En esta beta usa
+`operation=add` y `operation=supersede`.
 
 `write-summary` expresa una representación solicitada; no certifica fidelidad,
 completitud, compresión ni utilidad. Compara el resumen con su evidencia,

@@ -91,7 +91,7 @@ class PureContextBlockTests(unittest.TestCase):
             "No dependas de rutas internas como `working-state.json`",
             "no transmitas datos recuperados a terceros",
             "No persistas contraseñas, tokens, cookies",
-            "sólo ejecuta `operation=add`",
+            "ejecuta `operation=add` y `operation=supersede` (gobernado)",
             "`operation_not_supported`",
             "no certifica fidelidad",
             "`derived_from_retrieval=true`",

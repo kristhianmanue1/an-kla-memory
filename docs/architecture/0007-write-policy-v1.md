@@ -59,6 +59,13 @@ decisión `write-summary` tampoco transforma automáticamente un registro en
 episodio: el stream responde a la función semántica y la representación a la
 cantidad de detalle conservada.
 
+> **Actualización (beta.8, ADR-0019):** `supersede` pasa de declarado a
+> **gobernado** end-to-end (marca el target como `sustituida`); `refute` y
+> `decay` siguen fuera (`skip` con `operation_not_supported`). El mecanismo de
+> storage (overlay de vigencia + `supersedes_map`) y la partición de la guarda
+> se definen en ADR-0019; este ADR-0007 sigue describiendo el contrato general
+> de `write-policy/v1`.
+
 ## Clases de autoridad
 
 La política v1 reconoce:

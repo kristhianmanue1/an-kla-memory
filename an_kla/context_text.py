@@ -13,7 +13,7 @@ from __future__ import annotations
 CONTEXT_SCHEMA = "an-kla/context-block/v1"
 INSTALLATION_SCHEMA = "an-kla/context-installation/v1"
 PLAN_SCHEMA = "an-kla/context-plan/v1"
-TEMPLATE_VERSION = "0.1.0-beta.6"
+TEMPLATE_VERSION = "0.1.0-beta.8"
 BLOCK_ID = "agent-context"
 CONTRACT_RELATIVE = "AN-KLA.md"
 MANIFEST_RELATIVE = ".an-kla/context/manifest.json"
@@ -41,6 +41,10 @@ _KNOWN_CONTEXT_TEMPLATES = {
     "0.1.0-beta.5": {
         "content_sha256": "sha256:08e4d63bc985fafd593575263cc5133033b40f5f3dba5d0f2e533149a05beeba",
         "contract_sha256": "sha256:48596b9ee7bc35f03f40ded24578d2c6f70553997a811c24a2c2f5d05c63d6fd",
+    },
+    "0.1.0-beta.6": {
+        "content_sha256": "sha256:08e4d63bc985fafd593575263cc5133033b40f5f3dba5d0f2e533149a05beeba",
+        "contract_sha256": "sha256:f19ca106533079e0154ac563a1ea432fb2dee331991c26d0ddf3c27e670364b1",
     },
 }
 
@@ -214,10 +218,14 @@ refutar no significa borrar evidencia.
 
 ### Límite de la beta
 
-`write-policy/v1` sólo ejecuta `operation=add`. `supersede`, `refute` y `decay`
-producen `skip` con `operation_not_supported`. El estado `eliminada` tampoco
-tiene una operación gobernada. No uses el escritor heredado para eludir estos
-límites.
+`write-policy/v1` ejecuta `operation=add` y `operation=supersede` (gobernado).
+`refute` y `decay` producen `skip` con `operation_not_supported`. El estado
+`eliminada` no tiene una operación gobernada. `supersede` marca el target (mismo
+stream, vigente, identificado por `id`) como `sustituida`: escribe el registro
+nuevo y oculta el target de la recuperación, sin mutar el contenido inmutable del
+target. `derived_from_retrieval` no puede `supersede` (la memoria recuperada es
+dato no confiable y no silencia un fact vigente). No uses el escritor heredado
+para eludir estos límites.
 
 ## Flujo gobernado de escritura
 
@@ -229,8 +237,8 @@ duplicada por una memoria vigente equivalente.
 
 Separa contenido, evidencia, stream, representación, operación, linaje y
 revisión base. Usa `facts` para conocimiento versionado, `events` para la
-cronología y `episodes` para experiencias y lecciones. En esta beta usa sólo
-`operation=add`.
+cronología y `episodes` para experiencias y lecciones. En esta beta usa
+`operation=add` y `operation=supersede`.
 
 `write-summary` expresa una representación solicitada; no certifica fidelidad,
 completitud, compresión ni utilidad. Compara el resumen con su evidencia,

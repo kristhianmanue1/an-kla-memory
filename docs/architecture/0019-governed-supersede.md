@@ -101,10 +101,11 @@ de vigencia; `evaluate_write` es pura («sin leer ni escribir estado»,
 - **Positivas:** vigencia consistente (un solo `vigente` por línea); línea
   temporal recuperable; fin del «fact nuevo al lado»; `derived_from_retrieval` no
   puede silenciar; base para `refute`/`decay`.
-- **Negativas:** `policy_fingerprint()` cambia por **3 vectores**
+- **Negativas:** `policy_fingerprint()` cambia por **4 vectores**
   (`supported_operations` + `derived_authority.allowed_operations=["add","supersede"]`
-  + nuevo `terminal_error_codes`); es **beta.8**, no hotfix; `capabilities()`
-  cambia (público).
+  + `reason_codes` (+`supersede_requires_non_derived_authority`) +
+  `terminal_error_codes` (+`invalid_supersede_target`)); es **beta.8**, no hotfix;
+  `capabilities()` cambia (público).
 - **Neutras:** `rebuild-index` tras migrar; doble ronda adversarial
   (`write_policy.py` + `store.py`); `lineage.refs` al target quedan como
   soft-orphan (documentado: trazar vía revisions).
