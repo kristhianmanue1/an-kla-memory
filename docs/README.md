@@ -33,6 +33,7 @@ diffícil de revertir.
 | 0017 | [target-drift-transparency](architecture/0017-target-drift-transparency.md) | Transparencia de target drift en upgrade |
 | 0018 | [indexable-text-field](architecture/0018-indexable-text-field.md) | Campo explícito `indexable_text` para FTS |
 | 0019 | [governed-supersede](architecture/0019-governed-supersede.md) | Operación `supersede` gobernada |
+| 0020 | [context-diagnostics-in-write-result](architecture/0020-context-diagnostics-in-write-result.md) | Salud del contrato en el resultado de escritura |
 
 ### Documentación normativa
 
