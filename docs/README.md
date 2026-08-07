@@ -37,6 +37,7 @@ diffícil de revertir.
 
 ### Documentación normativa
 
+- [`practicas-ingenieria.md`](practicas-ingenieria.md) — Prácticas de ingeniería (ronda adversarial pre-code, spike, ADR-antes-que-código, secuenciación, CI local).
 - [`context-package.md`](context-package.md) — Guía de integración del bloque administrado.
 - [`upgrade-agent-flow.md`](upgrade-agent-flow.md) — Flujo de actualización para agentes.
 - [`write-policy-cli.md`](write-policy-cli.md) — CLI de escritura gobernada.

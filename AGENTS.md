@@ -31,6 +31,11 @@ Todo release beta pasa por ronda adversarial antes de publicarse (ver
 `store.py`, `retrieval.py`, `index.py`, `write_policy.py` o el contrato
 gestionado.
 
+Las prácticas de ingeniería (ronda adversarial pre-code, spike
+pre-implementación, ADR-antes-que-código, secuenciación de releases, CI local,
+reporte RAG con evidencia) viven en `docs/practicas-ingenieria.md` — revísalas
+antes de trabajo no trivial.
+
 <!-- an-kla:managed-begin {"content_sha256":"sha256:08e4d63bc985fafd593575263cc5133033b40f5f3dba5d0f2e533149a05beeba","id":"agent-context","schema":"an-kla/context-block/v1","version":"0.1.0-beta.8"} -->
 ## AN-KLA Memory
 
