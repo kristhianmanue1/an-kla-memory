@@ -554,6 +554,36 @@ class SupersedeStoreTests(unittest.TestCase):
         self.assertNotIn("f-old", ids)
         self.assertIn("f-new", ids)
 
+    def test_supersede_target_in_other_stream_is_missing(self) -> None:
+        # The guard resolves the target within item["stream"] only; a target id
+        # that exists in a different stream does not match (axes are not
+        # interchangeable, ADR-0019 decision 3).
+        rev1 = self._add(self.root_revision, "f-old")
+        # Seed an event sharing the id, then supersede it as a fact: must miss.
+        evt_base = rev1
+        evt_candidate = {
+            "schema": "an-kla/write-proposal-v1",
+            "base_revision": evt_base,
+            "stream": "events",
+            "operation": "add",
+            "requested_representation": "summary",
+            "record": {"id": "shared-id", "indexable_text": "evt"},
+            "lineage": {"derived_from_retrieval": False, "refs": []},
+        }
+        evt_auth = authority(evt_candidate)
+        evt_planning = self.store.plan_write(evt_candidate, evt_auth)
+        rev2 = self.store.commit_write_plan(
+            expected_current_hash=evt_base,
+            plan=evt_planning["plan"],
+            proposal=evt_candidate,
+            authority=evt_auth,
+            decision=evt_planning["decision"],
+        )["revision"]
+        with self.assertRaises(WritePolicyError) as caught:
+            self._supersede(rev2, "f-new", "shared-id")  # shared-id lives in events, not facts
+        self.assertEqual(caught.exception.code, "invalid_supersede_target")
+        self.assertEqual(caught.exception.detail, "target_missing")
+
     def test_add_only_revision_has_no_supersedes_map_field(self) -> None:
         # Backwards-compat: a plain add revision omits the field entirely
         # (byte-identical to pre-PR-B); snapshot reads it as no-op overlay.
