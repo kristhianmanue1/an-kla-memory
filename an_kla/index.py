@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .canonical import bare_digest
+from .record_text import record_text
 from .store import MemoryStore, STREAMS
 
 INDEX_PROFILE = "sqlite-fts5/v1"
@@ -24,26 +25,6 @@ INDEX_SCHEMA = "an-kla/index-v2"
 class IndexResolution:
     path: Path | None
     status: str
-
-
-def record_text(record: dict[str, Any]) -> str:
-    """Return the first supported non-empty string in normative priority.
-
-    Priority: ``indexable_text`` > ``text`` > ``render`` > ``summary`` > ``p``.
-    ``indexable_text`` is the writer's explicit declaration of what FTS should
-    index (see ADR-0018); the other fields are inspected as fallbacks so the
-    beta contract that selected ``text|render|summary|p`` keeps working.
-    """
-    payload = record.get("payload")
-    containers = (payload, record) if isinstance(payload, dict) else (record,)
-    for field in ("indexable_text", "text", "render", "summary", "p"):
-        for container in containers:
-            value = container.get(field)
-            if isinstance(value, str) and value.strip():
-                return value.strip()
-    if isinstance(payload, str) and payload.strip():
-        return payload.strip()
-    return ""
 
 
 def detect_fts5() -> bool:

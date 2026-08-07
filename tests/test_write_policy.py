@@ -181,6 +181,47 @@ class WritePolicyTests(unittest.TestCase):
         self.assertEqual(result["decision"], "skip")
         self.assertEqual(result["reason_codes"], ["operation_not_supported"])
 
+    def test_record_without_indexable_text_is_committed_but_warned(self) -> None:
+        candidate = proposal(
+            record={"id": "f-structural", "payload": {"outcome": "ok", "count": 3}}
+        )
+        result = evaluate_write(candidate, authority(candidate))
+        self.assertEqual(result["decision"], "write-full")
+        self.assertIn("record_without_indexable_text", result["reason_codes"])
+        self.assertIn("representation_accepted", result["reason_codes"])
+
+    def test_record_with_indexable_text_emits_no_text_warning(self) -> None:
+        candidate = proposal(
+            record={
+                "id": "f-indexed",
+                "payload": {"outcome": "ok", "indexable_text": "leccion durable"},
+            }
+        )
+        result = evaluate_write(candidate, authority(candidate))
+        self.assertNotIn("record_without_indexable_text", result["reason_codes"])
+
+    def test_skip_decisions_do_not_carry_the_no_text_warning(self) -> None:
+        candidate = proposal(
+            record={"id": "f-structural", "payload": {"outcome": "ok"}}
+        )
+        result = evaluate_write(candidate, authority(candidate, authority_class="unresolved"))
+        self.assertEqual(result["decision"], "skip")
+        self.assertNotIn("record_without_indexable_text", result["reason_codes"])
+
+    def test_no_text_warning_flows_through_build_write_plan(self) -> None:
+        candidate = proposal(
+            record={"id": "f-structural", "payload": {"outcome": "ok"}}
+        )
+        auth = authority(candidate)
+        plan = build_write_plan(candidate, auth)
+        decision = evaluate_write(candidate, auth)
+        self.assertIn("record_without_indexable_text", decision["reason_codes"])
+        self.assertIn(
+            "record_without_indexable_text",
+            plan["records"][1]["record"]["payload"]["reason_codes"],
+        )
+        verify_write_plan(plan, candidate, auth, decision)
+
     def test_plan_binds_decision_operation_representation_and_record(self) -> None:
         candidate = proposal(representation="summary")
         auth = authority(candidate)
@@ -303,6 +344,7 @@ class WritePolicyTests(unittest.TestCase):
                 "derived_authority_capped",
                 "derived_from_retrieval",
                 "operation_not_supported",
+                "record_without_indexable_text",
                 "representation_accepted",
                 "self_asserted_authority_ignored",
                 "summary_required_for_authority_ceiling",

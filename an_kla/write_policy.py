@@ -13,6 +13,7 @@ import re
 from typing import Any, Mapping
 
 from .canonical import canonical_json, digest_json
+from .record_text import record_text
 
 
 WRITE_POLICY_PROFILE = "write-policy/v1"
@@ -55,6 +56,7 @@ _POLICY_CONFIGURATION = {
         "derived_authority_capped",
         "derived_from_retrieval",
         "operation_not_supported",
+        "record_without_indexable_text",
         "representation_accepted",
         "self_asserted_authority_ignored",
         "summary_required_for_authority_ceiling",
@@ -376,6 +378,13 @@ def evaluate_write(
         if proposal["requested_representation"] == "full"
         else "write-summary"
     )
+    # Surface, at decision time, that the record will be committed but produce
+    # no FTS text and therefore be unrecoverable via retrieve/assemble-context.
+    # The beta policy only supports ``add``, so such a record cannot be
+    # superseded/refuted later; the operator must add ``indexable_text`` (or a
+    # text|render|summary|p fallback) to make it retrievable.  See issue #15.
+    if not record_text(proposal["record"]):
+        reasons.add("record_without_indexable_text")
     return _decision(proposal_sha256, authority_sha256, decision, reasons)
 
 

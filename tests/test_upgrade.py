@@ -15,7 +15,7 @@ from an_kla.upgrade import apply_upgrade, inspect_upgrade, verify_upgrade
 
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGET = "v0.1.0-beta.6"
+TARGET = "v0.1.0-beta.7"
 
 
 class UpgradeContractTests(unittest.TestCase):

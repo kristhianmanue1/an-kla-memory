@@ -117,6 +117,7 @@ Códigos emitidos por `write-policy/v1`:
 | `representation_accepted` | elegibilidad |
 | `summary_required_for_authority_ceiling` | `skip`; requiere nueva propuesta |
 | `operation_not_supported` | `skip` hasta implementar su semántica |
+| `record_without_indexable_text` | diagnóstico; el registro se escribe pero será `no_text` en `retrieve`/`assemble-context`. Como la beta sólo soporta `add`, es irrecuperable desde el CLI hasta añadir otro registro corregido. Emitido sólo en decisiones `write-full`/`write-summary`. |
 
 El catálogo ordenado forma parte de `_POLICY_CONFIGURATION`; añadir, retirar o
 cambiar razones modifica `policy_fingerprint`. No se reinterpretan decisiones
