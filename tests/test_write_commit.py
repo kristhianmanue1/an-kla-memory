@@ -593,5 +593,70 @@ class SupersedeStoreTests(unittest.TestCase):
         self.assertNotIn("status", self._facts()["f-old"])
 
 
+class ContextDiagnosticsTests(unittest.TestCase):
+    """ADR-0020: ``context_diagnostics`` in the commit-write-plan result."""
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.store = MemoryStore(self.temp.name)
+        self.root_revision = self.store.initialize()
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def _commit_add(self) -> dict:
+        candidate = proposal(self.root_revision, "f-x", representation="summary")
+        auth = authority(candidate)
+        planning = self.store.plan_write(candidate, auth)
+        return self.store.commit_write_plan(
+            expected_current_hash=self.root_revision,
+            plan=planning["plan"],
+            proposal=candidate,
+            authority=auth,
+            decision=planning["decision"],
+        )
+
+    def test_commit_result_includes_context_diagnostics(self) -> None:
+        result = self._commit_add()
+        self.assertIn("context_diagnostics", result)
+        # Consistent with context_status(project_root) of the same root.
+        from an_kla.context_package import context_status
+
+        expected = dict(context_status(self.temp.name))
+        self.assertEqual(result["context_diagnostics"], expected)
+        self.assertEqual(
+            result["context_diagnostics"]["schema"], "an-kla/context-status/v1"
+        )
+
+    def test_context_diagnostics_degraded_when_context_status_raises(self) -> None:
+        # commit must stay authoritative even if context_status blows up.
+        with patch("an_kla.store.context_status", side_effect=OSError("boom")):
+            result = self._commit_add()
+        self.assertTrue(result["committed"])
+        cd = result["context_diagnostics"]
+        self.assertIsNone(cd["ok"])
+        self.assertEqual(cd["diagnostics"], ["context_status_unavailable"])
+        self.assertEqual(cd["schema"], "an-kla/context-status/v1")
+        self.assertIn("error", cd)
+
+    def test_skip_result_includes_context_diagnostics(self) -> None:
+        # unresolved authority -> skip; diagnostics still surfaced (ADR-0020).
+        candidate = proposal(self.root_revision, "f-skip", representation="full")
+        auth = authority(candidate, authority_class="unresolved")
+        planning = self.store.plan_write(candidate, auth)
+        result = self.store.commit_write_plan(
+            expected_current_hash=self.root_revision,
+            plan=planning["plan"],
+            proposal=candidate,
+            authority=auth,
+            decision=planning["decision"],
+        )
+        self.assertFalse(result["committed"])
+        self.assertIn("context_diagnostics", result)
+        self.assertEqual(
+            result["context_diagnostics"]["schema"], "an-kla/context-status/v1"
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

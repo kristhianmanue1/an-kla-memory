@@ -57,6 +57,7 @@ def capabilities() -> dict[str, Any]:
             "privileged_authority_requires_external_adapter": True,
             "retrieval_requires_indexable_text": True,
             "no_text_warning_reason_code": "record_without_indexable_text",
+            "context_diagnostics_in_write_result": True,
         },
         "upgrade": {
             "profile": "project-context-upgrade/v1",

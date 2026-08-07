@@ -17,6 +17,7 @@ import uuid
 from typing import Any, Iterable, Iterator, Mapping
 
 from .canonical import bare_digest, canonical_json, digest_bytes, digest_json
+from .context_package import context_status
 from .write_policy import (
     WritePolicyError,
     build_write_plan,
@@ -278,6 +279,7 @@ class MemoryStore:
                     "decision": "skip",
                     "reason_codes": deepcopy(checked_decision["reason_codes"]),
                     "plan_fingerprint": checked_plan["plan_fingerprint"],
+                    "context_diagnostics": self._context_diagnostics(),
                 }
 
             # ADR-0019 (PR-B): resolve supersede targets against the authoritative
@@ -364,7 +366,28 @@ class MemoryStore:
             "decision": checked_decision["decision"],
             "reason_codes": deepcopy(checked_decision["reason_codes"]),
             "plan_fingerprint": checked_plan["plan_fingerprint"],
+            "context_diagnostics": self._context_diagnostics(),
         }
+
+    def _context_diagnostics(self) -> dict[str, Any]:
+        """Best-effort contract-health snapshot (ADR-0020).
+
+        Computed OUTSIDE the write lock on the commit path; always returns a
+        dict so it never masks a successful commit. Degrades to a
+        ``context_status_unavailable`` marker if ``context_status`` raises.
+        Objective status data, not instructions (trust boundary).
+        """
+
+        try:
+            return dict(context_status(str(self.project_root)))
+        except Exception as exc:  # best-effort diagnostic surface, never fatal
+            code = getattr(exc, "code", None) or type(exc).__name__
+            return {
+                "schema": "an-kla/context-status/v1",
+                "ok": None,
+                "diagnostics": ["context_status_unavailable"],
+                "error": str(code),
+            }
 
     def _commit_locked(
         self,
