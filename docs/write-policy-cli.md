@@ -120,24 +120,13 @@ beta no afirma identidad criptográfica.
 Los fallos al leer JSON se devuelven como `input_json_unreadable` o
 `input_json_invalid`; no incluyen rutas absolutas ni contenido candidato.
 
-## API heredada
+## API interna
 
-El comando `write` queda sólo como transición beta.9 y exige el opt-in visible
-`--allow-legacy-unguarded-write`. Sin ese flag falla antes de mutar con
-`legacy_unguarded_write_requires_opt_in`. Con el flag, no pasa por
-`write-policy/v1` y emite en stderr:
-
-```text
-an-kla warning: legacy_unguarded_write_enabled; bypasses_write_policy_v1; removal=v0.1.0-beta.10
-```
-
-El resultado conserva además:
-
-```text
-legacy_write_bypasses_write_policy
-```
+El comando público heredado `write` fue retirado en beta.11. Toda escritura
+pública nueva usa `plan-write` → `commit-write-plan`; pasar
+`--allow-legacy-unguarded-write` también falla porque el flag ya no forma parte
+del CLI.
 
 `MemoryStore.commit()` se conserva como mecanismo interno de mantenimiento y
-tests, no como escritura pública gobernada. El comando `write` se retirará en
-beta.10; las integraciones nuevas deben usar el flujo plan/commit. MCP sigue
+tests, no como superficie pública ni vía para saltar la política. MCP sigue
 siendo de sólo lectura.

@@ -197,10 +197,8 @@ class AgentCapabilityTests(unittest.TestCase):
         self.assertEqual(
             first["write_policy"]["legacy_unguarded_cli"],
             {
-                "command": "write",
-                "requires_flag": "--allow-legacy-unguarded-write",
-                "warning": "legacy_unguarded_write_enabled",
-                "removal_target": "v0.1.0-beta.10",
+                "available": False,
+                "removed_in": "v0.1.0-beta.11",
             },
         )
         self.assertEqual(

@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -29,6 +30,19 @@ def configuration_sha256() -> str:
     return scan_configuration_sha256()
 
 
+def reference_corpus_sha256() -> str:
+    queries = read_queries_v2(QUERIES_PATH)
+    with tempfile.TemporaryDirectory() as directory:
+        _store, fixture = build_reference_store(directory)
+    core = {
+        "schema": "an-kla/reference-corpus-core-v1",
+        "queries_sha256": digest_json(queries),
+        "records_sha256": fixture["records_sha256"],
+        "fixture_sha256": fixture["fixture_sha256"],
+    }
+    return digest_json(core)
+
+
 def main() -> int:
     try:
         queries = read_queries_v2(QUERIES_PATH)
@@ -51,23 +65,17 @@ def main() -> int:
     ):
         print("check_benchmark_corpus: FAIL — non_synthetic_identifier")
         return 1
-    import tempfile
-
-    with tempfile.TemporaryDirectory() as directory:
-        _store, fixture = build_reference_store(directory)
-    core = {
-        "schema": "an-kla/reference-corpus-core-v1",
-        "queries_sha256": digest_json(queries),
-        "records_sha256": fixture["records_sha256"],
-        "fixture_sha256": fixture["fixture_sha256"],
-    }
-    corpus_sha256 = digest_json(core)
+    corpus_sha256 = reference_corpus_sha256()
     try:
         validate_provenance_manifest(provenance, corpus_sha256)
     except ValueError:
         print("check_benchmark_corpus: FAIL — invalid_provenance")
         return 1
-    print("check_benchmark_corpus: OK — corpus saneado y ligado; human_review=pending")
+    review_status = provenance["human_review"]["status"]
+    print(
+        "check_benchmark_corpus: OK — corpus saneado y ligado; "
+        f"human_review={review_status}"
+    )
     return 0
 
 

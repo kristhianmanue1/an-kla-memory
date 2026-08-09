@@ -4,6 +4,9 @@ Esta carpeta contiene la documentación evergreen del proyecto. Para hallazgos
 puntuales, planificación y respuestas a revisiones externas, ver
 [`planning/`](planning/).
 
+Para instalar o migrar un proyecto consumidor, empieza por la
+[guía de beta.11](beta11-user-guide.md).
+
 ## Índice
 
 ### Decisiones de arquitectura (ADRs)

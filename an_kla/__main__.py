@@ -144,24 +144,6 @@ def _run() -> None:
     evaluate_v2_cmd.add_argument("--measure-latency", action="store_true")
     reference_benchmark_cmd = sub.add_parser("benchmark-reference")
     reference_benchmark_cmd.add_argument("--measure-latency", action="store_true")
-    write_cmd = sub.add_parser(
-        "write",
-        allow_abbrev=False,
-        help="API alfa heredada; omite write-policy/v1 y emite deprecación.",
-    )
-    write_cmd.add_argument("--expected-current", required=True)
-    write_cmd.add_argument("--checkpoint-patch", required=True)
-    write_cmd.add_argument("--facts", default="")
-    write_cmd.add_argument("--events", default="")
-    write_cmd.add_argument("--episodes", default="")
-    write_cmd.add_argument(
-        "--allow-legacy-unguarded-write",
-        action="store_true",
-        help=(
-            "Confirmar explícitamente el bypass legado de write-policy/v1; "
-            "se retirará en beta.10."
-        ),
-    )
     plan_write_cmd = sub.add_parser(
         "plan-write", help="Planificar sin mutar; autoridad privilegiada requiere adaptador externo."
     )
@@ -289,11 +271,6 @@ def _run() -> None:
         help="Verificar (sin aplicar) si hay una versión más reciente publicada.",
     )
     args = parser.parse_args()
-
-    # Reject the legacy mutation before update checks, filesystem reads or
-    # MemoryStore construction.  The full flag is intentionally non-abbreviable.
-    if args.command == "write" and not args.allow_legacy_unguarded_write:
-        raise ValueError("legacy_unguarded_write_requires_opt_in")
 
     if args.command == "check-updates":
         notice = check_for_update(force=True)
@@ -466,24 +443,6 @@ def _run() -> None:
         )
     elif args.command == "benchmark-reference":
         result = run_reference_benchmark(measure_latency=args.measure_latency)
-    elif args.command == "write":
-        if not args.allow_legacy_unguarded_write:
-            raise ValueError("legacy_unguarded_write_requires_opt_in")
-        sys.stderr.write(
-            "an-kla warning: legacy_unguarded_write_enabled; "
-            "bypasses_write_policy_v1; removal=v0.1.0-beta.10\n"
-        )
-        result = {
-            "revision": store.commit(
-                expected_current_hash=args.expected_current,
-                checkpoint_patch=_json(args.checkpoint_patch),
-                facts=_json(args.facts) if args.facts else (),
-                events=_json(args.events) if args.events else (),
-                episodes=_json(args.episodes) if args.episodes else (),
-            ),
-            "deprecation": "legacy_write_bypasses_write_policy",
-            "warning": "legacy_unguarded_write_enabled",
-        }
     elif args.command == "plan-write":
         result = store.plan_write(
             _json(args.proposal),

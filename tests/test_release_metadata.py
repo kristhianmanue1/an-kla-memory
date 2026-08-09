@@ -71,12 +71,14 @@ class ReleaseMetadataTests(unittest.TestCase):
         payload = (ROOT / "README.md").read_text(encoding="utf-8")
         required = (
             "python3.12 -m venv .venv",
-            "git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.9",
+            "git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.11",
             "-m an_kla --version",
             "context plan --operation install",
             "context plan --operation update",
             "context plan --operation uninstall",
             "pip uninstall an-kla-memory",
+            "docs/beta11-user-guide.md",
+            'resume --query "siguiente paso" --budget 4096',
         )
         for fragment in required:
             with self.subTest(fragment=fragment):
@@ -86,6 +88,16 @@ class ReleaseMetadataTests(unittest.TestCase):
             "git+https://github.com/kristhianmanue1/an-kla-memory.git@main",
             payload,
         )
+
+    def test_beta11_legacy_migration_adopts_identity_before_apply(self) -> None:
+        payload = (ROOT / "docs" / "beta11-user-guide.md").read_text(
+            encoding="utf-8"
+        )
+        inspect_at = payload.index("upgrade inspect")
+        adopt_at = payload.index("identity adopt")
+        apply_at = payload.index("upgrade apply")
+        self.assertLess(inspect_at, adopt_at)
+        self.assertLess(adopt_at, apply_at)
 
 
 if __name__ == "__main__":

@@ -71,8 +71,8 @@ python3 scripts/check_benchmark_corpus.py
 → check_benchmark_corpus: OK — corpus saneado y ligado; human_review=pending
 
 python3 scripts/check_clean_wheel.py
-→ check_clean_wheel: OK — entrypoint, recursos y benchmark-reference desde
-  wheel aislado (an-kla-memory 0.1.0b9)
+→ check_clean_wheel: OK — instalación nueva, contexto, identidad, recursos y
+  benchmark-reference desde wheel aislado (an-kla-memory 0.1.0b11)
 ```
 
 Los gates completos de tests, schemas, tamaños y ronda adversarial se registran
