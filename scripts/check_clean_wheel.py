@@ -54,6 +54,15 @@ def main() -> int:
         cli = scripts / ("an-kla.exe" if os.name == "nt" else "an-kla")
         _run([str(python), "-m", "pip", "install", "--no-deps", str(wheels[0])])
         version = _run([str(cli), "--version"])
+        if version.stdout.decode().strip() != "an-kla-memory 0.1.0b11":
+            raise SystemExit("clean_wheel_wrong_version")
+        help_result = _run([str(cli), "--no-update-check", "--help"])
+        help_text = help_result.stdout.decode()
+        if "{init,status,verify" not in help_text:
+            raise SystemExit("clean_wheel_invalid_cli_help")
+        public_commands = help_text.split("{", 1)[1].split("}", 1)[0].split(",")
+        if "write" in public_commands:
+            raise SystemExit("clean_wheel_legacy_write_exposed")
         schema_list = _run(
             [str(cli), "--no-update-check", "schema", "list"],
             env={**os.environ, "AN_KLA_NO_UPDATE_CHECK": "1"},
@@ -89,8 +98,29 @@ def main() -> int:
             "reason": "metrics_require_future_adr",
         }:
             raise SystemExit("clean_wheel_unsafe_benchmark_conclusion")
+
+        consumer = temporary / "consumer"
+        consumer.mkdir()
+        consumer_command = [str(cli), "--no-update-check", "--project-root", str(consumer)]
+        _run([*consumer_command, "init"])
+        _run([*consumer_command, "context", "plan", "--operation", "install"])
+        _run([*consumer_command, "context", "install"])
+        context_status = json.loads(
+            _run([*consumer_command, "context", "status"]).stdout
+        )
+        if context_status.get("ok") is not True or context_status.get(
+            "template_version"
+        ) != "0.1.0-beta.11":
+            raise SystemExit("clean_wheel_context_not_current")
+        identity_status = json.loads(
+            _run([*consumer_command, "identity", "status"]).stdout
+        )
+        if identity_status.get("identity_status") != "complete":
+            raise SystemExit("clean_wheel_identity_not_ready")
+        _run([*consumer_command, "verify"])
     print(
-        "check_clean_wheel: OK — entrypoint, recursos y benchmark-reference "
+        "check_clean_wheel: OK — instalación nueva, contexto, identidad, "
+        "recursos y benchmark-reference "
         f"desde wheel aislado ({version.stdout.decode().strip()})"
     )
     return 0

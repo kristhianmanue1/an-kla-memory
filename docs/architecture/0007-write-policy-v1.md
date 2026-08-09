@@ -6,11 +6,15 @@ Aceptada. El núcleo puro está en `an_kla/write_policy.py` y la integración
 transaccional candidata de F2 en `MemoryStore.plan_write()` y
 `MemoryStore.commit_write_plan()`. `MemoryStore.commit()` queda accesible sólo
 como primitiva interna no soportada para mantenimiento y tests: esa
-accesibilidad no promete compatibilidad pública. En beta.9, el comando histórico
-`write` es una transición separada que exige el flag exacto
-`--allow-legacy-unguarded-write`, emite
-`legacy_write_bypasses_write_policy`/`legacy_unguarded_write_enabled` y se retira
-en beta.10. Sin opt-in falla antes de update-check, lectura o mutación.
+accesibilidad no promete compatibilidad pública. El comando histórico `write`
+se conservó como transición en beta.9 y fue retirado de la superficie pública
+en beta.11. `MemoryStore.commit()` permanece exclusivamente como API interna de
+mantenimiento y tests.
+
+Durante esa transición, el resultado y warning quedaron identificados por los
+códigos históricos estables `legacy_write_bypasses_write_policy` y
+`legacy_unguarded_write_enabled`; se conservan aquí para interpretar auditorías
+beta.9, no como capacidades vigentes.
 
 ## Contexto
 

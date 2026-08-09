@@ -62,6 +62,13 @@ class PureContextBlockTests(unittest.TestCase):
             f"Duplicated code blocks in DETAILED_CONTRACT: {duplicates}",
         )
 
+    def test_legacy_identity_adoption_precedes_upgrade_apply(self) -> None:
+        inspect_at = DETAILED_CONTRACT.index("upgrade inspect")
+        adopt_at = DETAILED_CONTRACT.index("identity adopt")
+        apply_at = DETAILED_CONTRACT.index("upgrade apply")
+        self.assertLess(inspect_at, adopt_at)
+        self.assertLess(adopt_at, apply_at)
+
     def test_repository_contract_and_managed_block_match_templates_orig(self) -> None:
         self.assertEqual(
             (ROOT / "AN-KLA.md").read_text(encoding="utf-8").replace("\r\n", "\n"),
@@ -96,7 +103,9 @@ class PureContextBlockTests(unittest.TestCase):
             "no certifica fidelidad",
             "`derived_from_retrieval=true`",
             "archivo efímero nuevo, privado y no rastreado",
-            "`governed_checkpoint_update_unavailable`",
+            "## Checkpoint y continuidad gobernados",
+            "transaction inspect",
+            "La compactación borra objetos históricos",
             "El lock es local",
             "AN-KLA no autoriza publicaciones",
         )

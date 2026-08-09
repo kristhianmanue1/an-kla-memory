@@ -12,6 +12,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from an_kla.version import normalized_release_tag
+from an_kla.benchmark_provenance import validate_provenance_manifest
+from scripts.check_benchmark_corpus import reference_corpus_sha256
 
 
 def project_version(root: Path) -> str:
@@ -32,6 +34,7 @@ def _unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
 
 
 def validate_release_gate(root: Path, tag: str) -> None:
+    validate_benchmark_review(root)
     path = root / "docs" / "releases" / f"{tag}-adversarial.md"
     try:
         payload = path.read_text(encoding="utf-8")
@@ -61,6 +64,30 @@ def validate_release_gate(root: Path, tag: str) -> None:
         raise ValueError("release_gate_scope_mismatch")
     if gate["decision"] != "proceed":
         raise ValueError("release_gate_not_proceed")
+
+
+def validate_benchmark_review(root: Path) -> None:
+    path = (
+        root
+        / "an_kla"
+        / "resources"
+        / "retrieval-benchmark-v2"
+        / "provenance.json"
+    )
+    try:
+        provenance = json.loads(
+            path.read_text(encoding="utf-8"), object_pairs_hook=_unique_object
+        )
+        checked = validate_provenance_manifest(
+            provenance, reference_corpus_sha256()
+        )
+    except (OSError, UnicodeError, json.JSONDecodeError, ValueError) as exc:
+        raise ValueError("benchmark_provenance_invalid") from exc
+    review = checked["human_review"]
+    if review["status"] != "passed":
+        raise ValueError("benchmark_human_review_pending")
+    if review["reviewer"] != "maintainer":
+        raise ValueError("benchmark_human_review_invalid")
 
 
 def main() -> None:

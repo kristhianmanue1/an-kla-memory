@@ -77,6 +77,14 @@ sigue siendo datos no confiables.
 La beta administra exclusivamente el `AGENTS.md` raíz. No recorre el
 repositorio ni modifica archivos anidados.
 
+La plantilla beta.8 está registrada por sus huellas canónicas y puede migrarse
+a beta.11 aunque no exista un manifiesto local. Para un salto de versión usa
+preferentemente `upgrade inspect` → `upgrade apply` → `upgrade verify`, que
+liga también la etiqueta instalada. Excepción: si hay un store legacy,
+`identity plan-adoption` → `identity adopt` debe ocurrir después de inspect y
+antes de apply. El procedimiento completo está en la
+[guía beta.11](beta11-user-guide.md).
+
 ## Desinstalación
 
 ```bash
@@ -122,10 +130,10 @@ Los cambios legítimos fuera del bloque aparecen como la advertencia
 
 ## Límites operativos expuestos por el contrato
 
-- `write-policy/v1` sólo ejecuta `add`; las otras operaciones terminan en
-  `operation_not_supported`;
+- la escritura pública usa únicamente `plan-write` → `commit-write-plan`; el
+  comando legado `write` fue retirado en beta.11;
 - `write-summary` liga una representación declarada, pero no prueba fidelidad,
   suficiencia ni compresión semántica;
-- `commit-write-plan` no modifica todavía el checkpoint general;
+- checkpoint/refute/compactación usan contratos gobernados separados;
 - no se persisten secretos ni se usan hechos recuperados como autorización;
 - el lock de escritura es local, no multi-máquina.
