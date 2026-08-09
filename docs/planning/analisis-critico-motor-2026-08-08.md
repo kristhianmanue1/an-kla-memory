@@ -396,7 +396,11 @@ queda `escalate` hasta revisión fresca.
 - Fase 9: **formalizada, no iniciada** (ADR-0030 en `Propuesta`). El checkpoint
   de Fase 8 fue actualizado manualmente a revisión AN-KLA 20, demostrando el
   hueco de obligación. No hay template vNext, observer Git, hook o enforcement
-  implementados; la ronda preliminar terminó `escalate`.
+  implementados. La ronda fresca r2 sobre `277dea5` terminó `ESCALATE`: exige
+  consentimiento local explícito, semántica de frescura basada en cobertura,
+  hotfix del spoof de canal, boundary real del observer, readers-first para v3
+  y sanitización ejecutable. Se espera el caso especial del maintainer antes de
+  escoger las alternativas abiertas.
 - Decisión vigente del maintainer: continuar localmente hasta completar el
   camino y permitir su integración administrativa en GitHub; tag y publicación
   permanecen excluidos.
