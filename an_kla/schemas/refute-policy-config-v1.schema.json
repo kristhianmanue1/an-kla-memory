@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:refute-policy-config:v1",
+  "title": "AN-KLA RefutePolicyConfig v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "profile", "supported_operations", "allowed_authority_classes", "evidence_kinds", "reason_codes", "terminal_error_codes", "overlay_format", "revision_schema", "resolver_required"],
+  "properties": {
+    "schema": {"const": "an-kla/refute-policy-config-v1"},
+    "profile": {"const": "refute-policy/v1"},
+    "supported_operations": {"const": ["refute"]},
+    "allowed_authority_classes": {"const": ["channel_confirmed", "tool_observed"]},
+    "evidence_kinds": {"const": ["artifact", "event", "fact", "episode", "revision", "external"]},
+    "reason_codes": {"const": ["authority_scope_mismatch", "refute_accepted", "refute_authority_resolver_unavailable", "refute_requires_privileged_authority", "verified_evidence_required"]},
+    "terminal_error_codes": {"const": ["invalid_refute_attestation", "invalid_refute_authority_claim", "invalid_refute_decision", "invalid_refute_plan", "invalid_refute_planning_result", "invalid_refute_proposal", "invalid_refute_target", "lifecycle_chain_invalid", "lifecycle_chain_limit_exceeded", "refute_content_hash_mismatch", "refute_plan_base_changed", "refute_policy_fingerprint_mismatch", "revision_schema_downgrade", "revision_transition_invalid"]},
+    "overlay_format": {"const": "refutations/v1"},
+    "revision_schema": {"const": "an-kla/revision-v2"},
+    "resolver_required": {"const": true}
+  }
+}

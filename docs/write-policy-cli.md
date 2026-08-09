@@ -25,6 +25,7 @@ Una propuesta de resumen derivado puede guardarse como `proposal.json`:
   "requested_representation": "summary",
   "record": {
     "id": "f-example",
+    "verified_at": "2026-08-08T00:00:00Z",
     "payload": {"text": "Resumen durable"}
   },
   "lineage": {
@@ -36,6 +37,14 @@ Una propuesta de resumen derivado puede guardarse como `proposal.json`:
 
 `sha256:REVISION_ACTUAL` representa el digest completo devuelto por `status`;
 no es un valor literal válido.
+
+`record.verified_at` es opcional y acepta la gramática cerrada
+`YYYY-MM-DDTHH:MM:SS[.ffffff](Z|±HH:MM)`: offset conocido entre `-14:00` y
+`+14:00`, con `14` sólo en minuto `00`; `-00:00` se rechaza. Es la fecha
+autodeclarada por el proposer en que se confirmó el dato; AN-KLA valida formato
+y representabilidad UTC, pero no la verifica ni eleva autoridad. Una fecha
+futura es dato válido y el core no lee reloj. Corregir o refrescar el valor
+requiere `supersede` del registro, no mutación del objeto existente.
 
 La autoridad separada, `authority.json`, liga el hash canónico de la propuesta,
 la misma revisión y el alcance exacto. Un agente por CLI puede usar
@@ -113,13 +122,22 @@ Los fallos al leer JSON se devuelven como `input_json_unreadable` o
 
 ## API heredada
 
-El comando `write` y `MemoryStore.commit()` siguen disponibles para
-compatibilidad y mantenimiento. No pasan por `write-policy/v1`; el CLI lo hace
-visible mediante:
+El comando `write` queda sólo como transición beta.9 y exige el opt-in visible
+`--allow-legacy-unguarded-write`. Sin ese flag falla antes de mutar con
+`legacy_unguarded_write_requires_opt_in`. Con el flag, no pasa por
+`write-policy/v1` y emite en stderr:
+
+```text
+an-kla warning: legacy_unguarded_write_enabled; bypasses_write_policy_v1; removal=v0.1.0-beta.10
+```
+
+El resultado conserva además:
 
 ```text
 legacy_write_bypasses_write_policy
 ```
 
-Las integraciones nuevas de agentes deben usar el flujo plan/commit. MCP sigue
+`MemoryStore.commit()` se conserva como mecanismo interno de mantenimiento y
+tests, no como escritura pública gobernada. El comando `write` se retirará en
+beta.10; las integraciones nuevas deben usar el flujo plan/commit. MCP sigue
 siendo de sólo lectura.

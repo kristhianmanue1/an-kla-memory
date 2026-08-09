@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:refute-proposal:v1",
+  "title": "AN-KLA RefuteProposal v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "base_revision", "stream", "target_record_sha256", "reason"],
+  "properties": {
+    "schema": {"const": "an-kla/refute-proposal-v1"},
+    "base_revision": {"$ref": "#/$defs/digest"},
+    "stream": {"enum": ["facts", "events", "episodes"]},
+    "target_record_sha256": {"$ref": "#/$defs/digest"},
+    "reason": {"enum": ["evidence_contradicts_record", "source_retracted", "integrity_violation"]}
+  },
+  "$defs": {"digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}
+}

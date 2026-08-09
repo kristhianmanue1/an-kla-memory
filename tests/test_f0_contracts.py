@@ -2,6 +2,8 @@ import json
 from pathlib import Path
 import unittest
 
+from an_kla.temporal import VERIFIED_AT_PATTERN
+
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMAS = ROOT / "docs" / "schemas"
@@ -18,6 +20,9 @@ class F0ContractTests(unittest.TestCase):
         "write-decision-v1.schema.json",
         "write-plan-v1.schema.json",
         "cost-certificate-v1.schema.json",
+        "context-assembly-v2.schema.json",
+        "mcp-retrieve-v2.schema.json",
+        "retrieval-result-v2.schema.json",
     )
 
     def test_all_schemas_are_local_strict_json_objects(self) -> None:
@@ -41,6 +46,32 @@ class F0ContractTests(unittest.TestCase):
         self.assertNotIn("supersede", representations)
         self.assertNotIn("refute", representations)
         self.assertIn("id", schema["properties"]["record"]["required"])
+
+    def test_write_proposal_documents_verified_at_closed_grammar(self) -> None:
+        schema = load_schema("write-proposal-v1.schema.json")
+        verified_at = schema["properties"]["record"]["properties"]["verified_at"]
+        self.assertEqual(verified_at["type"], "string")
+        self.assertEqual(verified_at["pattern"], VERIFIED_AT_PATTERN)
+        self.assertIn("never AN-KLA authority", verified_at["description"])
+
+    def test_retrieval_v2_schema_freezes_temporal_cooccurrences(self) -> None:
+        schema = load_schema("retrieval-result-v2.schema.json")
+        selected_item = schema["$defs"]["selected_item"]
+        computed_branch = selected_item["oneOf"][1]
+        self.assertEqual(
+            computed_branch["properties"]["verified_at"]["pattern"],
+            VERIFIED_AT_PATTERN,
+        )
+        stale_guard = schema["allOf"][0]
+        self.assertEqual(
+            stale_guard["if"]["properties"]["selected"]["contains"]["required"],
+            ["stale"],
+        )
+        self.assertEqual(
+            stale_guard["then"]["properties"]["freshness"]["properties"]
+            ["stale_after_days"],
+            {"type": "integer", "minimum": 0},
+        )
 
     def test_write_authority_is_a_separate_scoped_object(self) -> None:
         proposal = load_schema("write-proposal-v1.schema.json")

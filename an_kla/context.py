@@ -2,14 +2,17 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Any
 
 from .canonical import exact_sized_payload
 from .retrieval import retrieve
 from .store import MemoryStore
+from .temporal import FRESHNESS_PROFILE, FRESHNESS_PROJECTION_KEYS
 
 
 ASSEMBLY_PROFILE = "context-assembly/v1"
+ASSEMBLY_PROFILE_V2 = "context-assembly/v2"
 
 
 def assemble_context(
@@ -18,6 +21,9 @@ def assemble_context(
     budget: int,
     *,
     new_information: str | None = None,
+    freshness_profile: str | None = None,
+    now: datetime | None = None,
+    stale_after_days: int | None = None,
 ) -> dict[str, Any]:
     """Assemble checkpoint, caller information and retrieval under one budget.
 
@@ -34,9 +40,20 @@ def assemble_context(
     if new_information is not None and not isinstance(new_information, str):
         raise ValueError("invalid_new_information")
 
-    source = retrieve(store, query, 2**63 - 1)
+    if freshness_profile is None and now is None and stale_after_days is None:
+        source = retrieve(store, query, 2**63 - 1)
+    else:
+        source = retrieve(
+            store,
+            query,
+            2**63 - 1,
+            freshness_profile=freshness_profile,
+            now=now,
+            stale_after_days=stale_after_days,
+        )
     snapshot = store.snapshot(source["revision"])
     candidates = source["selected"]
+    freshness_enabled = source["schema"] == "an-kla/retrieval-result-v2"
     records: list[dict[str, Any]] = []
     # Reserve the largest possible diagnostic before selecting.  Decreasing
     # this count as records enter keeps every intermediate payload feasible and
@@ -47,9 +64,13 @@ def assemble_context(
         exclusions = dict(source["excluded_summary"])
         if budget_excluded:
             exclusions["budget"] = exclusions.get("budget", 0) + budget_excluded
-        return {
-            "schema": "an-kla/context-assembly-v1",
-            "profile": ASSEMBLY_PROFILE,
+        payload = {
+            "schema": (
+                "an-kla/context-assembly-v2"
+                if freshness_enabled
+                else "an-kla/context-assembly-v1"
+            ),
+            "profile": ASSEMBLY_PROFILE_V2 if freshness_enabled else ASSEMBLY_PROFILE,
             "canonicalization": "canonical-json/v1",
             "untrusted_memory_data": True,
             "host_framing_unmeasured": True,
@@ -68,6 +89,10 @@ def assemble_context(
             },
             "excluded_summary": exclusions,
         }
+        if freshness_enabled:
+            payload["freshness_profile"] = FRESHNESS_PROFILE
+            payload["freshness"] = source["freshness"]
+        return payload
 
     _required, required_size = exact_sized_payload(build)
     if required_size > budget:
@@ -75,9 +100,12 @@ def assemble_context(
 
     for item in candidates:
         budget_excluded -= 1
-        records.append(
-            {"id": item["id"], "text": item["render"], "score": item["score"]}
-        )
+        record = {"id": item["id"], "text": item["render"], "score": item["score"]}
+        if freshness_enabled:
+            record.update(
+                {key: item[key] for key in FRESHNESS_PROJECTION_KEYS if key in item}
+            )
+        records.append(record)
         _payload, measured = exact_sized_payload(build)
         if measured > budget:
             records.pop()

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:refute-observations:v1",
+  "title": "AN-KLA RefuteObservations v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "base_revision", "items"],
+  "properties": {
+    "schema": {"const": "an-kla/refute-observations-v1"},
+    "base_revision": {"$ref": "#/$defs/digest"},
+    "items": {"type": "array", "minItems": 1, "maxItems": 16, "items": {"$ref": "#/$defs/observation"}}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "evidence": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["kind", "record_sha256"], "properties": {"kind": {"enum": ["fact", "event", "episode"]}, "record_sha256": {"$ref": "#/$defs/digest"}}},
+        {"type": "object", "additionalProperties": false, "required": ["kind", "revision_sha256"], "properties": {"kind": {"const": "revision"}, "revision_sha256": {"$ref": "#/$defs/digest"}}},
+        {"type": "object", "additionalProperties": false, "required": ["kind", "content_sha256"], "properties": {"kind": {"enum": ["artifact", "external"]}, "content_sha256": {"$ref": "#/$defs/digest"}}}
+      ]
+    },
+    "observation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "evidence", "store_resolution", "observed_sha256"],
+      "properties": {
+        "schema": {"const": "an-kla/refute-observation-v1"},
+        "evidence": {"$ref": "#/$defs/evidence"},
+        "store_resolution": {"enum": ["present", "missing", "unavailable"]},
+        "observed_sha256": {"oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]}
+      }
+    }
+  }
+}

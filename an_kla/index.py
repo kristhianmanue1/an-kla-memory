@@ -13,6 +13,7 @@ from typing import Any
 from .canonical import bare_digest
 from .record_text import record_text
 from .store import MemoryStore, STREAMS
+from .reader_gate import shared_reader_gate
 
 INDEX_PROFILE = "sqlite-fts5/v1"
 INDEX_DIR_NAME = "sqlite-fts5-v1"
@@ -40,7 +41,7 @@ def detect_fts5() -> bool:
         return False
 
 
-def build_index(store: MemoryStore, *, revision_id: str | None = None) -> dict[str, Any]:
+def _build_index_under_gate(store: MemoryStore, *, revision_id: str | None = None) -> dict[str, Any]:
     snapshot = store.snapshot(revision_id)
     if not detect_fts5():
         return {
@@ -120,6 +121,11 @@ def build_index(store: MemoryStore, *, revision_id: str | None = None) -> dict[s
             temporary.unlink()
 
 
+def build_index(store: MemoryStore, *, revision_id: str | None = None) -> dict[str, Any]:
+    with shared_reader_gate(store):
+        return _build_index_under_gate(store, revision_id=revision_id)
+
+
 def _read_metadata(path: Path, key: str) -> str | None:
     try:
         con = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
@@ -134,7 +140,7 @@ def _read_metadata(path: Path, key: str) -> str | None:
         return None
 
 
-def index_resolution(store: MemoryStore, revision_id: str) -> IndexResolution:
+def _index_resolution_under_gate(store: MemoryStore, revision_id: str) -> IndexResolution:
     """Resolve an index reference without hashing a whole SQLite per query."""
     directory = store.root / "indexes" / bare_digest(revision_id) / INDEX_DIR_NAME
     reference = directory / "CURRENT"
@@ -161,11 +167,16 @@ def index_resolution(store: MemoryStore, revision_id: str) -> IndexResolution:
     return IndexResolution(target, "none")
 
 
+def index_resolution(store: MemoryStore, revision_id: str) -> IndexResolution:
+    with shared_reader_gate(store):
+        return _index_resolution_under_gate(store, revision_id)
+
+
 def resolve_index(store: MemoryStore, revision_id: str) -> Path | None:
     return index_resolution(store, revision_id).path
 
 
-def verify_index_deep(store: MemoryStore, revision_id: str | None = None) -> dict[str, Any]:
+def _verify_index_deep_under_gate(store: MemoryStore, revision_id: str | None = None) -> dict[str, Any]:
     """Hash the selected derived index on explicit diagnostic request only."""
     snapshot = store.snapshot(revision_id)
     resolution = index_resolution(store, snapshot.revision_id)
@@ -178,6 +189,11 @@ def verify_index_deep(store: MemoryStore, revision_id: str | None = None) -> dic
     actual = "sha256:" + hashlib.sha256(payload).hexdigest()
     expected = "sha256:" + resolution.path.stem
     return {"ok": actual == expected, "revision": snapshot.revision_id, "index": str(resolution.path.relative_to(store.root)), "expected": expected, "actual": actual}
+
+
+def verify_index_deep(store: MemoryStore, revision_id: str | None = None) -> dict[str, Any]:
+    with shared_reader_gate(store):
+        return _verify_index_deep_under_gate(store, revision_id)
 
 
 def index_integrity_status(path: Path) -> str:

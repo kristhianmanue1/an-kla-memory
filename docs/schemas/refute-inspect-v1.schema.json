@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:refute-inspect:v1",
+  "title": "AN-KLA RefuteInspect v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "untrusted_memory_data", "revision", "stream", "target_record_sha256", "found", "target_id_sha256", "state", "state_source", "physical_status_sha256", "links", "chain", "refutation", "authority_claim", "authority_attestation"],
+  "properties": {
+    "schema": {"const": "an-kla/refute-inspect-v1"},
+    "untrusted_memory_data": {"const": true},
+    "revision": {"$ref": "#/$defs/digest"},
+    "stream": {"enum": ["facts", "events", "episodes"]},
+    "target_record_sha256": {"$ref": "#/$defs/digest"},
+    "found": {"type": "boolean"},
+    "target_id_sha256": {"$ref": "#/$defs/nullable_digest"},
+    "state": {"oneOf": [{"enum": ["active", "inactive", "superseded", "refuted"]}, {"type": "null"}]},
+    "state_source": {"oneOf": [{"enum": ["default_active", "physical_untrusted", "supersedes_overlay", "refutations_overlay"]}, {"type": "null"}]},
+    "physical_status_sha256": {"$ref": "#/$defs/nullable_digest"},
+    "links": {"oneOf": [{"$ref": "#/$defs/links"}, {"type": "null"}]},
+    "chain": {"type": "array", "items": {"$ref": "#/$defs/hop"}},
+    "refutation": {"oneOf": [{"$ref": "urn:an-kla:schema:refutation:v1"}, {"type": "null"}]},
+    "authority_claim": {"oneOf": [{"$ref": "urn:an-kla:schema:refute-authority-claim:v1"}, {"type": "null"}]},
+    "authority_attestation": {"oneOf": [{"$ref": "urn:an-kla:schema:refute-authority-attestation:v1"}, {"type": "null"}]}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "nullable_digest": {"oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+    "links": {"type": "object", "additionalProperties": false, "required": ["superseded_by_sha256", "refutation_id"], "properties": {"superseded_by_sha256": {"$ref": "#/$defs/nullable_digest"}, "refutation_id": {"$ref": "#/$defs/nullable_digest"}}},
+    "hop": {"type": "object", "additionalProperties": false, "required": ["record_sha256", "id_sha256", "state", "superseded_by_sha256", "refutation_id"], "properties": {"record_sha256": {"$ref": "#/$defs/digest"}, "id_sha256": {"$ref": "#/$defs/digest"}, "state": {"enum": ["active", "inactive", "superseded", "refuted"]}, "superseded_by_sha256": {"$ref": "#/$defs/nullable_digest"}, "refutation_id": {"$ref": "#/$defs/nullable_digest"}}}
+  }
+}

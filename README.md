@@ -1,7 +1,7 @@
 # AN-KLA Memory
 
 [![CI](https://github.com/kristhianmanue1/an-kla-memory/actions/workflows/test.yml/badge.svg)](https://github.com/kristhianmanue1/an-kla-memory/actions/workflows/test.yml)
-[![Version](https://img.shields.io/badge/version-0.1.0--beta.8-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.8)
+[![Version](https://img.shields.io/badge/version-0.1.0--beta.9-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.9)
 [![Python](https://img.shields.io/badge/python-3.9%20%7C%203.12-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 [![Beta](https://img.shields.io/badge/status-local%20beta-orange)](https://github.com/kristhianmanue1/an-kla-memory/releases)
@@ -13,7 +13,10 @@ un plan verificable.
 
 La beta se distribuye desde GitHub, no desde PyPI. Usa siempre una etiqueta
 exacta: no instales `main` ni otra referencia móvil. La versión del código es
-`0.1.0b8` y su etiqueta de distribución es `v0.1.0-beta.8`.
+`0.1.0b9` y su etiqueta de distribución es `v0.1.0-beta.9`.
+La instalación expone tanto `python -m an_kla` como el comando equivalente
+`an-kla`; los ejemplos conservan la primera forma para hacer explícito el
+intérprete del entorno virtual.
 
 ## Tabla de contenidos
 
@@ -48,7 +51,7 @@ Desde la raíz del proyecto consumidor en macOS o Linux:
 python3.12 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
 .venv/bin/python -m pip install \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.8"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.9"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . init
 .venv/bin/python -m an_kla --project-root . context plan --operation install
@@ -88,7 +91,7 @@ de contexto:
 
 ```bash
 .venv/bin/python -m pip install --upgrade \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.8"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.9"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . context status
 .venv/bin/python -m an_kla --project-root . context plan --operation update
@@ -144,7 +147,7 @@ memoria del proyecto:
 `capabilities` emite JSON canónico y declara, entre otros límites, que la
 recuperación v1 busca únicamente `facts` por defecto, que MCP es de sólo lectura
 y que los presupuestos implementados miden bytes UTF-8, no tokens exactos. Los
-cinco schemas normativos se incluyen dentro del paquete y `schema show` entrega
+schemas normativos se incluyen dentro del paquete y `schema show` entrega
 sus bytes sin depender del checkout ni de la red. `context show-template` vuelca
 el texto canónico del bloque administrado y del contrato detallado de la versión
 instalada (o los hashes de plantillas históricas conocidas) para diagnóstico o
@@ -166,7 +169,7 @@ puede inspeccionar la actualización de la integración sin mutar el proyecto:
 
 ```bash
 .venv/bin/python -m an_kla --project-root . upgrade inspect \
-  --target v0.1.0-beta.8 > RUTA_EFIMERA_NUEVA
+  --target v0.1.0-beta.9 > RUTA_EFIMERA_NUEVA
 ```
 
 El agente debe conservar por separado el `plan_fingerprint` devuelto, revisar
@@ -176,7 +179,7 @@ el plan y aplicar exactamente esos bytes:
 .venv/bin/python -m an_kla --project-root . upgrade apply \
   <plan_fingerprint> --plan RUTA_EFIMERA_NUEVA
 .venv/bin/python -m an_kla --project-root . upgrade verify \
-  --target v0.1.0-beta.8
+  --target v0.1.0-beta.9
 git diff -- AGENTS.md AN-KLA.md
 ```
 
@@ -196,6 +199,10 @@ contenido de `context-package/v1`. Consulta la
   --query "estado del proyecto" --budget 1200
 .venv/bin/python -m an_kla --project-root . retrieve \
   --query "lecciones aprendidas" --budget 2000 --streams facts,episodes,events
+.venv/bin/python -m an_kla --project-root . retrieve \
+  --query "hechos por reconfirmar" --budget 2000 \
+  --freshness-profile computed-age/v1 \
+  --now 2026-08-08T00:00:00Z --stale-after-days 30
 .venv/bin/python -m an_kla --project-root . assemble-context \
   --query "estado del proyecto" \
   --new-information "solicitud actual" \
@@ -207,11 +214,18 @@ beta). El resultado incluye `excluded_detail.ids` (truncado a 50 IDs por razón)
 cuando los registros se excluyen por `budget`, `zero_score`, `inactive`,
 `no_text` o `invalid_record`.
 
+El perfil opcional `computed-age/v1` proyecta la edad de `verified_at` después
+de seleccionar: no cambia score, orden, autoridad ni exclusiones de retrieval.
+`verified_at` es un timestamp autodeclarado por el registro, no una verificación
+realizada por AN-KLA. Sin perfil explícito, los payloads v1 permanecen iguales.
+
 La salida completa de `context-assembly/v1` queda acotada en bytes UTF-8;
 consulta [ADR-0006](docs/architecture/0006-context-assembly-v1.md). La escritura
 nueva debe usar `plan-write` y `commit-write-plan`, descritos en la
 [guía de escritura gobernada](docs/write-policy-cli.md). El comando histórico
-`write` se conserva sólo por compatibilidad y no ofrece esa garantía.
+`write` se conserva sólo durante beta.9, exige
+`--allow-legacy-unguarded-write`, emite un warning estable y se retirará en
+beta.10. `MemoryStore.commit()` queda para mantenimiento interno y tests.
 
 ## Desarrollo del motor
 

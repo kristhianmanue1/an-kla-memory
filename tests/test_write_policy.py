@@ -334,6 +334,54 @@ class WritePolicyTests(unittest.TestCase):
         self.assertEqual(second["supported_operations"], ["add", "supersede"])
         self.assertEqual(policy_fingerprint(), digest_json(second))
 
+    def test_verified_at_validator_changes_and_freezes_policy_fingerprint(self) -> None:
+        self.assertEqual(
+            policy_configuration()["record_validators"],
+            {"verified_at": "an-kla-verified-at/v1"},
+        )
+        self.assertEqual(
+            policy_fingerprint(),
+            "sha256:2239cd32ec8f21e1d4ee5ca18613c69f9c94136819cdd81d4e63016fd7b98418",
+        )
+
+    def test_verified_at_is_validated_but_never_elevates_authority(self) -> None:
+        candidate = proposal()
+        candidate["record"]["verified_at"] = "2026-08-08T00:00:00Z"
+        decision = evaluate_write(candidate, authority(candidate))
+        self.assertEqual(decision["decision"], "write-full")
+        self.assertNotIn("self_asserted_authority_ignored", decision["reason_codes"])
+
+    def test_invalid_verified_at_uses_stable_proposal_error(self) -> None:
+        for value in (None, 7, "not-a-date", "2026-08-08T00:00:00"):
+            candidate = proposal()
+            candidate["record"]["verified_at"] = value
+            with self.subTest(value=value), self.assertRaises(WritePolicyError) as caught:
+                validate_write_proposal(candidate)
+            self.assertEqual(caught.exception.code, "invalid_write_proposal")
+            self.assertEqual(caught.exception.detail, "record.verified_at")
+
+    def test_beta8_valid_plan_fails_with_policy_fingerprint_mismatch(self) -> None:
+        candidate = proposal()
+        candidate["record"]["verified_at"] = "2026-08-08T00:00:00Z"
+        auth = authority(candidate)
+        current_decision = evaluate_write(candidate, auth)
+        beta8_fingerprint = (
+            "sha256:41d23cf05e393c31e8b88f2bb1e415c0a3961bc963c01944e1ef8cae892eaa77"
+        )
+        old_decision = deepcopy(current_decision)
+        old_decision["policy_fingerprint"] = beta8_fingerprint
+        old_plan = build_write_plan(candidate, auth, current_decision)
+        old_plan["core"]["policy_fingerprint"] = beta8_fingerprint
+        old_plan["core"]["decision_sha256"] = digest_json(old_decision)
+        for item in old_plan["records"]:
+            if item["record"].get("type") == "write_policy_decision":
+                item["record"]["payload"]["policy_fingerprint"] = beta8_fingerprint
+        old_plan["core"]["planned_records_sha256"] = digest_json(old_plan["records"])
+        old_plan["plan_fingerprint"] = digest_json(old_plan["core"])
+        with self.assertRaises(WritePolicyError) as caught:
+            verify_write_plan(old_plan, candidate, auth, old_decision)
+        self.assertEqual(caught.exception.code, "write_policy_fingerprint_mismatch")
+
     def test_policy_fingerprint_binds_reason_and_terminal_code_catalogs(self) -> None:
         configuration = policy_configuration()
         self.assertEqual(

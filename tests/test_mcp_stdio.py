@@ -76,7 +76,7 @@ class McpStdioTests(unittest.TestCase):
                 process.stdin.flush()
                 retrieved = self._send(process, {"jsonrpc":"2.0", "id":2, "method":"tools/call", "params":{"name":"an_kla_retrieve", "arguments":{"query":"memoria", "budget_bytes":400}}})
                 self.assertFalse(retrieved["result"]["isError"])
-                replacement = store.commit(expected_current_hash=expected, checkpoint_patch={"goal":"replaced while reader alive"})
+                replacement = store.commit(expected_current_hash=expected, checkpoint_patch={})
                 self.assertEqual(store.read_current(), replacement)
             finally:
                 assert process.stdin is not None

@@ -4,15 +4,18 @@
 
 Aceptada. El núcleo puro está en `an_kla/write_policy.py` y la integración
 transaccional candidata de F2 en `MemoryStore.plan_write()` y
-`MemoryStore.commit_write_plan()`. La API histórica `commit()` se conserva por
-compatibilidad y queda explícitamente fuera de la garantía de
-`write-policy/v1`; el comando histórico `write` devuelve la degradación
-`legacy_write_bypasses_write_policy`.
+`MemoryStore.commit_write_plan()`. `MemoryStore.commit()` queda accesible sólo
+como primitiva interna no soportada para mantenimiento y tests: esa
+accesibilidad no promete compatibilidad pública. En beta.9, el comando histórico
+`write` es una transición separada que exige el flag exacto
+`--allow-legacy-unguarded-write`, emite
+`legacy_write_bypasses_write_policy`/`legacy_unguarded_write_enabled` y se retira
+en beta.10. Sin opt-in falla antes de update-check, lectura o mutación.
 
 ## Contexto
 
 `MemoryStore.commit()` serializa escritores mediante un lock local y compara
-`expected_current_hash` con `CURRENT`. Esto preserva causalidad de almacenamiento,
+`expected_current_hash` con `CURRENT`. Como primitiva interna, esto preserva causalidad de almacenamiento,
 pero no decide si un candidato merece persistirse ni qué autoridad respalda su
 procedencia. El método vigente sólo exige IDs únicos antes de crear una revisión.
 

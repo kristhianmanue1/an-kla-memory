@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:resume:v1",
+  "title": "AN-KLA Resume v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "untrusted_memory_data", "revision", "budget_bytes", "used_bytes", "snapshot", "live_delta", "retrieved_evidence", "warnings", "provenance", "excluded_summary"],
+  "properties": {
+    "schema": {"const": "an-kla/resume-v1"},
+    "untrusted_memory_data": {"const": true},
+    "revision": {"$ref": "#/$defs/digest"},
+    "budget_bytes": {"type": "integer", "minimum": 0},
+    "used_bytes": {"type": "integer", "minimum": 0},
+    "snapshot": {"oneOf": [{"$ref": "#/$defs/v2snapshot"}, {"$ref": "#/$defs/v1snapshot"}]},
+    "live_delta": {"type": "null"},
+    "retrieved_evidence": {"type": "array", "items": {"$ref": "urn:an-kla:schema:resume-evidence:v1"}},
+    "warnings": {"type": "array", "uniqueItems": true, "items": {"enum": ["legacy_checkpoint_v1", "retrieval_degraded_to_scan"]}},
+    "provenance": {"$ref": "#/$defs/provenance"},
+    "excluded_summary": {"$ref": "#/$defs/excluded"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "v2snapshot": {"type": "object", "additionalProperties": false, "required": ["schema", "checkpoint_digest", "checkpoint_schema", "checkpoint"], "properties": {"schema": {"const": "an-kla/resume-snapshot-v1"}, "checkpoint_digest": {"$ref": "#/$defs/digest"}, "checkpoint_schema": {"const": "an-kla/checkpoint-v2"}, "checkpoint": {"$ref": "urn:an-kla:schema:checkpoint:v2"}}},
+    "v1snapshot": {"type": "object", "additionalProperties": false, "required": ["schema", "checkpoint_digest", "checkpoint_schema", "legacy_checkpoint_json"], "properties": {"schema": {"const": "an-kla/resume-snapshot-v1"}, "checkpoint_digest": {"$ref": "#/$defs/digest"}, "checkpoint_schema": {"const": "an-kla/checkpoint-v1"}, "legacy_checkpoint_json": {"type": "string"}}},
+    "memory": {"type": "object", "additionalProperties": false, "required": ["source", "revision"], "properties": {"source": {"const": "revision_snapshot"}, "revision": {"$ref": "#/$defs/digest"}}},
+    "retrieval": {"oneOf": [{"type": "object", "additionalProperties": false, "required": ["source", "revision", "query"], "properties": {"source": {"const": "disabled"}, "revision": {"type": "null"}, "query": {"const": "disabled"}}}, {"type": "object", "additionalProperties": false, "required": ["source", "revision", "query"], "properties": {"source": {"enum": ["scan-fallback/v1", "sqlite-fts5/v1"]}, "revision": {"$ref": "#/$defs/digest"}, "query": {"const": "caller_asserted"}}}]},
+    "provenance": {"type": "object", "additionalProperties": false, "required": ["memory", "retrieval", "live_delta"], "properties": {"memory": {"$ref": "#/$defs/memory"}, "retrieval": {"$ref": "#/$defs/retrieval"}, "live_delta": {"type": "object", "additionalProperties": false, "required": ["source"], "properties": {"source": {"const": "unavailable"}}}}},
+    "excluded": {"type": "object", "additionalProperties": false, "required": ["inactive", "zero_score", "budget", "invalid_record", "no_text"], "properties": {"inactive": {"type": "integer", "minimum": 0}, "zero_score": {"type": "integer", "minimum": 0}, "budget": {"type": "integer", "minimum": 0}, "invalid_record": {"type": "integer", "minimum": 0}, "no_text": {"type": "integer", "minimum": 0}}}
+  }
+}

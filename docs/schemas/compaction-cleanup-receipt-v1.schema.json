@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:an-kla:schema:compaction-cleanup-receipt:v1", "title": "AN-KLA Compaction Cleanup Receipt v1", "type": "object", "additionalProperties": false,
+  "required": ["schema", "transaction_id", "candidate_revision", "delete_set_sha256", "deleted_or_absent_sha256", "synced_directories", "remaining"],
+  "properties": {"schema": {"const": "an-kla/compaction-cleanup-receipt-v1"}, "transaction_id": {"$ref": "#/$defs/uuid"}, "candidate_revision": {"$ref": "#/$defs/digest"}, "delete_set_sha256": {"$ref": "#/$defs/digest"}, "deleted_or_absent_sha256": {"$ref": "#/$defs/digest"}, "synced_directories": {"type": "array", "uniqueItems": true, "items": {"type": "string", "minLength": 1}}, "remaining": {"const": 0}},
+  "$defs": {"digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, "uuid": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"}}
+}

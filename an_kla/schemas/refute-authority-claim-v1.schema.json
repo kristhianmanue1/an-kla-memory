@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:refute-authority-claim:v1",
+  "title": "AN-KLA RefuteAuthorityClaim v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "proposal_sha256", "base_revision", "requested_authority_class", "issuer_claim", "evidence", "scope"],
+  "properties": {
+    "schema": {"const": "an-kla/refute-authority-claim-v1"},
+    "proposal_sha256": {"$ref": "#/$defs/digest"},
+    "base_revision": {"$ref": "#/$defs/digest"},
+    "requested_authority_class": {"enum": ["tool_observed", "channel_confirmed", "model_derived", "derived_from_retrieval", "unresolved"]},
+    "issuer_claim": {"$ref": "#/$defs/issuer"},
+    "evidence": {"type": "array", "minItems": 1, "maxItems": 16, "uniqueItems": true, "items": {"$ref": "#/$defs/evidence"}},
+    "scope": {"$ref": "#/$defs/scope"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "issuer": {
+      "type": "object", "additionalProperties": false,
+      "required": ["kind", "subject_sha256", "configuration_fingerprint"],
+      "properties": {
+        "kind": {"enum": ["tool", "channel", "model", "resolver", "unknown"]},
+        "subject_sha256": {"$ref": "#/$defs/digest"},
+        "configuration_fingerprint": {"$ref": "#/$defs/digest"}
+      }
+    },
+    "evidence": {
+      "oneOf": [
+        {"type": "object", "additionalProperties": false, "required": ["kind", "record_sha256"], "properties": {"kind": {"enum": ["fact", "event", "episode"]}, "record_sha256": {"$ref": "#/$defs/digest"}}},
+        {"type": "object", "additionalProperties": false, "required": ["kind", "revision_sha256"], "properties": {"kind": {"const": "revision"}, "revision_sha256": {"$ref": "#/$defs/digest"}}},
+        {"type": "object", "additionalProperties": false, "required": ["kind", "content_sha256"], "properties": {"kind": {"enum": ["artifact", "external"]}, "content_sha256": {"$ref": "#/$defs/digest"}}}
+      ]
+    },
+    "scope": {
+      "type": "object", "additionalProperties": false,
+      "required": ["operation", "stream", "target_record_sha256"],
+      "properties": {"operation": {"const": "refute"}, "stream": {"enum": ["facts", "events", "episodes"]}, "target_record_sha256": {"$ref": "#/$defs/digest"}}
+    }
+  }
+}

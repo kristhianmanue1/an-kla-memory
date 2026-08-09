@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:identity-status:v1",
+  "title": "AN-KLA IdentityStatus v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "identity_status", "root_relocated", "error_code"],
+  "properties": {
+    "schema": {"const": "an-kla/identity-status-v1"},
+    "identity_status": {"enum": ["absent", "intent_only", "store_only", "project_only", "partial_consistent", "identities_ready_root_pending", "complete", "legacy_unadopted", "conflict"]},
+    "root_relocated": {"type": ["boolean", "null"]},
+    "error_code": {"type": ["string", "null"]},
+    "project_uuid": {"type": "string"},
+    "store_uuid": {"type": "string"},
+    "store_identity": {"type": "string"}
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:identity-operation-result:v1",
+  "title": "AN-KLA IdentityOperationResult v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "operation", "intent_sha256", "identity_state", "current_observed", "durability_state", "receipt", "error_code"],
+  "properties": {
+    "schema": {"const": "an-kla/identity-operation-result-v1"},
+    "operation": {"enum": ["initialize", "adopt", "repair"]},
+    "intent_sha256": {"$ref": "#/$defs/digest"},
+    "identity_state": {"enum": ["intent_only", "identities_ready_root_pending", "complete"]},
+    "current_observed": {"oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+    "durability_state": {"enum": ["complete", "incomplete"]},
+    "receipt": {"oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+    "error_code": {"type": ["string", "null"]}
+  },
+  "$defs": {"digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}
+}

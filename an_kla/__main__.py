@@ -9,7 +9,11 @@ import sys
 from typing import Any
 
 from .capabilities import capabilities
+from .benchmark_fixture import run_reference_benchmark
 from .canonical import canonical_json
+from .checkpoint_policy import CheckpointPolicyError
+from .compaction import CompactionError, commit_compaction, plan_compaction
+from .checkpoints import commit_checkpoint, plan_checkpoint, show_checkpoint
 from .context import assemble_context
 from .context_package import (
     apply_context_plan,
@@ -18,24 +22,33 @@ from .context_package import (
     plan_context_change,
 )
 from .index import INDEX_PROFILE, build_index, detect_fts5, verify_index_deep
-from .evaluation import evaluate_retrieval
+from .identity import IdentityError, adopt, identity_status, plan_adoption, repair
+from .evaluation import evaluate_retrieval, evaluate_retrieval_v2
+from .export_restore import ExportError, create_export, restore_export, verify_export
 from .retrieval import SCAN_PROFILE, retrieve
+from .resume import resume
 from .schemas import schema_bytes, schema_catalog
 from .store import ConcurrentUpdateError, MemoryStore, StoreError
+from .temporal import FRESHNESS_PROFILE, parse_freshness_now
+from .transactions import TransactionError
 from .update_check import check_for_update
 from .upgrade import apply_upgrade, inspect_upgrade, verify_upgrade
 from .version import VERSION
+
+
+class CliUsageError(ValueError):
+    pass
 
 
 def _json(path: str) -> Any:
     try:
         payload = Path(path).read_text(encoding="utf-8")
     except (OSError, UnicodeError):
-        raise ValueError("input_json_unreadable") from None
+        raise CliUsageError("input_json_unreadable") from None
     try:
         return json.loads(payload)
     except json.JSONDecodeError:
-        raise ValueError("input_json_invalid") from None
+        raise CliUsageError("input_json_invalid") from None
 
 
 def _cli_authority(value: Any) -> Any:
@@ -60,7 +73,17 @@ def _planning_result(value: Any, expected_current: str) -> tuple[Any, Any]:
     return value["decision"], value["plan"]
 
 
-def main() -> None:
+def _positive_csv(value: str, code: str) -> list[int]:
+    try:
+        result = [int(item) for item in value.split(",")]
+    except ValueError:
+        raise ValueError(code) from None
+    if not result or any(item <= 0 for item in result):
+        raise ValueError(code)
+    return result
+
+
+def _run() -> None:
     parser = argparse.ArgumentParser(description="AN-KLA Memory beta")
     parser.add_argument("--version", action="version", version=f"an-kla-memory {VERSION}")
     parser.add_argument("--project-root", default=".")
@@ -70,9 +93,11 @@ def main() -> None:
         help="Omitir la verificación no bloqueante de nuevas versiones.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
-    sub.add_parser("init")
+    init_cmd = sub.add_parser("init")
+    init_cmd.add_argument("--transaction-id")
     sub.add_parser("status")
-    sub.add_parser("verify")
+    verify_cmd = sub.add_parser("verify")
+    verify_cmd.add_argument("--revision")
     sub.add_parser(
         "capabilities", help="Descubrir contratos y límites sin leer memoria."
     )
@@ -94,6 +119,9 @@ def main() -> None:
     retrieve_cmd.add_argument(
         "--profile", choices=(SCAN_PROFILE, INDEX_PROFILE), default=SCAN_PROFILE
     )
+    retrieve_cmd.add_argument("--freshness-profile", choices=(FRESHNESS_PROFILE,))
+    retrieve_cmd.add_argument("--now")
+    retrieve_cmd.add_argument("--stale-after-days", type=int)
     retrieve_cmd.add_argument(
         "--streams",
         default="facts",
@@ -103,17 +131,37 @@ def main() -> None:
     assemble_cmd.add_argument("--query", required=True)
     assemble_cmd.add_argument("--budget", type=int, required=True)
     assemble_cmd.add_argument("--new-information")
+    assemble_cmd.add_argument("--freshness-profile", choices=(FRESHNESS_PROFILE,))
+    assemble_cmd.add_argument("--now")
+    assemble_cmd.add_argument("--stale-after-days", type=int)
     evaluate_cmd = sub.add_parser("evaluate")
     evaluate_cmd.add_argument("--queries", required=True)
     evaluate_cmd.add_argument("--budget", type=int, required=True)
+    evaluate_v2_cmd = sub.add_parser("evaluate-v2")
+    evaluate_v2_cmd.add_argument("--queries", required=True)
+    evaluate_v2_cmd.add_argument("--budgets", required=True)
+    evaluate_v2_cmd.add_argument("--k-values", default="1,3,5,10")
+    evaluate_v2_cmd.add_argument("--measure-latency", action="store_true")
+    reference_benchmark_cmd = sub.add_parser("benchmark-reference")
+    reference_benchmark_cmd.add_argument("--measure-latency", action="store_true")
     write_cmd = sub.add_parser(
-        "write", help="API alfa heredada; omite write-policy/v1 y emite deprecación."
+        "write",
+        allow_abbrev=False,
+        help="API alfa heredada; omite write-policy/v1 y emite deprecación.",
     )
     write_cmd.add_argument("--expected-current", required=True)
     write_cmd.add_argument("--checkpoint-patch", required=True)
     write_cmd.add_argument("--facts", default="")
     write_cmd.add_argument("--events", default="")
     write_cmd.add_argument("--episodes", default="")
+    write_cmd.add_argument(
+        "--allow-legacy-unguarded-write",
+        action="store_true",
+        help=(
+            "Confirmar explícitamente el bypass legado de write-policy/v1; "
+            "se retirará en beta.10."
+        ),
+    )
     plan_write_cmd = sub.add_parser(
         "plan-write", help="Planificar sin mutar; autoridad privilegiada requiere adaptador externo."
     )
@@ -126,6 +174,73 @@ def main() -> None:
     commit_plan_cmd.add_argument("--proposal", required=True)
     commit_plan_cmd.add_argument("--authority", required=True)
     commit_plan_cmd.add_argument("--planning-result", required=True)
+    commit_plan_cmd.add_argument("--transaction-id")
+    transaction_cmd = sub.add_parser(
+        "transaction", help="Inspeccionar outcomes por transaction id."
+    )
+    transaction_sub = transaction_cmd.add_subparsers(
+        dest="transaction_command", required=True
+    )
+    transaction_inspect = transaction_sub.add_parser("inspect")
+    transaction_inspect.add_argument("transaction_id")
+    transaction_repair = transaction_sub.add_parser("repair-durability")
+    transaction_repair.add_argument("transaction_id")
+    refute_cmd = sub.add_parser("refute", help="Refutación gobernada sin sucesor.")
+    refute_sub = refute_cmd.add_subparsers(dest="refute_command", required=True)
+    refute_plan = refute_sub.add_parser("plan")
+    refute_plan.add_argument("--proposal", required=True)
+    refute_plan.add_argument("--authority-claim", required=True)
+    refute_commit = refute_sub.add_parser("commit")
+    refute_commit.add_argument("--expected-current", required=True)
+    refute_commit.add_argument("--planning-result", required=True)
+    refute_commit.add_argument("--transaction-id")
+    refute_inspect = refute_sub.add_parser("inspect")
+    refute_inspect.add_argument("--stream", required=True, choices=("facts", "events", "episodes"))
+    refute_inspect.add_argument("--record-sha256", required=True)
+    refute_inspect.add_argument("--revision")
+    export_cmd = sub.add_parser("export", help="Export/backup local verificable.")
+    export_sub = export_cmd.add_subparsers(dest="export_command", required=True)
+    export_create = export_sub.add_parser("create")
+    export_create.add_argument("--bundle", required=True)
+    export_verify = export_sub.add_parser("verify")
+    export_verify.add_argument("--bundle", required=True)
+    export_restore = export_sub.add_parser("restore")
+    export_restore.add_argument("--bundle", required=True)
+    compact_cmd = sub.add_parser("compact", help="Compactación gobernada ligada a export.")
+    compact_sub = compact_cmd.add_subparsers(dest="compact_command", required=True)
+    compact_plan = compact_sub.add_parser("plan")
+    compact_plan.add_argument("--proposal", required=True)
+    compact_plan.add_argument("--bundle", required=True)
+    compact_commit = compact_sub.add_parser("commit")
+    compact_commit.add_argument("--planning-result", required=True)
+    compact_commit.add_argument("--expected-current", required=True)
+    compact_commit.add_argument("--bundle")
+    identity_cmd = sub.add_parser("identity", help="Inspeccionar o adoptar identidad local.")
+    identity_sub = identity_cmd.add_subparsers(dest="identity_command", required=True)
+    identity_status_cmd = identity_sub.add_parser("status")
+    identity_status_cmd.add_argument("--show-ids", action="store_true")
+    identity_sub.add_parser("plan-adoption")
+    identity_adopt_cmd = identity_sub.add_parser("adopt")
+    identity_adopt_cmd.add_argument("--plan", required=True)
+    identity_adopt_cmd.add_argument("--expected-current", required=True)
+    identity_repair_cmd = identity_sub.add_parser("repair")
+    identity_repair_cmd.add_argument("--plan", required=True)
+    checkpoint_cmd = sub.add_parser("checkpoint", help="Checkpoint operacional gobernado.")
+    checkpoint_sub = checkpoint_cmd.add_subparsers(dest="checkpoint_command", required=True)
+    checkpoint_sub.add_parser("show")
+    checkpoint_plan_cmd = checkpoint_sub.add_parser("plan")
+    checkpoint_plan_cmd.add_argument("--input", required=True)
+    checkpoint_plan_cmd.add_argument("--authority", required=True)
+    checkpoint_commit_cmd = checkpoint_sub.add_parser("commit")
+    checkpoint_commit_cmd.add_argument("--plan", required=True)
+    checkpoint_commit_cmd.add_argument("--expected-current", required=True)
+    checkpoint_commit_cmd.add_argument("--transaction-id", required=True)
+    resume_cmd = sub.add_parser("resume", help="Reanudar desde una revisión consistente.")
+    resume_cmd.add_argument("--budget", type=int, required=True)
+    resume_cmd.add_argument("--query")
+    resume_cmd.add_argument(
+        "--profile", choices=(SCAN_PROFILE, INDEX_PROFILE), default=SCAN_PROFILE
+    )
     context_cmd = sub.add_parser(
         "context", help="Administrar únicamente el bloque AN-KLA en AGENTS.md."
     )
@@ -174,6 +289,11 @@ def main() -> None:
         help="Verificar (sin aplicar) si hay una versión más reciente publicada.",
     )
     args = parser.parse_args()
+
+    # Reject the legacy mutation before update checks, filesystem reads or
+    # MemoryStore construction.  The full flag is intentionally non-abbreviable.
+    if args.command == "write" and not args.allow_legacy_unguarded_write:
+        raise ValueError("legacy_unguarded_write_requires_opt_in")
 
     if args.command == "check-updates":
         notice = check_for_update(force=True)
@@ -231,34 +351,128 @@ def main() -> None:
                 args.project_root, args.target, args.context_target
             )
     elif args.command == "init":
-        result = {"revision": store.initialize()}
+        result = store.initialize_with_outcome(transaction_id=args.transaction_id)
     elif args.command == "status":
         result = store.verify()
     elif args.command == "verify":
-        result = store.verify()
+        result = (
+            store.verify_revision(args.revision)
+            if args.revision is not None
+            else store.verify()
+        )
     elif args.command == "doctor":
         result = {**store.doctor(), "fts5": detect_fts5(), "memory_exists": store.current_path.exists()}
         if args.deep_index:
             result["index_deep"] = verify_index_deep(store)
     elif args.command == "recover":
         result = store.recover()
+    elif args.command == "transaction":
+        if args.transaction_command == "inspect":
+            result = store.inspect_transaction(args.transaction_id)
+        else:
+            result = store.repair_transaction_durability(args.transaction_id)
+    elif args.command == "refute":
+        if args.refute_command == "plan":
+            result = store.plan_refute(
+                _json(args.proposal), _json(args.authority_claim)
+            )
+        elif args.refute_command == "commit":
+            result = store.commit_refute_plan(
+                expected_current=args.expected_current,
+                planning_result=_json(args.planning_result),
+                transaction_id=args.transaction_id,
+            )
+        else:
+            result = store.inspect_refute(
+                stream=args.stream,
+                target_record_sha256=args.record_sha256,
+                revision=args.revision,
+            )
+    elif args.command == "export":
+        if args.export_command == "create":
+            result = create_export(store, args.bundle)
+        elif args.export_command == "verify":
+            result = verify_export(args.bundle)
+        else:
+            result = restore_export(args.bundle, args.project_root)
+    elif args.command == "compact":
+        if args.compact_command == "plan":
+            result = plan_compaction(store, _json(args.proposal), args.bundle)
+        else:
+            result = commit_compaction(
+                store, _json(args.planning_result), args.expected_current,
+                args.bundle,
+            )
+    elif args.command == "identity":
+        if args.identity_command == "status":
+            result = identity_status(store, include_ids=args.show_ids)
+        elif args.identity_command == "plan-adoption":
+            result = plan_adoption(store)
+        elif args.identity_command == "repair":
+            result = repair(store, _json(args.plan))
+        else:
+            result = adopt(store, _json(args.plan), args.expected_current)
+    elif args.command == "checkpoint":
+        if args.checkpoint_command == "show":
+            result = show_checkpoint(store)
+        elif args.checkpoint_command == "plan":
+            result = plan_checkpoint(store, _json(args.input), _json(args.authority))
+        else:
+            result = commit_checkpoint(
+                store,
+                _json(args.plan),
+                args.expected_current,
+                transaction_id=args.transaction_id,
+            )
+    elif args.command == "resume":
+        result = resume(store, args.budget, query=args.query, profile=args.profile)
     elif args.command == "rebuild-index":
         result = build_index(store, revision_id=args.revision)
     elif args.command == "retrieve":
         streams_tuple = tuple(s for s in args.streams.split(",") if s)
+        if args.freshness_profile is None and (
+            args.now is not None or args.stale_after_days is not None
+        ):
+            raise ValueError("freshness_profile_required")
         result = retrieve(
-            store, args.query, args.budget, profile=args.profile, streams=streams_tuple
+            store, args.query, args.budget, profile=args.profile, streams=streams_tuple,
+            freshness_profile=args.freshness_profile,
+            now=parse_freshness_now(args.now) if args.now is not None else None,
+            stale_after_days=args.stale_after_days,
         )
     elif args.command == "assemble-context":
+        if args.freshness_profile is None and (
+            args.now is not None or args.stale_after_days is not None
+        ):
+            raise ValueError("freshness_profile_required")
         result = assemble_context(
             store,
             args.query,
             args.budget,
             new_information=args.new_information,
+            freshness_profile=args.freshness_profile,
+            now=parse_freshness_now(args.now) if args.now is not None else None,
+            stale_after_days=args.stale_after_days,
         )
     elif args.command == "evaluate":
         result = evaluate_retrieval(store, args.queries, args.budget)
+    elif args.command == "evaluate-v2":
+        result = evaluate_retrieval_v2(
+            store,
+            args.queries,
+            _positive_csv(args.budgets, "invalid_evaluation_budget"),
+            _positive_csv(args.k_values, "invalid_evaluation_k"),
+            measure_latency=args.measure_latency,
+        )
+    elif args.command == "benchmark-reference":
+        result = run_reference_benchmark(measure_latency=args.measure_latency)
     elif args.command == "write":
+        if not args.allow_legacy_unguarded_write:
+            raise ValueError("legacy_unguarded_write_requires_opt_in")
+        sys.stderr.write(
+            "an-kla warning: legacy_unguarded_write_enabled; "
+            "bypasses_write_policy_v1; removal=v0.1.0-beta.10\n"
+        )
         result = {
             "revision": store.commit(
                 expected_current_hash=args.expected_current,
@@ -268,6 +482,7 @@ def main() -> None:
                 episodes=_json(args.episodes) if args.episodes else (),
             ),
             "deprecation": "legacy_write_bypasses_write_policy",
+            "warning": "legacy_unguarded_write_enabled",
         }
     elif args.command == "plan-write":
         result = store.plan_write(
@@ -284,17 +499,83 @@ def main() -> None:
             authority=_cli_authority(_json(args.authority)),
             decision=decision,
             plan=plan,
+            transaction_id=args.transaction_id,
         )
-    if args.command in {"assemble-context", "capabilities", "schema", "upgrade"}:
+    if args.command in {
+        "assemble-context",
+        "benchmark-reference",
+        "capabilities",
+        "commit-write-plan",
+        "compact",
+        "checkpoint",
+        "init",
+        "identity",
+        "evaluate-v2",
+        "export",
+        "resume",
+        "refute",
+        "schema",
+        "transaction",
+        "upgrade",
+    }:
         sys.stdout.buffer.write(canonical_json(result))
     else:
         print(json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2))
+    if (
+        args.command == "transaction"
+        and result.get("state") != "transaction_archived_by_compaction"
+        and result.get("committed") is not True
+    ):
+        raise SystemExit(3)
+    if (
+        args.command == "compact"
+        and args.compact_command == "commit"
+        and result.get("state") != "committed"
+    ):
+        raise SystemExit(3)
+    if (
+        args.command == "export"
+        and args.export_command == "restore"
+        and result.get("state") != "published"
+    ):
+        raise SystemExit(3)
+    if (
+        args.command == "refute"
+        and args.refute_command == "commit"
+        and isinstance(result.get("outcome"), dict)
+        and result["outcome"].get("committed") is not True
+    ):
+        raise SystemExit(3)
+    if (
+        args.command == "init"
+        and isinstance(result.get("outcome"), dict)
+        and result["outcome"].get("committed") is not True
+    ):
+        raise SystemExit(3)
+    if (
+        args.command == "commit-write-plan"
+        and isinstance(result.get("outcome"), dict)
+        and result["outcome"].get("committed") is not True
+    ):
+        raise SystemExit(3)
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Console entrypoint with the same safe error surface as ``python -m``."""
+
     try:
-        main()
-    except (StoreError, ConcurrentUpdateError, ValueError, OSError) as exc:
+        _run()
+    except CliUsageError as exc:
+        sys.stderr.write(f"an-kla error: {exc}\n")
+        raise SystemExit(2)
+    except (CheckpointPolicyError, CompactionError, ExportError, StoreError, ConcurrentUpdateError, IdentityError, TransactionError, ValueError, OSError) as exc:
+        if isinstance(exc, TransactionError) and str(exc) == "invalid_transaction_id":
+            sys.stderr.write("an-kla error: invalid_transaction_id\n")
+            raise SystemExit(2)
         detail = getattr(exc, "detail", None)
         suffix = f" ({detail})" if detail else ""
         raise SystemExit(f"an-kla error: {exc}{suffix}")
+
+
+if __name__ == "__main__":
+    main()

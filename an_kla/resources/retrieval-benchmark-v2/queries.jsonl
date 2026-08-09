@@ -1,0 +1,5 @@
+{"category":"synthetic","id":"q-chain-active","query":"cadena conocimiento vigente","relevant":["f-chain-c"],"schema":"an-kla/retrieval-eval-query-v2","streams":["facts"]}
+{"category":"handoff_exact","id":"q-continuity-multistream","query":"evidencia continuidad","relevant":["e-continuity","ep-continuity"],"schema":"an-kla/retrieval-eval-query-v2","streams":["events","episodes"]}
+{"category":"kairos_sanitized","id":"q-freshness-governance","query":"frescura memoria gobernanza","relevant":["f-kairos"],"schema":"an-kla/retrieval-eval-query-v2","streams":["facts"]}
+{"category":"handoff_exact","id":"q-handoff-next-step","query":"checkpoint handoff exact next step","relevant":["f-long","f-short"],"schema":"an-kla/retrieval-eval-query-v2","streams":["facts"]}
+{"category":"synthetic","id":"q-summary-continuity","query":"resumen continuidad verificable","relevant":["f-summary"],"schema":"an-kla/retrieval-eval-query-v2","streams":["facts"]}

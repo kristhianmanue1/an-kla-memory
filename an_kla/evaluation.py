@@ -9,6 +9,7 @@ from typing import Any
 
 from .retrieval import retrieve
 from .store import MemoryStore
+from .evaluation_v2 import evaluate_retrieval_v2
 
 
 def read_queries(path: str | Path) -> list[dict[str, Any]]:
@@ -41,3 +42,6 @@ def evaluate_retrieval(store: MemoryStore, queries_path: str | Path, budget: int
         },
         "rows": rows,
     }
+
+
+__all__ = ["evaluate_retrieval", "evaluate_retrieval_v2", "read_queries"]

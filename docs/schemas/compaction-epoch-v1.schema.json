@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:an-kla:schema:compaction-epoch:v1", "title": "AN-KLA Compaction Epoch v1", "type": "object", "additionalProperties": false,
+  "required": ["schema", "epoch_id", "transaction_id", "base_revision", "proposal_sha256", "export_manifest_sha256", "restore_proof", "tombstone_catalog", "delete_set_sha256", "compaction_policy"],
+  "properties": {"schema": {"const": "an-kla/compaction-epoch-v1"}, "epoch_id": {"$ref": "#/$defs/uuid"}, "transaction_id": {"$ref": "#/$defs/uuid"}, "base_revision": {"$ref": "#/$defs/digest"}, "proposal_sha256": {"$ref": "#/$defs/digest"}, "export_manifest_sha256": {"$ref": "#/$defs/digest"}, "restore_proof": {"$ref": "#/$defs/digest"}, "tombstone_catalog": {"$ref": "#/$defs/digest"}, "delete_set_sha256": {"$ref": "#/$defs/digest"}, "compaction_policy": {"$ref": "#/$defs/digest"}},
+  "$defs": {"digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, "uuid": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"}}
+}

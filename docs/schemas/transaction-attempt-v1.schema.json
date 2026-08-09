@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:transaction-attempt:v1",
+  "title": "AN-KLA TransactionAttempt v1",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "operation", "base_revision", "plan_fingerprint", "transaction_id", "execution_fingerprint"],
+      "properties": {
+        "schema": {"const": "an-kla/transaction-attempt-v1"},
+        "operation": {"enum": ["write", "checkpoint", "refute", "compact"]},
+        "base_revision": {"$ref": "#/$defs/digest"},
+        "plan_fingerprint": {"$ref": "#/$defs/digest"},
+        "transaction_id": {"$ref": "#/$defs/uuid"},
+        "execution_fingerprint": {"$ref": "#/$defs/digest"}
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "operation", "expected_current", "initialization_fingerprint", "transaction_id", "execution_fingerprint"],
+      "properties": {
+        "schema": {"const": "an-kla/transaction-attempt-v1"},
+        "operation": {"const": "initialize"},
+        "expected_current": {"type": "null"},
+        "initialization_fingerprint": {"$ref": "#/$defs/digest"},
+        "transaction_id": {"$ref": "#/$defs/uuid"},
+        "execution_fingerprint": {"$ref": "#/$defs/digest"}
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "operation", "base_revision", "mutation_fingerprint", "transaction_id", "execution_fingerprint"],
+      "properties": {
+        "schema": {"const": "an-kla/transaction-attempt-v1"},
+        "operation": {"const": "internal_commit"},
+        "base_revision": {"$ref": "#/$defs/digest"},
+        "mutation_fingerprint": {"$ref": "#/$defs/digest"},
+        "transaction_id": {"$ref": "#/$defs/uuid"},
+        "execution_fingerprint": {"$ref": "#/$defs/digest"}
+      }
+    }
+  ],
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "uuid": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"}
+  }
+}

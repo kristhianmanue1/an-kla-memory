@@ -17,7 +17,26 @@ import uuid
 from typing import Any, Iterable, Iterator, Mapping
 
 from .canonical import bare_digest, canonical_json, digest_bytes, digest_json
+from .checkpoint_policy import CheckpointPolicyError, validate_working_state
+from .compaction_store_mixin import CompactionStoreMixin
 from .context_package import context_status
+from .identity import (
+    assert_unchanged,
+    bootstrap_initialize,
+    identity_status,
+    mutation_preflight,
+    read_binding,
+    verify_current_binding,
+    verify_manifest_link,
+)
+from .initialization import existing_initialization
+from .storage_primitives import atomic_write, fsync_directory, write_immutable
+from .refute_store_mixin import RefuteStoreMixin
+from .reader_gate import shared_reader_gate
+from .transactions import (
+    begin_transaction,
+    commit_locked,
+)
 from .write_policy import (
     WritePolicyError,
     build_write_plan,
@@ -53,24 +72,56 @@ class Snapshot:
     manifest: Mapping[str, Any]
     checkpoint: Mapping[str, Any]
     records: Mapping[str, tuple[Mapping[str, Any], ...]]
+    raw_records: Mapping[str, tuple[Mapping[str, Any], ...]]
 
 
-def _deep_merge(base: Mapping[str, Any], patch: Mapping[str, Any]) -> dict[str, Any]:
-    result = deepcopy(dict(base))
-    for key, value in patch.items():
-        if isinstance(value, Mapping) and isinstance(result.get(key), Mapping):
-            result[key] = _deep_merge(result[key], value)
-        else:
-            result[key] = deepcopy(value)
-    return result
+@dataclass
+class LockResult:
+    release_error: str | None = None
 
 
-class MemoryStore:
+def _validate_checkpoint_v2(
+    checkpoint: Mapping[str, Any], manifest_revision: Any
+) -> None:
+    if checkpoint.get("schema") != "an-kla/checkpoint-v2":
+        return
+    if set(checkpoint) != {"schema", "revision", "working_state"}:
+        raise IntegrityError("checkpoint_v2_invalid")
+    revision = checkpoint["revision"]
+    if (
+        not isinstance(revision, int)
+        or isinstance(revision, bool)
+        or not isinstance(manifest_revision, int)
+        or isinstance(manifest_revision, bool)
+        or not 1 <= revision <= manifest_revision
+    ):
+        raise IntegrityError("checkpoint_v2_invalid")
+    try:
+        validate_working_state(checkpoint["working_state"])
+    except CheckpointPolicyError as exc:
+        raise IntegrityError("checkpoint_v2_invalid") from exc
+
+
+class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
     """Owns `.an-kla/memory` below a project root."""
 
-    def __init__(self, project_root: str | Path) -> None:
+    def __init__(
+        self, project_root: str | Path, *, refute_authority_resolver: Any | None = None
+    ) -> None:
         self.project_root = Path(project_root).resolve()
         self.root = self.project_root / ".an-kla" / "memory"
+        self.refute_authority_resolver = refute_authority_resolver
+        self._refute_resolver_descriptor: Mapping[str, Any] | None = None
+        if refute_authority_resolver is not None:
+            from .refute_contracts import RefutePolicyError, validate_descriptor
+
+            if isinstance(refute_authority_resolver, Mapping) or not callable(
+                getattr(refute_authority_resolver, "resolve", None)
+            ) or not callable(getattr(refute_authority_resolver, "verify", None)):
+                raise RefutePolicyError("invalid_refute_attestation", "resolver_capability")
+            self._refute_resolver_descriptor = validate_descriptor(
+                deepcopy(getattr(refute_authority_resolver, "descriptor", None))
+            )
 
     @property
     def current_path(self) -> Path:
@@ -82,36 +133,20 @@ class MemoryStore:
 
     def initialize(self) -> str:
         """Create an empty root revision, or return the existing revision."""
-        if self.current_path.exists():
-            return self.read_current()
-        self._make_layout()
-        with self.write_lock():
-            if self.current_path.exists():
-                return self.read_current()
-            checkpoint = {
-                "schema": "an-kla/checkpoint-v1",
-                "revision": 0,
-                "goal": None,
-                "next": None,
-                "decisions": [],
-                "blockers": [],
-            }
-            checkpoint_id = self._write_json_object("checkpoints", checkpoint)
-            manifest = {
-                "schema": "an-kla/revision-v1",
-                "revision": 0,
-                "parent": None,
-                "facts_segments": [],
-                "events_segments": [],
-                "episodes_segments": [],
-                "checkpoint": checkpoint_id,
-                "transaction_id": "root",
-                "canonicalization": "canonical-json/v1",
-                "integrity_claim": "content_identity_not_truth_or_authorship",
-            }
-            revision_id = self._write_json_object("revisions", manifest)
-            self._replace_current(revision_id)
-            return revision_id
+
+        result = self.initialize_with_outcome()
+        if result["outcome"] is not None and result["outcome"]["committed"] is not True:
+            raise StoreError(f"initialize_failed:{result['outcome']['state']}")
+        return str(result["revision"])
+
+    def initialize_with_outcome(
+        self, *, transaction_id: str | None = None, store_identity: str | None = None
+    ) -> dict[str, Any]:
+        """Bootstrap ADR-0022 identity, then create/reconcile the ADR-0024 root."""
+
+        if store_identity is not None:
+            raise StoreError("external_store_identity_not_allowed")
+        return bootstrap_initialize(self, transaction_id)
 
     def read_current(self) -> str:
         """Read and close CURRENT before doing any other I/O."""
@@ -130,14 +165,31 @@ class MemoryStore:
         return value
 
     def snapshot(self, revision_id: str | None = None) -> Snapshot:
+        with shared_reader_gate(self):
+            return self._snapshot_under_gate(revision_id)
+
+    def _snapshot_under_gate(self, revision_id: str | None = None) -> Snapshot:
         revision_id = revision_id or self.read_current()
-        manifest = self._read_json_object("revisions", revision_id)
+        try:
+            manifest = self._read_json_object("revisions", revision_id)
+        except IntegrityError as original:
+            from .compaction import archived_revision_link_under_gate
+
+            try:
+                archived = archived_revision_link_under_gate(self, revision_id)
+            except Exception as exc:
+                raise IntegrityError("compaction_catalog_invalid") from exc
+            if archived is not None:
+                raise IntegrityError("revision_archived_by_compaction") from original
+            raise
         if digest_json(manifest) != revision_id:
             raise IntegrityError("revision_hash_mismatch")
-        if manifest.get("schema") != "an-kla/revision-v1":
-            raise IntegrityError("revision_schema_invalid")
+        self._validate_manifest(manifest)
+        self._validate_revision_chain(revision_id, manifest)
+        verify_manifest_link(self, manifest)
         checkpoint_id = str(manifest.get("checkpoint", ""))
         checkpoint = self._read_json_object("checkpoints", checkpoint_id)
+        _validate_checkpoint_v2(checkpoint, manifest.get("revision"))
         records: dict[str, tuple[Mapping[str, Any], ...]] = {}
         for stream in STREAMS:
             rows: list[Mapping[str, Any]] = []
@@ -151,6 +203,8 @@ class MemoryStore:
                     seen.add(record_id)
                     rows.append(row)
             records[stream] = tuple(rows)
+        raw_records = records
+        self._validate_lifecycle(manifest, raw_records)
         # ADR-0019 (PR-B): vigencia observable por overlay. ``supersedes_map`` is
         # cumulative (inherited from the parent revision); each target is marked
         # ``status="sustituida"`` in memory without rewriting the immutable
@@ -172,7 +226,21 @@ class MemoryStore:
                     for row in rows
                 )
             records = overlaid
-        return Snapshot(revision_id, manifest, checkpoint, records)
+        refuted = {
+            (entry["stream"], entry["target_record_sha256"])
+            for entry in manifest.get("refutations_map", [])
+        }
+        if refuted:
+            overlaid = {}
+            for stream, rows in records.items():
+                overlaid[stream] = tuple(
+                    {**row, "status": "refutada"}
+                    if (stream, digest_json(raw)) in refuted
+                    else row
+                    for row, raw in zip(rows, raw_records[stream])
+                )
+            records = overlaid
+        return Snapshot(revision_id, manifest, checkpoint, records, raw_records)
 
     def commit(
         self,
@@ -183,29 +251,37 @@ class MemoryStore:
         events: Iterable[Mapping[str, Any]] = (),
         episodes: Iterable[Mapping[str, Any]] = (),
     ) -> str:
-        """Commit a child revision through the compatible unguarded API.
+        """Internal, unsupported primitive for an unguarded child commit.
 
         New agent-facing integrations should use :meth:`plan_write` followed by
         :meth:`commit_write_plan`.  This method remains available for internal
-        maintenance and compatibility with the alpha API.
+        maintenance and tests; accessibility is not a public compatibility
+        promise.
         """
+        if checkpoint_patch:
+            raise StoreError("governed_checkpoint_update_required")
+        binding = mutation_preflight(self)
         self._make_layout()
         pending = {
             "facts": [dict(row) for row in facts],
             "events": [dict(row) for row in events],
             "episodes": [dict(row) for row in episodes],
         }
-        with self.write_lock():
+        with self.write_lock() as lock_result:
             observed = self.read_current()
             if observed != expected_current_hash:
                 raise ConcurrentUpdateError(
                     f"current_changed:expected={expected_current_hash}:actual={observed}"
                 )
-            candidate = self._commit_locked(
+            store_identity = assert_unchanged(self, binding, observed)
+            candidate, outcome = self._commit_locked(
                 observed=observed,
                 checkpoint_patch=checkpoint_patch,
                 pending=pending,
+                store_identity=store_identity,
             )
+            if outcome["committed"] is not True:
+                raise StoreError(f"commit_failed:{outcome['state']}")
         self._maybe_reindex(observed, candidate)
         return candidate
 
@@ -236,14 +312,17 @@ class MemoryStore:
         proposal: Mapping[str, Any],
         authority: Mapping[str, Any],
         decision: Mapping[str, Any],
+        transaction_id: str | None = None,
     ) -> dict[str, Any]:
         """Revalidate and commit one exact write plan under the store lock."""
 
+        binding = mutation_preflight(self)
         self._make_layout()
-        with self.write_lock():
+        with self.write_lock() as lock_result:
             observed = self.read_current()
             if observed != expected_current_hash:
                 raise WritePolicyError("write_plan_base_changed")
+            store_identity = assert_unchanged(self, binding, observed)
 
             # Callers retain their dictionaries and may share them with other
             # threads.  Snapshot every object while holding the store lock and
@@ -340,7 +419,10 @@ class MemoryStore:
                 elif op == "supersede":
                     pending[item["stream"]].append(deepcopy(item["record"]))
                 else:
-                    raise WritePolicyError("invalid_write_plan")
+                    raise WritePolicyError(
+                        "invalid_write_plan",
+                        "records[]:operation:not_committable",
+                    )
 
             policy_metadata = {
                 "schema": "an-kla/write-policy-transaction-v1",
@@ -351,22 +433,41 @@ class MemoryStore:
                 "decision": checked_decision["decision"],
                 "reason_codes": deepcopy(checked_decision["reason_codes"]),
             }
-            revision = self._commit_locked(
+            attempt = begin_transaction(
+                "write",
+                transaction_id=transaction_id,
+                base_revision=observed,
+                plan_fingerprint=checked_plan["plan_fingerprint"],
+            )
+            revision, outcome = self._commit_locked(
                 observed=observed,
                 checkpoint_patch={},
                 pending=pending,
+                attempt=attempt,
                 policy_metadata=policy_metadata,
                 supersedes=pending_supersedes or None,
+                store_identity=store_identity,
             )
-        self._maybe_reindex(observed, revision)
+        if lock_result.release_error is not None:
+            outcome = deepcopy(outcome)
+            outcome["audit_state"] = "incomplete"
+            outcome["warnings"] = sorted(
+                set([*outcome["warnings"], lock_result.release_error])
+            )
+            if outcome["committed"] is True:
+                outcome["state"] = "committed_audit_incomplete"
+                outcome["operation_error_code"] = "lock_release_incomplete"
+        if outcome["committed"] is True and revision != observed:
+            self._maybe_reindex(observed, revision)
         return {
             "schema": "an-kla/write-commit-result-v1",
-            "committed": True,
+            "committed": outcome["committed"] is True,
             "revision": revision,
             "decision": checked_decision["decision"],
             "reason_codes": deepcopy(checked_decision["reason_codes"]),
             "plan_fingerprint": checked_plan["plan_fingerprint"],
             "context_diagnostics": self._context_diagnostics(),
+            "outcome": outcome,
         }
 
     def _context_diagnostics(self) -> dict[str, Any]:
@@ -395,99 +496,60 @@ class MemoryStore:
         observed: str,
         checkpoint_patch: Mapping[str, Any],
         pending: Mapping[str, list[dict[str, Any]]],
+        attempt: Mapping[str, Any] | None = None,
         policy_metadata: Mapping[str, Any] | None = None,
         supersedes: list[dict[str, str]] | None = None,
-    ) -> str:
+        refute_objects: Mapping[str, Any] | None = None,
+        store_identity: str | None = None,
+    ) -> tuple[str, dict[str, Any]]:
         """Write a child revision while the caller holds ``write_lock``."""
 
-        base = self.snapshot(observed)
-        assigned = self._assign_records(base, pending)
-        checkpoint = _deep_merge(base.checkpoint, checkpoint_patch)
-        checkpoint["revision"] = int(base.manifest["revision"]) + 1
-        checkpoint["base_event_id"] = (
-            assigned["events"][-1]["id"]
-            if assigned["events"]
-            else base.checkpoint.get("base_event_id")
-        )
-        txid = str(uuid.uuid4())
-        prepared = {"stage": "prepared", "parent": observed}
-        if policy_metadata is not None:
-            prepared["write_policy"] = deepcopy(dict(policy_metadata))
-        self._write_transaction(txid, prepared)
-        segment_ids: dict[str, list[str]] = {}
-        for stream in STREAMS:
-            existing = list(base.manifest.get(f"{stream}_segments", []))
-            if assigned[stream]:
-                existing.append(self._write_segment(stream, assigned[stream]))
-            segment_ids[stream] = existing
-        checkpoint_id = self._write_json_object("checkpoints", checkpoint)
-        # ADR-0019 (PR-B): supersedes_map is cumulative — inherit the parent's
-        # entries and append this revision's. Omit the field entirely when empty
-        # so the root/empty revision stays byte-identical to today (backwards
-        # compatibility for readers and for test_initial_current_is_canonical).
-        inherited = list(base.manifest.get("supersedes_map", []))
-        new_map = [*inherited, *(list(supersedes) if supersedes else [])]
-        manifest = {
-            "schema": "an-kla/revision-v1",
-            "revision": checkpoint["revision"],
-            "parent": observed,
-            "facts_segments": segment_ids["facts"],
-            "events_segments": segment_ids["events"],
-            "episodes_segments": segment_ids["episodes"],
-            "checkpoint": checkpoint_id,
-            "transaction_id": txid,
-            "canonicalization": "canonical-json/v1",
-            "integrity_claim": "content_identity_not_truth_or_authorship",
-        }
-        if new_map:
-            manifest["supersedes_map"] = new_map
-        self._validate_manifest(manifest)
-        candidate = self._write_json_object("revisions", manifest)
-        intent_id = self._write_ref_log(
-            {
-                "schema": "an-kla/ref-log-v1",
-                "kind": "intent",
-                "transaction_id": txid,
-                "parent": observed,
-                "candidate": candidate,
+        if attempt is None:
+            mutation = {
+                "base_revision": observed,
+                "checkpoint_patch": checkpoint_patch,
+                "pending": pending,
+                "policy_metadata": policy_metadata,
+                "supersedes": supersedes,
             }
-        )
-        if self.read_current() != observed:
-            raise ConcurrentUpdateError("current_changed_before_commit")
-        self._replace_current(candidate)
-        committed = {"stage": "committed", "parent": observed, "candidate": candidate}
-        if policy_metadata is not None:
-            committed["write_policy"] = deepcopy(dict(policy_metadata))
-        self._write_transaction(txid, committed)
-        try:
-            self._write_ref_log(
-                {
-                    "schema": "an-kla/ref-log-v1",
-                    "kind": "observed_commit",
-                    "transaction_id": txid,
-                    "parent": observed,
-                    "candidate": candidate,
-                    "intent": intent_id,
-                }
+            if refute_objects is not None:
+                mutation["refute_objects"] = refute_objects
+            attempt = begin_transaction(
+                "internal_commit",
+                base_revision=observed,
+                mutation_fingerprint=digest_json(mutation),
             )
-        except OSError:
-            # The commit is already authoritative.  The missing diagnostic
-            # object is visible through doctor, never grounds a rollback.
-            pass
-        return candidate
+        return commit_locked(
+            self,
+            observed=observed,
+            checkpoint_patch=checkpoint_patch,
+            pending=pending,
+            attempt=attempt,
+            policy_metadata=policy_metadata,
+            supersedes=supersedes,
+            refute_objects=refute_objects,
+            store_identity=store_identity,
+        )
 
     def verify(self) -> dict[str, Any]:
         snapshot = self.snapshot()
+        binding = verify_current_binding(self, snapshot.manifest, snapshot.revision_id)
         return {
             "ok": True,
             "revision": snapshot.revision_id,
             "revision_number": snapshot.manifest["revision"],
             "counts": {stream: len(snapshot.records[stream]) for stream in STREAMS},
             "durability_profile": self.durability_profile,
+            "identity_status": identity_status(self)["identity_status"],
+            "root_relocated": binding["root_relocated"],
         }
 
     def recover(self) -> dict[str, Any]:
         """Diagnose interrupted work without guessing a replacement CURRENT."""
+        with shared_reader_gate(self):
+            return self._recover_under_gate()
+
+    def _recover_under_gate(self) -> dict[str, Any]:
         current = self.read_current()
         # A valid CURRENT is authoritative even if its operational transaction
         # record is stale.  Prepared journals are retained for inspection.
@@ -508,6 +570,10 @@ class MemoryStore:
         }
 
     def doctor(self) -> dict[str, Any]:
+        with shared_reader_gate(self):
+            return self._doctor_under_gate()
+
+    def _doctor_under_gate(self) -> dict[str, Any]:
         try:
             status = self.verify()
             current_error = None
@@ -528,8 +594,9 @@ class MemoryStore:
         }
 
     @contextmanager
-    def write_lock(self) -> Iterator[None]:
+    def write_lock(self) -> Iterator[LockResult]:
         self._make_layout()
+        result = LockResult()
         try:
             import fcntl  # type: ignore
         except ImportError:
@@ -542,9 +609,12 @@ class MemoryStore:
                 except FileExistsError as exc:
                     raise LockBusyError("write_lock_busy") from exc
                 try:
-                    yield
+                    yield result
                 finally:
-                    lock_dir.rmdir()
+                    try:
+                        lock_dir.rmdir()
+                    except OSError:
+                        result.release_error = "lock_release_incomplete"
                 return
             lock_path = self.root / ".write.lock"
             with lock_path.open("a+b") as handle:
@@ -562,18 +632,24 @@ class MemoryStore:
                             raise LockBusyError("write_lock_busy") from exc
                         time.sleep(0.05)
                 try:
-                    yield
+                    yield result
                 finally:
-                    handle.seek(0)
-                    msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                    try:
+                        handle.seek(0)
+                        msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
+                    except OSError:
+                        result.release_error = "lock_release_incomplete"
             return
         lock_path = self.root / ".write.lock"
         with lock_path.open("a+b") as handle:
             fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
             try:
-                yield
+                yield result
             finally:
-                fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+                try:
+                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+                except OSError:
+                    result.release_error = "lock_release_incomplete"
 
     def _make_layout(self) -> None:
         for relative in (
@@ -587,6 +663,10 @@ class MemoryStore:
             "indexes",
             "leases",
             "quarantine",
+            "identities/sha256",
+            "authority-claims/sha256",
+            "authority-attestations/sha256",
+            "refutations/sha256",
         ):
             (self.root / relative).mkdir(parents=True, exist_ok=True)
 
@@ -642,31 +722,12 @@ class MemoryStore:
         self._atomic_write(self.root / "transactions" / f"{txid}.json", canonical_json(body))
 
     def _write_immutable(self, target: Path, payload: bytes) -> None:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        if target.exists():
-            if target.read_bytes() != payload:
-                self._quarantine_conflict(target)
-            else:
-                return
-        # Objects are unreferenced until a valid manifest becomes CURRENT.  O_EXCL
-        # prevents an existing object from being overwritten.
-        try:
-            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_BINARY", 0)
-            descriptor = os.open(target, flags, 0o644)
-        except FileExistsError:
-            if target.read_bytes() != payload:
-                self._quarantine_conflict(target)
-                return self._write_immutable(target, payload)
-            return
-        try:
-            view = memoryview(payload)
-            while view:
-                written = os.write(descriptor, view)
-                view = view[written:]
-            os.fsync(descriptor)
-        finally:
-            os.close(descriptor)
-        self._fsync_directory(target.parent)
+        write_immutable(
+            target,
+            payload,
+            conflict=self._quarantine_conflict,
+            fsync_directory=self._fsync_directory,
+        )
 
     def _quarantine_conflict(self, target: Path) -> None:
         """Move an unreferenced conflicting object out of every lookup path."""
@@ -681,18 +742,7 @@ class MemoryStore:
         self._fsync_directory(quarantine)
 
     def _atomic_write(self, target: Path, payload: bytes) -> None:
-        target.parent.mkdir(parents=True, exist_ok=True)
-        temporary = target.with_name(f".{target.name}.{uuid.uuid4().hex}.tmp")
-        try:
-            with temporary.open("xb") as handle:
-                handle.write(payload)
-                handle.flush()
-                os.fsync(handle.fileno())
-            os.replace(temporary, target)
-            self._fsync_directory(target.parent)
-        finally:
-            if temporary.exists():
-                temporary.unlink()
+        atomic_write(target, payload, fsync_directory=self._fsync_directory)
 
     def _replace_current(self, identifier: str) -> None:
         bare_digest(identifier)
@@ -700,16 +750,7 @@ class MemoryStore:
 
     @staticmethod
     def _fsync_directory(path: Path) -> None:
-        if os.name == "nt":
-            return
-        try:
-            descriptor = os.open(path, os.O_RDONLY)
-        except OSError:
-            return
-        try:
-            os.fsync(descriptor)
-        finally:
-            os.close(descriptor)
+        fsync_directory(path)
 
     def _assign_records(
         self, base: Snapshot, pending: Mapping[str, list[dict[str, Any]]]
@@ -732,64 +773,25 @@ class MemoryStore:
 
     @staticmethod
     def _validate_manifest(manifest: Mapping[str, Any]) -> None:
-        if manifest.get("schema") != "an-kla/revision-v1":
-            raise IntegrityError("manifest_schema_invalid")
-        for key in ("checkpoint", "parent"):
-            value = manifest.get(key)
-            if key == "parent" and value is None:
-                continue
-            if not isinstance(value, str):
-                raise IntegrityError("manifest_identifier_missing")
-            bare_digest(value)
-        for stream in STREAMS:
-            values = manifest.get(f"{stream}_segments")
-            if not isinstance(values, list):
-                raise IntegrityError("manifest_segments_invalid")
-            for identifier in values:
-                bare_digest(str(identifier))
-        # ADR-0019 (PR-B): validate the supersede map shape (defense in depth).
-        # Absent on legacy revisions; present since supersede was introduced.
-        supersede_map = manifest.get("supersedes_map")
-        if supersede_map is not None:
-            if not isinstance(supersede_map, list):
-                raise IntegrityError("manifest_supersedes_map_invalid")
-            for entry in supersede_map:
-                if not isinstance(entry, dict):
-                    raise IntegrityError("manifest_supersedes_map_invalid")
-                stream = entry.get("stream")
-                target_id = entry.get("target_id")
-                sustituida_por = entry.get("sustituida_por")
-                if (
-                    stream not in STREAMS
-                    or not isinstance(target_id, str)
-                    or not target_id
-                    or not isinstance(sustituida_por, str)
-                    or not sustituida_por
-                ):
-                    raise IntegrityError("manifest_supersedes_map_invalid")
+        from .revision_validation import validate_manifest
+
+        validate_manifest(manifest, IntegrityError)
+
+    def _validate_revision_chain(
+        self, revision_id: str, manifest: Mapping[str, Any]
+    ) -> None:
+        from .revision_validation import validate_revision_chain
+
+        validate_revision_chain(self, revision_id, manifest, IntegrityError)
+
+    def _validate_lifecycle(
+        self, manifest: Mapping[str, Any], raw_records: Mapping[str, tuple[Mapping[str, Any], ...]]
+    ) -> None:
+        from .revision_validation import validate_lifecycle
+
+        validate_lifecycle(self, manifest, raw_records, IntegrityError)
 
     def _maybe_reindex(self, parent_revision: str, candidate_revision: str) -> None:
-        """Best-effort refresh of the derived FTS5 cache after a commit.
+        from .index_refresh import maybe_reindex
 
-        Runs *outside* the write lock because the index is a derived cache
-        whose authority is the (revision, hash) pair, never the commit
-        pointer.  Failures are silent: a missing or stale index simply
-        degrades retrieval to the scan profile.
-        """
-
-        try:
-            from .index import build_index, index_resolution
-        except ImportError:
-            return
-        try:
-            parent = index_resolution(self, parent_revision)
-            if parent.path is None:
-                return
-        except Exception:
-            return
-        try:
-            build_index(self, revision_id=candidate_revision)
-        except Exception:
-            # The commit is already authoritative.  A failed cache refresh is
-            # visible through ``doctor`` and never blocks retrieval.
-            pass
+        maybe_reindex(self, parent_revision, candidate_revision)

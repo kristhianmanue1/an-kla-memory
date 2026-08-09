@@ -1,24 +1,87 @@
 from __future__ import annotations
 
+from pathlib import Path
+import tempfile
 import unittest
 
-from an_kla.version import normalized_release_tag
+from scripts.check_release_tag import validate_release_gate
 
 
-class ReleaseTagTests(unittest.TestCase):
-    def test_alpha_tag_normalizes_to_pep440(self) -> None:
-        self.assertEqual(normalized_release_tag("v0.1.0-alpha.3"), "0.1.0a3")
+TAG = "v0.1.0-beta.9"
 
-    def test_future_release_phases_are_supported(self) -> None:
-        self.assertEqual(normalized_release_tag("v0.1.0-beta.1"), "0.1.0b1")
-        self.assertEqual(normalized_release_tag("v0.1.0-beta.2"), "0.1.0b2")
-        self.assertEqual(normalized_release_tag("v0.1.0-beta.3"), "0.1.0b3")
-        self.assertEqual(normalized_release_tag("v1.0.0-rc.2"), "1.0.0rc2")
-        self.assertEqual(normalized_release_tag("v1.0.0"), "1.0.0")
 
-    def test_unknown_tag_is_rejected(self) -> None:
-        with self.assertRaisesRegex(ValueError, "unsupported_release_tag"):
-            normalized_release_tag("release-0.1.0")
+class ReleaseGateTests(unittest.TestCase):
+    def _root(self, *lines: str) -> tempfile.TemporaryDirectory:
+        temp = tempfile.TemporaryDirectory()
+        release_dir = Path(temp.name) / "docs" / "releases"
+        release_dir.mkdir(parents=True)
+        (release_dir / f"{TAG}-adversarial.md").write_text(
+            "\n".join(lines), encoding="utf-8"
+        )
+        return temp
+
+    def test_accepts_one_exact_candidate_proceed_marker(self) -> None:
+        temp = self._root(
+            '<!-- an-kla:release-gate {"decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.9"} -->'
+        )
+        self.addCleanup(temp.cleanup)
+        validate_release_gate(Path(temp.name), TAG)
+
+    def test_fails_closed_for_missing_or_duplicate_marker(self) -> None:
+        cases = (
+            (("# no gate",), "release_gate_missing"),
+            (
+                (
+                    '<!-- an-kla:release-gate {"decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.9"} -->',
+                    '<!-- an-kla:release-gate {"decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.9"} -->',
+                ),
+                "release_gate_duplicated",
+            ),
+        )
+        for lines, expected in cases:
+            with self.subTest(expected=expected):
+                temp = self._root(*lines)
+                try:
+                    with self.assertRaisesRegex(ValueError, expected):
+                        validate_release_gate(Path(temp.name), TAG)
+                finally:
+                    temp.cleanup()
+
+    def test_fails_closed_for_wrong_decision_scope_or_tag(self) -> None:
+        cases = (
+            ({"decision": "fix-and-retry", "scope": "release-candidate", "tag": TAG}, "release_gate_not_proceed"),
+            ({"decision": "proceed", "scope": "PR-C", "tag": TAG}, "release_gate_scope_mismatch"),
+            ({"decision": "proceed", "scope": "release-candidate", "tag": "v0.1.0-beta.8"}, "release_gate_tag_mismatch"),
+        )
+        for gate, expected in cases:
+            marker = (
+                '<!-- an-kla:release-gate '
+                f'{{"decision":"{gate["decision"]}","scope":"{gate["scope"]}","tag":"{gate["tag"]}"}} -->'
+            )
+            with self.subTest(expected=expected):
+                temp = self._root(marker)
+                try:
+                    with self.assertRaisesRegex(ValueError, expected):
+                        validate_release_gate(Path(temp.name), TAG)
+                finally:
+                    temp.cleanup()
+
+    def test_fails_closed_for_malformed_or_extra_fields(self) -> None:
+        cases = (
+            "<!-- an-kla:release-gate not-json -->",
+            '<!-- an-kla:release-gate {"decision":"proceed","extra":1,"scope":"release-candidate","tag":"v0.1.0-beta.9"} -->',
+            '<!-- an-kla:release-gate {"decision":"fix-and-retry","decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.9"} -->',
+            '<!-- an-kla:release-gate {"decision":"proceed","scope":"PR-C","scope":"release-candidate","tag":"v0.1.0-beta.9"} -->',
+            '<!-- an-kla:release-gate {"decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.8","tag":"v0.1.0-beta.9"} -->',
+        )
+        for marker in cases:
+            with self.subTest(marker=marker):
+                temp = self._root(marker)
+                try:
+                    with self.assertRaisesRegex(ValueError, "release_gate_invalid"):
+                        validate_release_gate(Path(temp.name), TAG)
+                finally:
+                    temp.cleanup()
 
 
 if __name__ == "__main__":
