@@ -287,6 +287,40 @@ disponibilidad histórica (`present/archived_by_compaction`). Ningún borrado
 físico precede manifest de export, restore validado, tombstones, época y
 respuesta explícita `archived` al verificar revisiones antiguas.
 
+### Fase 8 — recuperación semántica derivada
+
+Formalizada el 2026-08-09 en ADR-0029 y
+`docs/planning/fase-8-recuperacion-semantica-2026-08-09.md`. Separa dos tracks:
+recuperar registros existentes por significado y generar propuestas semánticas
+desde evidencia. El segundo no comienza ni integra proveedor por efecto de esta
+fase.
+
+Secuencia: cerrar validación externa #10; ejecutar spike read-only de
+portabilidad/privacidad; ampliar benchmark con paráfrasis, sinónimos, negaciones
+y model drift; decidir ADR-0029; sólo entonces implementar índice derivado,
+perfil vectorial opt-in y fusión híbrida experimental. CAS sigue siendo la
+única autoridad, el índice es descartable, los filtros epistémicos se aplican
+uniformemente y el ranking/default productivo no cambia sin otro gate.
+
+La preferencia histórica por `sqlite-vec` frente a un segundo store ChromaDB es
+una hipótesis del spike, no una selección. Memoria L0→L3/persona requiere ADR y
+autorización separadas; toda salida de modelo sería propuesta no confiable y
+pasaría por la escritura gobernada.
+
+Escrubery queda formalizado como subtrack **F8-E** de atestación opcional, no
+como motor vectorial. Su contrato candidato permite observar modelo, artefacto,
+dimensión, normalización y política de datos en un snapshot firmado cuyo digest
+AN-KLA puede ligar al manifest. No habrá consulta viva al catálogo en retrieval
+ni selección de perfil desde memoria recuperada.
+
+La revisión externa dejó `FIX-AND-RETRY` antes de runtime: el remoto debe
+reconstruir el sistema, Evidentia necesita append inmutable/serializado y
+checkpoint real, y F3 requiere sandbox/artefactos endurecidos. Secuencia
+F8-E0..E5: fuente reproducible; Evidentia; F3; schema de atestación; snapshot
+offline; spike de adapter. El detalle durable está en
+`docs/planning/fase-8-escrubery-attestation-2026-08-09.md` y en
+`https://github.com/kristhianmanue1/escrubery/issues/1`.
+
 ### Gates transversales
 
 - Cada fase sensible tiene ronda `proceed | fix-and-retry | escalate` con
@@ -336,6 +370,10 @@ respuesta explícita `archived` al verificar revisiones antiguas.
   Suite final: 393 tests en Python 3.9 y 3.12 (un skip esperado en 3.12), wheel
   limpio y 61 schemas docs/package byte-idénticos. El retry final reprodujo
   cero borrados sin recibo durable y lectura histórica bajo deriva de política.
+- Fase 8: **formalizada, no iniciada** (ADR-0029 en `Propuesta`; F8.0 depende de
+  la validación externa #10 y F8.1 es un spike read-only). No hay backend,
+  modelo, proveedor, profile ni cambio de ranking autorizados. La ronda
+  documental preliminar terminó `escalate` hasta evidencia y revisión fresca.
 - Decisión vigente del maintainer: continuar localmente hasta completar el
   camino y permitir su integración administrativa en GitHub; tag y publicación
   permanecen excluidos.

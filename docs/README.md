@@ -45,6 +45,7 @@ diffícil de revertir.
 | 0026 | [governed-refute-v1](architecture/0026-governed-refute-v1.md) | Refutación gobernada, auditable y sin sucesor |
 | 0027 | [verifiable-export-restore-v1](architecture/0027-verifiable-export-restore-v1.md) | Export/backup verificable y restore fail-closed |
 | 0028 | [governed-compaction-v1](architecture/0028-governed-compaction-v1.md) | Corte de epoch, tombstones y archivo verificable |
+| 0029 | [derived-semantic-retrieval-v1](architecture/0029-derived-semantic-retrieval-v1.md) | Índice semántico derivado y recuperación híbrida opt-in (Propuesta) |
 
 ### Documentación normativa
 
@@ -82,3 +83,9 @@ de publicación. Cumplen el rol de `CHANGELOG.md`.
 [`planning/`](planning/) contiene documentos puntuales: respuestas a
 revisiones externas (argos), planes de iteración, investigaciones de bugs.
 No son evergreen; se conservan como histórico.
+
+La iniciativa vigente de recuperación semántica está documentada en el
+[plan de Fase 8](planning/fase-8-recuperacion-semantica-2026-08-09.md), su
+[ronda adversarial documental](planning/fase-8-recuperacion-semantica-adversarial-2026-08-09.md)
+y el subtrack opcional
+[F8-E para atestación mediante Escrubery](planning/fase-8-escrubery-attestation-2026-08-09.md).
