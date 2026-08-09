@@ -321,6 +321,25 @@ offline; spike de adapter. El detalle durable está en
 `docs/planning/fase-8-escrubery-attestation-2026-08-09.md` y en
 `https://github.com/kristhianmanue1/escrubery/issues/1`.
 
+### Fase 9 — obligación gobernada de continuidad
+
+Formalizada el 2026-08-09 en ADR-0030 y
+`docs/planning/fase-9-continuidad-obligatoria-2026-08-09.md`. Corrige el hueco
+entre disponer de checkpoint gobernado y exigir que el agente lo actualice al
+cerrar un hito material.
+
+La decisión propuesta combina una regla del contrato gestionado con
+`checkpoint obligation`, evaluador read-only `fresh|required|indeterminate`.
+Los triggers son commits, cambios de fase/objetivo/next step, decisiones,
+blockers, releases y handoff; tareas triviales, estado idéntico y cambios sólo
+de reloj quedan exentos. `required` no salta `plan -> commit`.
+
+La implementación necesita `working-state/checkpoint-v3` para el observer
+reservado `git/v1`, y debe cerrar antes la asimetría actual por la que checkpoint
+acepta `channel_confirmed` desde JSON mientras write falla cerrado. Un host no
+integrado no puede anunciar enforcement completo. La ronda documental inicial
+queda `escalate` hasta revisión fresca.
+
 ### Gates transversales
 
 - Cada fase sensible tiene ronda `proceed | fix-and-retry | escalate` con
@@ -374,6 +393,10 @@ offline; spike de adapter. El detalle durable está en
   la validación externa #10 y F8.1 es un spike read-only). No hay backend,
   modelo, proveedor, profile ni cambio de ranking autorizados. La ronda
   documental preliminar terminó `escalate` hasta evidencia y revisión fresca.
+- Fase 9: **formalizada, no iniciada** (ADR-0030 en `Propuesta`). El checkpoint
+  de Fase 8 fue actualizado manualmente a revisión AN-KLA 20, demostrando el
+  hueco de obligación. No hay template vNext, observer Git, hook o enforcement
+  implementados; la ronda preliminar terminó `escalate`.
 - Decisión vigente del maintainer: continuar localmente hasta completar el
   camino y permitir su integración administrativa en GitHub; tag y publicación
   permanecen excluidos.

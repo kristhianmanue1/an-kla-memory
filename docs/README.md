@@ -46,6 +46,7 @@ diffícil de revertir.
 | 0027 | [verifiable-export-restore-v1](architecture/0027-verifiable-export-restore-v1.md) | Export/backup verificable y restore fail-closed |
 | 0028 | [governed-compaction-v1](architecture/0028-governed-compaction-v1.md) | Corte de epoch, tombstones y archivo verificable |
 | 0029 | [derived-semantic-retrieval-v1](architecture/0029-derived-semantic-retrieval-v1.md) | Índice semántico derivado y recuperación híbrida opt-in (Propuesta) |
+| 0030 | [milestone-checkpoint-obligation-v1](architecture/0030-milestone-checkpoint-obligation-v1.md) | Obligación gobernada de continuidad al cerrar hitos (Propuesta) |
 
 ### Documentación normativa
 
@@ -89,3 +90,7 @@ La iniciativa vigente de recuperación semántica está documentada en el
 [ronda adversarial documental](planning/fase-8-recuperacion-semantica-adversarial-2026-08-09.md)
 y el subtrack opcional
 [F8-E para atestación mediante Escrubery](planning/fase-8-escrubery-attestation-2026-08-09.md).
+
+La política propuesta para evitar checkpoints obsoletos está en el
+[plan de Fase 9](planning/fase-9-continuidad-obligatoria-2026-08-09.md) y su
+[ronda adversarial documental](planning/fase-9-continuidad-obligatoria-adversarial-2026-08-09.md).
