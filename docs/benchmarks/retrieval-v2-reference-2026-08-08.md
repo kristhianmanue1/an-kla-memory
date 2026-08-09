@@ -11,8 +11,9 @@ verdad, autoridad ni calidad decisional. La conclusión normativa permanece:
 ```
 
 No se midió latencia. BM25 es experimental y sus bytes no son contractuales
-entre runtimes porque dependen de `libm`. La revisión humana del corpus sigue
-`pending`, por lo que este resultado no satisface un gate de publicación.
+entre runtimes porque dependen de `libm`. La revisión humana del corpus está
+`passed`, ligada al digest exacto y atestiguada por el maintainer. Esto cierra
+el gate de privacidad; no autoriza por sí solo un cambio de ranking.
 
 ## Identidad reproducible
 
@@ -68,7 +69,7 @@ python3 -m an_kla --no-update-check benchmark-reference
 → parity mismatches=0 en 20 rankings y 80 selecciones presupuestadas
 
 python3 scripts/check_benchmark_corpus.py
-→ check_benchmark_corpus: OK — corpus saneado y ligado; human_review=pending
+→ check_benchmark_corpus: OK — corpus saneado y ligado; human_review=passed
 
 python3 scripts/check_clean_wheel.py
 → check_clean_wheel: OK — instalación nueva, contexto, identidad, recursos y

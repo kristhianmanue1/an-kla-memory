@@ -277,7 +277,7 @@ class RetrievalEvaluationV2Tests(unittest.TestCase):
             strategy_validator.validate(wrong_score)
 
         wrong_review = deepcopy(provenance)
-        wrong_review["human_review"]["reviewer"] = "maintainer"
+        wrong_review["human_review"]["reviewer"] = "agent"
         with self.assertRaises(ValidationError):
             provenance_validator.validate(wrong_review)
 
@@ -303,7 +303,7 @@ class RetrievalEvaluationV2Tests(unittest.TestCase):
             timeout=30,
         )
         self.assertEqual(scan.returncode, 0, scan.stderr)
-        self.assertIn("human_review=pending", scan.stdout)
+        self.assertIn("human_review=passed", scan.stdout)
         cli = subprocess.run(
             [
                 sys.executable, "-m", "an_kla", "--no-update-check",
