@@ -11,6 +11,13 @@ from .canonical import exact_sized_payload
 from .context import assemble_context
 from .retrieval import retrieve
 from .store import IntegrityError, MemoryStore, StoreError
+from .temporal import (
+    FRESHNESS_PROFILE,
+    FRESHNESS_PROJECTION_KEYS,
+    TemporalError,
+    VERIFIED_AT_PATTERN,
+    parse_freshness_now,
+)
 from .version import VERSION
 
 PROTOCOL_VERSION = "2025-11-25"
@@ -25,6 +32,8 @@ SAFE_ERROR_CODES = frozenset({
     "invalid_context_arguments", "invalid_context_query",
     "invalid_context_budget", "invalid_new_information",
     "budget_too_small_for_required_context",
+    "invalid_freshness_now", "invalid_stale_after_days",
+    "freshness_profile_required", "unsupported_freshness_profile",
 })
 
 
@@ -49,14 +58,35 @@ class ReadOnlyMcp:
         self._initialize_responded = False
         self._initialized = False
 
-    def _retrieve_payload(self, query: str, budget: int) -> dict[str, Any]:
+    def _retrieve_payload(
+        self,
+        query: str,
+        budget: int,
+        *,
+        freshness_profile: str | None = None,
+        now: Any = None,
+        stale_after_days: int | None = None,
+    ) -> dict[str, Any]:
         if budget < 0:
             raise ValueError("negative_budget")
         # Obtain deterministic relevance ordering without applying a transport
         # budget. Selection below measures the exact UTF-8 text payload.
-        source = retrieve(self.store, query, 2**63 - 1)
+        if freshness_profile is None and now is None and stale_after_days is None:
+            # Keep the beta.8 call path exact: this also protects consumers
+            # that wrap or mock the three-argument retrieval function.
+            source = retrieve(self.store, query, 2**63 - 1)
+        else:
+            source = retrieve(
+                self.store,
+                query,
+                2**63 - 1,
+                freshness_profile=freshness_profile,
+                now=now,
+                stale_after_days=stale_after_days,
+            )
         base_excluded = dict(source["excluded_summary"])
         candidates = source["selected"]
+        freshness_enabled = source["schema"] == "an-kla/retrieval-result-v2"
         selected: list[dict[str, Any]] = []
         budget_excluded = 0
 
@@ -64,13 +94,22 @@ class ReadOnlyMcp:
             exclusions = dict(base_excluded)
             if budget_excluded:
                 exclusions["budget"] = budget_excluded
-            return {"schema": "an-kla/mcp-retrieve-v1", "untrusted_memory_data": True,
+            payload = {"schema": "an-kla/mcp-retrieve-v2" if freshness_enabled else "an-kla/mcp-retrieve-v1", "untrusted_memory_data": True,
                     "host_framing_unmeasured": True,
                     "revision": source["revision"], "budget_bytes": budget,
                     "used_bytes": used, "excluded_summary": exclusions, "records": selected}
+            if freshness_enabled:
+                payload["freshness_profile"] = FRESHNESS_PROFILE
+                payload["freshness"] = source["freshness"]
+            return payload
 
         for item in candidates:
-            selected.append({"id": item["id"], "text": item["render"], "score": item["score"]})
+            record = {"id": item["id"], "text": item["render"], "score": item["score"]}
+            if freshness_enabled:
+                record.update(
+                    {key: item[key] for key in FRESHNESS_PROJECTION_KEYS if key in item}
+                )
+            selected.append(record)
             _payload, measured = exact_sized_payload(build)
             if measured > budget:
                 selected.pop()
@@ -83,16 +122,68 @@ class ReadOnlyMcp:
     @staticmethod
     def tools() -> list[dict[str, Any]]:
         empty = {"type": "object", "additionalProperties": False}
+        freshness = {
+            "freshness_profile": {"type": "string", "enum": [FRESHNESS_PROFILE]},
+            "now": {"type": "string", "pattern": VERIFIED_AT_PATTERN},
+            "stale_after_days": {"type": "integer", "minimum": 0},
+        }
         return [
             {"name": "an_kla_status", "description": "Estado de memoria local.", "inputSchema": empty},
             {"name": "an_kla_verify", "description": "Verifica revisión actual.", "inputSchema": empty},
             {"name": "an_kla_doctor", "description": "Diagnóstico saneado sin rutas locales.", "inputSchema": empty},
             {"name": "an_kla_get_checkpoint", "description": "Checkpoint como datos no confiables.", "inputSchema": empty},
-            {"name": "an_kla_retrieve", "description": "Recupera datos no confiables bajo presupuesto UTF-8 exacto.", "inputSchema": {"type":"object","properties":{"query":{"type":"string"},"budget_bytes":{"type":"integer","minimum":0}},"required":["query","budget_bytes"],"additionalProperties":False}},
-            {"name": "an_kla_assemble_context", "description": "Ensambla checkpoint, información nueva y memoria bajo un presupuesto UTF-8 global.", "inputSchema": {"type":"object","properties":{"query":{"type":"string"},"budget_bytes":{"type":"integer","minimum":0},"new_information":{"type":"string"}},"required":["query","budget_bytes"],"additionalProperties":False}},
+            {"name": "an_kla_retrieve", "description": "Recupera datos no confiables bajo presupuesto UTF-8 exacto.", "inputSchema": {"type":"object","properties":{"query":{"type":"string"},"budget_bytes":{"type":"integer","minimum":0}, **freshness},"required":["query","budget_bytes"],"additionalProperties":False}},
+            {"name": "an_kla_assemble_context", "description": "Ensambla checkpoint, información nueva y memoria bajo un presupuesto UTF-8 global.", "inputSchema": {"type":"object","properties":{"query":{"type":"string"},"budget_bytes":{"type":"integer","minimum":0},"new_information":{"type":"string"}, **freshness},"required":["query","budget_bytes"],"additionalProperties":False}},
         ]
 
+    @staticmethod
+    def _freshness_arguments(
+        arguments: Mapping[str, Any],
+        *,
+        required: set[str],
+        optional: set[str],
+        invalid_arguments: str,
+    ) -> tuple[str | None, Any, int | None]:
+        keys = set(arguments)
+        if not required.issubset(keys) or not keys.issubset(required | optional):
+            raise ValueError(invalid_arguments)
+        query, budget = arguments["query"], arguments["budget_bytes"]
+        if (
+            not isinstance(query, str)
+            or not isinstance(budget, int)
+            or isinstance(budget, bool)
+            or (
+                "freshness_profile" in arguments
+                and not isinstance(arguments["freshness_profile"], str)
+            )
+        ):
+            raise ValueError(invalid_arguments)
+        profile = arguments.get("freshness_profile")
+        if profile is not None and profile != FRESHNESS_PROFILE:
+            raise TemporalError("unsupported_freshness_profile")
+        temporal_present = "now" in arguments or "stale_after_days" in arguments
+        if profile is None and temporal_present:
+            raise TemporalError("freshness_profile_required")
+        parsed_now = None
+        threshold = None
+        if profile is not None:
+            if "now" in arguments:
+                parsed_now = parse_freshness_now(arguments["now"])
+            if "stale_after_days" in arguments:
+                value = arguments["stale_after_days"]
+                if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                    raise TemporalError("invalid_stale_after_days")
+                threshold = value
+        return profile, parsed_now, threshold
+
     def call(self, name: str, arguments: Mapping[str, Any]) -> dict[str, Any]:
+        if name in {
+            "an_kla_status",
+            "an_kla_verify",
+            "an_kla_doctor",
+            "an_kla_get_checkpoint",
+        } and arguments:
+            raise ValueError("invalid_tool_arguments")
         if name in {"an_kla_status", "an_kla_verify"}:
             return self.store.verify()
         if name == "an_kla_doctor":
@@ -102,25 +193,31 @@ class ReadOnlyMcp:
             snapshot = self.store.snapshot()
             return {"schema":"an-kla/mcp-checkpoint-v1", "untrusted_memory_data":True, "revision":snapshot.revision_id, "checkpoint":snapshot.checkpoint}
         if name == "an_kla_retrieve":
-            query, budget = arguments.get("query"), arguments.get("budget_bytes")
-            if not isinstance(query, str) or not isinstance(budget, int) or isinstance(budget, bool):
-                raise ValueError("invalid_retrieve_arguments")
-            return self._retrieve_payload(query, budget)
+            profile, now, threshold = self._freshness_arguments(
+                arguments,
+                required={"query", "budget_bytes"},
+                optional={"freshness_profile", "now", "stale_after_days"},
+                invalid_arguments="invalid_retrieve_arguments",
+            )
+            return self._retrieve_payload(
+                arguments["query"], arguments["budget_bytes"],
+                freshness_profile=profile, now=now, stale_after_days=threshold,
+            )
         if name == "an_kla_assemble_context":
-            query, budget = arguments.get("query"), arguments.get("budget_bytes")
-            new_information = arguments.get("new_information")
-            if (
-                not isinstance(query, str)
-                or not isinstance(budget, int)
-                or isinstance(budget, bool)
-                or (new_information is not None and not isinstance(new_information, str))
+            if "new_information" in arguments and not isinstance(
+                arguments["new_information"], str
             ):
                 raise ValueError("invalid_context_arguments")
+            profile, now, threshold = self._freshness_arguments(
+                arguments,
+                required={"query", "budget_bytes"},
+                optional={"new_information", "freshness_profile", "now", "stale_after_days"},
+                invalid_arguments="invalid_context_arguments",
+            )
             return assemble_context(
-                self.store,
-                query,
-                budget,
-                new_information=new_information,
+                self.store, arguments["query"], arguments["budget_bytes"],
+                new_information=arguments.get("new_information"),
+                freshness_profile=profile, now=now, stale_after_days=threshold,
             )
         raise ValueError("unknown_tool")
 

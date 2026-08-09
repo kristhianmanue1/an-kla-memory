@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:an-kla:schema:compaction-restore-proof:v1", "title": "AN-KLA Compaction Restore Proof v1", "type": "object", "additionalProperties": false,
+  "required": ["schema", "manifest_sha256", "inventory_sha256", "current_revision", "project_identity_sha256", "store_identity_sha256", "transaction_outcomes_sha256", "restore_result_sha256"],
+  "properties": {"schema": {"const": "an-kla/compaction-restore-proof-v1"}, "manifest_sha256": {"$ref": "#/$defs/digest"}, "inventory_sha256": {"$ref": "#/$defs/digest"}, "current_revision": {"$ref": "#/$defs/digest"}, "project_identity_sha256": {"$ref": "#/$defs/digest"}, "store_identity_sha256": {"$ref": "#/$defs/digest"}, "transaction_outcomes_sha256": {"$ref": "#/$defs/digest"}, "restore_result_sha256": {"$ref": "#/$defs/digest"}},
+  "$defs": {"digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}
+}

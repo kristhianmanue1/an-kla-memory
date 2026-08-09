@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:export-result:v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "created", "bundle", "manifest_sha256", "current_revision", "warnings"],
+  "properties": {
+    "schema": {"const": "an-kla/export-result-v1"},
+    "created": {"const": true},
+    "bundle": {"type": "string", "minLength": 1},
+    "manifest_sha256": {"$ref": "#/$defs/digest"},
+    "current_revision": {"$ref": "#/$defs/digest"},
+    "warnings": {"const": ["plaintext_export_contains_untrusted_memory_data"]}
+  },
+  "$defs": {"digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}
+}

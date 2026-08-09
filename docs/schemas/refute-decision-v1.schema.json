@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:refute-decision:v1",
+  "title": "AN-KLA RefuteDecision v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "proposal_sha256", "authority_claim_sha256", "authority_attestation_id", "policy_profile", "policy_fingerprint", "decision", "reason_codes"],
+  "properties": {
+    "schema": {"const": "an-kla/refute-decision-v1"},
+    "proposal_sha256": {"$ref": "#/$defs/digest"},
+    "authority_claim_sha256": {"$ref": "#/$defs/digest"},
+    "authority_attestation_id": {"oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+    "policy_profile": {"const": "refute-policy/v1"},
+    "policy_fingerprint": {"$ref": "#/$defs/digest"},
+    "decision": {"enum": ["skip", "refute"]},
+    "reason_codes": {"type": "array", "minItems": 1, "maxItems": 1, "items": {"enum": ["authority_scope_mismatch", "refute_accepted", "refute_authority_resolver_unavailable", "refute_requires_privileged_authority", "verified_evidence_required"]}}
+  },
+  "$defs": {"digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}
+}

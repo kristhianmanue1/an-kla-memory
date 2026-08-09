@@ -34,6 +34,14 @@ diffícil de revertir.
 | 0018 | [indexable-text-field](architecture/0018-indexable-text-field.md) | Campo explícito `indexable_text` para FTS |
 | 0019 | [governed-supersede](architecture/0019-governed-supersede.md) | Operación `supersede` gobernada |
 | 0020 | [context-diagnostics-in-write-result](architecture/0020-context-diagnostics-in-write-result.md) | Salud del contrato en el resultado de escritura |
+| 0021 | [verified-at-freshness-v1](architecture/0021-verified-at-freshness-v1.md) | `verified_at` autodeclarado y frescura computada en lectura |
+| 0022 | [store-project-identity-v1](architecture/0022-store-project-identity-v1.md) | Identidad lógica separada de proyecto y store |
+| 0023 | [governed-checkpoint-handoff-v2](architecture/0023-governed-checkpoint-handoff-v2.md) | Checkpoint exacto y handoff gobernado |
+| 0024 | [commit-outcome-v2](architecture/0024-commit-outcome-v2.md) | Resultado transaccional y durabilidad explícita |
+| 0025 | [retrieval-evaluation-v2](architecture/0025-retrieval-evaluation-v2.md) | Benchmark de ranking y presupuesto sin cambiar retrieval |
+| 0026 | [governed-refute-v1](architecture/0026-governed-refute-v1.md) | Refutación gobernada, auditable y sin sucesor |
+| 0027 | [verifiable-export-restore-v1](architecture/0027-verifiable-export-restore-v1.md) | Export/backup verificable y restore fail-closed |
+| 0028 | [governed-compaction-v1](architecture/0028-governed-compaction-v1.md) | Corte de epoch, tombstones y archivo verificable |
 
 ### Documentación normativa
 
@@ -49,6 +57,17 @@ diffícil de revertir.
 Los schemas normativos están bajo [`schemas/`](schemas/) y también embebidos
 en el paquete (`an_kla/schemas/`). Se consultan con
 `python -m an_kla schema list` / `schema show <name>`.
+El contrato de objetos que completa ADR-0026 está en
+[`refute-contract-v1.md`](refute-contract-v1.md).
+El contrato ejecutable que completa ADR-0028 está en
+[`compaction-contract-v1.md`](compaction-contract-v1.md).
+
+### Benchmarks reproducibles
+
+[`benchmarks/`](benchmarks/) conserva reportes interpretados ligados a digests;
+el primer baseline es
+[`retrieval-v2-reference-2026-08-08.md`](benchmarks/retrieval-v2-reference-2026-08-08.md).
+Los reportes son evidencia experimental, no decisiones de ranking.
 
 ### Notas de release
 

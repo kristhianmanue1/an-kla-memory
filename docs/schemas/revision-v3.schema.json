@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:revision:v3",
+  "title": "AN-KLA Revision v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "revision", "parent", "facts_segments", "events_segments", "episodes_segments", "checkpoint", "transaction_id", "canonicalization", "integrity_claim", "store_identity", "features", "supersedes_map", "refutations_map", "compaction_epoch"],
+  "properties": {
+    "schema": {"const": "an-kla/revision-v3"},
+    "revision": {"type": "integer", "minimum": 1},
+    "parent": {"oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+    "facts_segments": {"$ref": "#/$defs/digests"},
+    "events_segments": {"$ref": "#/$defs/digests"},
+    "episodes_segments": {"$ref": "#/$defs/digests"},
+    "checkpoint": {"$ref": "#/$defs/digest"},
+    "transaction_id": {"$ref": "#/$defs/uuid"},
+    "canonicalization": {"const": "canonical-json/v1"},
+    "integrity_claim": {"const": "content_identity_not_truth_or_authorship"},
+    "store_identity": {"$ref": "#/$defs/digest"},
+    "features": {"const": ["refutations/v1", "compaction/v1"]},
+    "supersedes_map": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/supersedes_entry"}},
+    "refutations_map": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/refutation_entry"}},
+    "compaction_epoch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["epoch_id", "source_revision", "export_manifest_sha256", "tombstone_catalog", "epoch_manifest"],
+      "properties": {
+        "epoch_id": {"$ref": "#/$defs/uuid"},
+        "source_revision": {"$ref": "#/$defs/digest"},
+        "export_manifest_sha256": {"$ref": "#/$defs/digest"},
+        "tombstone_catalog": {"$ref": "#/$defs/digest"},
+        "epoch_manifest": {"$ref": "#/$defs/digest"}
+      }
+    }
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "digests": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/digest"}},
+    "uuid": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"},
+    "refutation_entry": {"type": "object", "additionalProperties": false, "required": ["stream", "target_record_sha256", "refutation_id"], "properties": {"stream": {"enum": ["facts", "events", "episodes"]}, "target_record_sha256": {"$ref": "#/$defs/digest"}, "refutation_id": {"$ref": "#/$defs/digest"}}},
+    "supersedes_entry": {"type": "object", "additionalProperties": false, "required": ["stream", "target_id", "sustituida_por"], "properties": {"stream": {"enum": ["facts", "events", "episodes"]}, "target_id": {"type": "string", "minLength": 1}, "sustituida_por": {"type": "string", "minLength": 1}}}
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:an-kla:schema:compaction-tombstone-catalog:v1", "title": "AN-KLA Compaction Tombstone Catalog v1", "type": "object", "additionalProperties": false,
+  "required": ["schema", "epoch_id", "source_revision", "export_manifest_sha256", "delete_set_sha256", "archived_revisions", "record_tombstones", "object_tombstones", "previous_catalogs"],
+  "properties": {
+    "schema": {"const": "an-kla/compaction-tombstone-catalog-v1"}, "epoch_id": {"$ref": "#/$defs/uuid"}, "source_revision": {"$ref": "#/$defs/digest"}, "export_manifest_sha256": {"$ref": "#/$defs/digest"}, "delete_set_sha256": {"$ref": "#/$defs/digest"},
+    "archived_revisions": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/archived"}}, "record_tombstones": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/record"}}, "object_tombstones": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/object"}}, "previous_catalogs": {"type": "array", "uniqueItems": true, "items": {"$ref": "#/$defs/previous"}}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, "uuid": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"},
+    "archived": {"type": "object", "additionalProperties": false, "required": ["revision", "epoch_id", "export_manifest_sha256"], "properties": {"revision": {"$ref": "#/$defs/digest"}, "epoch_id": {"$ref": "#/$defs/uuid"}, "export_manifest_sha256": {"$ref": "#/$defs/digest"}}},
+    "record": {"type": "object", "additionalProperties": false, "required": ["stream", "record_sha256", "state"], "properties": {"stream": {"enum": ["facts", "events", "episodes"]}, "record_sha256": {"$ref": "#/$defs/digest"}, "state": {"enum": ["superseded", "refuted", "inactive"]}}},
+    "object": {"type": "object", "additionalProperties": false, "required": ["path", "content_sha256", "kind"], "properties": {"path": {"type": "string", "minLength": 1}, "content_sha256": {"$ref": "#/$defs/digest"}, "kind": {"enum": ["revision", "checkpoint", "segment", "ref-log", "transaction", "stage", "receipt", "refutation", "authority-claim", "authority-attestation", "index"]}}},
+    "previous": {"type": "object", "additionalProperties": false, "required": ["epoch_id", "catalog_sha256", "export_manifest_sha256"], "properties": {"epoch_id": {"$ref": "#/$defs/uuid"}, "catalog_sha256": {"$ref": "#/$defs/digest"}, "export_manifest_sha256": {"$ref": "#/$defs/digest"}}}
+  }
+}

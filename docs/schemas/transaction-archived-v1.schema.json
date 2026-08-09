@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:an-kla:schema:transaction-archived:v1", "title": "AN-KLA Archived Transaction v1", "type": "object", "additionalProperties": false,
+  "required": ["schema", "transaction_id", "state", "epoch_id", "export_manifest_sha256", "tombstone_catalog"],
+  "properties": {"schema": {"const": "an-kla/transaction-archived-v1"}, "transaction_id": {"$ref": "#/$defs/uuid"}, "state": {"const": "transaction_archived_by_compaction"}, "epoch_id": {"$ref": "#/$defs/uuid"}, "export_manifest_sha256": {"$ref": "#/$defs/digest"}, "tombstone_catalog": {"$ref": "#/$defs/digest"}},
+  "$defs": {"digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, "uuid": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"}}
+}

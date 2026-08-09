@@ -1,0 +1,5 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:an-kla:schema:compaction-policy-config:v1", "title": "AN-KLA Compaction Policy Config v1", "type": "object", "additionalProperties": false,
+  "required": ["schema", "profile", "platform", "export_profile", "revision_schema", "projection_precedence", "segmenting", "result_states"],
+  "properties": {"schema": {"const": "an-kla/compaction-policy-config-v1"}, "profile": {"const": "compaction-policy/v1"}, "platform": {"const": "posix"}, "export_profile": {"const": "export/v1"}, "revision_schema": {"const": "an-kla/revision-v3"}, "projection_precedence": {"const": ["refuted", "superseded", "physical"]}, "segmenting": {"const": "one-canonical-jsonl-per-nonempty-stream"}, "result_states": {"const": ["not_committed", "committed_cleanup_incomplete", "committed", "outcome_unknown"]}}
+}

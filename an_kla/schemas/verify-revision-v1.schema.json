@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:an-kla:schema:verify-revision:v1", "title": "AN-KLA Verify Revision v1", "type": "object", "additionalProperties": false,
+  "required": ["schema", "revision", "availability", "epoch_id", "export_manifest_sha256", "tombstone_catalog", "integrity"],
+  "properties": {"schema": {"const": "an-kla/verify-revision-v1"}, "revision": {"$ref": "#/$defs/digest"}, "availability": {"enum": ["present", "archived_by_compaction", "unknown"]}, "epoch_id": {"oneOf": [{"$ref": "#/$defs/uuid"}, {"type": "null"}]}, "export_manifest_sha256": {"oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]}, "tombstone_catalog": {"oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]}, "integrity": {"enum": ["verified", "catalog_verified", "not_available"]}},
+  "$defs": {"digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, "uuid": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"}}
+}

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+from contextlib import nullcontext
 import re
 import sqlite3
 from typing import Any, Mapping
@@ -14,6 +16,17 @@ from .index import (
     record_text,
 )
 from .store import MemoryStore, STREAMS
+from .reader_gate import shared_reader_gate
+from .temporal import (
+    FRESHNESS_PROFILE,
+    FRESHNESS_SEMANTICS,
+    FRESHNESS_SOURCE_FIELD,
+    TemporalError,
+    format_utc,
+    normalize_freshness_now,
+    project_record_freshness,
+    validate_stale_after_days,
+)
 
 
 TOKEN = re.compile(r"[\w]+", re.UNICODE)
@@ -67,7 +80,7 @@ def _narrow_with_index(
         return None
 
 
-def retrieve(
+def _retrieve_under_gate(
     store: MemoryStore,
     query: str,
     budget: int,
@@ -76,6 +89,10 @@ def retrieve(
     per_record_overhead_bytes: int = 0,
     profile: str = SCAN_PROFILE,
     streams: tuple[str, ...] | list[str] | None = None,
+    freshness_profile: str | None = None,
+    now: datetime | None = None,
+    stale_after_days: int | None = None,
+    revision_id: str | None = None,
 ) -> dict[str, Any]:
     """Retrieve deterministically, reserving any caller-owned envelope cost.
 
@@ -96,6 +113,18 @@ def retrieve(
         raise ValueError("fixed_overhead_exceeds_budget")
     if profile not in SUPPORTED_PROFILES:
         raise ValueError("unsupported_retrieval_profile")
+    freshness_now: datetime | None = None
+    freshness_threshold: int | None = None
+    if freshness_profile is None:
+        if now is not None or stale_after_days is not None:
+            raise TemporalError("freshness_profile_required")
+    elif freshness_profile != FRESHNESS_PROFILE:
+        raise TemporalError("unsupported_freshness_profile")
+    else:
+        freshness_now = normalize_freshness_now(
+            datetime.now(timezone.utc) if now is None else now
+        )
+        freshness_threshold = validate_stale_after_days(stale_after_days)
     selected_streams = tuple(streams) if streams is not None else DEFAULT_STREAMS
     if not selected_streams or any(s not in STREAMS for s in selected_streams):
         raise ValueError("unsupported_retrieval_stream")
@@ -108,7 +137,7 @@ def retrieve(
             seen_streams.add(s)
             deduped.append(s)
     selected_streams = tuple(deduped)
-    snapshot = store.snapshot()
+    snapshot = store.snapshot() if revision_id is None else store.snapshot(revision_id)
     query_terms = _terms(query)
     ranked: list[tuple[int, str, Mapping[str, Any], str, str]] = []
     excluded: dict[str, int] = {
@@ -189,13 +218,22 @@ def retrieve(
             if len(excluded_detail["budget"]) < EXCLUDED_DETAIL_CAP:
                 excluded_detail["budget"].append(identifier)
             continue
-        selected.append({
+        item = {
             "id": identifier,
             "stream": stream,
             "score": score,
             "render": rendered,
             "cost_bytes": cost,
-        })
+        }
+        if freshness_now is not None:
+            item.update(
+                project_record_freshness(
+                    _record,
+                    freshness_now,
+                    freshness_threshold,
+                )
+            )
+        selected.append(item)
         used += cost
     excluded_summary = {key: value for key, value in excluded.items() if value}
     truncated: dict[str, bool] = {}
@@ -205,7 +243,7 @@ def retrieve(
             continue
         truncated[key] = excluded[key] > len(ids)
         visible_detail[key] = ids
-    return {
+    result = {
         "schema": "an-kla/retrieval-result-v1",
         "revision": snapshot.revision_id,
         "requested_profile": profile,
@@ -226,3 +264,46 @@ def retrieve(
         },
         "selected": selected,
     }
+    if freshness_now is not None:
+        result["schema"] = "an-kla/retrieval-result-v2"
+        result["freshness_profile"] = FRESHNESS_PROFILE
+        result["freshness"] = {
+            "semantics": FRESHNESS_SEMANTICS,
+            "source_field": FRESHNESS_SOURCE_FIELD,
+            "computed_at": format_utc(freshness_now),
+            "stale_after_days": freshness_threshold,
+        }
+    return result
+
+
+def retrieve(
+    store: MemoryStore,
+    query: str,
+    budget: int,
+    *,
+    fixed_overhead_bytes: int = 0,
+    per_record_overhead_bytes: int = 0,
+    profile: str = SCAN_PROFILE,
+    streams: tuple[str, ...] | list[str] | None = None,
+    freshness_profile: str | None = None,
+    now: datetime | None = None,
+    stale_after_days: int | None = None,
+    revision_id: str | None = None,
+) -> dict[str, Any]:
+    """Hold the archival reader lease through scan and index consumption."""
+
+    gate = shared_reader_gate(store) if hasattr(store, "root") else nullcontext()
+    with gate:
+        return _retrieve_under_gate(
+            store,
+            query,
+            budget,
+            fixed_overhead_bytes=fixed_overhead_bytes,
+            per_record_overhead_bytes=per_record_overhead_bytes,
+            profile=profile,
+            streams=streams,
+            freshness_profile=freshness_profile,
+            now=now,
+            stale_after_days=stale_after_days,
+            revision_id=revision_id,
+        )

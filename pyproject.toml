@@ -4,15 +4,22 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "an-kla-memory"
-version = "0.1.0b8"
+dynamic = ["version"]
 description = "Local revisioned memory for AI-agent projects"
 requires-python = ">=3.9"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{name = "The AN-KLA Memory Authors"}]
 
+[project.scripts]
+an-kla = "an_kla.__main__:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "an_kla.version.VERSION"}
+
 [tool.setuptools]
 packages = ["an_kla", "an_kla.schemas"]
 
 [tool.setuptools.package-data]
+"an_kla" = ["resources/retrieval-benchmark-v2/*.json", "resources/retrieval-benchmark-v2/*.jsonl"]
 "an_kla.schemas" = ["*.json"]

@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:export-manifest:v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "profile", "core", "manifest_sha256"],
+  "properties": {
+    "schema": {"const": "an-kla/export-manifest-v1"},
+    "profile": {"const": "export/v1"},
+    "manifest_sha256": {"$ref": "#/$defs/digest"},
+    "core": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["current_revision", "project_identity_sha256", "store_identity_sha256", "entry_count", "total_bytes", "entries"],
+      "properties": {
+        "current_revision": {"$ref": "#/$defs/digest"},
+        "project_identity_sha256": {"$ref": "#/$defs/digest"},
+        "store_identity_sha256": {"$ref": "#/$defs/digest"},
+        "entry_count": {"type": "integer", "minimum": 5, "maximum": 100000},
+        "total_bytes": {"type": "integer", "minimum": 1},
+        "entries": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 100000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["path", "size", "content_sha256"],
+            "properties": {
+              "path": {
+                "type": "string",
+                "oneOf": [
+                  {"pattern": "^anchor/project-identity\\.json$"},
+                  {"pattern": "^anchor/identity-intent\\.json$"},
+                  {"pattern": "^anchor/identity-(intents|receipts)/sha256/[0-9a-f]{64}\\.json$"},
+                  {"pattern": "^anchor/memory/identity\\.json$"},
+                  {"pattern": "^anchor/memory/identities/sha256/[0-9a-f]{64}\\.json$"},
+                  {"pattern": "^anchor/memory/refs/CURRENT$"},
+                  {"pattern": "^anchor/memory/refs/ref-log/sha256/[0-9a-f]{64}\\.json$"},
+                  {"pattern": "^anchor/memory/(revisions|checkpoints|refutations|authority-claims|authority-attestations)/sha256/[0-9a-f]{64}\\.json$"},
+                  {"pattern": "^anchor/memory/segments/(facts|events|episodes)/sha256/[0-9a-f]{64}\\.jsonl$"},
+                  {"pattern": "^anchor/memory/transactions/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\\.json$"},
+                  {"pattern": "^anchor/memory/transactions/[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/(stages|receipts)/sha256/[0-9a-f]{64}\\.json$"}
+                  ,{"pattern": "^anchor/memory/compaction/(catalogs|epochs|restore-proofs)/sha256/[0-9a-f]{64}\\.json$"}
+                ]
+              },
+              "size": {"type": "integer", "minimum": 0},
+              "content_sha256": {"$ref": "#/$defs/digest"}
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {"digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}
+}

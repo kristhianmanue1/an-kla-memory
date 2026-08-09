@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:refute-commit-result:v1",
+  "title": "AN-KLA RefuteCommitResult v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "committed", "revision", "decision", "reason_codes", "plan_fingerprint", "outcome"],
+  "properties": {
+    "schema": {"const": "an-kla/refute-commit-result-v1"},
+    "committed": {"type": ["boolean", "null"]},
+    "revision": {"oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+    "decision": {"$ref": "urn:an-kla:schema:refute-decision:v1"},
+    "reason_codes": {"type": "array", "minItems": 1, "maxItems": 1, "items": {"type": "string"}},
+    "plan_fingerprint": {"$ref": "#/$defs/digest"},
+    "outcome": {"oneOf": [{"$ref": "urn:an-kla:schema:commit-outcome:v2"}, {"type": "null"}]}
+  },
+  "$defs": {"digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}
+}

@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "urn:an-kla:schema:compaction-proposal:v1", "title": "AN-KLA Compaction Proposal v1", "type": "object", "additionalProperties": false,
+  "required": ["schema", "base_revision", "epoch_id", "transaction_id", "export_manifest_sha256"],
+  "properties": {"schema": {"const": "an-kla/compaction-proposal-v1"}, "base_revision": {"$ref": "#/$defs/digest"}, "epoch_id": {"$ref": "#/$defs/uuid"}, "transaction_id": {"$ref": "#/$defs/uuid"}, "export_manifest_sha256": {"$ref": "#/$defs/digest"}},
+  "$defs": {"digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, "uuid": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"}}
+}

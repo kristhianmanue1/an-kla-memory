@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:identity-adoption-plan:v1",
+  "title": "AN-KLA IdentityAdoptionPlan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "expected_current", "canonical_project_root_observed", "project_identity", "store_identity", "plan_fingerprint"],
+  "properties": {
+    "schema": {"const": "an-kla/identity-adoption-plan-v1"},
+    "expected_current": {"$ref": "#/$defs/digest"},
+    "canonical_project_root_observed": {"type": "string", "minLength": 1},
+    "project_identity": {"$ref": "#/$defs/project"},
+    "store_identity": {"$ref": "#/$defs/store"},
+    "plan_fingerprint": {"$ref": "#/$defs/digest"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "uuid": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"},
+    "project": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "project_uuid", "created_by_version"],
+      "properties": {"schema": {"const": "an-kla/project-identity-v1"}, "project_uuid": {"$ref": "#/$defs/uuid"}, "created_by_version": {"type": "string", "minLength": 1}}
+    },
+    "store": {
+      "type": "object", "additionalProperties": false,
+      "required": ["schema", "store_uuid", "project_uuid", "project_identity", "canonical_project_root_at_init", "created_by_version"],
+      "properties": {"schema": {"const": "an-kla/store-identity-v1"}, "store_uuid": {"$ref": "#/$defs/uuid"}, "project_uuid": {"$ref": "#/$defs/uuid"}, "project_identity": {"$ref": "#/$defs/digest"}, "canonical_project_root_at_init": {"type": "string", "minLength": 1}, "created_by_version": {"type": "string", "minLength": 1}}
+    }
+  }
+}

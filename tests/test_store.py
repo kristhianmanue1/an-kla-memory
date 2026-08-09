@@ -7,6 +7,7 @@ import shutil
 import sqlite3
 import tempfile
 import unittest
+import uuid
 from pathlib import Path
 
 from an_kla.evaluation import evaluate_retrieval
@@ -21,7 +22,7 @@ def _concurrent_writer(project_root: str, expected: str, event_id: str, queue: m
     try:
         result = store.commit(
             expected_current_hash=expected,
-            checkpoint_patch={"winner": event_id},
+            checkpoint_patch={},
             events=[{"id": event_id, "payload": {"summary": event_id}}],
         )
         queue.put(("committed", result))
@@ -48,29 +49,30 @@ class MemoryStoreTests(unittest.TestCase):
         self.assertEqual(snapshot.records["facts"], ())
 
     def test_commit_creates_immutable_child_revision(self) -> None:
+        parent_checkpoint = self.store.snapshot().manifest["checkpoint"]
         child = self.store.commit(
             expected_current_hash=self.root_revision,
-            checkpoint_patch={"goal": "recordar decisiones"},
+            checkpoint_patch={},
             facts=[{"id": "f-001", "payload": {"text": "La memoria es datos."}}],
             events=[{"id": "e-001", "payload": {"summary": "inicio"}}],
         )
         snapshot = self.store.snapshot()
         self.assertEqual(snapshot.revision_id, child)
         self.assertEqual(snapshot.manifest["parent"], self.root_revision)
-        self.assertEqual(snapshot.checkpoint["goal"], "recordar decisiones")
+        self.assertEqual(snapshot.manifest["checkpoint"], parent_checkpoint)
         self.assertEqual(snapshot.records["facts"][0]["id"], "f-001")
         self.assertTrue((self.store.root / "refs" / "ref-log" / "sha256").exists())
 
     def test_stale_writer_fails_without_moving_current(self) -> None:
         self.store.commit(
             expected_current_hash=self.root_revision,
-            checkpoint_patch={"goal": "first"},
+            checkpoint_patch={},
         )
         current = self.store.read_current()
         with self.assertRaises(ConcurrentUpdateError):
             self.store.commit(
                 expected_current_hash=self.root_revision,
-                checkpoint_patch={"goal": "stale"},
+                checkpoint_patch={},
             )
         self.assertEqual(self.store.read_current(), current)
 
@@ -93,6 +95,57 @@ class MemoryStoreTests(unittest.TestCase):
         self.store.current_path.write_text("bad\n", encoding="ascii")
         with self.assertRaises(IntegrityError):
             self.store.snapshot()
+
+    def test_invalid_checkpoint_v2_revision_fails_verify_and_write_closed(self) -> None:
+        parent_checkpoint = self.store.snapshot().manifest["checkpoint"]
+        state = {
+            "schema": "an-kla/working-state-v2",
+            "objective": {"value": "x", "provenance": "caller_asserted"},
+            "phase": {"value": None, "provenance": "unavailable"},
+            "next_step": {"value": None, "provenance": "unavailable"},
+            "decisions": [],
+            "blockers": [],
+            "evidence": [],
+            "source_state": {
+                "profile": "none/v1",
+                "head": {"value": None, "provenance": "unavailable"},
+                "branch": {"value": None, "provenance": "unavailable"},
+                "dirty_digest": {"value": None, "provenance": "unavailable"},
+            },
+            "captured_at": {"value": None, "provenance": "unavailable"},
+            "supersedes_checkpoint": parent_checkpoint,
+        }
+        for checkpoint_revision in (-1, 0, 2, True):
+            with self.subTest(checkpoint_revision=checkpoint_revision), tempfile.TemporaryDirectory() as root:
+                store = MemoryStore(root)
+                parent = store.initialize()
+                base = store.snapshot(parent)
+                state["supersedes_checkpoint"] = base.manifest["checkpoint"]
+                checkpoint_id = store._write_json_object(
+                    "checkpoints",
+                    {
+                        "schema": "an-kla/checkpoint-v2",
+                        "revision": checkpoint_revision,
+                        "working_state": state,
+                    },
+                )
+                manifest = dict(base.manifest)
+                manifest.update(
+                    {
+                        "parent": parent,
+                        "revision": 1,
+                        "checkpoint": checkpoint_id,
+                        "transaction_id": str(uuid.uuid4()),
+                    }
+                )
+                forged = store._write_json_object("revisions", manifest)
+                store._replace_current(forged)
+                before = set((store.root / "transactions").rglob("*"))
+                with self.assertRaisesRegex(IntegrityError, "checkpoint_v2_invalid"):
+                    store.verify()
+                with self.assertRaisesRegex(IntegrityError, "checkpoint_v2_invalid"):
+                    store.commit(expected_current_hash=forged, checkpoint_patch={})
+                self.assertEqual(set((store.root / "transactions").rglob("*")), before)
 
     def test_conflicting_unreferenced_object_is_quarantined(self) -> None:
         checkpoint = {"schema": "an-kla/checkpoint-v1", "revision": 77}

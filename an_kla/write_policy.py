@@ -14,6 +14,7 @@ from typing import Any, Mapping
 
 from .canonical import canonical_json, digest_json
 from .record_text import record_text
+from .temporal import TemporalError, VERIFIED_AT_VALIDATOR, parse_verified_at
 
 
 WRITE_POLICY_PROFILE = "write-policy/v1"
@@ -80,6 +81,7 @@ _POLICY_CONFIGURATION = {
         "maximum_representation": "summary",
     },
     "require_verified_tool_evidence": True,
+    "record_validators": {"verified_at": VERIFIED_AT_VALIDATOR},
     "self_asserted_authority_keys": sorted(_SELF_ASSERTED_AUTHORITY_KEYS),
 }
 
@@ -207,6 +209,11 @@ def validate_write_proposal(proposal: Mapping[str, Any]) -> None:
         raise WritePolicyError(code, "record:not_object")
     if not isinstance(record.get("id"), str) or not record["id"]:
         raise WritePolicyError(code, "record.id")
+    if "verified_at" in record:
+        try:
+            parse_verified_at(record["verified_at"])
+        except TemporalError as exc:
+            raise WritePolicyError(code, "record.verified_at") from exc
     # Co-occurrence contract (ADR-0019): operation=supersede <-> supersedes
     # present.  supersedes names the target id (unique within stream) and must
     # not self-reference the new record.

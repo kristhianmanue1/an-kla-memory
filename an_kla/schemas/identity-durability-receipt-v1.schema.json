@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:identity-durability-receipt:v1",
+  "title": "AN-KLA IdentityDurabilityReceipt v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "operation", "intent_sha256", "current_observed", "predecessor_receipt", "protected"],
+  "properties": {
+    "schema": {"const": "an-kla/identity-durability-receipt-v1"},
+    "operation": {"enum": ["initialize", "adopt", "repair"]},
+    "intent_sha256": {"$ref": "#/$defs/digest"},
+    "current_observed": {"$ref": "#/$defs/digest"},
+    "predecessor_receipt": {"oneOf": [{"$ref": "#/$defs/digest"}, {"type": "null"}]},
+    "protected": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"$ref": "#/$defs/protected"}, "x-an-kla-order": "path-then-operation"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "path": {"type": "string", "minLength": 1, "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.{1,2}(?:/|$)).+$"},
+    "protected": {"oneOf": [
+      {"type": "object", "additionalProperties": false, "required": ["path", "operation", "content_sha256"], "properties": {"path": {"$ref": "#/$defs/path"}, "operation": {"const": "file_fsync"}, "content_sha256": {"$ref": "#/$defs/digest"}}},
+      {"type": "object", "additionalProperties": false, "required": ["path", "operation", "content_sha256"], "properties": {"path": {"$ref": "#/$defs/path"}, "operation": {"const": "directory_fsync"}, "content_sha256": {"type": "null"}}}
+    ]}
+  }
+}

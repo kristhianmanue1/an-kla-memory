@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:refute-planning-result:v1",
+  "title": "AN-KLA RefutePlanningResult v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "current_revision", "proposal", "authority_claim", "authority_attestation", "decision", "plan"],
+  "properties": {
+    "schema": {"const": "an-kla/refute-planning-result-v1"},
+    "current_revision": {"$ref": "#/$defs/digest"},
+    "proposal": {"$ref": "urn:an-kla:schema:refute-proposal:v1"},
+    "authority_claim": {"$ref": "urn:an-kla:schema:refute-authority-claim:v1"},
+    "authority_attestation": {"oneOf": [{"$ref": "urn:an-kla:schema:refute-authority-attestation:v1"}, {"type": "null"}]},
+    "decision": {"$ref": "urn:an-kla:schema:refute-decision:v1"},
+    "plan": {"$ref": "urn:an-kla:schema:refute-plan:v1"}
+  },
+  "$defs": {"digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}}
+}

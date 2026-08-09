@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:refute-policy-transaction:v1",
+  "title": "AN-KLA RefutePolicyTransaction v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "proposal_sha256", "authority_claim_sha256", "authority_attestation_id", "policy_fingerprint", "decision_sha256", "evidence_sha256", "plan_fingerprint", "decision", "reason", "target", "refutation_id"],
+  "properties": {
+    "schema": {"const": "an-kla/refute-policy-transaction-v1"},
+    "proposal_sha256": {"$ref": "#/$defs/digest"},
+    "authority_claim_sha256": {"$ref": "#/$defs/digest"},
+    "authority_attestation_id": {"$ref": "#/$defs/digest"},
+    "policy_fingerprint": {"$ref": "#/$defs/digest"},
+    "decision_sha256": {"$ref": "#/$defs/digest"},
+    "evidence_sha256": {"$ref": "#/$defs/digest"},
+    "plan_fingerprint": {"$ref": "#/$defs/digest"},
+    "decision": {"const": "refute"},
+    "reason": {"enum": ["evidence_contradicts_record", "source_retracted", "integrity_violation"]},
+    "target": {"$ref": "#/$defs/target"},
+    "refutation_id": {"$ref": "#/$defs/digest"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "target": {"type": "object", "additionalProperties": false, "required": ["stream", "record_sha256"], "properties": {"stream": {"enum": ["facts", "events", "episodes"]}, "record_sha256": {"$ref": "#/$defs/digest"}}}
+  }
+}
