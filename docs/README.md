@@ -102,3 +102,8 @@ La política propuesta para evitar checkpoints obsoletos está en el
 La reevaluación posterior a la ronda —continuidad frente a assurance, casos
 `expertoGobernanza`/`adrc-python`, oportunidad y aceptación del usuario— vive en
 la [nota de frontera de Fase 9](planning/fase-9-frontera-continuidad-assurance-2026-08-09.md).
+
+El backlog abierto y su secuencia para trabajo con agentes están en el
+[plan técnico de ejecución](planning/plan-ejecucion-backlog-agentes-2026-08-11.md),
+acompañado por su
+[ronda adversarial documental](planning/plan-ejecucion-backlog-agentes-adversarial-2026-08-11.md).
