@@ -128,6 +128,28 @@ evidencia mecánica de qué texto pertenece a AN-KLA y cuál al usuario.
 Los cambios legítimos fuera del bloque aparecen como la advertencia
 `context_target_changed_outside_managed_block`; no invalidan la instalación.
 
+## Marcadores frente a menciones
+
+El parser distingue un **marcador efectivo** de una **mención** para que el
+propio mecanismo de bloque gestionado pueda documentarse dentro de `AGENTS.md`
+sin invalidarlo (issue #44, ADR-0009):
+
+- Es **candidato a marcador** la línea cuyo texto, ignorando espacios
+  iniciales, empieza por la apertura del marcador (`<!-- an-kla:managed-begin`
+  o `<!-- an-kla:managed-end`, sin requerir aún el espacio ni el JSON). Sólo los
+  candidatos se interpretan como marcadores; a continuación se parsean de forma
+  estricta (espacio + JSON válido + sufijo ` -->` y campos esperados).
+- Son **menciones** (se ignoran) las apariciones de `an-kla:managed-` que no
+  están ancladas al inicio de la línea: texto en prosa, referencias dentro de
+  *code spans* inline (backticks) o cualquier línea cuyo contenido anterior
+  impida confundirla con un marcador. Se pueden documentar los marcadores en
+  prosa o entre backticks sin romper el bloque.
+- Siguen **fallando cerrado** (`managed_block_structure_invalid` o
+  `managed_block_modified`) los candidatos reales malformados (incluido un
+  marcador incompleto o sin el espacio separador), indentados, situados dentro
+  de una cerca de código (fenced), duplicados, anidados o fuera de orden, así
+  como cualquier alteración del contenido dentro del bloque.
+
 ## Límites operativos expuestos por el contrato
 
 - la escritura pública usa únicamente `plan-write` → `commit-write-plan`; el

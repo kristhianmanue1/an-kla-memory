@@ -33,6 +33,8 @@ from an_kla.context_text import (
 
 _BEGIN_PREFIX = "<!-- an-kla:managed-begin "
 _END_PREFIX = "<!-- an-kla:managed-end "
+_BEGIN_ANCHOR = "<!-- an-kla:managed-begin"
+_END_ANCHOR = "<!-- an-kla:managed-end"
 _MARKER_SUFFIX = " -->"
 _HASH_RE = re.compile(r"^sha256:[0-9a-f]{64}$")
 
@@ -171,7 +173,15 @@ def _parse_marker(line: str, prefix: str) -> dict[str, Any]:
 
 
 def parse_managed_block(document: str) -> ManagedBlock | None:
-    """Return the single valid block, rejecting ambiguous marker structures."""
+    """Return the single valid block, rejecting ambiguous marker structures.
+
+    Only a line whose marker syntax is anchored at the start (ignoring leading
+    whitespace) is a marker candidate. Bare mentions of ``an-kla:managed-`` in
+    prose or inside inline code spans are ignored so the managed-block mechanism
+    can be documented inside ``AGENTS.md`` itself. Anchored candidates still fail
+    closed when malformed, indented, fenced, duplicated, nested or out of order,
+    as required by ADR-0009.
+    """
 
     lines = document.splitlines(keepends=True)
     begins: list[int] = []
@@ -188,6 +198,8 @@ def parse_managed_block(document: str) -> ManagedBlock | None:
             elif fence[0] == kind and len(token) >= fence[1]:
                 fence = None
         if "an-kla:managed-" not in line:
+            continue
+        if not stripped.startswith((_BEGIN_ANCHOR, _END_ANCHOR)):
             continue
         if fence is not None or line.startswith((" ", "\t")):
             raise ContextPackageError("managed_block_structure_invalid")

@@ -182,6 +182,55 @@ class PureContextBlockTests(unittest.TestCase):
                 with self.assertRaises(ContextPackageError):
                     parse_managed_block(payload)
 
+    def test_prose_and_inline_code_mentions_of_markers_are_ignored(self) -> None:
+        """Regression for issue #44.
+
+        Documenting the managed-block marker syntax inside AGENTS.md (in
+        prose or inside inline code spans, anchored or not) must not
+        invalidate an otherwise valid block. Only lines whose marker syntax
+        is anchored at the start are candidates; bare mentions are ignored.
+        """
+
+        valid = render_managed_block()
+        cases = [
+            valid
+            + "\n## Nota\n\nLas marcas `<!-- an-kla:managed-begin -->` se editan así.\n",
+            valid + "\nUsa `an-kla:managed-end` para cerrar el bloque.\n",
+            "El bloque abre con <!-- an-kla:managed-begin --> segun los docs.\n\n"
+            + valid,
+            valid + "\n  línea indentada que cita an-kla:managed-begin de paso.\n",
+        ]
+        for document in cases:
+            with self.subTest(document=document[:60]):
+                parsed = parse_managed_block(document)
+                self.assertIsNotNone(parsed)
+                self.assertEqual(parsed.metadata["id"], BLOCK_ID)
+                self.assertEqual(parsed.metadata["version"], TEMPLATE_VERSION)
+
+    def test_anchored_malformed_and_indented_candidates_fail_closed(self) -> None:
+        """Complement to issue #44: unanchored mentions are ignored, but
+        anchored candidates that are malformed, indented or duplicated still
+        fail closed per ADR-0009.
+        """
+
+        valid = render_managed_block()
+        malformed_end = valid.replace(
+            '<!-- an-kla:managed-end {"id":"agent-context"} -->',
+            '<!-- an-kla:managed-end {not valid json} -->',
+        )
+        indented_begin = valid.replace(
+            "<!-- an-kla:managed-begin",
+            "    <!-- an-kla:managed-begin",
+            1,
+        )
+        no_space_extra = valid + '\n<!-- an-kla:managed-begin{"id":"x"} -->\n'
+        for payload in (malformed_end, indented_begin, no_space_extra):
+            with self.subTest(payload=payload[:60]):
+                with self.assertRaisesRegex(
+                    ContextPackageError, "managed_block_structure_invalid"
+                ):
+                    parse_managed_block(payload)
+
     def test_unmarked_legacy_integration_is_not_blindly_appended(self) -> None:
         legacy = (
             "# AGENTS\npython3 -m an_kla status\n"
