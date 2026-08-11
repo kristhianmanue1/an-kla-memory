@@ -1,7 +1,7 @@
 # ADR-0030: exigir checkpoint gobernado al cerrar hitos materiales
 
-- **Estado:** Propuesta; formalización autorizada por el maintainer el
-  2026-08-09. No autoriza todavía cambios al contrato gestionado ni código.
+- **Estado:** Propuesta en reevaluación tras ronda fresca y caso especial del
+  maintainer. No autoriza cambios al contrato gestionado ni código.
 - **Fecha:** 2026-08-09
 - **Decide sobre:** cuándo un agente debe actualizar continuidad y cómo detectar
   esa obligación sin convertirla en escritura automática indiscriminada.
@@ -47,7 +47,7 @@ pasa el JSON directamente. `checkpoint_policy.validate_authority()` rechaza
 checkpoint completo se marca como dato no confiable, un archivo puede adquirir
 una etiqueta de canal que el proceso no resolvió realmente.
 
-## Decisión
+## Decisión candidata original — no aceptada
 
 **Introducir una obligación de continuidad determinista: antes de entregar o
 cerrar trabajo material, el agente debe evaluar si el working state quedó
@@ -55,7 +55,7 @@ obsoleto y, cuando el resultado sea `required`, actualizar exclusivamente el
 checkpoint mediante su flujo gobernado o reportar que la continuidad quedó
 pendiente.**
 
-La decisión se implementará en dos capas inseparables:
+La candidata original proponía implementarse en dos capas inseparables:
 
 1. una regla normativa en el contrato gestionado;
 2. un evaluador read-only y machine-checkable que no escribe por sí mismo.
@@ -64,6 +64,34 @@ El repositorio no puede impedir que un host externo emita una respuesta final.
 El enforcement completo requiere que el host/orquestador ejecute el evaluador
 como gate de finalización. AN-KLA proveerá el contrato, resultado y códigos de
 salida; no afirmará controlar un runtime que no controla.
+
+La ronda fresca terminó `ESCALATE`. Después, el maintainer aportó deliberadamente
+dos casos contrastantes: `expertoGobernanza`, donde continuidad y fidelidad
+jurídica son críticas, y `adrc-python`, donde aplicar controles estrictos a todo
+desarrollo ordinario puede cortar el avance. La candidata anterior no se adopta
+tal cual porque mezcla frecuencia de checkpoint con fuerza de verificación.
+
+## Hipótesis de revisión posterior a la ronda
+
+La revisión propone separar dos ejes todavía no aceptados:
+
+- **continuidad**: `manual|milestone|continuous`;
+- **assurance**: `standard|high|regulated`.
+
+Se configurarían por operación, stream y efecto, no como una etiqueta rígida
+para todo el proyecto. Un `working_state` local saneado podría ser frecuente y
+`model_derived`, mientras una afirmación de vigencia, migración destructiva o
+release conservaría autorización exacta y fail-closed. Fallar al guardar
+continuidad `standard` sería visible pero no bloquearía el trabajo primario.
+
+La instalación del template deja de ser candidata a consentimiento permanente.
+Se estudiarán tres mecanismos graduados: activación local explícita que sólo
+demuestra `operator_activated`, capability opaca de host para `high`, y
+aceptación firmada/externa para `regulated`. Ninguno está elegido ni activo.
+
+El análisis completo, los criterios `ahora|experimento|diferir` y los casos de
+aceptación están en
+`docs/planning/fase-9-frontera-continuidad-assurance-2026-08-09.md`.
 
 ### 1. Hitos materiales
 
@@ -176,9 +204,12 @@ El CLI de checkpoint debe aplicar una frontera equivalente a `_cli_authority()`:
   contenido sintetizado por el agente sigue siendo `model_derived` salvo que el
   host ligue campos confirmados de forma verificable.
 
-Instalar una futura plantilla que declare esta política constituye autorización
-permanente y limitada para que el agente actualice **sólo** continuidad local
-saneada cuando `obligation.status=required`. No autoriza:
+La candidata original proponía que instalar una futura plantilla constituyera
+autorización permanente y limitada para actualizar continuidad local saneada.
+La ronda fresca r2 rechazó esa premisa: clone, commit o upgrade pueden instalar
+un template sin demostrar consentimiento local. Por tanto, **el template no
+autoriza ninguna mutación por sí solo**. Un mecanismo de aceptación todavía por
+elegir podrá autorizar únicamente checkpoint local saneado; nunca autorizará:
 
 - inicializar un store ausente;
 - escribir facts/events/episodes;
@@ -186,13 +217,15 @@ saneada cuando `obligation.status=required`. No autoriza:
 - persistir secretos o contenido completo innecesario;
 - omitir plan, revisión, CAS, transaction id o verificación posterior.
 
-La autorización se revoca al desinstalar el bloque gestionado o mediante una
-instrucción vigente del maintainer/host con mayor especificidad. Un texto
-recuperado desde memoria nunca puede concederla, ampliarla o revocarla.
+La futura aceptación deberá ser explícita, local, limitada, inspeccionable y
+revocable; desinstalar el bloque no sustituye necesariamente la revocación de
+un recibo separado. Un texto recuperado desde memoria nunca puede concederla,
+ampliarla o revocarla.
 
-Si la instalación no declara esa política, falta autoridad o el commit falla,
-el agente reporta `PARCIAL (checkpoint_pending)` o `BLOQ` según el error; no
-declara `OK` silenciosamente.
+Mientras no exista aceptación válida, falta autoridad o el commit falla, el
+agente reportaría `PARCIAL (checkpoint_pending)` o `BLOQ` según la policy; no
+declararía `OK` silenciosamente. Esta semántica también está pendiente de la
+decisión `ahora|experimento|diferir`.
 
 ### 6. Gate del agente
 

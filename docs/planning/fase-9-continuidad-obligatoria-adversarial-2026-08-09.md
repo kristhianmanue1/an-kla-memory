@@ -124,3 +124,23 @@ solo autorización standing sube de MEDIUM a BLOCKER.
 La propuesta queda a la espera del caso especial del maintainer antes de elegir
 estas alternativas. Hasta entonces no se corrige el ADR de forma especulativa,
 no se acepta y no comienza F9.1.
+
+## Insumo posterior a la ronda: frontera de riesgo
+
+El maintainer aportó el caso especial después del veredicto para preservar la
+independencia de la ronda. El contraste entre `expertoGobernanza` y
+`adrc-python` muestra que una sola escala `manual|balanced|strict` todavía
+mezclaría continuidad con assurance.
+
+La hipótesis posterior separa:
+
+- frecuencia de continuidad: `manual|milestone|continuous`;
+- fuerza de assurance: `standard|high|regulated`;
+- aplicación por operación/stream/efecto, no rigidez universal del proyecto.
+
+También deja abiertas tres formas de aceptación: activación local explícita,
+capability opaca del host y aceptación firmada/externa. Este insumo no cambia el
+veredicto r2 ni resuelve sus BLOCKER. ADR-0030 permanece `Propuesta`, la
+implementación sigue detenida y se requiere decidir primero si integrar ahora,
+experimentar opt-in o diferir. Detalle:
+`fase-9-frontera-continuidad-assurance-2026-08-09.md`.

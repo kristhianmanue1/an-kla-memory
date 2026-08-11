@@ -399,8 +399,12 @@ queda `escalate` hasta revisión fresca.
   implementados. La ronda fresca r2 sobre `277dea5` terminó `ESCALATE`: exige
   consentimiento local explícito, semántica de frescura basada en cobertura,
   hotfix del spoof de canal, boundary real del observer, readers-first para v3
-  y sanitización ejecutable. Se espera el caso especial del maintainer antes de
-  escoger las alternativas abiertas.
+  y sanitización ejecutable. El caso especial posterior a la ronda ya fue
+  incorporado como insumo, no como decisión: separa continuidad
+  `manual|milestone|continuous` de assurance `standard|high|regulated`, con
+  aplicación por operación/stream y aceptación graduada. Antes de implementar
+  se decidirá `integrar ahora | experimento opt-in | diferir`; detalle en
+  `docs/planning/fase-9-frontera-continuidad-assurance-2026-08-09.md`.
 - Decisión vigente del maintainer: continuar localmente hasta completar el
   camino y permitir su integración administrativa en GitHub; tag y publicación
   permanecen excluidos.

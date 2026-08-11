@@ -48,7 +48,7 @@ prospectiva esté implementada; la última columna conserva esa distinción.
 | 0027 | [verifiable-export-restore-v1](architecture/0027-verifiable-export-restore-v1.md) | Export/backup verificable y restore fail-closed | Aceptada | Publicada en [beta.11](releases/v0.1.0-beta.11.md) |
 | 0028 | [governed-compaction-v1](architecture/0028-governed-compaction-v1.md) | Corte de epoch, tombstones y archivo verificable | Aceptada | Publicada en [beta.11](releases/v0.1.0-beta.11.md) |
 | 0029 | [derived-semantic-retrieval-v1](architecture/0029-derived-semantic-retrieval-v1.md) | Índice semántico derivado y recuperación híbrida opt-in | Propuesta | Sin implementación ni proveedor autorizado |
-| 0030 | [milestone-checkpoint-obligation-v1](architecture/0030-milestone-checkpoint-obligation-v1.md) | Obligación gobernada de continuidad al cerrar hitos | Propuesta | Sin cambio de contrato ni código |
+| 0030 | [milestone-checkpoint-obligation-v1](architecture/0030-milestone-checkpoint-obligation-v1.md) | Obligación gobernada de continuidad al cerrar hitos | Propuesta | En reevaluación; sin cambio de contrato ni código |
 
 Resumen: **30 ADRs**, sin huecos; **28 aceptadas** y **2 propuestas**. No hay
 ADRs rechazadas ni reemplazadas en el registro actual.
@@ -99,3 +99,6 @@ y el subtrack opcional
 La política propuesta para evitar checkpoints obsoletos está en el
 [plan de Fase 9](planning/fase-9-continuidad-obligatoria-2026-08-09.md) y su
 [ronda adversarial documental](planning/fase-9-continuidad-obligatoria-adversarial-2026-08-09.md).
+La reevaluación posterior a la ronda —continuidad frente a assurance, casos
+`expertoGobernanza`/`adrc-python`, oportunidad y aceptación del usuario— vive en
+la [nota de frontera de Fase 9](planning/fase-9-frontera-continuidad-assurance-2026-08-09.md).

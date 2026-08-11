@@ -1,6 +1,6 @@
 # Fase 9 — obligación gobernada de continuidad
 
-- **Estado:** formalizada; implementación no autorizada.
+- **Estado:** formalizada y en reevaluación; implementación no autorizada.
 - **Fecha:** 2026-08-09
 - **ADR rector:** ADR-0030 (Propuesta)
 - **Precondición:** aceptación explícita del ADR y ronda pre-code fresca.
@@ -30,13 +30,26 @@ proveedores.
 
 ## Secuencia ejecutable
 
+### F9.R — reevaluación de frontera (actual)
+
+1. Separar continuidad `manual|milestone|continuous` de assurance
+   `standard|high|regulated`.
+2. Definir la matriz por operación/stream usando `expertoGobernanza` y
+   `adrc-python` como casos contrastantes.
+3. Comparar activación local, capability opaca del host y aceptación externa.
+4. Diseñar sanitizer y métricas de fricción antes de elegir implementación.
+5. Decidir explícitamente `integrar ahora | experimento opt-in | diferir`.
+
+**Gate:** decisión explícita del maintainer sobre oportunidad y aceptación. La
+nota de análisis está en
+`fase-9-frontera-continuidad-assurance-2026-08-09.md`.
+
 ### F9.0 — ADR y contrato documental
 
 1. Revisar ADR-0030 contra ADR-0007/0009/0011/0023/0024.
 2. Congelar triggers, exenciones, estados, reasons y frontera de autoridad.
-3. Validar adversarialmente la decisión de que instalar el template otorga
-   autorización permanente, pero estrictamente limitada al checkpoint local
-   saneado cuando obligation sea `required`.
+3. Resolver el mecanismo de aceptación sin tratar template o JSON como
+   consentimiento; conservar migraciones sin automatismo.
 4. Ejecutar ronda adversarial independiente.
 
 **Gate:** ADR aceptado por maintainer y veredicto `proceed`.
@@ -139,7 +152,8 @@ decide al aceptar ADR-0030; este documento no reserva tag.
 1. Evaluar obligación nunca muta.
 2. `required` no salta plan/commit/CAS.
 3. El agente no declara autoridad privilegiada desde JSON.
-4. El template sólo autoriza checkpoint local saneado, no otros writes.
+4. El template no autoriza mutación; una futura aceptación separada sólo podrá
+   cubrir checkpoint local saneado, no otros writes.
 5. Secretos, diff, rutas absolutas y PII no entran al source state.
 6. Ausencia de Git/observer es `indeterminate`, no `fresh`.
 7. `captured_at` no causa loop.
@@ -175,5 +189,7 @@ No mezclar simultáneamente cambios sobre `checkpoint_policy.py`,
 
 ## Siguiente paso permitido
 
-Ronda adversarial fresca de ADR-0030. Hasta obtener `proceed` no se modifica
-template, schema, CLI ni checkpoint runtime.
+Completar F9.R y decidir si la capacidad corresponde a esta fase, a un
+experimento opt-in o a una versión futura. Después se revisará ADR-0030 y se
+ejecutará otra ronda fresca. Hasta entonces no se modifica template, schema,
+CLI ni checkpoint runtime.
