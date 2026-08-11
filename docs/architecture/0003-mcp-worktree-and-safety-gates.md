@@ -2,8 +2,8 @@
 
 ## Estado
 
-Aceptada para planificación. No autoriza todavía implementar ni publicar un
-servidor MCP.
+Aceptada e implementada. El servidor MCP local de sólo lectura se publicó en
+`v0.1.0-alpha.2`; la prohibición de escritura por MCP continúa vigente.
 
 ## Contexto
 

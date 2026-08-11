@@ -1,6 +1,7 @@
 # ADR-0020: `context_diagnostics` en el resultado de escritura
 
-- **Estado:** Propuesta (v2, tras ronda adversarial `fix-and-retry`)
+- **Estado:** Aceptada e implementada en `v0.1.0-beta.11` (v2, tras ronda
+  adversarial `fix-and-retry`)
 - **Fecha:** 2026-08-07
 - **Decide sobre:** cómo un agente que escribe recibe la salud objetiva del
   contrato en el instante de la escritura, sin correr `context status` aparte.

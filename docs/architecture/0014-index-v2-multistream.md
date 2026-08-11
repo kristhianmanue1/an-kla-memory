@@ -1,6 +1,6 @@
 # ADR-0014: Índice SQLite FTS5 multi-stream (index-v2)
 
-- **Estado:** Aceptado
+- **Estado:** Aceptada
 - **Fecha:** 2026-08-03
 - **Cierra:** issue #10 (parte C)
 - **Actualiza:** ADR-0004

@@ -13,40 +13,45 @@ Para instalar o migrar un proyecto consumidor, empieza por la
 
 Los ADRs viven en [`architecture/`](architecture/) y siguen una numeración
 secuencial. Cada uno documenta una decisión arquitectónica irreversible o
-diffícil de revertir.
+difícil de revertir. Este índice es el registro canónico de inventario y estado
+decisional, actualizado al 2026-08-11. `Aceptada` no implica que toda extensión
+prospectiva esté implementada; la última columna conserva esa distinción.
 
-| # | ADR | Tema |
-|---|---|---|
-| 0001 | [revision-commit](architecture/0001-revision-commit.md) | Revisión content-addressed y `CURRENT` |
-| 0002 | [alpha-scope](architecture/0002-alpha-scope.md) | Alcance alfa |
-| 0003 | [mcp-worktree-and-safety-gates](architecture/0003-mcp-worktree-and-safety-gates.md) | MCP y compuertas de seguridad |
-| 0004 | [index-reference](architecture/0004-index-reference.md) | Referencia de índice (FTS5) |
-| 0005 | [mathematical-alignment](architecture/0005-mathematical-alignment.md) | Alineación matemática |
-| 0006 | [context-assembly-v1](architecture/0006-context-assembly-v1.md) | Ensamblado de contexto con presupuesto |
-| 0007 | [write-policy-v1](architecture/0007-write-policy-v1.md) | Política de escritura gobernada |
-| 0008 | [cost-model-v1](architecture/0008-cost-model-v1.md) | Modelo de costos (bytes UTF-8) |
-| 0009 | [managed-agent-context-v1](architecture/0009-managed-agent-context-v1.md) | Contexto administrado para agentes |
-| 0010 | [agent-first-public-contracts](architecture/0010-agent-first-public-contracts.md) | Contratos públicos agent-first |
-| 0011 | [governed-agent-upgrade](architecture/0011-governed-agent-upgrade.md) | Upgrade gobernado del proyecto |
-| 0012 | [update-check-v1](architecture/0012-update-check-v1.md) | Verificación no bloqueante de versiones |
-| 0013 | [multi-stream-retrieval](architecture/0013-multi-stream-retrieval.md) | Recuperación multi-stream opt-in |
-| 0014 | [index-v2-multistream](architecture/0014-index-v2-multistream.md) | Índice FTS5 multi-stream |
-| 0015 | [excluded-detail-v1](architecture/0015-excluded-detail-v1.md) | Transparencia en exclusiones |
-| 0016 | [auto-reindex-post-commit](architecture/0016-auto-reindex-post-commit.md) | Reindexado best-effort tras commit |
-| 0017 | [target-drift-transparency](architecture/0017-target-drift-transparency.md) | Transparencia de target drift en upgrade |
-| 0018 | [indexable-text-field](architecture/0018-indexable-text-field.md) | Campo explícito `indexable_text` para FTS |
-| 0019 | [governed-supersede](architecture/0019-governed-supersede.md) | Operación `supersede` gobernada |
-| 0020 | [context-diagnostics-in-write-result](architecture/0020-context-diagnostics-in-write-result.md) | Salud del contrato en el resultado de escritura |
-| 0021 | [verified-at-freshness-v1](architecture/0021-verified-at-freshness-v1.md) | `verified_at` autodeclarado y frescura computada en lectura |
-| 0022 | [store-project-identity-v1](architecture/0022-store-project-identity-v1.md) | Identidad lógica separada de proyecto y store |
-| 0023 | [governed-checkpoint-handoff-v2](architecture/0023-governed-checkpoint-handoff-v2.md) | Checkpoint exacto y handoff gobernado |
-| 0024 | [commit-outcome-v2](architecture/0024-commit-outcome-v2.md) | Resultado transaccional y durabilidad explícita |
-| 0025 | [retrieval-evaluation-v2](architecture/0025-retrieval-evaluation-v2.md) | Benchmark de ranking y presupuesto sin cambiar retrieval |
-| 0026 | [governed-refute-v1](architecture/0026-governed-refute-v1.md) | Refutación gobernada, auditable y sin sucesor |
-| 0027 | [verifiable-export-restore-v1](architecture/0027-verifiable-export-restore-v1.md) | Export/backup verificable y restore fail-closed |
-| 0028 | [governed-compaction-v1](architecture/0028-governed-compaction-v1.md) | Corte de epoch, tombstones y archivo verificable |
-| 0029 | [derived-semantic-retrieval-v1](architecture/0029-derived-semantic-retrieval-v1.md) | Índice semántico derivado y recuperación híbrida opt-in (Propuesta) |
-| 0030 | [milestone-checkpoint-obligation-v1](architecture/0030-milestone-checkpoint-obligation-v1.md) | Obligación gobernada de continuidad al cerrar hitos (Propuesta) |
+| # | ADR | Tema | Estado | Vigencia o evidencia |
+|---|---|---|---|---|
+| 0001 | [revision-commit](architecture/0001-revision-commit.md) | Revisión content-addressed y `CURRENT` | Aceptada | Núcleo de alpha.1; formato físico vigente |
+| 0002 | [alpha-scope](architecture/0002-alpha-scope.md) | Alcance alfa | Aceptada | Alcance histórico de alpha.1 |
+| 0003 | [mcp-worktree-and-safety-gates](architecture/0003-mcp-worktree-and-safety-gates.md) | MCP y compuertas de seguridad | Aceptada | Publicada en [alpha.2](releases/v0.1.0-alpha.2.md) |
+| 0004 | [index-reference](architecture/0004-index-reference.md) | Referencia de índice (FTS5) | Aceptada | Publicada en [alpha.3](releases/v0.1.0-alpha.3.md) |
+| 0005 | [mathematical-alignment](architecture/0005-mathematical-alignment.md) | Alineación matemática | Aceptada | Norma vigente; diseño prospectivo explícito |
+| 0006 | [context-assembly-v1](architecture/0006-context-assembly-v1.md) | Ensamblado de contexto con presupuesto | Aceptada | Publicada en [beta.1](releases/v0.1.0-beta.1.md) |
+| 0007 | [write-policy-v1](architecture/0007-write-policy-v1.md) | Política de escritura gobernada | Aceptada | Beta.1; transición cerrada en [beta.11](releases/v0.1.0-beta.11.md) |
+| 0008 | [cost-model-v1](architecture/0008-cost-model-v1.md) | Modelo de costos (bytes UTF-8) | Aceptada | F0 vigente; tokenización exacta F3 pendiente |
+| 0009 | [managed-agent-context-v1](architecture/0009-managed-agent-context-v1.md) | Contexto administrado para agentes | Aceptada | Publicada en [beta.1](releases/v0.1.0-beta.1.md) |
+| 0010 | [agent-first-public-contracts](architecture/0010-agent-first-public-contracts.md) | Contratos públicos agent-first | Aceptada | Publicada en [beta.2](releases/v0.1.0-beta.2.md) |
+| 0011 | [governed-agent-upgrade](architecture/0011-governed-agent-upgrade.md) | Upgrade gobernado del proyecto | Aceptada | Publicada en [beta.3](releases/v0.1.0-beta.3.md) |
+| 0012 | [update-check-v1](architecture/0012-update-check-v1.md) | Verificación no bloqueante de versiones | Aceptada | Publicada en [beta.4](releases/v0.1.0-beta.4.md) |
+| 0013 | [multi-stream-retrieval](architecture/0013-multi-stream-retrieval.md) | Recuperación multi-stream opt-in | Aceptada | Publicada en [beta.4](releases/v0.1.0-beta.4.md) |
+| 0014 | [index-v2-multistream](architecture/0014-index-v2-multistream.md) | Índice FTS5 multi-stream | Aceptada | Publicada en [beta.4](releases/v0.1.0-beta.4.md) |
+| 0015 | [excluded-detail-v1](architecture/0015-excluded-detail-v1.md) | Transparencia en exclusiones | Aceptada | Publicada en [beta.4](releases/v0.1.0-beta.4.md) |
+| 0016 | [auto-reindex-post-commit](architecture/0016-auto-reindex-post-commit.md) | Reindexado best-effort tras commit | Aceptada | Publicada en [beta.4](releases/v0.1.0-beta.4.md) |
+| 0017 | [target-drift-transparency](architecture/0017-target-drift-transparency.md) | Transparencia de target drift en upgrade | Aceptada | Publicada en [beta.5](releases/v0.1.0-beta.5.md) |
+| 0018 | [indexable-text-field](architecture/0018-indexable-text-field.md) | Campo explícito `indexable_text` para FTS | Aceptada | Publicada en [beta.5](releases/v0.1.0-beta.5.md) |
+| 0019 | [governed-supersede](architecture/0019-governed-supersede.md) | Operación `supersede` gobernada | Aceptada | Publicada en [beta.8](releases/v0.1.0-beta.8.md) |
+| 0020 | [context-diagnostics-in-write-result](architecture/0020-context-diagnostics-in-write-result.md) | Salud del contrato en el resultado de escritura | Aceptada | Publicada en [beta.11](releases/v0.1.0-beta.11.md) |
+| 0021 | [verified-at-freshness-v1](architecture/0021-verified-at-freshness-v1.md) | `verified_at` autodeclarado y frescura computada en lectura | Aceptada | Publicada en [beta.9](releases/v0.1.0-beta.9.md) |
+| 0022 | [store-project-identity-v1](architecture/0022-store-project-identity-v1.md) | Identidad lógica separada de proyecto y store | Aceptada | Publicada en [beta.11](releases/v0.1.0-beta.11.md) |
+| 0023 | [governed-checkpoint-handoff-v2](architecture/0023-governed-checkpoint-handoff-v2.md) | Checkpoint exacto y handoff gobernado | Aceptada | Publicada en [beta.11](releases/v0.1.0-beta.11.md) |
+| 0024 | [commit-outcome-v2](architecture/0024-commit-outcome-v2.md) | Resultado transaccional y durabilidad explícita | Aceptada | Publicada en [beta.11](releases/v0.1.0-beta.11.md) |
+| 0025 | [retrieval-evaluation-v2](architecture/0025-retrieval-evaluation-v2.md) | Benchmark de ranking y presupuesto sin cambiar retrieval | Aceptada | Publicada en [beta.11](releases/v0.1.0-beta.11.md) |
+| 0026 | [governed-refute-v1](architecture/0026-governed-refute-v1.md) | Refutación gobernada, auditable y sin sucesor | Aceptada | Publicada en [beta.11](releases/v0.1.0-beta.11.md) |
+| 0027 | [verifiable-export-restore-v1](architecture/0027-verifiable-export-restore-v1.md) | Export/backup verificable y restore fail-closed | Aceptada | Publicada en [beta.11](releases/v0.1.0-beta.11.md) |
+| 0028 | [governed-compaction-v1](architecture/0028-governed-compaction-v1.md) | Corte de epoch, tombstones y archivo verificable | Aceptada | Publicada en [beta.11](releases/v0.1.0-beta.11.md) |
+| 0029 | [derived-semantic-retrieval-v1](architecture/0029-derived-semantic-retrieval-v1.md) | Índice semántico derivado y recuperación híbrida opt-in | Propuesta | Sin implementación ni proveedor autorizado |
+| 0030 | [milestone-checkpoint-obligation-v1](architecture/0030-milestone-checkpoint-obligation-v1.md) | Obligación gobernada de continuidad al cerrar hitos | Propuesta | Sin cambio de contrato ni código |
+
+Resumen: **30 ADRs**, sin huecos; **28 aceptadas** y **2 propuestas**. No hay
+ADRs rechazadas ni reemplazadas en el registro actual.
 
 ### Documentación normativa
 

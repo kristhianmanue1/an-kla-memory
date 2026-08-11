@@ -1,6 +1,6 @@
 # ADR-0013: Recuperación multi-stream opt-in
 
-- **Estado:** Aceptado
+- **Estado:** Aceptada
 - **Fecha:** 2026-08-03
 - **Cierra:** issue #10 (parte A)
 - **Actualiza:** ADR-0004 (índice de referencia)

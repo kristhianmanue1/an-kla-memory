@@ -2,8 +2,9 @@
 
 ## Estado
 
-Implementada experimentalmente en la línea de desarrollo. No forma parte de
-una versión etiquetada.
+Aceptada e implementada. `context-assembly/v1` se publicó en
+`v0.1.0-beta.1`; versiones posteriores añadieron contratos versionados sin
+invalidar este ensamblado.
 
 ## Decisión
 

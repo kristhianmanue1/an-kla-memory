@@ -1,8 +1,8 @@
 """ci_local.py — replica local de .github/workflows/test.yml.
 
 Ejecuta los mismos pasos que el CI remoto (importabilidad + unittest +
-check_sizes) sin gastar minutos de GitHub Actions. Portable a los 3 SO de la
-matriz del workflow. Determinista: sin red, sin reloj real.
+check_sizes + registro ADR) sin gastar minutos de GitHub Actions. Portable a
+los 3 SO de la matriz del workflow. Determinista: sin red, sin reloj real.
 
 Bandera --simulate-ci: exporta GITHUB_ACTIONS=true y CI=true antes de los tests
 para reproducir el entorno del runner y atrapar tests no deterministas (categoría
@@ -23,10 +23,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON = sys.executable
 CHECK_SIZES = ROOT / "scripts" / "check_sizes.py"
+CHECK_ADRS = ROOT / "scripts" / "check_adr_registry.py"
 
 
 def paso_import() -> str:
-    print("==> [1/3] importabilidad de an_kla", flush=True)
+    print("==> [1/4] importabilidad de an_kla", flush=True)
     try:
         result = subprocess.run(
             [PYTHON, "-c", "import an_kla"],
@@ -49,7 +50,7 @@ def paso_import() -> str:
 
 def paso_tests(simulate_ci: bool) -> str:
     etiqueta = " (simulate-ci)" if simulate_ci else ""
-    print(f"==> [2/3] unittest discover{etiqueta}", flush=True)
+    print(f"==> [2/4] unittest discover{etiqueta}", flush=True)
     env = dict(os.environ)
     if simulate_ci:
         env["GITHUB_ACTIONS"] = "true"
@@ -65,11 +66,19 @@ def paso_tests(simulate_ci: bool) -> str:
 
 
 def paso_sizes() -> str:
-    print("==> [3/3] check_sizes", flush=True)
+    print("==> [3/4] check_sizes", flush=True)
     if not CHECK_SIZES.exists():
         print("    SKIP: scripts/check_sizes.py no existe (ver issue #21 / PR #24)")
         return "SKIP"
     result = subprocess.run([PYTHON, str(CHECK_SIZES)], cwd=ROOT)
+    estado = "OK" if result.returncode == 0 else "FAIL"
+    print(f"    {estado}")
+    return estado
+
+
+def paso_adrs() -> str:
+    print("==> [4/4] check_adr_registry", flush=True)
+    result = subprocess.run([PYTHON, str(CHECK_ADRS)], cwd=ROOT)
     estado = "OK" if result.returncode == 0 else "FAIL"
     print(f"    {estado}")
     return estado
@@ -88,6 +97,7 @@ def main() -> int:
         "importabilidad": paso_import(),
         "unittest": paso_tests(args.simulate_ci),
         "check_sizes": paso_sizes(),
+        "check_adr_registry": paso_adrs(),
     }
 
     print("\nResumen:")

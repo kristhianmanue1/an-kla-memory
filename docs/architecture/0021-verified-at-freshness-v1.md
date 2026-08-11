@@ -1,6 +1,6 @@
 # ADR-0021: `verified_at` y frescura computada en lectura
 
-- **Estado:** Aceptado (v3 enmendada; retry adversarial focalizado `proceed`;
+- **Estado:** Aceptada (v3 enmendada; retry adversarial focalizado `proceed`;
   aceptación explícita del maintainer el 2026-08-08)
 - **Fecha:** 2026-08-08
 - **Decide sobre:** cómo un registro declara su última fecha de confirmación y

@@ -1,5 +1,9 @@
 # ADR-0001: revisión content-addressed y `CURRENT`
 
+- **Estado:** Aceptada
+- **Implementación:** núcleo publicado desde `v0.1.0-alpha.1`; formato físico
+  vigente.
+
 La fuente de verdad es un manifiesto de revisión y los objetos inmutables que
 este enumera. `.an-kla/memory/refs/CURRENT` contiene el hash del manifiesto
 confirmado. Su reemplazo atómico local es el punto lógico de commit.

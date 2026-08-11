@@ -1,6 +1,6 @@
 # ADR-0017: Transparencia de target drift en el flujo de upgrade
 
-- **Estado:** Aceptado
+- **Estado:** Aceptada
 - **Fecha:** 2026-08-04
 - **Cierra:** issue #12
 - **Actualiza:** ADR-0011 (governed-agent-upgrade)

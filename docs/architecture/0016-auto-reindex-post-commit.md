@@ -1,6 +1,6 @@
 # ADR-0016: Reindexado best-effort tras commit
 
-- **Estado:** Aceptado
+- **Estado:** Aceptada
 - **Fecha:** 2026-08-03
 - **Cierra:** issue #10 (parte D)
 

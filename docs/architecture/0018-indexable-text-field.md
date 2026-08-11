@@ -1,6 +1,6 @@
 # ADR-0018: Campo explícito `indexable_text` para FTS
 
-- **Estado:** Aceptado
+- **Estado:** Aceptada
 - **Fecha:** 2026-08-04
 - **Cierra:** issue #14
 - **Decide sobre:** cobertura de `record_text()` para FTS5

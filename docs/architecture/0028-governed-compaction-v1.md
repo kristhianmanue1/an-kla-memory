@@ -1,9 +1,9 @@
 # ADR-0028: compactación gobernada por epoch v1
 
-- Estado: Aceptado e implementado localmente; pre-code r4 e implementación
+- **Estado:** Aceptada e implementada localmente; pre-code r4 e implementación
   adversarial final `PROCEED`
-- Fecha: 2026-08-08
-- Gate: ronda adversarial pre-code obligatoria
+- **Fecha:** 2026-08-08
+- **Gate:** ronda adversarial pre-code obligatoria
 
 ## Problema
 

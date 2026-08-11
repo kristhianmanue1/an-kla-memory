@@ -1,6 +1,6 @@
 # ADR-0012: Read-only release update check
 
-- **Estado:** Propuesta
+- **Estado:** Aceptada e implementada en `v0.1.0-beta.4`
 - **Fecha:** 2026-08-03
 - **Decide sobre:** comportamiento del CLI al detectar versiones publicadas
 

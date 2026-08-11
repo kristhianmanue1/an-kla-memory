@@ -1,6 +1,7 @@
 # ADR-NNNN: Título corto imperativo
 
-- **Estado:** Propuesta | Aceptado | Rechazado | Reemplazado por ADR-MMMM
+- **Estado:** Propuesta | Aceptada | Rechazada | Reemplazada por ADR-MMMM
+- **Implementación:** No iniciada | Parcial | Implementada | No aplica
 - **Fecha:** YYYY-MM-DD
 - **Decide sobre:** una sola decisión arquitectónica
 

@@ -1,6 +1,7 @@
 # ADR-0019: operación `supersede` gobernada en `write-policy/v1`
 
-- **Estado:** Propuesta (v2, tras ronda adversarial)
+- **Estado:** Aceptada e implementada en `v0.1.0-beta.8` (v2, tras ronda
+  adversarial)
 - **Fecha:** 2026-08-07
 - **Decide sobre:** cómo el flujo gobernado ejecuta la sustitución de vigencia de un registro, sin mutar contenido CAS.
 

@@ -1,5 +1,9 @@
 # ADR-0002: alcance alfa
 
+- **Estado:** Aceptada
+- **Implementación:** alcance histórico de `v0.1.0-alpha.1`; las ampliaciones
+  posteriores se documentan en ADRs propios.
+
 La alfa implementa una sola memoria activa, objetos inmutables, locks locales,
 CAS, recuperación lexical y contexto con presupuesto en bytes. Multi-memoria,
 instaladores de adaptadores, firma externa, compactación y sincronización quedan

@@ -1,8 +1,9 @@
 # ADR-0027: export verificable y restore fail-closed v1
 
-- Estado: Aceptado e implementado localmente; gate de implementación `PROCEED`
-- Fecha: 2026-08-08
-- Gate: ronda adversarial pre-code obligatoria
+- **Estado:** Aceptada e implementada localmente; gate de implementación
+  `PROCEED`
+- **Fecha:** 2026-08-08
+- **Gate:** ronda adversarial pre-code obligatoria
 
 ## Contexto
 

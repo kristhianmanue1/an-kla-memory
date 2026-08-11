@@ -127,6 +127,19 @@ versión anterior (plantilla reconocida en `_KNOWN_CONTEXT_TEMPLATES`),
 README/contrato/coherencia tag↔VERSION, changelog (`docs/releases/`) y community
 files (LICENSE, SECURITY, COC, CONTRIBUTING, CITATION, dependabot, templates).
 
+## §10 Registro y vigencia de ADRs
+
+La tabla de `docs/README.md` es el registro canónico del inventario y estado
+decisional. Estado e implementación son ejes distintos: aceptar una decisión no
+afirma que todas sus fases prospectivas estén implementadas. Cada cambio de
+estado actualiza el ADR y el registro en el mismo commit.
+
+`scripts/check_adr_registry.py` falla ante huecos, duplicados, rutas ausentes,
+metadata no canónica o contradicciones de estado. Se ejecuta en CI local y
+remoto. La evidencia de publicación se enlaza desde el registro a la nota de
+release correspondiente; los documentos de `planning/` siguen siendo historia,
+no una segunda fuente de estado.
+
 ## Cómo se mejora este documento
 
 Como cualquier artefacto: cambios vía plan + ronda adversarial al cerrar la
