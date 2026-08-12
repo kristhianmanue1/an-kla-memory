@@ -14,6 +14,7 @@ from typing import Any, Mapping
 
 from .canonical import canonical_json, digest_json
 from .record_text import record_text
+from .subject_ref import SubjectRefError, parse_subject_ref
 from .temporal import TemporalError, VERIFIED_AT_VALIDATOR, parse_verified_at
 
 
@@ -71,6 +72,7 @@ _POLICY_CONFIGURATION = {
         "invalid_write_decision",
         "invalid_write_plan",
         "invalid_write_proposal",
+        "subject_ref_namespace_mismatch",
         "write_content_hash_mismatch",
         "write_plan_base_changed",
         "write_plan_hash_mismatch",
@@ -81,7 +83,10 @@ _POLICY_CONFIGURATION = {
         "maximum_representation": "summary",
     },
     "require_verified_tool_evidence": True,
-    "record_validators": {"verified_at": VERIFIED_AT_VALIDATOR},
+    "record_validators": {
+        "subject_ref": "an-kla-subject-ref/v1",
+        "verified_at": VERIFIED_AT_VALIDATOR,
+    },
     "self_asserted_authority_keys": sorted(_SELF_ASSERTED_AUTHORITY_KEYS),
 }
 
@@ -214,6 +219,11 @@ def validate_write_proposal(proposal: Mapping[str, Any]) -> None:
             parse_verified_at(record["verified_at"])
         except TemporalError as exc:
             raise WritePolicyError(code, "record.verified_at") from exc
+    if "subject_ref" in record:
+        try:
+            parse_subject_ref(record["subject_ref"])
+        except SubjectRefError as exc:
+            raise WritePolicyError(code, "record.subject_ref") from exc
     # Co-occurrence contract (ADR-0019): operation=supersede <-> supersedes
     # present.  supersedes names the target id (unique within stream) and must
     # not self-reference the new record.

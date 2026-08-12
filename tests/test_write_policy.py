@@ -337,11 +337,14 @@ class WritePolicyTests(unittest.TestCase):
     def test_verified_at_validator_changes_and_freezes_policy_fingerprint(self) -> None:
         self.assertEqual(
             policy_configuration()["record_validators"],
-            {"verified_at": "an-kla-verified-at/v1"},
+            {
+                "subject_ref": "an-kla-subject-ref/v1",
+                "verified_at": "an-kla-verified-at/v1",
+            },
         )
         self.assertEqual(
             policy_fingerprint(),
-            "sha256:2239cd32ec8f21e1d4ee5ca18613c69f9c94136819cdd81d4e63016fd7b98418",
+            "sha256:0d0133a5a91b1b0c01c3749b649802075efbccc797b81a413a5c8b6ad615afe1",
         )
 
     def test_verified_at_is_validated_but_never_elevates_authority(self) -> None:
@@ -409,6 +412,7 @@ class WritePolicyTests(unittest.TestCase):
                 "invalid_write_decision",
                 "invalid_write_plan",
                 "invalid_write_proposal",
+                "subject_ref_namespace_mismatch",
                 "write_content_hash_mismatch",
                 "write_plan_base_changed",
                 "write_plan_hash_mismatch",
@@ -601,6 +605,106 @@ class SupersedePolicyTests(unittest.TestCase):
         events = [r for r in plan["records"] if r["stream"] == "events"]
         self.assertEqual(len(events), 1)
         self.assertNotIn("supersedes", events[0])
+
+
+# Pre-Phase-A fingerprint (verified_at-only validators). Used to prove that a
+# plan carrying a stale fingerprint is rejected after the subject_ref validator
+# and terminal code land (ADR-0033 §Consecuencias).
+PRE_PHASE_A_FINGERPRINT = (
+    "sha256:2239cd32ec8f21e1d4ee5ca18613c69f9c94136819cdd81d4e63016fd7b98418"
+)
+SUBJECT_REF_VALID = "an-kla:subject:v1:decision:p-" + "0" * 32 + ":adr-0033"
+
+
+class SubjectRefPolicyTests(unittest.TestCase):
+    """ADR-0033 Fase A: subject_ref form guard, verbatim carry and non-authority."""
+
+    def _subject_ref_proposal(self) -> dict:
+        candidate = proposal()
+        candidate["record"]["subject_ref"] = SUBJECT_REF_VALID
+        return candidate
+
+    def test_invalid_subject_ref_rejected_via_validate_write_proposal(self) -> None:
+        cases = {
+            "none": None,
+            "int": 7,
+            "empty": "",
+            "bad_namespace": "an-kla:subject:v1:decision:p-" + "0" * 31 + ":adr-0033",
+            "bad_kind": "an-kla:subject:v1:widget:p-" + "0" * 32 + ":adr-0033",
+            "version_v2": "an-kla:subject:v2:decision:p-" + "0" * 32 + ":adr-0033",
+            "trailing_newline": SUBJECT_REF_VALID + "\n",
+            "leading_newline": "\n" + SUBJECT_REF_VALID,
+        }
+        for name, value in cases.items():
+            candidate = proposal()
+            candidate["record"]["subject_ref"] = value
+            with self.subTest(name=name), self.assertRaises(WritePolicyError) as caught:
+                validate_write_proposal(candidate)
+            self.assertEqual(caught.exception.code, "invalid_write_proposal")
+            self.assertEqual(caught.exception.detail, "record.subject_ref")
+
+    def test_subject_ref_validator_registered_in_record_validators(self) -> None:
+        validators = policy_configuration()["record_validators"]
+        self.assertEqual(validators["subject_ref"], "an-kla-subject-ref/v1")
+        self.assertEqual(validators["verified_at"], "an-kla-verified-at/v1")
+
+    def test_subject_ref_and_terminal_code_freeze_policy_fingerprint(self) -> None:
+        self.assertEqual(
+            policy_fingerprint(),
+            "sha256:0d0133a5a91b1b0c01c3749b649802075efbccc797b81a413a5c8b6ad615afe1",
+        )
+        self.assertIn(
+            "subject_ref_namespace_mismatch",
+            policy_configuration()["terminal_error_codes"],
+        )
+
+    def test_subject_ref_not_in_self_asserted_authority_keys(self) -> None:
+        self.assertNotIn(
+            "subject_ref", policy_configuration()["self_asserted_authority_keys"]
+        )
+
+    def test_subject_ref_does_not_elevate_authority(self) -> None:
+        candidate = self._subject_ref_proposal()
+        decision = evaluate_write(
+            candidate, authority(candidate, authority_class="unresolved")
+        )
+        self.assertEqual(decision["decision"], "skip")
+        self.assertIn("unresolved_authority", decision["reason_codes"])
+
+    def test_subject_ref_does_not_trigger_self_asserted_warning(self) -> None:
+        candidate = self._subject_ref_proposal()
+        decision = evaluate_write(candidate, authority(candidate))
+        self.assertEqual(decision["decision"], "write-full")
+        self.assertNotIn("self_asserted_authority_ignored", decision["reason_codes"])
+
+    def test_subject_ref_persists_verbatim_in_plan(self) -> None:
+        candidate = self._subject_ref_proposal()
+        plan = build_write_plan(candidate, authority(candidate))
+        carried = [
+            item
+            for item in plan["records"]
+            if item["stream"] == candidate["stream"]
+        ]
+        self.assertEqual(len(carried), 1)
+        self.assertEqual(carried[0]["record"]["subject_ref"], SUBJECT_REF_VALID)
+
+    def test_beta11_valid_plan_fails_with_policy_fingerprint_mismatch(self) -> None:
+        candidate = self._subject_ref_proposal()
+        auth = authority(candidate)
+        current_decision = evaluate_write(candidate, auth)
+        old_decision = deepcopy(current_decision)
+        old_decision["policy_fingerprint"] = PRE_PHASE_A_FINGERPRINT
+        old_plan = build_write_plan(candidate, auth, current_decision)
+        old_plan["core"]["policy_fingerprint"] = PRE_PHASE_A_FINGERPRINT
+        old_plan["core"]["decision_sha256"] = digest_json(old_decision)
+        for item in old_plan["records"]:
+            if item["record"].get("type") == "write_policy_decision":
+                item["record"]["payload"]["policy_fingerprint"] = PRE_PHASE_A_FINGERPRINT
+        old_plan["core"]["planned_records_sha256"] = digest_json(old_plan["records"])
+        old_plan["plan_fingerprint"] = digest_json(old_plan["core"])
+        with self.assertRaises(WritePolicyError) as caught:
+            verify_write_plan(old_plan, candidate, auth, old_decision)
+        self.assertEqual(caught.exception.code, "write_policy_fingerprint_mismatch")
 
 
 if __name__ == "__main__":
