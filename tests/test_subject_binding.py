@@ -92,6 +92,20 @@ class CheckSubjectRefBindingTests(unittest.TestCase):
             check_subject_ref_binding(plan, binding())
         self.assertEqual(caught.exception.code, "subject_ref_namespace_mismatch")
 
+    def test_check_binding_checks_each_record_even_when_first_matches(self) -> None:
+        # Phase B M-1: a matching first record MUST NOT short-circuit. A later
+        # record with the wrong namespace still triggers mismatch. This freezes
+        # the "each record" invariant — binding is per-record, not first-only.
+        other = "p-" + "f" * 32
+        plan = plan_with_records(
+            record_with(subject_ref(NAMESPACE)),
+            record_with(subject_ref(other)),
+        )
+        with self.assertRaises(WritePolicyError) as caught:
+            check_subject_ref_binding(plan, binding())
+        self.assertEqual(caught.exception.code, "subject_ref_namespace_mismatch")
+        self.assertEqual(str(caught.exception), "subject_ref_namespace_mismatch")
+
     def test_legacy_plan_without_subject_ref_and_empty_binding_is_noop(self) -> None:
         # Contraexample (auditoría integrador): a plan whose records carry no
         # subject_ref must be a no-op even when binding lacks "project_bytes".

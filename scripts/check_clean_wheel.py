@@ -54,7 +54,7 @@ def main() -> int:
         cli = scripts / ("an-kla.exe" if os.name == "nt" else "an-kla")
         _run([str(python), "-m", "pip", "install", "--no-deps", str(wheels[0])])
         version = _run([str(cli), "--version"])
-        if version.stdout.decode().strip() != "an-kla-memory 0.1.0b11":
+        if version.stdout.decode().strip() != "an-kla-memory 0.1.0b12":
             raise SystemExit("clean_wheel_wrong_version")
         help_result = _run([str(cli), "--no-update-check", "--help"])
         help_text = help_result.stdout.decode()

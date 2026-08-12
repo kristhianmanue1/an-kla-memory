@@ -29,11 +29,20 @@ class CompactionTests(unittest.TestCase):
             project.mkdir()
             store = MemoryStore(project)
             initial = store.initialize()
+            subject_ref = (
+                "an-kla:subject:v1:service:"
+                "p-0123456789abcdef0123456789abcdef:service-a"
+            )
             source = store.commit(
                 expected_current_hash=initial,
                 checkpoint_patch={},
                 facts=[
-                    {"id": "f-active", "text": "keep", "status": "active"},
+                    {
+                        "id": "f-active",
+                        "text": "keep",
+                        "status": "active",
+                        "subject_ref": subject_ref,
+                    },
                     {"id": "f-inactive", "text": "drop", "status": "inactive"},
                 ],
             )
@@ -68,6 +77,7 @@ class CompactionTests(unittest.TestCase):
             current = store.snapshot()
             self.assertEqual(current.manifest["schema"], "an-kla/revision-v3")
             self.assertEqual([row["id"] for row in current.records["facts"]], ["f-active"])
+            self.assertEqual(current.records["facts"][0]["subject_ref"], subject_ref)
             archived = verify_revision(store, source)
             self.assertEqual(archived["availability"], "archived_by_compaction")
             self.assertEqual(verify_revision(store, current.revision_id)["availability"], "present")
@@ -101,7 +111,15 @@ class CompactionTests(unittest.TestCase):
 
             refute_store = MemoryStore(project, refute_authority_resolver=Resolver())
             refute_proposal, claim = proposal_and_claim(
-                refute_store, digest_json({"id": "f-active", "text": "keep", "status": "active"})
+                refute_store,
+                digest_json(
+                    {
+                        "id": "f-active",
+                        "text": "keep",
+                        "status": "active",
+                        "subject_ref": subject_ref,
+                    }
+                ),
             )
             refute_plan = refute_store.plan_refute(refute_proposal, claim)
             refuted = refute_store.commit_refute_plan(
@@ -113,6 +131,12 @@ class CompactionTests(unittest.TestCase):
             self.assertEqual(
                 refute_store.snapshot(refuted["revision"]).manifest["schema"],
                 "an-kla/revision-v3",
+            )
+            self.assertEqual(
+                refute_store.snapshot(refuted["revision"]).records["facts"][0][
+                    "subject_ref"
+                ],
+                subject_ref,
             )
 
             bundle2 = Path(root) / "bundle2"

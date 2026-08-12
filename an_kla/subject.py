@@ -19,9 +19,12 @@ SCHEMA = "an-kla/subject-namespace-result-v1"
 
 # Controlled IdentityError catalogue from ``read_binding`` after a complete
 # status (ADR-0033 §10 / plan §8): the identity migrated between the two
-# read-only calls.  Any other exception (``StoreError``, ``IntegrityError``,
-# ``OSError`` or an out-of-catalogue ``IdentityError``) propagates to the CLI's
-# general handler as exit 1 — error layering must not mix hierarchies.
+# read-only calls.  ``identity_uuid_invalid`` was added in beta.12 (Fase C L-3):
+# a concurrent UUID corruption between the two reads must surface as
+# fail-closed ``namespace_unavailable`` / exit 3, not as an uncaught exit 1.
+# Any other exception (``StoreError``, ``IntegrityError``, ``OSError`` or an
+# out-of-catalogue ``IdentityError``) propagates to the CLI's general handler
+# as exit 1 — error layering must not mix hierarchies.
 _BINDING_DRIFT_CODES = frozenset(
     (
         "project_identity_missing",
@@ -29,6 +32,7 @@ _BINDING_DRIFT_CODES = frozenset(
         "store_identity_missing",
         "store_identity_invalid",
         "project_identity_mismatch",
+        "identity_uuid_invalid",
     )
 )
 

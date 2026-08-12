@@ -9,7 +9,7 @@ from scripts.check_release_tag import validate_release_gate
 from scripts.check_benchmark_corpus import reference_corpus_sha256
 
 
-TAG = "v0.1.0-beta.11"
+TAG = "v0.1.0-beta.12"
 
 
 class ReleaseGateTests(unittest.TestCase):
@@ -61,7 +61,7 @@ class ReleaseGateTests(unittest.TestCase):
 
     def test_fails_closed_when_human_review_is_pending(self) -> None:
         temp = self._root(
-            '<!-- an-kla:release-gate {"decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.11"} -->'
+            '<!-- an-kla:release-gate {"decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.12"} -->'
         )
         self.addCleanup(temp.cleanup)
         path = (
@@ -80,7 +80,7 @@ class ReleaseGateTests(unittest.TestCase):
 
     def test_fails_closed_when_review_corpus_hash_is_wrong(self) -> None:
         temp = self._root(
-            '<!-- an-kla:release-gate {"decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.11"} -->'
+            '<!-- an-kla:release-gate {"decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.12"} -->'
         )
         self.addCleanup(temp.cleanup)
         path = (
@@ -95,7 +95,7 @@ class ReleaseGateTests(unittest.TestCase):
 
     def test_fails_closed_when_reviewer_is_not_maintainer(self) -> None:
         temp = self._root(
-            '<!-- an-kla:release-gate {"decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.11"} -->'
+            '<!-- an-kla:release-gate {"decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.12"} -->'
         )
         self.addCleanup(temp.cleanup)
         path = (
@@ -110,7 +110,7 @@ class ReleaseGateTests(unittest.TestCase):
 
     def test_accepts_one_exact_candidate_proceed_marker(self) -> None:
         temp = self._root(
-            '<!-- an-kla:release-gate {"decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.11"} -->'
+            '<!-- an-kla:release-gate {"decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.12"} -->'
         )
         self.addCleanup(temp.cleanup)
         validate_release_gate(Path(temp.name), TAG)
@@ -120,8 +120,8 @@ class ReleaseGateTests(unittest.TestCase):
             (("# no gate",), "release_gate_missing"),
             (
                 (
-                    '<!-- an-kla:release-gate {"decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.11"} -->',
-                    '<!-- an-kla:release-gate {"decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.11"} -->',
+                    '<!-- an-kla:release-gate {"decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.12"} -->',
+                    '<!-- an-kla:release-gate {"decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.12"} -->',
                 ),
                 "release_gate_duplicated",
             ),
@@ -157,10 +157,10 @@ class ReleaseGateTests(unittest.TestCase):
     def test_fails_closed_for_malformed_or_extra_fields(self) -> None:
         cases = (
             "<!-- an-kla:release-gate not-json -->",
-            '<!-- an-kla:release-gate {"decision":"proceed","extra":1,"scope":"release-candidate","tag":"v0.1.0-beta.11"} -->',
-            '<!-- an-kla:release-gate {"decision":"fix-and-retry","decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.11"} -->',
-            '<!-- an-kla:release-gate {"decision":"proceed","scope":"PR-C","scope":"release-candidate","tag":"v0.1.0-beta.11"} -->',
-            '<!-- an-kla:release-gate {"decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.8","tag":"v0.1.0-beta.11"} -->',
+            '<!-- an-kla:release-gate {"decision":"proceed","extra":1,"scope":"release-candidate","tag":"v0.1.0-beta.12"} -->',
+            '<!-- an-kla:release-gate {"decision":"fix-and-retry","decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.12"} -->',
+            '<!-- an-kla:release-gate {"decision":"proceed","scope":"PR-C","scope":"release-candidate","tag":"v0.1.0-beta.12"} -->',
+            '<!-- an-kla:release-gate {"decision":"proceed","scope":"release-candidate","tag":"v0.1.0-beta.8","tag":"v0.1.0-beta.12"} -->',
         )
         for marker in cases:
             with self.subTest(marker=marker):

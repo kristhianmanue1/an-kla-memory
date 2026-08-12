@@ -13,7 +13,7 @@
   "allOf": [
     {
       "if": {"properties": {"result": {"const": "namespace_available"}}, "required": ["result"]},
-      "then": {"properties": {"namespace": {"type": "string", "pattern": "^p-[0-9a-f]{32}$"}}}
+      "then": {"properties": {"namespace": {"type": "string", "maxLength": 34, "pattern": "^p-[0-9a-f]{32}$"}}}
     },
     {
       "if": {"properties": {"result": {"const": "namespace_unavailable"}}, "required": ["result"]},

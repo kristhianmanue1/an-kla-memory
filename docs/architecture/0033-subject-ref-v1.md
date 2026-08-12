@@ -1,7 +1,8 @@
 # ADR-0033: identidad contextual estable `subject_ref` v1
 
 - **Estado:** Aceptada
-- **Implementación:** No iniciada
+- **Implementación:** Completada en candidata `v0.1.0-beta.12` (sin publicar);
+  fases y evidencia en el [reporte adversarial](../releases/v0.1.0-beta.12-adversarial.md).
 - **Fecha:** 2026-08-11
 - **Decide sobre:** la identidad contextual estable `subject_ref` (elemento
   contextual recordado: servicio, decisión, actor, API, etc.), separada del
@@ -209,9 +210,11 @@ frontera de confianza de `AN-KLA.md:133-145`.
     lecturas aparece drift o `IdentityError` esperado, se mapea a
     `namespace_unavailable`/exit 3. **stderr vacío sólo para los nueve estados
     clasificados y esos `IdentityError` esperados**; `OSError` y fallos
-    inesperados siguen el handler general del CLI (`__main__.py:530`):
-    stderr saneado + exit 1. El commit sigue revalidando bajo lock (decisión
-    5); la salida del comando es sólo input para construir proposals.
+    inesperados capturados siguen el handler general del CLI
+    (`an_kla/__main__.py:541-555`): exit 1 y un mensaje de una línea que puede
+    incluir la ruta que falló; excepciones fuera del conjunto capturado pueden
+    conservar traceback. El commit sigue revalidando bajo lock (decisión 5);
+    la salida del comando es sólo input para construir proposals.
     **Diferencia frente a `identity status` (H2):** `identity status` es de
     **inspección** (diagnóstico; con `--show-ids` expone UUIDs); `subject
     namespace` es de **resolución** (produce el `namespace` a usar, fail-closed
@@ -318,15 +321,15 @@ frontera de confianza de `AN-KLA.md:133-145`.
   nuevas escrituras con ese namespace fallan binding (decisión 12);
   migración/remapeo fuera de v1.
 - **Neutras:** no cambia código ni schemas ejecutables todavía; el registro
-  gana una fila (0033); 33 ADRs (30 aceptadas, 3 propuestas); test de registro
-  actualizado (Propuesta 2 → 3).
+  gana una fila (0033); 33 ADRs (31 aceptadas, 2 propuestas); test de registro
+  actualizado (Aceptada 30 → 31).
 
 ## Test de regresión
 
 Este ADR es documental. Test inmediato: `scripts/check_adr_registry.py`,
 `scripts/check_sizes.py` (≤ 400 líneas) y `python3 -m unittest discover -s
 tests -p 'test_*.py'` pasan; el conteo del registro en
-`tests/test_adr_registry.py` refleja este ADR (Aceptada 30, Propuesta 3).
+`tests/test_adr_registry.py` refleja este ADR (Aceptada 31, Propuesta 2).
 
 Tests funcionales diferidos a la implementación (criterios del PR):
 
@@ -357,9 +360,10 @@ Tests funcionales diferidos a la implementación (criterios del PR):
   `identities_ready_root_pending`, `conflict`), y también drift o
   `IdentityError` esperado entre `identity_status` y `read_binding`, →
   `result="namespace_unavailable"`, `namespace=null`, exit 3, stderr vacío.
-  `OSError`/inesperado → handler general stderr saneado + exit 1. Sin
-  `.an-kla/` produce `namespace_unavailable`/exit 3 sin crear `.an-kla/`, sin
-  `write_lock`, sin mutar `CURRENT`.
+  `OSError`/inesperado capturado → handler general exit 1 con mensaje de una
+  línea que puede incluir la ruta que falló; una excepción no capturada puede
+  conservar traceback. Sin `.an-kla/` produce `namespace_unavailable`/exit 3
+  sin crear `.an-kla/`, sin `write_lock`, sin mutar `CURRENT`.
 - **`capabilities()` + schema `write-proposal-v1` (B3 + N5a):** dos
   invocaciones de `capabilities()` producen JSON canónico idéntico; el bloque
   `write_policy` enumera `record_validators` (aditivo nuevo); **no**

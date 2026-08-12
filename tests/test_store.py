@@ -755,6 +755,43 @@ class SubjectRefBindingTests(unittest.TestCase):
         self.assertEqual(self.store.read_current(), current_before)
         self.assertEqual(self._file_state(), files_before)
 
+    def test_valid_supersede_then_binding_mismatch_has_no_filesystem_effects(self) -> None:
+        # Adversarial M-2: supersede resolution succeeds, then binding fails.
+        # Compare every file, including lock/gate dotfiles, byte-for-byte.
+        target_ref = _subject_ref_for(self.namespace)
+        target = _subject_proposal(self.root_revision, "f-target", target_ref)
+        target_auth = _subject_authority(target)
+        target_plan = self.store.plan_write(target, target_auth)
+        committed = self._commit(target, target_auth, target_plan)
+
+        other = "p-" + "f" * 32
+        candidate = _subject_proposal(
+            committed["revision"],
+            "f-successor",
+            _subject_ref_for(other),
+            operation="supersede",
+            supersedes="f-target",
+        )
+        auth = _subject_authority(candidate)
+        planning = self.store.plan_write(candidate, auth)
+        files_before = {
+            str(path.relative_to(self.store.root)): path.read_bytes()
+            for path in self.store.root.rglob("*")
+            if path.is_file()
+        }
+
+        with self.assertRaises(WritePolicyError) as caught:
+            self._commit(candidate, auth, planning)
+
+        self.assertEqual(caught.exception.code, "subject_ref_namespace_mismatch")
+        self.assertEqual(self.store.read_current(), committed["revision"])
+        files_after = {
+            str(path.relative_to(self.store.root)): path.read_bytes()
+            for path in self.store.root.rglob("*")
+            if path.is_file()
+        }
+        self.assertEqual(files_after, files_before)
+
 
 if __name__ == "__main__":
     unittest.main()

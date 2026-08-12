@@ -12,6 +12,7 @@ from unittest.mock import patch
 from an_kla.canonical import canonical_json
 from an_kla.identity import IdentityError, identity_status, read_binding
 from an_kla.store import IntegrityError, MemoryStore, StoreError
+from an_kla.subject import _BINDING_DRIFT_CODES
 from an_kla.subject_ref import derive_namespace
 
 
@@ -31,12 +32,15 @@ NON_COMPLETE_STATES = (
 
 # Controlled IdentityError catalogue from read_binding after a complete status
 # (ADR-0033 §10 / plan §8): identity migrated between the two read-only calls.
+# ``identity_uuid_invalid`` added in beta.12 (Fase C L-3): a concurrent UUID
+# corruption between the two reads must be fail-closed unavailable/exit 3.
 BINDING_DRIFT_CODES = (
     "project_identity_missing",
     "project_identity_invalid",
     "store_identity_missing",
     "store_identity_invalid",
     "project_identity_mismatch",
+    "identity_uuid_invalid",
 )
 
 
@@ -95,6 +99,9 @@ def _subject_argv(project_root: str) -> list[str]:
 
 class SubjectNamespaceUnitTests(unittest.TestCase):
     """resolve_namespace logic: state mapping, drift catalogue, error layering."""
+
+    def test_controlled_drift_fixture_matches_runtime_catalogue(self) -> None:
+        self.assertEqual(set(BINDING_DRIFT_CODES), set(_BINDING_DRIFT_CODES))
 
     def test_unavailable_for_each_non_complete_state(self) -> None:
         from an_kla.subject import resolve_namespace

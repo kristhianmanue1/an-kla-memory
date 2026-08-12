@@ -285,10 +285,12 @@ class SubjectNamespaceSchemaTests(unittest.TestCase):
             set(branches),
             {"namespace_available", "namespace_unavailable"},
         )
-        self.assertEqual(
-            branches["namespace_available"]["then"]["properties"]["namespace"]["pattern"],
-            "^p-[0-9a-f]{32}$",
-        )
+        available_namespace = branches["namespace_available"]["then"]["properties"]["namespace"]
+        self.assertEqual(available_namespace["pattern"], "^p-[0-9a-f]{32}$")
+        # Phase C L-1: redundant defensive maxLength next to the pattern.
+        # ``p-`` (2) + 32 hex = 34 chars; the regex already constrains this,
+        # but the explicit cap hardens against future regex drift.
+        self.assertEqual(available_namespace["maxLength"], 34)
         self.assertEqual(
             branches["namespace_unavailable"]["then"]["properties"]["namespace"]["type"],
             "null",
