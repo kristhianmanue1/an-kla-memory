@@ -142,6 +142,7 @@ def capabilities() -> dict[str, Any]:
             "profile": WRITE_POLICY_PROFILE,
             "fingerprint": policy_fingerprint(),
             "supported_operations": policy["supported_operations"],
+            "record_validators": dict(policy["record_validators"]),
             "cli_authority_classes": [
                 "derived_from_retrieval",
                 "model_derived",

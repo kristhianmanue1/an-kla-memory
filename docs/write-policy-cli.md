@@ -46,6 +46,94 @@ y representabilidad UTC, pero no la verifica ni eleva autoridad. Una fecha
 futura es dato válido y el core no lee reloj. Corregir o refrescar el valor
 requiere `supersede` del registro, no mutación del objeto existente.
 
+## Identidad contextual `subject_ref`
+
+`record.subject_ref` es **opcional y no autoritativo**: ancla el registro a una
+identidad contextual estable (servicio, decisión, actor, API, etc.) separada
+del `id` físico y de `lineage.refs`, pero `evaluate_write` no lo lee para
+decidir techo ni autoridad. Su forma canónica es
+`an-kla:subject:v1:<kind>:<namespace>:<id>`, donde `<namespace>` se deriva del
+digest de `project-identity-v1` del proyecto actual. La gramática, kinds y
+reglas normativas viven en el campo `record.subject_ref` del schema
+`write-proposal-v1`; este documento no las repite.
+
+Como el namespace depende de la identidad del proyecto, resuélvelo antes de
+construir la propuesta y trátalo como input efímero, no como secreto:
+
+```bash
+.venv/bin/python -m an_kla --project-root . subject namespace
+```
+
+`stdout` es JSON canónico con schema `an-kla/subject-namespace-result-v1`. Si
+`identity status` reporta `complete`, devuelve
+`{"result": "namespace_available", "namespace": "p-<32hex>"}` y exit 0. Cualquier
+otro estado de identidad (`absent`, `legacy_unadopted`, `conflict`, etc.)
+devuelve `{"result": "namespace_unavailable", "namespace": null}` y **exit 3**
+sin crear `.an-kla/`, sin adquirir `write_lock` y sin mutar `CURRENT`. Es un
+fallo cerrado: no fabriques un namespace, no reutilices uno de otro proyecto y
+no asumas que un namespace histórico sigue siendo válido si la identidad del
+proyecto pudo haber sido reemplazada. Un `OSError` capturado termina con exit 1
+y un mensaje de una línea en stderr que puede incluir la ruta que falló; una
+excepción fuera del conjunto capturado por el CLI puede conservar su traceback.
+
+Inserta el namespace devuelto en el `subject_ref` de la propuesta:
+
+```json
+{
+  "schema": "an-kla/write-proposal-v1",
+  "base_revision": "sha256:REVISION_ACTUAL",
+  "stream": "facts",
+  "operation": "add",
+  "requested_representation": "summary",
+  "record": {
+    "id": "f-example",
+    "verified_at": "2026-08-08T00:00:00Z",
+    "subject_ref": "an-kla:subject:v1:decision:p-<32hex-devuelto-por-subject-namespace>:adr-0033",
+    "payload": {"text": "Resumen durable"}
+  },
+  "lineage": {
+    "derived_from_retrieval": false,
+    "refs": []
+  }
+}
+```
+
+`p-<32hex-devuelto-por-subject-namespace>` es un marcador documental, no un
+valor literal. Sustitúyelo por el `namespace` exacto devuelto por el comando.
+`subject_ref` viaja verbatim al segmento; los registros legacy sin él siguen
+siendo legibles. Continúa con `plan-write` → `commit-write-plan` como en
+cualquier escritura gobernada.
+
+### Revalidación bajo lock y TOCTOU
+
+`subject namespace` es una lectura sin lock: devuelve el namespace que el caller
+**debe** declarar para que el commit pase. El binding definitivo se comprueba
+dentro de `write_lock` en `commit-write-plan`, **después** de `assert_unchanged`
+y `verify_write_plan`, y **antes** de construir los registros pendientes. El
+digest se toma del `binding["project_bytes"]` capturado por
+`mutation_preflight` y revalidado por `assert_unchanged`; no se relee
+`project-identity` fuera de ese binding.
+
+Si la decisión no es `skip` y la identidad del proyecto migra entre la consulta
+`subject namespace` y el commit, `assert_unchanged` lanza primero
+`IdentityError("store_identity_changed")`
+y el caller nunca ve un mismatch por TOCTOU. Si la identidad no migró pero el
+caller declaró un namespace incorrecto, el commit lanza
+`WritePolicyError("subject_ref_namespace_mismatch")` con cero efectos: ningún
+objeto, journal, evento o revisión nueva, y el CLI termina con exit 1 (no con
+el exit 3 reservado a `subject namespace`). El orden de fallos bajo lock es:
+
+1. `write_plan_base_changed` (CAS sobre `CURRENT`).
+2. `IdentityError("store_identity_changed")` vía `assert_unchanged` (TOCTOU).
+3. `verify_write_plan` (fingerprint, hashes).
+4. `invalid_supersede_target` (resolución de supersede).
+5. `subject_ref_namespace_mismatch` (binding de namespace).
+6. Construcción de registros y commit.
+
+El lock es local (`fcntl`/`msvcrt`); no hay exclusión mutua entre máquinas.
+
+## Autoridad separada
+
 La autoridad separada, `authority.json`, liga el hash canónico de la propuesta,
 la misma revisión y el alcance exacto. Un agente por CLI puede usar
 `model_derived` o `derived_from_retrieval`; ambas clases quedan limitadas a

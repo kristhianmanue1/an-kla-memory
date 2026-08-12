@@ -10,6 +10,7 @@ import unittest
 from an_kla import VERSION, capabilities
 from an_kla.canonical import canonical_json, digest_bytes
 from an_kla.schemas import schema_bytes, schema_catalog, schema_document, schema_names
+from an_kla.write_policy import policy_configuration, policy_fingerprint
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -293,6 +294,62 @@ class SubjectNamespaceSchemaTests(unittest.TestCase):
             "null",
         )
         self.assertNotIn("project_identity_sha256", document["properties"])
+
+
+class RecordValidatorsCapabilityTests(unittest.TestCase):
+    expected_record_validators = {
+        "subject_ref": "an-kla-subject-ref/v1",
+        "verified_at": "an-kla-verified-at/v1",
+    }
+
+    def test_capabilities_exposes_record_validators_mapping(self) -> None:
+        cap = capabilities()
+        self.assertIn("record_validators", cap["write_policy"])
+        self.assertEqual(
+            cap["write_policy"]["record_validators"],
+            self.expected_record_validators,
+        )
+
+    def test_record_validators_serialization_is_deterministic(self) -> None:
+        first = capabilities()
+        second = capabilities()
+        self.assertEqual(
+            canonical_json(first["write_policy"]["record_validators"]),
+            canonical_json(second["write_policy"]["record_validators"]),
+        )
+        self.assertEqual(canonical_json(first), canonical_json(second))
+
+    def test_capabilities_do_not_expose_subject_view_or_kinds_or_namespaces(
+        self,
+    ) -> None:
+        cap = capabilities()
+        write_policy = cap["write_policy"]
+        self.assertNotIn("subject_view", write_policy)
+        self.assertNotIn("kinds", write_policy)
+        self.assertNotIn("subject_kinds", write_policy)
+        self.assertNotIn("namespaces", write_policy)
+        self.assertNotIn("subject_namespaces", write_policy)
+        serialized = canonical_json(cap).decode("utf-8")
+        self.assertNotIn("subject_view", serialized)
+        self.assertNotIn("subject_kinds", serialized)
+        self.assertNotIn("namespaces", serialized)
+        self.assertNotIn("an-kla:subject:v1:", serialized)
+        self.assertNotIn("actor|api|decision", serialized)
+        self.assertNotIn("p-[0-9a-f]{32}", serialized)
+
+    def test_record_validators_returned_mapping_is_unshared(self) -> None:
+        policy_before = policy_configuration()
+        fingerprint_before = policy_fingerprint()
+        first = capabilities()
+        first["write_policy"]["record_validators"]["subject_ref"] = "MUTATED"
+        first["write_policy"]["record_validators"]["injected"] = "x"
+        second = capabilities()
+        self.assertEqual(
+            second["write_policy"]["record_validators"],
+            self.expected_record_validators,
+        )
+        self.assertEqual(policy_configuration(), policy_before)
+        self.assertEqual(policy_fingerprint(), fingerprint_before)
 
 
 if __name__ == "__main__":

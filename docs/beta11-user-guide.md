@@ -104,6 +104,49 @@ incompleto, inspecciona su UUID antes de reintentar:
 Los estados distinguen no comprometido, comprometido, auditoría incompleta,
 durabilidad incompleta y resultado desconocido.
 
+### Escritura con `subject_ref`
+
+`record.subject_ref` ancla un hecho a una identidad contextual estable (servicio,
+decisión, actor, API, etc.) sin elevar autoridad: es opcional, viaja verbatim y
+los registros legacy sin él siguen siendo legibles. El `namespace` del
+`subject_ref` se deriva del digest de la identidad del proyecto, así que se
+resuelve antes de construir la propuesta y se respeta su exit code:
+
+```bash
+.venv/bin/python -m an_kla --project-root . subject namespace
+```
+
+Con `identity status == complete` devuelve
+`{"result": "namespace_available", "namespace": "p-<32hex>"}` (exit 0). Con
+cualquier otro estado de identidad devuelve
+`{"result": "namespace_unavailable", "namespace": null}` y **exit 3** sin crear
+`.an-kla/` ni mutar `CURRENT`: es un fallo cerrado, no fabriques el namespace.
+Inserta el namespace devuelto en el `subject_ref` del `record` y continúa con el
+flujo gobernado habitual:
+
+```bash
+.venv/bin/python -m an_kla --project-root . plan-write \
+  --proposal proposal.json --authority authority.json > RUTA_NUEVA
+.venv/bin/python -m an_kla --project-root . commit-write-plan \
+  --expected-current sha256:REVISION_ACTUAL \
+  --proposal proposal.json --authority authority.json \
+  --planning-result RUTA_NUEVA
+```
+
+`REVISION_ACTUAL` es el digest completo devuelto por `status`, no un valor
+literal. `RUTA_NUEVA` debe ser un archivo efímero nuevo, no rastreado, con
+permisos privados y cuya inexistencia hayas comprobado antes de redirigir.
+
+La gramática cerrada y los kinds de `subject_ref` viven en el schema
+`write-proposal-v1`; un `subject_ref` malformado se rechaza con
+`invalid_write_proposal`/`record.subject_ref`. El commit revalida el binding de
+namespace bajo `write_lock` (después de `assert_unchanged` y antes de escribir).
+Cuando la decisión no es `skip`, un namespace incorrecto termina con
+`subject_ref_namespace_mismatch`, cero efectos y exit 1 del CLI (no el exit 3 de
+`subject namespace`); una identidad migrada entre la consulta y el commit se
+detecta primero como `store_identity_changed`. Sin `subject_ref`, la propuesta y
+el plan siguen el flujo heredado sin cambio.
+
 ## Refute, respaldo y compactación
 
 `refute` no fabrica un sucesor ni borra evidencia. Requiere una capability de
