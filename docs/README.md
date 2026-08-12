@@ -111,3 +111,7 @@ El backlog abierto y su secuencia para trabajo con agentes están en el
 [plan técnico de ejecución](planning/plan-ejecucion-backlog-agentes-2026-08-11.md),
 acompañado por su
 [ronda adversarial documental](planning/plan-ejecucion-backlog-agentes-adversarial-2026-08-11.md).
+
+La implementación de `subject_ref` v1 (issue #59, ADR-0033) se secuencia en
+[plan técnico por fases](planning/issue-59-subject-ref-implementation-2026-08-11.md);
+es historia de planificación, no una segunda fuente de estado decisional.
