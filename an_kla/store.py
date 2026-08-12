@@ -33,6 +33,7 @@ from .initialization import existing_initialization
 from .storage_primitives import atomic_write, fsync_directory, write_immutable
 from .refute_store_mixin import RefuteStoreMixin
 from .reader_gate import shared_reader_gate
+from .supersede import resolve_supersede_targets
 from .transactions import (
     begin_transaction,
     commit_locked,
@@ -365,43 +366,7 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
             # snapshot under the lock, before any object/journal is written. A
             # failure here raises invalid_supersede_target (terminal) with no
             # side effects (no orphan objects, no prepared journal).
-            pending_supersedes: list[dict[str, str]] = []
-            if any(item["operation"] == "supersede" for item in checked_plan["records"]):
-                base_snapshot = self.snapshot(observed)
-                for item in checked_plan["records"]:
-                    if item["operation"] != "supersede":
-                        continue
-                    stream = item["stream"]
-                    target_id = item["supersedes"]
-                    # self-ref is already enforced by the policy core
-                    # (write_policy.py); keep a defense-in-depth check here.
-                    if target_id == item["record"]["id"]:
-                        raise WritePolicyError("invalid_supersede_target", "self_reference")
-                    target = next(
-                        (
-                            r
-                            for r in base_snapshot.records[stream]
-                            if str(r.get("id", "")) == target_id
-                        ),
-                        None,
-                    )
-                    if target is None:
-                        raise WritePolicyError("invalid_supersede_target", "target_missing")
-                    if target.get("status", target.get("nu", "vigente")) not in {
-                        "vigente",
-                        "active",
-                        None,
-                    }:
-                        raise WritePolicyError(
-                            "invalid_supersede_target", "target_not_vigente"
-                        )
-                    pending_supersedes.append(
-                        {
-                            "stream": stream,
-                            "target_id": target_id,
-                            "sustituida_por": str(item["record"]["id"]),
-                        }
-                    )
+            pending_supersedes = resolve_supersede_targets(self, checked_plan, observed)
 
             pending: dict[str, list[dict[str, Any]]] = {
                 "facts": [],
