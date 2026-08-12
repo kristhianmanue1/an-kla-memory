@@ -33,6 +33,7 @@ from .initialization import existing_initialization
 from .storage_primitives import atomic_write, fsync_directory, write_immutable
 from .refute_store_mixin import RefuteStoreMixin
 from .reader_gate import shared_reader_gate
+from .subject_binding import check_subject_ref_binding
 from .supersede import resolve_supersede_targets
 from .transactions import (
     begin_transaction,
@@ -367,6 +368,13 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
             # failure here raises invalid_supersede_target (terminal) with no
             # side effects (no orphan objects, no prepared journal).
             pending_supersedes = resolve_supersede_targets(self, checked_plan, observed)
+
+            # ADR-0033 §Decisión 5 (issue #59 Fase B): validate subject_ref
+            # namespaces against the bound project identity, still under the
+            # write lock and before any object/journal is written. ``binding``
+            # is the snapshot captured by mutation_preflight and revalidated by
+            # assert_unchanged; the guard never re-reads project identity.
+            check_subject_ref_binding(checked_plan, binding)
 
             pending: dict[str, list[dict[str, Any]]] = {
                 "facts": [],
