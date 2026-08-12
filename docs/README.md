@@ -51,8 +51,9 @@ prospectiva esté implementada; la última columna conserva esa distinción.
 | 0030 | [milestone-checkpoint-obligation-v1](architecture/0030-milestone-checkpoint-obligation-v1.md) | Obligación gobernada de continuidad al cerrar hitos | Propuesta | En reevaluación; sin cambio de contrato ni código |
 | 0031 | [agent-owned-memory-host-managed-v1](architecture/0031-agent-owned-memory-host-managed-v1.md) | Memoria del agente con alcance de proyecto y perfil host-managed | Aceptada | Reconocido host-managed como perfil soportado; G1 (observabilidad) no iniciado |
 | 0032 | [derived-contextual-view-v1](architecture/0032-derived-contextual-view-v1.md) | Vista contextual vigente derivada, non-authoritative, sobre sustrato de afirmaciones | Aceptada | Decisión documental; vista y `subject_ref` no iniciados (G-SUBJECT/G-VIEW pendientes) |
+| 0033 | [subject-ref-v1](architecture/0033-subject-ref-v1.md) | Identidad contextual estable `subject_ref`, namespace derivado de project identity y binding bajo lock | Aceptada | Decisión documental aprobada por ronda adversarial; implementación G-SUBJECT pendiente |
 
-Resumen: **32 ADRs**, sin huecos; **30 aceptadas** y **2 propuestas**. No hay
+Resumen: **33 ADRs**, sin huecos; **31 aceptadas** y **2 propuestas**. No hay
 ADRs rechazadas ni reemplazadas en el registro actual.
 
 ### Documentación normativa
