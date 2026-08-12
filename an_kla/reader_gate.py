@@ -40,13 +40,19 @@ def _open_gate(path: Path) -> BinaryIO:
     nofollow = getattr(os, "O_NOFOLLOW", None)
     if nofollow is None:
         raise ReaderGateError("reader_gate_platform_unsafe")
-    descriptor = os.open(path, flags | nofollow, 0o600)
+    try:
+        descriptor = os.open(path, flags | nofollow, 0o600)
+    except OSError as exc:
+        raise ReaderGateError("reader_gate_unavailable") from exc
     try:
         info = os.fstat(descriptor)
         if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
             raise ReaderGateError("reader_gate_unsafe_file")
         os.fchmod(descriptor, 0o600)
         return os.fdopen(descriptor, "r+b")
+    except OSError as exc:
+        os.close(descriptor)
+        raise ReaderGateError("reader_gate_unavailable") from exc
     except Exception:
         os.close(descriptor)
         raise
@@ -76,7 +82,10 @@ def shared_reader_gate(store: Any) -> Iterator[None]:
         return
     path = store.root / ".reader-gate"
     with _open_gate(path) as handle:
-        fcntl.flock(handle.fileno(), fcntl.LOCK_SH)
+        try:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_SH)
+        except OSError as exc:
+            raise ReaderGateError("reader_gate_unavailable") from exc
         states[key] = {"mode": "shared", "depth": 1}
         try:
             yield
