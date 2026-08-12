@@ -62,6 +62,7 @@ SCHEMA_FILES = {
     "restore-result-v1": "restore-result-v1.schema.json",
     "project-identity-v1": "project-identity-v1.schema.json",
     "store-identity-v1": "store-identity-v1.schema.json",
+    "subject-namespace-result-v1": "subject-namespace-result-v1.schema.json",
     "transaction-attempt-v1": "transaction-attempt-v1.schema.json",
     "transaction-archived-v1": "transaction-archived-v1.schema.json",
     "upgrade-plan-v1": "upgrade-plan-v1.schema.json",

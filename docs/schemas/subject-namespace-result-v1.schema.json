@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:subject-namespace-result:v1",
+  "title": "AN-KLA SubjectNamespaceResult v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "result", "namespace"],
+  "properties": {
+    "schema": {"const": "an-kla/subject-namespace-result-v1"},
+    "result": {"enum": ["namespace_available", "namespace_unavailable"]},
+    "namespace": {"type": ["string", "null"]}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"result": {"const": "namespace_available"}}, "required": ["result"]},
+      "then": {"properties": {"namespace": {"type": "string", "pattern": "^p-[0-9a-f]{32}$"}}}
+    },
+    {
+      "if": {"properties": {"result": {"const": "namespace_unavailable"}}, "required": ["result"]},
+      "then": {"properties": {"namespace": {"type": "null"}}}
+    }
+  ]
+}

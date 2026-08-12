@@ -70,6 +70,7 @@ class InstalledSchemaTests(unittest.TestCase):
         "revision-v2",
         "revision-v3",
         "store-identity-v1",
+        "subject-namespace-result-v1",
         "transaction-archived-v1",
         "transaction-attempt-v1",
         "upgrade-plan-v1",
@@ -241,6 +242,57 @@ class AgentCapabilityTests(unittest.TestCase):
                 schema_show_run.stdout, schema_bytes("write-proposal-v1")
             )
             self.assertFalse((root / ".an-kla").exists())
+
+
+class SubjectNamespaceSchemaTests(unittest.TestCase):
+    def test_schema_catalog_includes_subject_namespace_result_v1(self) -> None:
+        names = schema_names()
+        self.assertIn("subject-namespace-result-v1", names)
+        catalog = schema_catalog()
+        entry = next(
+            item for item in catalog["schemas"]
+            if item["name"] == "subject-namespace-result-v1"
+        )
+        self.assertEqual(
+            entry["id"], "urn:an-kla:schema:subject-namespace-result:v1"
+        )
+        self.assertEqual(
+            entry["sha256"], digest_bytes(schema_bytes("subject-namespace-result-v1"))
+        )
+
+    def test_schema_copies_are_byte_identical(self) -> None:
+        installed = schema_bytes("subject-namespace-result-v1")
+        source = (SOURCE_SCHEMAS / "subject-namespace-result-v1.schema.json").read_bytes()
+        self.assertEqual(installed, source)
+
+    def test_schema_is_closed_with_conditional_namespace(self) -> None:
+        document = schema_document("subject-namespace-result-v1")
+        self.assertFalse(document.get("additionalProperties", True))
+        self.assertEqual(
+            document["properties"]["schema"]["const"],
+            "an-kla/subject-namespace-result-v1",
+        )
+        self.assertEqual(
+            document["properties"]["result"]["enum"],
+            ["namespace_available", "namespace_unavailable"],
+        )
+        branches = {
+            branch["if"]["properties"]["result"]["const"]: branch
+            for branch in document["allOf"]
+        }
+        self.assertEqual(
+            set(branches),
+            {"namespace_available", "namespace_unavailable"},
+        )
+        self.assertEqual(
+            branches["namespace_available"]["then"]["properties"]["namespace"]["pattern"],
+            "^p-[0-9a-f]{32}$",
+        )
+        self.assertEqual(
+            branches["namespace_unavailable"]["then"]["properties"]["namespace"]["type"],
+            "null",
+        )
+        self.assertNotIn("project_identity_sha256", document["properties"])
 
 
 if __name__ == "__main__":

@@ -29,6 +29,7 @@ from .retrieval import SCAN_PROFILE, retrieve
 from .resume import resume
 from .schemas import schema_bytes, schema_catalog
 from .store import ConcurrentUpdateError, MemoryStore, StoreError
+from .subject import resolve_namespace
 from .temporal import FRESHNESS_PROFILE, parse_freshness_now
 from .transactions import TransactionError
 from .update_check import check_for_update
@@ -270,6 +271,15 @@ def _run() -> None:
         "check-updates",
         help="Verificar (sin aplicar) si hay una versión más reciente publicada.",
     )
+    subject_cmd = sub.add_parser(
+        "subject",
+        help="Resolver el namespace contextual del proyecto.",
+    )
+    subject_sub = subject_cmd.add_subparsers(dest="subject_command", required=True)
+    subject_sub.add_parser(
+        "namespace",
+        help="Devolver el namespace para subject_ref; fail-closed si la identidad no está complete.",
+    )
     args = parser.parse_args()
 
     if args.command == "check-updates":
@@ -389,6 +399,8 @@ def _run() -> None:
             result = repair(store, _json(args.plan))
         else:
             result = adopt(store, _json(args.plan), args.expected_current)
+    elif args.command == "subject":
+        result = resolve_namespace(store)
     elif args.command == "checkpoint":
         if args.checkpoint_command == "show":
             result = show_checkpoint(store)
@@ -474,6 +486,7 @@ def _run() -> None:
         "resume",
         "refute",
         "schema",
+        "subject",
         "transaction",
         "upgrade",
     }:
@@ -515,6 +528,12 @@ def _run() -> None:
         args.command == "commit-write-plan"
         and isinstance(result.get("outcome"), dict)
         and result["outcome"].get("committed") is not True
+    ):
+        raise SystemExit(3)
+    if (
+        args.command == "subject"
+        and args.subject_command == "namespace"
+        and result.get("result") == "namespace_unavailable"
     ):
         raise SystemExit(3)
 
