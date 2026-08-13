@@ -152,7 +152,7 @@ def main() -> int:
             raise SystemExit("beta12_upgrade_missing_revision")
 
         _run([str(python), "-m", "pip", "install", "--no-deps", "--upgrade", str(candidate_wheel)])
-        if _run([str(cli), "--version"]).stdout.decode().strip() != "an-kla-memory 0.1.0b13":
+        if _run([str(cli), "--version"]).stdout.decode().strip() != "an-kla-memory 0.1.0b14":
             raise SystemExit("beta12_upgrade_wrong_candidate_version")
         after = json.loads(_run([*command, "verify"]).stdout)
         if after.get("ok") is not True or after.get("revision") != revision:
@@ -186,7 +186,7 @@ def main() -> int:
 
     print(
         "check_beta12_upgrade: OK — subject_ref, revisión, id y texto beta.12 "
-        "preservados y servidos por G-VIEW válido desde wheel candidato 0.1.0b13"
+        "preservados y servidos por G-VIEW válido desde wheel candidato 0.1.0b14"
     )
     return 0
 

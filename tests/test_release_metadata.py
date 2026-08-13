@@ -71,7 +71,7 @@ class ReleaseMetadataTests(unittest.TestCase):
         payload = (ROOT / "README.md").read_text(encoding="utf-8")
         required = (
             "python3.12 -m venv .venv",
-            "git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.13",
+            "git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.14",
             "-m an_kla --version",
             "context plan --operation install",
             "context plan --operation update",
