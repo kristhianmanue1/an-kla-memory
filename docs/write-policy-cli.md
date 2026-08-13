@@ -139,8 +139,88 @@ la misma revisión y el alcance exacto. Un agente por CLI puede usar
 `model_derived` o `derived_from_retrieval`; ambas clases quedan limitadas a
 `summary` por la política vigente.
 
+Ejemplo mínimo para la propuesta anterior, usando `model_derived`:
+
+```json
+{
+  "schema": "an-kla/write-authority-v1",
+  "proposal_sha256": "sha256:PROPOSAL_SHA256",
+  "base_revision": "sha256:REVISION_ACTUAL",
+  "authority_class": "model_derived",
+  "issuer": {
+    "kind": "model",
+    "id": "agent-local",
+    "configuration_fingerprint": "sha256:ISSUER_CONFIG_SHA256"
+  },
+  "evidence": [],
+  "scope": {
+    "streams": ["facts"],
+    "representations": ["summary"],
+    "operations": ["add"]
+  }
+}
+```
+
+Los tres valores en mayúsculas son marcadores documentales, no digests válidos.
+`base_revision` debe repetir exactamente `revision` de `status` y
+`proposal_sha256` es `digest_json()` del objeto JSON parseado, no el hash del
+archivo ni del texto pretty-printed:
+
+```bash
+.venv/bin/python - <<'PY'
+import json
+from pathlib import Path
+from an_kla.canonical import digest_json
+
+proposal = json.loads(Path("proposal.json").read_text(encoding="utf-8"))
+issuer_config = json.loads(
+    Path("issuer-config.json").read_text(encoding="utf-8")
+)
+print("proposal_sha256=", digest_json(proposal), sep="")
+print("configuration_fingerprint=", digest_json(issuer_config), sep="")
+PY
+```
+
+`issuer-config.json` es configuración **saneada y propiedad del caller/host**:
+describe la configuración real que identifica al issuer (por ejemplo kind, id y
+perfil local), sin secretos, rutas privadas ni credenciales. AN-KLA sólo exige
+un digest bien formado en esta superficie: el fingerprint liga la declaración,
+pero no prueba identidad, no concede autoridad y no debe sustituirse por ceros o
+un valor arbitrario para “hacer pasar” el schema.
+
+Un caller manual podría declarar, por ejemplo, este objeto propio —no es un
+schema normativo de AN-KLA— y conservarlo junto a su configuración local:
+
+```json
+{
+  "kind": "model",
+  "id": "agent-local",
+  "profile": "manual-cli/v1"
+}
+```
+
 Los objetos normativos completos se describen en
-[ADR-0007](architecture/0007-write-policy-v1.md) y en `docs/schemas/`.
+[ADR-0007](architecture/0007-write-policy-v1.md). Inspecciona sus schemas sin
+leer memoria:
+
+```bash
+.venv/bin/python -m an_kla schema show write-proposal-v1
+.venv/bin/python -m an_kla schema show write-authority-v1
+```
+
+## Recorrido mínimo completo
+
+1. Ejecuta `status` y copia su `revision` exacta a `proposal.json` y
+   `authority.json`.
+2. Termina `proposal.json`; después calcula su `proposal_sha256` canónico.
+3. Define y conserva la configuración saneada del issuer, calcula su
+   fingerprint y termina `authority.json` con scope exacto.
+4. Elige una ruta nueva y privada para el planning result.
+5. Ejecuta `plan-write`, revisa el JSON y entrégalo sin reconstruir a
+   `commit-write-plan` junto con los mismos proposal/authority/revisión.
+6. Comprueba el outcome y vuelve a ejecutar `status`.
+
+Los schemas también están versionados en `docs/schemas/`.
 
 ## Planificar sin mutación
 
@@ -191,6 +271,21 @@ La envolvente también liga `current_revision` al valor de
 `--expected-current`. Aunque la revisión ya está incluida en el plan, el CLI no
 ignora ni acepta una copia exterior alterada.
 
+### Varias escrituras
+
+Cada commit exitoso mueve `CURRENT`. No prepares un batch completo contra una
+sola revisión: el segundo plan quedará obsoleto. Ejecuta cada elemento de forma
+secuencial:
+
+```text
+status → proposal/authority → plan-write → commit-write-plan → verificar outcome
+       → status nuevo → siguiente proposal/authority → plan-write → commit…
+```
+
+`write_plan_base_changed (refresh_status_and_replan)` indica que debes descartar
+el planning result obsoleto, releer `status` y construir un plan nuevo. No
+edites el plan viejo ni fuerces `expected-current`.
+
 ## Frontera de autoridad del CLI
 
 Un archivo JSON no demuestra que una herramienta observó algo ni que otro
@@ -206,7 +301,9 @@ de resolver autoridad desde configuración y estado externos al candidato. Esta
 beta no afirma identidad criptográfica.
 
 Los fallos al leer JSON se devuelven como `input_json_unreadable` o
-`input_json_invalid`; no incluyen rutas absolutas ni contenido candidato.
+`input_json_invalid`. En `plan-write`/`commit-write-plan` pueden añadir el rol
+saneado `proposal`, `authority` o `planning_result`; nunca incluyen la ruta
+absoluta ni el contenido candidato.
 
 ## API interna
 

@@ -45,18 +45,22 @@ from .version import VERSION
 
 
 class CliUsageError(ValueError):
-    pass
+    """Stable CLI input error with an optional, sanitized input role."""
+
+    def __init__(self, code: str, detail: str | None = None) -> None:
+        super().__init__(code)
+        self.detail = detail
 
 
-def _json(path: str) -> Any:
+def _json(path: str, *, role: str | None = None) -> Any:
     try:
         payload = Path(path).read_text(encoding="utf-8")
     except (OSError, UnicodeError):
-        raise CliUsageError("input_json_unreadable") from None
+        raise CliUsageError("input_json_unreadable", role) from None
     try:
         return json.loads(payload)
     except json.JSONDecodeError:
-        raise CliUsageError("input_json_invalid") from None
+        raise CliUsageError("input_json_invalid", role) from None
 
 
 def _cli_authority(value: Any) -> Any:
@@ -153,18 +157,65 @@ def _run() -> None:
     reference_benchmark_cmd = sub.add_parser("benchmark-reference")
     reference_benchmark_cmd.add_argument("--measure-latency", action="store_true")
     plan_write_cmd = sub.add_parser(
-        "plan-write", help="Planificar sin mutar; autoridad privilegiada requiere adaptador externo."
+        "plan-write",
+        help="Planificar sin mutar; autoridad privilegiada requiere adaptador externo.",
+        description=(
+            "Validar write-proposal-v1 + write-authority-v1 y emitir el "
+            "planning result exacto sin mutar la memoria."
+        ),
+        epilog=(
+            "Obtén base_revision con `status`; guarda stdout en un archivo "
+            "efímero nuevo y privado. Consulta docs/write-policy-cli.md."
+        ),
+        formatter_class=argparse.RawTextHelpFormatter,
     )
-    plan_write_cmd.add_argument("--proposal", required=True)
-    plan_write_cmd.add_argument("--authority", required=True)
+    plan_write_cmd.add_argument(
+        "--proposal",
+        required=True,
+        help="Archivo JSON con schema an-kla/write-proposal-v1.",
+    )
+    plan_write_cmd.add_argument(
+        "--authority",
+        required=True,
+        help="Archivo JSON con schema an-kla/write-authority-v1.",
+    )
     commit_plan_cmd = sub.add_parser(
-        "commit-write-plan", help="Revalidar y escribir un plan exacto bajo el lock."
+        "commit-write-plan",
+        help="Revalidar y escribir un plan exacto bajo el lock.",
+        description=(
+            "Consumir proposal, authority y planning result exactos; revalidar "
+            "CURRENT bajo lock antes de escribir."
+        ),
+        epilog=(
+            "Cada commit mueve CURRENT: para otra escritura relee `status` y "
+            "vuelve a planificar. Consulta docs/write-policy-cli.md."
+        ),
+        formatter_class=argparse.RawTextHelpFormatter,
     )
-    commit_plan_cmd.add_argument("--expected-current", required=True)
-    commit_plan_cmd.add_argument("--proposal", required=True)
-    commit_plan_cmd.add_argument("--authority", required=True)
-    commit_plan_cmd.add_argument("--planning-result", required=True)
-    commit_plan_cmd.add_argument("--transaction-id")
+    commit_plan_cmd.add_argument(
+        "--expected-current",
+        required=True,
+        help="Digest revision obtenido de status antes de planificar.",
+    )
+    commit_plan_cmd.add_argument(
+        "--proposal",
+        required=True,
+        help="Mismo archivo write-proposal-v1 usado al planificar.",
+    )
+    commit_plan_cmd.add_argument(
+        "--authority",
+        required=True,
+        help="Mismo archivo write-authority-v1 usado al planificar.",
+    )
+    commit_plan_cmd.add_argument(
+        "--planning-result",
+        required=True,
+        help="stdout exacto de plan-write, guardado sin reconstruirlo.",
+    )
+    commit_plan_cmd.add_argument(
+        "--transaction-id",
+        help="UUID opcional del caller para inspección idempotente del outcome.",
+    )
     transaction_cmd = sub.add_parser(
         "transaction", help="Inspeccionar outcomes por transaction id."
     )
@@ -510,17 +561,18 @@ def _run() -> None:
         result = run_reference_benchmark(measure_latency=args.measure_latency)
     elif args.command == "plan-write":
         result = store.plan_write(
-            _json(args.proposal),
-            _cli_authority(_json(args.authority)),
+            _json(args.proposal, role="proposal"),
+            _cli_authority(_json(args.authority, role="authority")),
         )
     else:
         decision, plan = _planning_result(
-            _json(args.planning_result), args.expected_current
+            _json(args.planning_result, role="planning_result"),
+            args.expected_current,
         )
         result = store.commit_write_plan(
             expected_current_hash=args.expected_current,
-            proposal=_json(args.proposal),
-            authority=_cli_authority(_json(args.authority)),
+            proposal=_json(args.proposal, role="proposal"),
+            authority=_cli_authority(_json(args.authority, role="authority")),
             decision=decision,
             plan=plan,
             transaction_id=args.transaction_id,
@@ -597,13 +649,16 @@ def main() -> None:
     try:
         _run()
     except CliUsageError as exc:
-        sys.stderr.write(f"an-kla error: {exc}\n")
+        suffix = f" ({exc.detail})" if exc.detail else ""
+        sys.stderr.write(f"an-kla error: {exc}{suffix}\n")
         raise SystemExit(2)
     except (CheckpointPolicyError, CompactionError, ExportError, StoreError, ConcurrentUpdateError, IdentityError, TransactionError, ValueError, OSError) as exc:
         if isinstance(exc, TransactionError) and str(exc) == "invalid_transaction_id":
             sys.stderr.write("an-kla error: invalid_transaction_id\n")
             raise SystemExit(2)
         detail = getattr(exc, "detail", None)
+        if str(exc) == "write_plan_base_changed" and detail is None:
+            detail = "refresh_status_and_replan"
         suffix = f" ({detail})" if detail else ""
         raise SystemExit(f"an-kla error: {exc}{suffix}")
 
