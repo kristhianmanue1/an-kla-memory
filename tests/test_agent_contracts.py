@@ -9,6 +9,23 @@ import unittest
 
 from an_kla import VERSION, capabilities
 from an_kla.canonical import canonical_json, digest_bytes
+from an_kla.context_view import (
+    CONTRACT_VERSION as VIEW_CONTRACT_VERSION,
+    DEFAULT_BUDGET_BYTES as VIEW_DEFAULT_BUDGET_BYTES,
+    DEFAULT_LIMIT as VIEW_DEFAULT_LIMIT,
+    DEFAULT_STREAMS as VIEW_DEFAULT_STREAMS,
+    ERROR_CODES as VIEW_ERROR_CODES,
+    ERROR_SCHEMA as VIEW_ERROR_SCHEMA,
+    MAX_BUDGET_BYTES as VIEW_MAX_BUDGET_BYTES,
+    MAX_CURSOR_CHARS as VIEW_MAX_CURSOR_CHARS,
+    OPERATION as VIEW_OPERATION,
+    PROFILE as VIEW_PROFILE,
+    PROJECTIONS as VIEW_PROJECTIONS,
+    READ_COORDINATION_SIDE_EFFECT as VIEW_READ_COORDINATION_SIDE_EFFECT,
+    SUCCESS_SCHEMA as VIEW_SUCCESS_SCHEMA,
+    SURFACES as VIEW_SURFACES,
+    WARNING_CODES as VIEW_WARNING_CODES,
+)
 from an_kla.schemas import schema_bytes, schema_catalog, schema_document, schema_names
 from an_kla.write_policy import policy_configuration, policy_fingerprint
 
@@ -176,6 +193,39 @@ class InstalledSchemaTests(unittest.TestCase):
 
 
 class AgentCapabilityTests(unittest.TestCase):
+    expected_view = {
+        "profile": VIEW_PROFILE,
+        "contract_version": VIEW_CONTRACT_VERSION,
+        "canonicality": "non-authoritative",
+        "untrusted_memory_data": True,
+        "requires_explicit_revision": True,
+        "resolves_current": False,
+        "operations": [VIEW_OPERATION],
+        "surfaces": dict(VIEW_SURFACES),
+        "schemas": {
+            "success": VIEW_SUCCESS_SCHEMA,
+            "error": VIEW_ERROR_SCHEMA,
+        },
+        "projections": list(VIEW_PROJECTIONS),
+        "default_streams": list(VIEW_DEFAULT_STREAMS),
+        "limits": {
+            "default_limit": VIEW_DEFAULT_LIMIT,
+            "default_budget_bytes": VIEW_DEFAULT_BUDGET_BYTES,
+            "maximum_budget_bytes": VIEW_MAX_BUDGET_BYTES,
+            "maximum_cursor_chars": VIEW_MAX_CURSOR_CHARS,
+            "subject_atomic_pagination": True,
+        },
+        "purity": {
+            "level": "L2",
+            "substrate_mutation": False,
+            "write_lock": False,
+            "persistent_cache": False,
+        },
+        "read_coordination_side_effect": VIEW_READ_COORDINATION_SIDE_EFFECT,
+        "warnings": list(VIEW_WARNING_CODES),
+        "terminal_codes": list(VIEW_ERROR_CODES),
+    }
+
     def test_capabilities_are_deterministic_and_describe_facts_only_v1(self) -> None:
         first = capabilities()
         second = capabilities()
@@ -208,6 +258,60 @@ class AgentCapabilityTests(unittest.TestCase):
         self.assertEqual(
             [item["name"] for item in first["schemas"]], list(schema_names())
         )
+        self.assertEqual(first["view"], self.expected_view)
+
+    def test_view_capability_is_unshared_and_does_not_observe_project_data(self) -> None:
+        subject_kinds = {
+            "actor", "api", "decision", "dependency", "doc", "environment",
+            "integration", "issue", "project", "service", "system",
+        }
+        first = capabilities()
+        first["view"]["projections"].append("MUTATED")
+        first["view"]["terminal_codes"].clear()
+        second = capabilities()
+        self.assertEqual(second["view"], self.expected_view)
+        def walk(value: object) -> None:
+            if isinstance(value, dict):
+                for key, nested in value.items():
+                    self.assertNotIn("namespace", key.lower())
+                    self.assertNotIn("kind", key.lower())
+                    walk(nested)
+            elif isinstance(value, list):
+                for nested in value:
+                    walk(nested)
+            elif isinstance(value, str):
+                if value == "multiple_namespaces_observed":
+                    return
+                self.assertNotIn(value, subject_kinds)
+                self.assertNotIn("an-kla:subject:v1:", value)
+                self.assertNotRegex(value, r"^p-[0-9a-f]{32}$")
+                self.assertNotIn("actor|api|decision", value)
+
+        walk(second["view"])
+
+    def test_view_discovery_constants_match_normative_contract(self) -> None:
+        self.assertEqual(VIEW_PROFILE, "derived-context-view/v1")
+        self.assertEqual(VIEW_OPERATION, "context")
+        self.assertEqual(
+            dict(VIEW_SURFACES),
+            {"cli": "view context", "mcp": "an_kla_view_context"},
+        )
+        self.assertEqual(
+            VIEW_WARNING_CODES,
+            ("legacy_records_without_subject_ref", "multiple_namespaces_observed"),
+        )
+        success_schema = schema_document("context-view-v1")
+        schema_warnings = tuple(
+            success_schema["properties"]["warnings"]["items"]["enum"]
+        )
+        self.assertEqual(VIEW_WARNING_CODES, schema_warnings)
+        error_schema = schema_document("view-error-v1")
+        schema_codes = tuple(
+            branch["properties"]["code"]["const"]
+            for branch in error_schema["oneOf"]
+        )
+        self.assertEqual(set(VIEW_ERROR_CODES), set(schema_codes))
+        self.assertEqual(len(VIEW_ERROR_CODES), len(schema_codes))
 
     def test_discovery_cli_is_canonical_and_does_not_create_project_state(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -336,7 +440,7 @@ class RecordValidatorsCapabilityTests(unittest.TestCase):
         serialized = canonical_json(cap).decode("utf-8")
         self.assertNotIn("subject_view", serialized)
         self.assertNotIn("subject_kinds", serialized)
-        self.assertNotIn("namespaces", serialized)
+        self.assertNotIn('"namespaces":', serialized)
         self.assertNotIn("an-kla:subject:v1:", serialized)
         self.assertNotIn("actor|api|decision", serialized)
         self.assertNotIn("p-[0-9a-f]{32}", serialized)

@@ -6,6 +6,23 @@ from typing import Any
 
 from .index import INDEX_PROFILE
 from .compaction_contracts import policy_fingerprint as compaction_policy_fingerprint
+from .context_view import (
+    CONTRACT_VERSION as VIEW_CONTRACT_VERSION,
+    DEFAULT_BUDGET_BYTES as VIEW_DEFAULT_BUDGET_BYTES,
+    DEFAULT_LIMIT as VIEW_DEFAULT_LIMIT,
+    DEFAULT_STREAMS as VIEW_DEFAULT_STREAMS,
+    ERROR_CODES as VIEW_ERROR_CODES,
+    ERROR_SCHEMA as VIEW_ERROR_SCHEMA,
+    MAX_BUDGET_BYTES as VIEW_MAX_BUDGET_BYTES,
+    MAX_CURSOR_CHARS as VIEW_MAX_CURSOR_CHARS,
+    OPERATION as VIEW_OPERATION,
+    PROFILE as VIEW_PROFILE,
+    PROJECTIONS as VIEW_PROJECTIONS,
+    READ_COORDINATION_SIDE_EFFECT as VIEW_READ_COORDINATION_SIDE_EFFECT,
+    SUCCESS_SCHEMA as VIEW_SUCCESS_SCHEMA,
+    SURFACES as VIEW_SURFACES,
+    WARNING_CODES as VIEW_WARNING_CODES,
+)
 from .mcp import PROTOCOL_VERSION, ReadOnlyMcp
 from .retrieval import SCAN_PROFILE
 from .refute_policy import (
@@ -132,6 +149,38 @@ def capabilities() -> dict[str, Any]:
                 "reference_index_states": ["absent", "fresh", "corrupt", "stale"],
                 "ranking_change_authorized": False,
             },
+        },
+        "view": {
+            "profile": VIEW_PROFILE,
+            "contract_version": VIEW_CONTRACT_VERSION,
+            "canonicality": "non-authoritative",
+            "untrusted_memory_data": True,
+            "requires_explicit_revision": True,
+            "resolves_current": False,
+            "operations": [VIEW_OPERATION],
+            "surfaces": dict(VIEW_SURFACES),
+            "schemas": {
+                "success": VIEW_SUCCESS_SCHEMA,
+                "error": VIEW_ERROR_SCHEMA,
+            },
+            "projections": list(VIEW_PROJECTIONS),
+            "default_streams": list(VIEW_DEFAULT_STREAMS),
+            "limits": {
+                "default_limit": VIEW_DEFAULT_LIMIT,
+                "default_budget_bytes": VIEW_DEFAULT_BUDGET_BYTES,
+                "maximum_budget_bytes": VIEW_MAX_BUDGET_BYTES,
+                "maximum_cursor_chars": VIEW_MAX_CURSOR_CHARS,
+                "subject_atomic_pagination": True,
+            },
+            "purity": {
+                "level": "L2",
+                "substrate_mutation": False,
+                "write_lock": False,
+                "persistent_cache": False,
+            },
+            "read_coordination_side_effect": VIEW_READ_COORDINATION_SIDE_EFFECT,
+            "warnings": list(VIEW_WARNING_CODES),
+            "terminal_codes": list(VIEW_ERROR_CODES),
         },
         "cost": {
             "implemented_units": ["utf8_bytes"],
