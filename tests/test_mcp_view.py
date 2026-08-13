@@ -8,6 +8,7 @@ from unittest.mock import patch
 from an_kla.canonical import canonical_json
 from an_kla.context_view import context_view
 from an_kla.mcp import PROTOCOL_VERSION, ReadOnlyMcp
+from an_kla.schemas import schema_document
 from an_kla.store import STREAMS, MemoryStore
 
 
@@ -162,6 +163,61 @@ class McpContextViewTests(unittest.TestCase):
             self.assertTrue(response["result"]["isError"])
             self.assertEqual(payload, {"error": "internal_error"})
             self.assertNotIn("/private/SECRET", json.dumps(response))
+
+    def test_transport_enforces_normative_success_invariants(self) -> None:
+        conflict = self.store.commit(
+            expected_current_hash=self.revision,
+            checkpoint_patch={},
+            facts=[
+                {"id": "f-1", "subject_ref": SUBJECT, "payload": {"text": "one"}},
+                {"id": "f-2", "subject_ref": SUBJECT, "payload": {"text": "two"}},
+            ],
+        )
+        valid = context_view(self.store, revision=conflict)
+        malformed = []
+
+        conflict_false = json.loads(json.dumps(valid))
+        conflict_false["subjects"][0]["data_conflict"] = False
+        malformed.append(conflict_false)
+
+        differs_false = json.loads(json.dumps(valid))
+        differs_false["subjects"][0]["content_differs_beyond_text"] = False
+        malformed.append(differs_false)
+
+        verified_at_non_string = json.loads(json.dumps(valid))
+        verified_at_non_string["subjects"][0]["alternatives"][0]["verified_at"] = 7
+        verified_at_non_string["subjects"][0]["alternatives"][0][
+            "self_asserted_timestamp"
+        ] = True
+        malformed.append(verified_at_non_string)
+
+        incomplete_without_truncation = json.loads(json.dumps(valid))
+        incomplete_without_truncation["pagination"]["complete"] = False
+        incomplete_without_truncation["pagination"]["next_cursor"] = "opaque"
+        incomplete_without_truncation["pagination"]["truncated_subjects"] = 0
+        malformed.append(incomplete_without_truncation)
+
+        fresh = context_view(
+            self.store,
+            revision=conflict,
+            now="2026-08-12T00:00:00.000000Z",
+            stale_after_days=1,
+        )
+        boolean_stale_after_days = json.loads(json.dumps(fresh))
+        boolean_stale_after_days["freshness"]["stale_after_days"] = True
+        malformed.append(boolean_stale_after_days)
+
+        from jsonschema import Draft202012Validator
+
+        validator = Draft202012Validator(schema_document("context-view-v1"))
+        for value in malformed:
+            self.assertFalse(validator.is_valid(value))
+            with self.subTest(value=value), patch(
+                "an_kla.mcp.context_view", return_value=value
+            ):
+                response, payload = self._call({"revision": conflict})
+            self.assertTrue(response["result"]["isError"])
+            self.assertEqual(payload, {"error": "internal_error"})
 
 
 if __name__ == "__main__":

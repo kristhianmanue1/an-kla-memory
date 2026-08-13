@@ -1,7 +1,7 @@
 # ADR-0034: contrato de vista contextual derivada G-VIEW v1
 
 - **Estado:** Aceptada
-- **Implementación:** Parcial; candidatas CORE+CLI+MCP+CAP, sin REL
+- **Implementación:** Completada en candidata `v0.1.0-beta.13`; REL en auditoría
 - **Fecha:** 2026-08-12
 - **Decide sobre:** el contrato observable de G-VIEW v1: revisión, universo,
   confianza, proyecciones, conflicto, orden, cursor, presupuesto, pureza y
