@@ -157,7 +157,10 @@ memoria del proyecto:
 
 `capabilities` emite JSON canónico y declara, entre otros límites, que la
 recuperación v1 busca únicamente `facts` por defecto, que MCP es de sólo lectura
-y que los presupuestos implementados miden bytes UTF-8, no tokens exactos. Los
+y que los presupuestos implementados miden bytes UTF-8, no tokens exactos. El
+bloque `view` descubre el contrato G-VIEW, sus superficies CLI/MCP, proyecciones,
+límites y pureza L2 sin leer memoria; declara que `.reader-gate` puede crearse o
+bloquearse como artefacto de coordinación, sin mutar el sustrato. Los
 schemas normativos se incluyen dentro del paquete y `schema show` entrega
 sus bytes sin depender del checkout ni de la red. `context show-template` vuelca
 el texto canónico del bloque administrado y del contrato detallado de la versión

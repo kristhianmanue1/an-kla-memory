@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 import json
+from types import MappingProxyType
 from typing import Any, Mapping, Sequence
 
 from .canonical import bare_digest, canonical_json, digest_bytes, digest_json, exact_sized_payload
@@ -24,6 +25,9 @@ from .temporal import (
 
 
 CONTRACT_VERSION = "g-view/v1"
+PROFILE = "derived-context-view/v1"
+OPERATION = "context"
+SURFACES = MappingProxyType({"cli": "view context", "mcp": "an_kla_view_context"})
 SUCCESS_SCHEMA = "an-kla/context-view-v1"
 ERROR_SCHEMA = "an-kla/view-error-v1"
 PROJECTIONS = ("metadata", "text", "full")
@@ -32,6 +36,23 @@ DEFAULT_LIMIT = 50
 DEFAULT_BUDGET_BYTES = 65536
 MAX_BUDGET_BYTES = 1_000_000_000
 MAX_CURSOR_CHARS = 16_384
+READ_COORDINATION_SIDE_EFFECT = ".reader-gate (may be created/locked, no substrate mutation)"
+WARNING_CODES = (
+    "legacy_records_without_subject_ref",
+    "multiple_namespaces_observed",
+)
+ERROR_CODES = (
+    "view_invalid_inputs",
+    "view_revision_not_available",
+    "view_invalid_subject_ref_in_revision",
+    "view_rule_ambiguous",
+    "view_cursor_invalid",
+    "view_envelope_exceeds_budget",
+    "view_subject_exceeds_budget",
+    "view_budget_measurement_unavailable",
+    "view_reader_gate_unavailable",
+    "view_internal_error",
+)
 _MISSING = object()
 
 
@@ -301,9 +322,9 @@ def _derive(snapshot: Snapshot, streams: tuple[str, ...], subject_filter: str | 
         subjects.append(subject_out)
     warnings = []
     if any(missing.values()):
-        warnings.append("legacy_records_without_subject_ref")
+        warnings.append(WARNING_CODES[0])
     if len(namespaces) > 1:
-        warnings.append("multiple_namespaces_observed")
+        warnings.append(WARNING_CODES[1])
     return subjects, missing, warnings
 
 
@@ -512,10 +533,17 @@ __all__ = [
     "ContextViewError",
     "DEFAULT_BUDGET_BYTES",
     "DEFAULT_LIMIT",
+    "DEFAULT_STREAMS",
+    "ERROR_CODES",
     "ERROR_SCHEMA",
     "MAX_BUDGET_BYTES",
     "MAX_CURSOR_CHARS",
+    "OPERATION",
+    "PROFILE",
     "PROJECTIONS",
+    "READ_COORDINATION_SIDE_EFFECT",
     "SUCCESS_SCHEMA",
+    "SURFACES",
+    "WARNING_CODES",
     "context_view",
 ]

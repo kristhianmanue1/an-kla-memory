@@ -180,6 +180,30 @@ class ContextViewCoreTests(unittest.TestCase):
         self.assertEqual(output["code"], "view_invalid_inputs")
         self.assertEqual(output["detail"], "subject_filter")
 
+    def test_multiple_namespace_warning_uses_filtered_universe_not_page(self):
+        other_namespace = "p-" + "3" * 32
+        rows = [fact("f-a", "a", "A"), fact("f-b", "b", "B")]
+        rows[1]["subject_ref"] = f"an-kla:subject:v1:service:{other_namespace}:b"
+        output = context_view(
+            FakeStore({"facts": rows}), revision=REVISION,
+            streams=["facts"], limit=1, budget_bytes=20_000,
+        )
+        self.assertEqual(output["warnings"], ["multiple_namespaces_observed"])
+        self.assertEqual(len(output["subjects"]), 1)
+
+        filtered = context_view(
+            FakeStore({"facts": rows}), revision=REVISION,
+            streams=["events"], limit=1, budget_bytes=20_000,
+        )
+        self.assertEqual(filtered["warnings"], [])
+
+        exact = context_view(
+            FakeStore({"facts": rows}), revision=REVISION,
+            streams=["facts"], subject_filter=subject("a"),
+            limit=1, budget_bytes=20_000,
+        )
+        self.assertEqual(exact["warnings"], [])
+
     def test_full_projection_requires_exact_filter_and_preserves_raw(self):
         row = fact("f-a", "svc", "secret")
         output = context_view(

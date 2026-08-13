@@ -13,10 +13,13 @@ from .context import assemble_context
 from .context_view import (
     DEFAULT_BUDGET_BYTES as VIEW_DEFAULT_BUDGET_BYTES,
     DEFAULT_LIMIT as VIEW_DEFAULT_LIMIT,
+    ERROR_CODES as VIEW_ERROR_CODES,
     ERROR_SCHEMA as VIEW_ERROR_SCHEMA,
     MAX_BUDGET_BYTES as VIEW_MAX_BUDGET_BYTES,
     MAX_CURSOR_CHARS as VIEW_MAX_CURSOR_CHARS,
     PROJECTIONS as VIEW_PROJECTIONS,
+    SURFACES as VIEW_SURFACES,
+    WARNING_CODES as VIEW_WARNING_CODES,
     context_view,
 )
 from .retrieval import retrieve
@@ -45,12 +48,7 @@ SAFE_ERROR_CODES = frozenset({
     "budget_too_small_for_required_context",
     "invalid_freshness_now", "invalid_stale_after_days",
     "freshness_profile_required", "unsupported_freshness_profile",
-    "view_invalid_inputs", "view_revision_not_available",
-    "view_invalid_subject_ref_in_revision", "view_rule_ambiguous",
-    "view_cursor_invalid", "view_envelope_exceeds_budget",
-    "view_subject_exceeds_budget", "view_budget_measurement_unavailable",
-    "view_reader_gate_unavailable", "view_internal_error",
-})
+}) | frozenset(VIEW_ERROR_CODES)
 
 
 def _json(value: Any) -> str:
@@ -208,7 +206,7 @@ def _validate_view_result(value: Any) -> bool:
     if (
         not isinstance(warnings, list)
         or len(warnings) != len(set(warnings))
-        or any(item not in {"legacy_records_without_subject_ref", "multiple_namespaces_observed"} for item in warnings)
+        or any(item not in VIEW_WARNING_CODES for item in warnings)
         or not isinstance(value["subjects"], list)
     ):
         raise ValueError("internal_error")
@@ -425,7 +423,7 @@ class ReadOnlyMcp:
             {"name": "an_kla_get_checkpoint", "description": "Checkpoint como datos no confiables.", "inputSchema": empty},
             {"name": "an_kla_retrieve", "description": "Recupera datos no confiables bajo presupuesto UTF-8 exacto.", "inputSchema": {"type":"object","properties":{"query":{"type":"string"},"budget_bytes":{"type":"integer","minimum":0}, **freshness},"required":["query","budget_bytes"],"additionalProperties":False}},
             {"name": "an_kla_assemble_context", "description": "Ensambla checkpoint, información nueva y memoria bajo un presupuesto UTF-8 global.", "inputSchema": {"type":"object","properties":{"query":{"type":"string"},"budget_bytes":{"type":"integer","minimum":0},"new_information":{"type":"string"}, **freshness},"required":["query","budget_bytes"],"additionalProperties":False}},
-            {"name": "an_kla_view_context", "description": "Proyecta una vista contextual non-authoritative sobre una revisión fijada.", "inputSchema": view},
+            {"name": VIEW_SURFACES["mcp"], "description": "Proyecta una vista contextual non-authoritative sobre una revisión fijada.", "inputSchema": view},
         ]
 
     @staticmethod
@@ -511,7 +509,7 @@ class ReadOnlyMcp:
                 new_information=arguments.get("new_information"),
                 freshness_profile=profile, now=now, stale_after_days=threshold,
             )
-        if name == "an_kla_view_context":
+        if name == VIEW_SURFACES["mcp"]:
             allowed = {
                 "revision", "streams", "subject_filter", "projection", "limit",
                 "budget_bytes", "cursor", "now", "stale_after_days",
@@ -559,7 +557,7 @@ class ReadOnlyMcp:
                 value = self.call(str(params.get("name", "")), params.get("arguments", {}))
                 is_error = (
                     _validate_view_result(value)
-                    if params.get("name") == "an_kla_view_context"
+                    if params.get("name") == VIEW_SURFACES["mcp"]
                     else False
                 )
                 return {"jsonrpc":"2.0","id":request_id,"result":{"content":[{"type":"text","text":_json(value)}],"isError":is_error}}
