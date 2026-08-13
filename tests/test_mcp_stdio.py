@@ -24,7 +24,7 @@ class McpStdioTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as project_root:
             store = MemoryStore(project_root)
             root = store.initialize()
-            store.commit(expected_current_hash=root, checkpoint_patch={}, facts=[
+            revision = store.commit(expected_current_hash=root, checkpoint_patch={}, facts=[
                 {"id": "f-001", "payload": {"text": "memoria por stdio"}},
             ])
             messages = [
@@ -32,6 +32,7 @@ class McpStdioTests(unittest.TestCase):
                 {"jsonrpc": "2.0", "method": "notifications/initialized"},
                 {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
                 {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "an_kla_retrieve", "arguments": {"query": "memoria", "budget_bytes": 400}}},
+                {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "an_kla_view_context", "arguments": {"revision": revision}}},
             ]
             env = dict(os.environ)
             env["PYTHONPYCACHEPREFIX"] = str(Path(tempfile.gettempdir()) / "an-kla-pycache")
@@ -46,11 +47,15 @@ class McpStdioTests(unittest.TestCase):
                 timeout=10,
             )
             replies = [json.loads(line) for line in process.stdout.splitlines()]
-            self.assertEqual([reply["id"] for reply in replies], [1, 2, 3])
+            self.assertEqual([reply["id"] for reply in replies], [1, 2, 3, 4])
             self.assertEqual(replies[0]["result"]["protocolVersion"], PROTOCOL_VERSION)
             self.assertIn("an_kla_retrieve", [tool["name"] for tool in replies[1]["result"]["tools"]])
             payload = json.loads(replies[2]["result"]["content"][0]["text"])
             self.assertLessEqual(payload["used_bytes"], payload["budget_bytes"])
+            view = json.loads(replies[3]["result"]["content"][0]["text"])
+            self.assertFalse(replies[3]["result"]["isError"])
+            self.assertEqual(view["schema"], "an-kla/context-view-v1")
+            self.assertEqual(view["revision"], revision)
             self.assertNotIn("Traceback", process.stderr)
 
     def test_live_reader_does_not_block_current_replacement(self) -> None:

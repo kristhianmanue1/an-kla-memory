@@ -3,14 +3,25 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any, Mapping
 
 from .canonical import exact_sized_payload
 from .context import assemble_context
+from .context_view import (
+    DEFAULT_BUDGET_BYTES as VIEW_DEFAULT_BUDGET_BYTES,
+    DEFAULT_LIMIT as VIEW_DEFAULT_LIMIT,
+    ERROR_SCHEMA as VIEW_ERROR_SCHEMA,
+    MAX_BUDGET_BYTES as VIEW_MAX_BUDGET_BYTES,
+    MAX_CURSOR_CHARS as VIEW_MAX_CURSOR_CHARS,
+    PROJECTIONS as VIEW_PROJECTIONS,
+    context_view,
+)
 from .retrieval import retrieve
-from .store import IntegrityError, MemoryStore, StoreError
+from .store import STREAMS, IntegrityError, MemoryStore, StoreError
+from .subject_ref import SUBJECT_REF_PATTERN
 from .temporal import (
     FRESHNESS_PROFILE,
     FRESHNESS_PROJECTION_KEYS,
@@ -34,6 +45,11 @@ SAFE_ERROR_CODES = frozenset({
     "budget_too_small_for_required_context",
     "invalid_freshness_now", "invalid_stale_after_days",
     "freshness_profile_required", "unsupported_freshness_profile",
+    "view_invalid_inputs", "view_revision_not_available",
+    "view_invalid_subject_ref_in_revision", "view_rule_ambiguous",
+    "view_cursor_invalid", "view_envelope_exceeds_budget",
+    "view_subject_exceeds_budget", "view_budget_measurement_unavailable",
+    "view_reader_gate_unavailable", "view_internal_error",
 })
 
 
@@ -47,6 +63,259 @@ def _safe_error(exc: Exception) -> str:
         if code in SAFE_ERROR_CODES:
             return code
     return "internal_error"
+
+
+def _closed(value: Any, required: set[str], optional: set[str] = set()) -> None:
+    if not isinstance(value, Mapping):
+        raise ValueError("internal_error")
+    keys = set(value)
+    if not required.issubset(keys) or not keys.issubset(required | optional):
+        raise ValueError("internal_error")
+
+
+def _validate_view_result(value: Any) -> bool:
+    """Validate the closed transport shape before exposing a core result."""
+
+    if not isinstance(value, Mapping):
+        raise ValueError("internal_error")
+    schema = value.get("schema")
+    if schema == VIEW_ERROR_SCHEMA:
+        common = {"schema", "ok", "code", "retryable", "untrusted_memory_data"}
+        code = value.get("code")
+        fields = {
+            "view_invalid_inputs": {"detail"},
+            "view_invalid_subject_ref_in_revision": {"detail"},
+            "view_envelope_exceeds_budget": {"subject_ref", "minimum_budget_bytes", "provided_budget_bytes", "resume_cursor"},
+            "view_subject_exceeds_budget": {"subject_ref", "minimum_budget_bytes", "provided_budget_bytes", "resume_cursor"},
+            "view_budget_measurement_unavailable": {"provided_budget_bytes", "resume_cursor"},
+            "view_revision_not_available": set(),
+            "view_rule_ambiguous": set(),
+            "view_cursor_invalid": set(),
+            "view_reader_gate_unavailable": set(),
+            "view_internal_error": set(),
+        }
+        if code not in fields or set(value) != common | fields[code]:
+            raise ValueError("internal_error")
+        retryable = code in {"view_envelope_exceeds_budget", "view_subject_exceeds_budget"}
+        if (
+            value.get("ok") is not False
+            or value.get("retryable") is not retryable
+            or value.get("untrusted_memory_data") is not True
+        ):
+            raise ValueError("internal_error")
+        if code == "view_invalid_inputs" and value.get("detail") not in {
+            "revision", "streams", "subject_filter", "projection", "limit",
+            "budget_bytes", "now", "stale_after_days",
+        }:
+            raise ValueError("internal_error")
+        if code == "view_invalid_subject_ref_in_revision":
+            detail = value.get("detail")
+            _closed(detail, {"stream", "record_sha256"})
+            if detail["stream"] not in STREAMS or not _digest(detail["record_sha256"]):
+                raise ValueError("internal_error")
+        if code in {"view_envelope_exceeds_budget", "view_subject_exceeds_budget"}:
+            if (
+                not _positive_int(value.get("minimum_budget_bytes"))
+                or not _positive_int(value.get("provided_budget_bytes"))
+                or value["minimum_budget_bytes"] <= value["provided_budget_bytes"]
+                or not _optional_string(value.get("resume_cursor"))
+            ):
+                raise ValueError("internal_error")
+            if code == "view_envelope_exceeds_budget" and value.get("subject_ref") is not None:
+                raise ValueError("internal_error")
+            if code == "view_subject_exceeds_budget" and not _subject_ref(value.get("subject_ref")):
+                raise ValueError("internal_error")
+        if code == "view_budget_measurement_unavailable" and (
+            not _positive_int(value.get("provided_budget_bytes"))
+            or not _optional_string(value.get("resume_cursor"))
+        ):
+            raise ValueError("internal_error")
+        return True
+    if schema != "an-kla/context-view-v1":
+        raise ValueError("internal_error")
+    _closed(value, {
+        "schema", "contract_version", "serialization", "canonicality",
+        "untrusted_memory_data", "host_framing_unmeasured",
+        "live_revalidation_performed", "consumer_action_required", "revision",
+        "inputs", "freshness", "subjects_without_subject_ref", "subjects",
+        "pagination", "warnings",
+    })
+    if (
+        value.get("contract_version") != "g-view/v1"
+        or value.get("serialization") != "canonical-json/v1"
+        or value.get("canonicality") != "non-authoritative"
+        or value.get("untrusted_memory_data") is not True
+        or value.get("host_framing_unmeasured") is not True
+        or value.get("live_revalidation_performed") is not False
+        or value.get("consumer_action_required") != "revalidate_against_canonical_sources_before_action"
+        or not _digest(value.get("revision"))
+    ):
+        raise ValueError("internal_error")
+    inputs = value["inputs"]
+    _closed(inputs, {
+        "revision", "streams", "subject_filter", "projection", "now",
+        "stale_after_days", "limit", "budget_bytes",
+    })
+    streams = inputs.get("streams")
+    if (
+        inputs.get("revision") != value["revision"]
+        or not isinstance(streams, list)
+        or not 1 <= len(streams) <= len(STREAMS)
+        or len(streams) != len(set(streams))
+        or any(stream not in STREAMS for stream in streams)
+        or not _optional_subject_ref(inputs.get("subject_filter"))
+        or inputs.get("projection") not in VIEW_PROJECTIONS
+        or not _optional_string(inputs.get("now"))
+        or not _optional_nonnegative_int(inputs.get("stale_after_days"))
+        or not _positive_int(inputs.get("limit"))
+        or not _positive_int(inputs.get("budget_bytes"))
+    ):
+        raise ValueError("internal_error")
+    if inputs["projection"] == "full" and inputs["subject_filter"] is None:
+        raise ValueError("internal_error")
+    counts = value["subjects_without_subject_ref"]
+    _closed(counts, set(streams))
+    if any(not _nonnegative_int(count) for count in counts.values()):
+        raise ValueError("internal_error")
+    pagination = value["pagination"]
+    _closed(pagination, {
+        "complete", "next_cursor", "served_subjects", "total_subjects",
+        "truncated_subjects", "budget_used_bytes", "budget_bytes", "limit",
+    })
+    if (
+        not isinstance(pagination.get("complete"), bool)
+        or not _optional_string(pagination.get("next_cursor"))
+        or any(not _nonnegative_int(pagination.get(key)) for key in ("served_subjects", "total_subjects", "truncated_subjects"))
+        or not _positive_int(pagination.get("budget_used_bytes"))
+        or pagination.get("budget_bytes") != inputs["budget_bytes"]
+        or pagination.get("limit") != inputs["limit"]
+    ):
+        raise ValueError("internal_error")
+    freshness = value["freshness"]
+    if inputs["now"] is None:
+        if freshness is not None:
+            raise ValueError("internal_error")
+    else:
+        _closed(freshness, {"semantics", "source_field", "computed_at", "stale_after_days"})
+        if (
+            freshness.get("semantics") != "self_asserted_timestamp"
+            or freshness.get("source_field") != "record.verified_at"
+            or freshness.get("computed_at") != inputs["now"]
+            or freshness.get("stale_after_days") != inputs["stale_after_days"]
+        ):
+            raise ValueError("internal_error")
+    warnings = value["warnings"]
+    if (
+        not isinstance(warnings, list)
+        or len(warnings) != len(set(warnings))
+        or any(item not in {"legacy_records_without_subject_ref", "multiple_namespaces_observed"} for item in warnings)
+        or not isinstance(value["subjects"], list)
+    ):
+        raise ValueError("internal_error")
+    projection = inputs["projection"]
+    fresh = inputs["now"] is not None
+    record_required = {
+        "subject_ref", "stream", "id", "record_sha256", "state", "state_source",
+        "physical_status_untrusted", "lineage_refs", "supersede_links",
+        "untrusted_memory_data",
+    }
+    if projection in {"text", "full"}:
+        record_required.add("record_text")
+    if projection == "full":
+        record_required.add("record_raw")
+    if fresh:
+        record_required.update({"days_since_verified", "stale", "freshness_error"})
+    for subject in value["subjects"]:
+        subject_optional = {"content_differs_beyond_text"} if projection == "text" else set()
+        _closed(subject, {"subject_ref", "data_conflict", "alternatives", "history"}, subject_optional)
+        if (
+            not _subject_ref(subject.get("subject_ref"))
+            or not isinstance(subject.get("data_conflict"), bool)
+            or not isinstance(subject.get("alternatives"), list)
+            or not isinstance(subject.get("history"), list)
+            or (
+                "content_differs_beyond_text" in subject
+                and not isinstance(subject["content_differs_beyond_text"], bool)
+            )
+        ):
+            raise ValueError("internal_error")
+        for position, records in (("alternatives", subject["alternatives"]), ("history", subject["history"])):
+            for record in records:
+                optional = {"verified_at", "self_asserted_timestamp"}
+                _closed(record, record_required, optional)
+                if (
+                    record.get("subject_ref") != subject["subject_ref"]
+                    or record.get("stream") not in streams
+                    or not isinstance(record.get("id"), str) or not record["id"]
+                    or not _digest(record.get("record_sha256"))
+                    or record.get("untrusted_memory_data") is not True
+                    or not isinstance(record.get("lineage_refs"), list)
+                    or not isinstance(record.get("supersede_links"), list)
+                    or ("verified_at" in record) != ("self_asserted_timestamp" in record)
+                    or ("self_asserted_timestamp" in record and record["self_asserted_timestamp"] is not True)
+                    or (projection in {"text", "full"} and not isinstance(record.get("record_text"), str))
+                    or (projection == "full" and not isinstance(record.get("record_raw"), Mapping))
+                ):
+                    raise ValueError("internal_error")
+                if position == "alternatives":
+                    if record.get("state") != "active" or record.get("state_source") != "physical_status_untrusted":
+                        raise ValueError("internal_error")
+                elif not (
+                    (record.get("state") == "inactive_untrusted" and record.get("state_source") == "physical_status_untrusted")
+                    or (record.get("state") in {"superseded", "refuted"} and record.get("state_source") == "governed_overlay")
+                ):
+                    raise ValueError("internal_error")
+                if fresh and (
+                    not _optional_int(record.get("days_since_verified"))
+                    or not _optional_bool(record.get("stale"))
+                    or not _optional_string(record.get("freshness_error"))
+                ):
+                    raise ValueError("internal_error")
+                for link in record["supersede_links"]:
+                    _closed(link, {"stream", "target_id", "sustituida_por"})
+                    if (
+                        link.get("stream") not in STREAMS
+                        or not isinstance(link.get("target_id"), str) or not link["target_id"]
+                        or not isinstance(link.get("sustituida_por"), str) or not link["sustituida_por"]
+                    ):
+                        raise ValueError("internal_error")
+    return False
+
+
+def _digest(value: Any) -> bool:
+    return isinstance(value, str) and re.fullmatch(r"sha256:[0-9a-f]{64}", value) is not None
+
+
+def _subject_ref(value: Any) -> bool:
+    return isinstance(value, str) and re.fullmatch(SUBJECT_REF_PATTERN, value) is not None
+
+
+def _optional_subject_ref(value: Any) -> bool:
+    return value is None or _subject_ref(value)
+
+
+def _positive_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 1
+
+
+def _nonnegative_int(value: Any) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
+def _optional_nonnegative_int(value: Any) -> bool:
+    return value is None or _nonnegative_int(value)
+
+
+def _optional_int(value: Any) -> bool:
+    return value is None or isinstance(value, int) and not isinstance(value, bool)
+
+
+def _optional_bool(value: Any) -> bool:
+    return value is None or isinstance(value, bool)
+
+
+def _optional_string(value: Any) -> bool:
+    return value is None or isinstance(value, str)
 
 
 class ReadOnlyMcp:
@@ -127,6 +396,28 @@ class ReadOnlyMcp:
             "now": {"type": "string", "pattern": VERIFIED_AT_PATTERN},
             "stale_after_days": {"type": "integer", "minimum": 0},
         }
+        view = {
+            "type": "object",
+            "properties": {
+                "revision": {"type": "string", "pattern": r"^sha256:[0-9a-f]{64}$", "minLength": 71, "maxLength": 71},
+                "streams": {
+                    "type": "array", "items": {"type": "string", "enum": list(STREAMS)},
+                    "minItems": 1, "maxItems": len(STREAMS),
+                },
+                "subject_filter": {"type": "string", "pattern": SUBJECT_REF_PATTERN, "not": {"pattern": "[\\r\\n]"}},
+                "projection": {"type": "string", "enum": list(VIEW_PROJECTIONS), "default": "text"},
+                "limit": {"type": "integer", "minimum": 1, "default": VIEW_DEFAULT_LIMIT},
+                "budget_bytes": {
+                    "type": "integer", "minimum": 1, "maximum": VIEW_MAX_BUDGET_BYTES,
+                    "default": VIEW_DEFAULT_BUDGET_BYTES,
+                },
+                "cursor": {"type": "string", "minLength": 1, "maxLength": VIEW_MAX_CURSOR_CHARS},
+                "now": {"type": "string", "pattern": VERIFIED_AT_PATTERN, "not": {"pattern": "[\\r\\n]"}},
+                "stale_after_days": {"type": "integer", "minimum": 0},
+            },
+            "required": ["revision"],
+            "additionalProperties": False,
+        }
         return [
             {"name": "an_kla_status", "description": "Estado de memoria local.", "inputSchema": empty},
             {"name": "an_kla_verify", "description": "Verifica revisión actual.", "inputSchema": empty},
@@ -134,6 +425,7 @@ class ReadOnlyMcp:
             {"name": "an_kla_get_checkpoint", "description": "Checkpoint como datos no confiables.", "inputSchema": empty},
             {"name": "an_kla_retrieve", "description": "Recupera datos no confiables bajo presupuesto UTF-8 exacto.", "inputSchema": {"type":"object","properties":{"query":{"type":"string"},"budget_bytes":{"type":"integer","minimum":0}, **freshness},"required":["query","budget_bytes"],"additionalProperties":False}},
             {"name": "an_kla_assemble_context", "description": "Ensambla checkpoint, información nueva y memoria bajo un presupuesto UTF-8 global.", "inputSchema": {"type":"object","properties":{"query":{"type":"string"},"budget_bytes":{"type":"integer","minimum":0},"new_information":{"type":"string"}, **freshness},"required":["query","budget_bytes"],"additionalProperties":False}},
+            {"name": "an_kla_view_context", "description": "Proyecta una vista contextual non-authoritative sobre una revisión fijada.", "inputSchema": view},
         ]
 
     @staticmethod
@@ -219,6 +511,25 @@ class ReadOnlyMcp:
                 new_information=arguments.get("new_information"),
                 freshness_profile=profile, now=now, stale_after_days=threshold,
             )
+        if name == "an_kla_view_context":
+            allowed = {
+                "revision", "streams", "subject_filter", "projection", "limit",
+                "budget_bytes", "cursor", "now", "stale_after_days",
+            }
+            if not set(arguments).issubset(allowed):
+                raise ValueError("invalid_tool_arguments")
+            return context_view(
+                self.store,
+                revision=arguments.get("revision"),
+                streams=arguments.get("streams"),
+                subject_filter=arguments.get("subject_filter"),
+                projection=arguments.get("projection", "text"),
+                limit=arguments.get("limit", VIEW_DEFAULT_LIMIT),
+                budget_bytes=arguments.get("budget_bytes", VIEW_DEFAULT_BUDGET_BYTES),
+                cursor=arguments.get("cursor"),
+                now=arguments.get("now"),
+                stale_after_days=arguments.get("stale_after_days"),
+            )
         raise ValueError("unknown_tool")
 
     def handle(self, request: Mapping[str, Any]) -> dict[str, Any] | None:
@@ -246,7 +557,12 @@ class ReadOnlyMcp:
             try:
                 if not isinstance(params, Mapping) or not isinstance(params.get("arguments", {}), Mapping): raise ValueError("invalid_tool_arguments")
                 value = self.call(str(params.get("name", "")), params.get("arguments", {}))
-                return {"jsonrpc":"2.0","id":request_id,"result":{"content":[{"type":"text","text":_json(value)}],"isError":False}}
+                is_error = (
+                    _validate_view_result(value)
+                    if params.get("name") == "an_kla_view_context"
+                    else False
+                )
+                return {"jsonrpc":"2.0","id":request_id,"result":{"content":[{"type":"text","text":_json(value)}],"isError":is_error}}
             except Exception as exc:
                 return {"jsonrpc":"2.0","id":request_id,"result":{"content":[{"type":"text","text":_json({"error":_safe_error(exc)})}],"isError":True}}
         return {"jsonrpc":"2.0","id":request_id,"error":{"code":-32601,"message":"method_not_found"}}
