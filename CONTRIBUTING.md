@@ -12,7 +12,9 @@ write flow and a tagged release.
 - AN-KLA Memory intentionally avoids third-party runtime dependencies. Keep it
   pure-Python and stdlib-only.
 - Discuss API or schema changes in the issue first. The project does not bump
-  major versionson beta; additive-only changes are preferred.
+  major versions in beta. Extend a version only at points its contract declares
+  extensible; closed schemas, canonical payloads and incompatible semantics
+  require a new version or profile. See §11.2 of the engineering practices.
 
 ## Development setup
 

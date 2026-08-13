@@ -53,8 +53,9 @@ prospectiva esté implementada; la última columna conserva esa distinción.
 | 0032 | [derived-contextual-view-v1](architecture/0032-derived-contextual-view-v1.md) | Vista contextual vigente derivada, non-authoritative, sobre sustrato de afirmaciones | Aceptada | G-SUBJECT publicado en [beta.12](releases/v0.1.0-beta.12.md); G-VIEW publicado en [beta.13](releases/v0.1.0-beta.13.md) |
 | 0033 | [subject-ref-v1](architecture/0033-subject-ref-v1.md) | Identidad contextual estable `subject_ref`, namespace derivado de project identity y binding bajo lock | Aceptada | Publicada en [beta.12](releases/v0.1.0-beta.12.md) |
 | 0034 | [derived-context-view-contract-v1](architecture/0034-derived-context-view-contract-v1.md) | Contrato G-VIEW v1: vista contextual determinista, non-authoritative, paginada y recuperable | Aceptada | CORE+CLI+MCP+CAP publicados en [beta.13](releases/v0.1.0-beta.13.md); auditoría REL `proceed` |
+| 0035 | [explicit-project-context-baseline-adoption-v1](architecture/0035-explicit-project-context-baseline-adoption-v1.md) | Adopción explícita de baseline project-owned sin debilitar target drift | Propuesta | Sin implementación; issue #45 |
 
-Resumen: **34 ADRs**, sin huecos; **32 aceptadas** y **2 propuestas**. No hay
+Resumen: **35 ADRs**, sin huecos; **32 aceptadas** y **3 propuestas**. No hay
 ADRs rechazadas ni reemplazadas en el registro actual.
 
 ### Documentación normativa
