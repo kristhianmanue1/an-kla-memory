@@ -21,6 +21,13 @@ from .context_package import (
     get_template,
     plan_context_change,
 )
+from .context_view import (
+    DEFAULT_BUDGET_BYTES,
+    DEFAULT_LIMIT,
+    ERROR_SCHEMA as VIEW_ERROR_SCHEMA,
+    PROJECTIONS,
+    context_view,
+)
 from .index import INDEX_PROFILE, build_index, detect_fts5, verify_index_deep
 from .identity import IdentityError, adopt, identity_status, plan_adoption, repair
 from .evaluation import evaluate_retrieval, evaluate_retrieval_v2
@@ -280,6 +287,26 @@ def _run() -> None:
         "namespace",
         help="Devolver el namespace para subject_ref; fail-closed si la identidad no está complete.",
     )
+    view_cmd = sub.add_parser(
+        "view", help="Proyectar vistas derivadas read-only sobre una revisión fijada."
+    )
+    view_sub = view_cmd.add_subparsers(dest="view_command", required=True)
+    view_context_cmd = view_sub.add_parser(
+        "context", help="Vista contextual determinista y non-authoritative."
+    )
+    view_context_cmd.add_argument("--revision", required=True)
+    view_context_cmd.add_argument("--subject", dest="subject_filter")
+    view_context_cmd.add_argument("--streams", default=None)
+    view_context_cmd.add_argument(
+        "--projection", choices=PROJECTIONS, default="text"
+    )
+    view_context_cmd.add_argument("--limit", type=int, default=DEFAULT_LIMIT)
+    view_context_cmd.add_argument(
+        "--budget", type=int, default=DEFAULT_BUDGET_BYTES
+    )
+    view_context_cmd.add_argument("--cursor")
+    view_context_cmd.add_argument("--now")
+    view_context_cmd.add_argument("--stale-after-days", type=int)
     args = parser.parse_args()
 
     if args.command == "check-updates":
@@ -401,6 +428,32 @@ def _run() -> None:
             result = adopt(store, _json(args.plan), args.expected_current)
     elif args.command == "subject":
         result = resolve_namespace(store)
+    elif args.command == "view":
+        streams = None if args.streams is None else tuple(args.streams.split(","))
+        result = context_view(
+            store,
+            revision=args.revision,
+            streams=streams,
+            subject_filter=args.subject_filter,
+            projection=args.projection,
+            limit=args.limit,
+            budget_bytes=args.budget,
+            cursor=args.cursor,
+            now=args.now,
+            stale_after_days=args.stale_after_days,
+        )
+        if result.get("code") == "view_invalid_inputs":
+            sys.stderr.write(
+                f"an-kla error: view_invalid_inputs ({result.get('detail', 'input')})\n"
+            )
+            raise SystemExit(2)
+        if result.get("code") == "view_internal_error":
+            sys.stderr.write("an-kla error: view_internal_error\n")
+            raise SystemExit(1)
+        sys.stdout.buffer.write(canonical_json(result))
+        if result.get("schema") == VIEW_ERROR_SCHEMA:
+            raise SystemExit(3)
+        return
     elif args.command == "checkpoint":
         if args.checkpoint_command == "show":
             result = show_checkpoint(store)

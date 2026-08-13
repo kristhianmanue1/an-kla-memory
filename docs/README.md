@@ -52,7 +52,7 @@ prospectiva esté implementada; la última columna conserva esa distinción.
 | 0031 | [agent-owned-memory-host-managed-v1](architecture/0031-agent-owned-memory-host-managed-v1.md) | Memoria del agente con alcance de proyecto y perfil host-managed | Aceptada | Reconocido host-managed como perfil soportado; G1 (observabilidad) no iniciado |
 | 0032 | [derived-contextual-view-v1](architecture/0032-derived-contextual-view-v1.md) | Vista contextual vigente derivada, non-authoritative, sobre sustrato de afirmaciones | Aceptada | Decisión documental; G-SUBJECT completado en candidata beta.12, G-VIEW #60 pendiente |
 | 0033 | [subject-ref-v1](architecture/0033-subject-ref-v1.md) | Identidad contextual estable `subject_ref`, namespace derivado de project identity y binding bajo lock | Aceptada | Implementación completada en candidata [beta.12](releases/v0.1.0-beta.12.md) (no publicada) |
-| 0034 | [derived-context-view-contract-v1](architecture/0034-derived-context-view-contract-v1.md) | Contrato G-VIEW v1: vista contextual determinista, non-authoritative, paginada y recuperable | Aceptada | CORE candidato en worktree; CLI/MCP/CAP no iniciados |
+| 0034 | [derived-context-view-contract-v1](architecture/0034-derived-context-view-contract-v1.md) | Contrato G-VIEW v1: vista contextual determinista, non-authoritative, paginada y recuperable | Aceptada | CORE+CLI candidatos; MCP/CAP no iniciados |
 
 Resumen: **34 ADRs**, sin huecos; **32 aceptadas** y **2 propuestas**. No hay
 ADRs rechazadas ni reemplazadas en el registro actual.

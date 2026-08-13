@@ -1,4 +1,4 @@
-"""Deterministic G-VIEW core (ADR-0034), without CLI or MCP adapters."""
+"""Deterministic G-VIEW core shared by its public adapters (ADR-0034)."""
 
 from __future__ import annotations
 
