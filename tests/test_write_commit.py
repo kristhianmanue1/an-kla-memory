@@ -542,6 +542,32 @@ class WriteCommitTests(unittest.TestCase):
 
 
 class WriteCommitCliTests(unittest.TestCase):
+    def test_write_help_explains_inputs_and_sequential_current(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        planned = subprocess.run(
+            [sys.executable, "-m", "an_kla", "plan-write", "--help"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=True,
+        )
+        committed = subprocess.run(
+            [sys.executable, "-m", "an_kla", "commit-write-plan", "--help"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=True,
+        )
+
+        self.assertIn("an-kla/write-proposal-v1", planned.stdout)
+        self.assertIn("an-kla/write-authority-v1", planned.stdout)
+        self.assertIn("status", planned.stdout)
+        self.assertIn("Digest revision obtenido de status", committed.stdout)
+        self.assertIn("stdout exacto de plan-write", committed.stdout)
+        self.assertIn("Cada commit mueve CURRENT", committed.stdout)
+
     def test_cli_plans_then_commits_exact_derived_summary(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             store = MemoryStore(root)
@@ -696,8 +722,119 @@ class WriteCommitCliTests(unittest.TestCase):
                 timeout=30,
             )
             self.assertNotEqual(completed.returncode, 0)
-            self.assertIn(b"input_json_unreadable", completed.stderr)
+            self.assertIn(b"input_json_unreadable (proposal)", completed.stderr)
             self.assertNotIn(str(secret_path).encode(), completed.stderr)
+
+    def test_cli_invalid_json_names_role_without_disclosing_payload(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            store = MemoryStore(root)
+            store.initialize()
+            invalid = Path(root) / "private-authority-name.json"
+            invalid.write_text('{"secret":"do-not-disclose"', encoding="utf-8")
+            proposal_path = Path(root) / "proposal.json"
+            proposal_path.write_text("{}", encoding="utf-8")
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "an_kla",
+                    "--project-root",
+                    root,
+                    "plan-write",
+                    "--proposal",
+                    str(proposal_path),
+                    "--authority",
+                    str(invalid),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                capture_output=True,
+                timeout=30,
+            )
+
+            self.assertEqual(completed.returncode, 2)
+            self.assertIn(b"input_json_invalid (authority)", completed.stderr)
+            self.assertNotIn(str(invalid).encode(), completed.stderr)
+            self.assertNotIn(b"do-not-disclose", completed.stderr)
+
+    def test_cli_unreadable_planning_result_names_role_without_path(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            store = MemoryStore(root)
+            base = store.initialize()
+            missing = Path(root) / "private-planning-name.json"
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "an_kla",
+                    "--project-root",
+                    root,
+                    "commit-write-plan",
+                    "--expected-current",
+                    base,
+                    "--proposal",
+                    str(missing),
+                    "--authority",
+                    str(missing),
+                    "--planning-result",
+                    str(missing),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                capture_output=True,
+                timeout=30,
+            )
+
+            self.assertEqual(completed.returncode, 2)
+            self.assertIn(
+                b"input_json_unreadable (planning_result)", completed.stderr
+            )
+            self.assertNotIn(str(missing).encode(), completed.stderr)
+
+    def test_cli_stale_base_includes_sanitized_recovery_hint(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            store = MemoryStore(root)
+            base = store.initialize()
+            stale_candidate = proposal(base, "f-stale")
+            stale_authority = authority(stale_candidate)
+
+            advancing_candidate = proposal(base, "f-advance")
+            advancing_authority = authority(advancing_candidate)
+            planning = store.plan_write(advancing_candidate, advancing_authority)
+            store.commit_write_plan(
+                expected_current_hash=base,
+                proposal=advancing_candidate,
+                authority=advancing_authority,
+                decision=planning["decision"],
+                plan=planning["plan"],
+            )
+
+            proposal_path = Path(root) / "proposal.json"
+            authority_path = Path(root) / "authority.json"
+            proposal_path.write_text(json.dumps(stale_candidate), encoding="utf-8")
+            authority_path.write_text(json.dumps(stale_authority), encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "an_kla",
+                    "--project-root",
+                    root,
+                    "plan-write",
+                    "--proposal",
+                    str(proposal_path),
+                    "--authority",
+                    str(authority_path),
+                ],
+                cwd=Path(__file__).resolve().parents[1],
+                capture_output=True,
+                timeout=30,
+            )
+
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn(
+                b"write_plan_base_changed (refresh_status_and_replan)",
+                completed.stderr,
+            )
 
 
 class SupersedeStoreTests(unittest.TestCase):
