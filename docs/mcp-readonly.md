@@ -17,7 +17,15 @@ cliente decidir si continúa. Ninguna herramienta se descubre ni ejecuta hasta
 recibir `notifications/initialized`.
 
 Herramientas disponibles: `an_kla_status`, `an_kla_verify`,
-`an_kla_doctor`, `an_kla_get_checkpoint` y `an_kla_retrieve`. No hay escritura.
+`an_kla_doctor`, `an_kla_get_checkpoint`, `an_kla_retrieve` y
+`an_kla_view_context`. No hay escritura.
+
+`an_kla_view_context` proyecta el contrato G-VIEW v1 sobre una revisión
+explícita. Usa el mismo core que `an-kla view context`: el objeto semántico se
+serializa canónicamente en `content[0].text`, los errores conservan
+`an-kla/view-error-v1` y fijan `isError=true`. El frame JSON-RPC no forma parte
+del presupuesto y `structuredContent` se difiere. La proyección `full` exige un
+`subject_filter` exacto; todo contenido sigue siendo dato no confiable.
 
 El perfil experimental `context-assembly/v1` añade
 `an_kla_assemble_context`. Esta operación entrega checkpoint, información nueva
