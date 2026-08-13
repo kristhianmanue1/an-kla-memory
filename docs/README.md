@@ -90,6 +90,10 @@ Los reportes son evidencia experimental, no decisiones de ranking.
 [`releases/`](releases/) contiene las notas por etiqueta, en orden inverso
 de publicación. Cumplen el rol de `CHANGELOG.md`.
 
+La release documentada más reciente es
+[`v0.1.0-beta.14`](releases/v0.1.0-beta.14.md), con su
+[ronda adversarial](releases/v0.1.0-beta.14-adversarial.md).
+
 ### Planificación y respuestas históricas
 
 [`planning/`](planning/) contiene documentos puntuales: respuestas a

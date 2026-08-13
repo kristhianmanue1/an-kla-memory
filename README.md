@@ -1,7 +1,7 @@
 # AN-KLA Memory
 
 [![CI](https://github.com/kristhianmanue1/an-kla-memory/actions/workflows/test.yml/badge.svg)](https://github.com/kristhianmanue1/an-kla-memory/actions/workflows/test.yml)
-[![Version](https://img.shields.io/badge/version-0.1.0--beta.13-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.13)
+[![Version](https://img.shields.io/badge/version-0.1.0--beta.14-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.14)
 [![Python](https://img.shields.io/badge/python-3.9%20%7C%203.12-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 [![Beta](https://img.shields.io/badge/status-local%20beta-orange)](https://github.com/kristhianmanue1/an-kla-memory/releases)
@@ -13,10 +13,10 @@ un plan verificable.
 
 La beta se distribuye desde GitHub, no desde PyPI. Usa siempre una etiqueta
 exacta: no instales `main` ni otra referencia móvil. La versión del código es
-`0.1.0b13` y su etiqueta de distribución es `v0.1.0-beta.13`. El contexto
-gestionado y la plantilla administrada siguen en `0.1.0-beta.11`: beta.13 es un
-release de código y contrato (G-VIEW v1 sobre `subject_ref`), no de plantilla
-administrada.
+`0.1.0b14` y su etiqueta de distribución es `v0.1.0-beta.14`. El contexto
+gestionado y la plantilla administrada siguen en `0.1.0-beta.11`: beta.14
+conserva G-VIEW v1 y mejora la experiencia del primer write, sin modificar la
+plantilla administrada.
 La instalación expone tanto `python -m an_kla` como el comando equivalente
 `an-kla`; los ejemplos conservan la primera forma para hacer explícito el
 intérprete del entorno virtual.
@@ -84,7 +84,7 @@ Desde la raíz del proyecto consumidor en macOS o Linux:
 python3.12 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
 .venv/bin/python -m pip install \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.13"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.14"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . init
 .venv/bin/python -m an_kla --project-root . context plan --operation install
@@ -129,7 +129,7 @@ por separado el contrato de contexto:
 
 ```bash
 .venv/bin/python -m pip install --upgrade \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.13"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.14"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . context status
 .venv/bin/python -m an_kla --project-root . context plan --operation update
@@ -213,7 +213,7 @@ puede inspeccionar la actualización de la integración sin mutar el proyecto:
 
 ```bash
 .venv/bin/python -m an_kla --project-root . upgrade inspect \
-  --target v0.1.0-beta.13 > RUTA_EFIMERA_NUEVA
+  --target v0.1.0-beta.14 > RUTA_EFIMERA_NUEVA
 ```
 
 El agente debe conservar por separado el `plan_fingerprint` devuelto, revisar
@@ -225,7 +225,7 @@ bytes del upgrade:
 .venv/bin/python -m an_kla --project-root . upgrade apply \
   <plan_fingerprint> --plan RUTA_EFIMERA_NUEVA
 .venv/bin/python -m an_kla --project-root . upgrade verify \
-  --target v0.1.0-beta.13
+  --target v0.1.0-beta.14
 git diff -- AGENTS.md AN-KLA.md
 ```
 
@@ -317,6 +317,8 @@ y las decisiones de arquitectura en `docs/architecture/`.
 
 - [Contrato del agente](AN-KLA.md) — desarrollo del bloque administrado.
 - [Documentación evergreen](docs/README.md) — índice de la carpeta `docs/`.
+- [Notas de beta.14](docs/releases/v0.1.0-beta.14.md) — primer write operable y
+  cambios de adopción posteriores a beta.13.
 - [Handoff posterior a beta.13](docs/planning/handoff-post-beta13-g-fresh-2026-08-12.md)
   — estado verificable y entrada recomendada a G-FRESH.
 - [Guía beta.11](docs/beta11-user-guide.md) — instalación, migración y nuevos flujos.
