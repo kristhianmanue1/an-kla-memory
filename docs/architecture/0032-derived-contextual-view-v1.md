@@ -1,8 +1,9 @@
 # ADR-0032: vista contextual vigente derivada sobre el sustrato de afirmaciones
 
 - **Estado:** Aceptada
-- **Implementación:** Completada en candidata `v0.1.0-beta.13`; contrato
-  ejecutable en ADR-0034
+- **Implementación:** Publicada en
+  [`v0.1.0-beta.13`](../releases/v0.1.0-beta.13.md); contrato ejecutable en
+  ADR-0034
 - **Fecha:** 2026-08-11
 - **Decide sobre:** la forma del contenido y la superficie de lectura de AN-KLA:
   un sustrato físico de afirmaciones inmutables más una vista contextual vigente
