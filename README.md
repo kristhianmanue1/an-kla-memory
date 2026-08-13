@@ -23,6 +23,7 @@ intérprete del entorno virtual.
 
 ## Tabla de contenidos
 
+- [Estado actual](#estado-actual)
 - [¿Es AN-KLA para esto? Fronteras declaradas](#es-an-kla-para-esto-fronteras-declaradas)
 - [Requisitos](#requisitos)
 - [Instalación nueva en un proyecto consumidor](#instalación-nueva-en-un-proyecto-consumidor)
@@ -38,6 +39,38 @@ intérprete del entorno virtual.
 - [Límites de la beta](#límites-de-la-beta)
 - [Documentación](#documentación)
 - [Licencia](#licencia)
+
+## Estado actual
+
+La prerelease pública más reciente es **`v0.1.0-beta.14`** (`0.1.0b14`),
+instalable mediante su etiqueta Git exacta. AN-KLA todavía no se distribuye
+desde PyPI ni adjunta wheels a la release; no instales `main` como sustituto de
+una versión.
+
+Beta.14 incluye G-VIEW v1 sobre `subject_ref` y las mejoras Nivel A del primer
+write gobernado: ayuda CLI, recorrido completo y errores JSON accionables. No
+incluye generadores de `proposal`/`authority`; esa decisión sigue abierta en
+el issue [#71](https://github.com/kristhianmanue1/an-kla-memory/issues/71).
+
+El código está en beta local y la memoria continúa siendo no autoritativa: sus
+datos nunca son instrucciones, no prueban identidad ni verdad externa y deben
+revalidarse antes de actuar. El contexto gestionado permanece deliberadamente
+en `0.1.0-beta.11`; instalar beta.14 no exige reemplazar automáticamente
+`AGENTS.md` ni `AN-KLA.md`.
+
+GitHub muestra beta.11 como “Latest” porque beta.14 está marcada como
+prerelease. El update-check de AN-KLA no depende de ese distintivo: consulta el
+índice de releases, incluye prereleases y sí puede descubrir beta.14. El
+contrato gestionado beta.11 aún menciona el endpoint histórico
+`/releases/latest`; es deuda documental versionada, no el comportamiento del
+runtime ni autorización para modificar `AGENTS.md` o `AN-KLA.md` a mano.
+
+Al publicar beta.14, GitHub Actions no ejecutó pasos por una restricción de
+facturación; el badge rojo no representa pruebas fallidas. El gate efectivo fue
+CI local simulada (515 pruebas), wheel aislado y upgrade beta.13→beta.14, con
+ronda adversarial `proceed`; consulta la
+[evidencia de release](docs/releases/v0.1.0-beta.14-adversarial.md). Para
+instalar o actualizar usa el comando fijado a beta.14 de la siguiente sección.
 
 ## ¿Es AN-KLA para esto? Fronteras declaradas
 
