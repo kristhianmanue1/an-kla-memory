@@ -54,7 +54,7 @@ def main() -> int:
         cli = scripts / ("an-kla.exe" if os.name == "nt" else "an-kla")
         _run([str(python), "-m", "pip", "install", "--no-deps", str(wheels[0])])
         version = _run([str(cli), "--version"])
-        if version.stdout.decode().strip() != "an-kla-memory 0.1.0b12":
+        if version.stdout.decode().strip() != "an-kla-memory 0.1.0b13":
             raise SystemExit("clean_wheel_wrong_version")
         help_result = _run([str(cli), "--no-update-check", "--help"])
         help_text = help_result.stdout.decode()
@@ -80,6 +80,8 @@ def main() -> int:
             "revision-v3",
             "transaction-archived-v1",
             "verify-revision-v1",
+            "context-view-v1",
+            "view-error-v1",
         }
         if not required_compaction.issubset(installed_schemas):
             raise SystemExit("clean_wheel_missing_compaction_schemas")
@@ -117,7 +119,49 @@ def main() -> int:
         )
         if identity_status.get("identity_status") != "complete":
             raise SystemExit("clean_wheel_identity_not_ready")
-        _run([*consumer_command, "verify"])
+        verified = json.loads(_run([*consumer_command, "verify"]).stdout)
+        revision = verified.get("revision")
+        if not isinstance(revision, str):
+            raise SystemExit("clean_wheel_missing_revision")
+        capabilities_payload = json.loads(
+            _run([str(cli), "--no-update-check", "capabilities"]).stdout
+        )
+        if capabilities_payload.get("view", {}).get("contract_version") != "g-view/v1":
+            raise SystemExit("clean_wheel_missing_view_capability")
+        view_result = _run(
+            [*consumer_command, "view", "context", "--revision", revision]
+        )
+        try:
+            view_payload = json.loads(view_result.stdout)
+        except (UnicodeError, json.JSONDecodeError):
+            raise SystemExit("clean_wheel_invalid_view_output") from None
+        canonical_view = json.dumps(
+            view_payload, ensure_ascii=False, sort_keys=True,
+            separators=(",", ":"), allow_nan=False,
+        ).encode("utf-8")
+        if view_result.stdout != canonical_view:
+            raise SystemExit("clean_wheel_noncanonical_view")
+        if view_payload.get("schema") != "an-kla/context-view-v1":
+            raise SystemExit("clean_wheel_wrong_view_schema")
+        mcp_messages = [
+            {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-11-25"}},
+            {"jsonrpc": "2.0", "method": "notifications/initialized"},
+            {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+            {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "an_kla_view_context", "arguments": {"revision": revision}}},
+        ]
+        mcp = _run(
+            [str(python), "-m", "an_kla.mcp", "--project-root", str(consumer)],
+            input="".join(json.dumps(item) + "\n" for item in mcp_messages).encode(),
+        )
+        replies = [json.loads(line) for line in mcp.stdout.splitlines()]
+        tool_names = {item["name"] for item in replies[1]["result"]["tools"]}
+        if "an_kla_view_context" not in tool_names:
+            raise SystemExit("clean_wheel_missing_view_tool")
+        mcp_result = replies[2]["result"]
+        if mcp_result.get("isError") is not False:
+            raise SystemExit("clean_wheel_view_tool_error")
+        if mcp_result["content"][0]["text"].encode("utf-8") != canonical_view:
+            raise SystemExit("clean_wheel_view_parity_mismatch")
     print(
         "check_clean_wheel: OK — instalación nueva, contexto, identidad, "
         "recursos y benchmark-reference "

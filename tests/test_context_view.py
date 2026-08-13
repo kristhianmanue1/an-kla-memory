@@ -82,6 +82,15 @@ class ContextViewCoreTests(unittest.TestCase):
         self.assertEqual(store.revisions, [REVISION])
         self.assertSchemaValid("context-view-v1", output)
 
+    def test_schema_binds_legacy_counts_to_requested_streams(self):
+        output = context_view(FakeStore(), revision=REVISION, streams=["facts"])
+        self.assertSchemaValid("context-view-v1", output)
+        for counts in ({}, {"events": 0}, {"facts": 0, "events": 0}):
+            with self.subTest(counts=counts):
+                malformed = deepcopy(output)
+                malformed["subjects_without_subject_ref"] = counts
+                self.assertSchemaInvalid("context-view-v1", malformed)
+
     def test_streams_reject_unbounded_or_oversized_iterables(self):
         store = FakeStore()
         self.assertEqual(context_view(store, revision=REVISION, streams=(x for x in ["facts"]))["detail"], "streams")

@@ -1,7 +1,7 @@
 # ADR-0033: identidad contextual estable `subject_ref` v1
 
 - **Estado:** Aceptada
-- **Implementación:** Completada en candidata `v0.1.0-beta.12` (sin publicar);
+- **Implementación:** Publicada en [`v0.1.0-beta.12`](../releases/v0.1.0-beta.12.md);
   fases y evidencia en el [reporte adversarial](../releases/v0.1.0-beta.12-adversarial.md).
 - **Fecha:** 2026-08-11
 - **Decide sobre:** la identidad contextual estable `subject_ref` (elemento

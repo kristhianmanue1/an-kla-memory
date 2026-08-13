@@ -35,6 +35,10 @@ from .temporal import (
 from .version import VERSION
 
 PROTOCOL_VERSION = "2025-11-25"
+VIEW_OUTPUT_TIMESTAMP_PATTERN = (
+    r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}"
+    r"\.[0-9]{6}Z$"
+)
 SAFE_ERROR_CODES = frozenset({
     "memory_not_initialized", "negative_budget", "budget_too_small_for_envelope",
     "invalid_retrieve_arguments", "invalid_tool_arguments", "unknown_tool",
@@ -163,7 +167,7 @@ def _validate_view_result(value: Any) -> bool:
         or any(stream not in STREAMS for stream in streams)
         or not _optional_subject_ref(inputs.get("subject_filter"))
         or inputs.get("projection") not in VIEW_PROJECTIONS
-        or not _optional_string(inputs.get("now"))
+        or not _optional_timestamp(inputs.get("now"))
         or not _optional_nonnegative_int(inputs.get("stale_after_days"))
         or not _positive_int(inputs.get("limit"))
         or not _positive_int(inputs.get("budget_bytes"))
@@ -189,6 +193,15 @@ def _validate_view_result(value: Any) -> bool:
         or pagination.get("limit") != inputs["limit"]
     ):
         raise ValueError("internal_error")
+    if pagination["complete"]:
+        if pagination["next_cursor"] is not None or pagination["truncated_subjects"] != 0:
+            raise ValueError("internal_error")
+    elif (
+        not isinstance(pagination["next_cursor"], str)
+        or not pagination["next_cursor"]
+        or pagination["truncated_subjects"] < 1
+    ):
+        raise ValueError("internal_error")
     freshness = value["freshness"]
     if inputs["now"] is None:
         if freshness is not None:
@@ -199,6 +212,7 @@ def _validate_view_result(value: Any) -> bool:
             freshness.get("semantics") != "self_asserted_timestamp"
             or freshness.get("source_field") != "record.verified_at"
             or freshness.get("computed_at") != inputs["now"]
+            or not _optional_nonnegative_int(freshness.get("stale_after_days"))
             or freshness.get("stale_after_days") != inputs["stale_after_days"]
         ):
             raise ValueError("internal_error")
@@ -231,9 +245,10 @@ def _validate_view_result(value: Any) -> bool:
             or not isinstance(subject.get("data_conflict"), bool)
             or not isinstance(subject.get("alternatives"), list)
             or not isinstance(subject.get("history"), list)
+            or subject["data_conflict"] != (len(subject["alternatives"]) >= 2)
             or (
                 "content_differs_beyond_text" in subject
-                and not isinstance(subject["content_differs_beyond_text"], bool)
+                and subject["content_differs_beyond_text"] is not True
             )
         ):
             raise ValueError("internal_error")
@@ -250,6 +265,7 @@ def _validate_view_result(value: Any) -> bool:
                     or not isinstance(record.get("lineage_refs"), list)
                     or not isinstance(record.get("supersede_links"), list)
                     or ("verified_at" in record) != ("self_asserted_timestamp" in record)
+                    or ("verified_at" in record and not isinstance(record["verified_at"], str))
                     or ("self_asserted_timestamp" in record and record["self_asserted_timestamp"] is not True)
                     or (projection in {"text", "full"} and not isinstance(record.get("record_text"), str))
                     or (projection == "full" and not isinstance(record.get("record_raw"), Mapping))
@@ -314,6 +330,13 @@ def _optional_bool(value: Any) -> bool:
 
 def _optional_string(value: Any) -> bool:
     return value is None or isinstance(value, str)
+
+
+def _optional_timestamp(value: Any) -> bool:
+    return value is None or (
+        isinstance(value, str)
+        and re.fullmatch(VIEW_OUTPUT_TIMESTAMP_PATTERN, value) is not None
+    )
 
 
 class ReadOnlyMcp:
