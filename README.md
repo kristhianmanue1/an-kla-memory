@@ -23,6 +23,7 @@ intérprete del entorno virtual.
 
 ## Tabla de contenidos
 
+- [¿Es AN-KLA para esto? Fronteras declaradas](#es-an-kla-para-esto-fronteras-declaradas)
 - [Requisitos](#requisitos)
 - [Instalación nueva en un proyecto consumidor](#instalación-nueva-en-un-proyecto-consumidor)
 - [Actualizar desde otra beta](#actualizar-desde-otra-beta)
@@ -37,6 +38,34 @@ intérprete del entorno virtual.
 - [Límites de la beta](#límites-de-la-beta)
 - [Documentación](#documentación)
 - [Licencia](#licencia)
+
+## ¿Es AN-KLA para esto? Fronteras declaradas
+
+AN-KLA conserva **memoria contextual para agentes**: hechos versionados,
+decisiones, eventos, episodios y estado de continuidad que ayudan a reconstruir
+por qué y cómo se trabajó. Puede describir entidades persistentes mediante
+`subject_ref` y ofrecer una vista vigente derivada, pero esa vista es
+`non-authoritative`: organiza lo registrado, no sustituye la fuente original ni
+demuestra que el mundo externo siga igual.
+
+Mantén fuera de AN-KLA el estado canónico que una aplicación necesita para
+funcionar: cuentas, permisos, configuración operacional, inventarios completos,
+secretos y cualquier dato cuya ausencia impida prestar el servicio. Esos datos
+pertenecen a archivos, bases o servicios con su propio contrato de integridad,
+confidencialidad, disponibilidad y control de acceso. AN-KLA puede recordar una
+observación o decisión sobre ellos; el agente debe revalidarla contra la fuente
+canónica antes de actuar.
+
+Usa esta **prueba de amputación**: imagina que `.an-kla/` desaparece. Es
+aceptable perder memoria de cómo se construyó, qué se intentó o qué contexto
+conviene recuperar. Si el producto deja de funcionar correctamente, el dato que
+falta necesita otro hogar. Borrar `.an-kla/` realmente sigue siendo una acción
+destructiva: la prueba es una heurística mental, no un procedimiento operativo.
+
+Esta frontera no reduce AN-KLA a una bitácora: admite afirmaciones contextuales
+reconstruibles y navegación por subjects, sin convertirlas en un catálogo
+autoritativo. La decisión completa está en
+[ADR-0032](docs/architecture/0032-derived-contextual-view-v1.md).
 
 ## Requisitos
 
@@ -288,6 +317,8 @@ y las decisiones de arquitectura en `docs/architecture/`.
 
 - [Contrato del agente](AN-KLA.md) — desarrollo del bloque administrado.
 - [Documentación evergreen](docs/README.md) — índice de la carpeta `docs/`.
+- [Handoff posterior a beta.13](docs/planning/handoff-post-beta13-g-fresh-2026-08-12.md)
+  — estado verificable y entrada recomendada a G-FRESH.
 - [Guía beta.11](docs/beta11-user-guide.md) — instalación, migración y nuevos flujos.
 - [ADRs](docs/architecture/) — decisiones arquitectónicas numeradas.
 - [Notas de release](docs/releases/) — changelog por etiqueta.

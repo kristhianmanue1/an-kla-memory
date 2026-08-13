@@ -22,6 +22,8 @@ plantilla de la ronda; `docs/agent-report-template.md` la del reporte.
 | Gate de tamaños | siempre (CI + local) | §7 + `scripts/check_sizes.py` |
 | Verificación de invariantes con evidencia | ronda adversarial y auditoría de release | §8 |
 | Auditoría de release con evidencia | antes de comunicar/publicar | §9 |
+| Señales en el punto de decisión | al diseñar errores, diagnósticos o resultados | §11.1 |
+| Evolución aditiva/versionada | al cambiar contratos observables estables | §11.2 |
 
 ---
 
@@ -139,6 +141,36 @@ metadata no canónica o contradicciones de estado. Se ejecuta en CI local y
 remoto. La evidencia de publicación se enlaza desde el registro a la nota de
 release correspondiente; los documentos de `planning/` siguen siendo historia,
 no una segunda fuente de estado.
+
+## §11 Principios para contratos observables
+
+### §11.1 Señalar en el punto de decisión
+
+Un estado contractualmente relevante que el motor ya conoce, que puede cambiar
+una decisión observable y que está autorizado para ese caller debe aparecer, de
+forma estructurada y saneada, en el resultado o error de esa misma operación.
+No se difiere a una recuperación posterior ni se obliga al agente a inferirlo
+leyendo código fuente. La señal se emite después de las validaciones y controles
+de autoridad aplicables, en la frontera más temprana que dispone de evidencia y
+permiso suficientes; no autoriza acción, no eleva datos autodeclarados, no
+fabrica verdad externa ni crea un oráculo de existencia o autorización.
+
+Esto no exige duplicar todo diagnóstico en todas las superficies. El ADR de la
+feature decide el punto exacto, el schema y la compatibilidad; tests cubren que
+el código/reason/detail sea estable y no filtre payloads, rutas ni secretos.
+
+### §11.2 Evolucionar de forma aditiva o versionada
+
+Primero se identifica la unidad versionada: schema, payload, perfil, comando o
+API. Sólo se añade dentro de la misma versión si el contrato vigente declara ese
+punto extensible y los tests demuestran compatibilidad. Payloads dorados,
+serialización canónica y schemas cerrados requieren una nueva versión o perfil.
+
+Una superficie paralela debe derivar de una sola semántica y fuente canónica,
+además de declarar precedencia, migración y, cuando corresponda, deprecación. Si
+una reinterpretación o ruptura es inevitable, requiere ADR, versión nueva y
+tests que demuestren el comportamiento legado y el nuevo; “aditivo” no justifica
+ambigüedad, dos implementaciones divergentes ni dos fuentes de verdad.
 
 ## Cómo se mejora este documento
 
