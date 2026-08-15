@@ -32,6 +32,7 @@ from .index import INDEX_PROFILE, build_index, detect_fts5, verify_index_deep
 from .identity import IdentityError, adopt, identity_status, plan_adoption, repair
 from .evaluation import evaluate_retrieval, evaluate_retrieval_v2
 from .export_restore import ExportError, create_export, restore_export, verify_export
+from .reader_gate import ReaderGateError
 from .retrieval import SCAN_PROFILE, retrieve
 from .resume import resume
 from .schemas import schema_bytes, schema_catalog
@@ -652,7 +653,7 @@ def main() -> None:
         suffix = f" ({exc.detail})" if exc.detail else ""
         sys.stderr.write(f"an-kla error: {exc}{suffix}\n")
         raise SystemExit(2)
-    except (CheckpointPolicyError, CompactionError, ExportError, StoreError, ConcurrentUpdateError, IdentityError, TransactionError, ValueError, OSError) as exc:
+    except (CheckpointPolicyError, CompactionError, ExportError, StoreError, ConcurrentUpdateError, IdentityError, ReaderGateError, TransactionError, ValueError, OSError) as exc:
         if isinstance(exc, TransactionError) and str(exc) == "invalid_transaction_id":
             sys.stderr.write("an-kla error: invalid_transaction_id\n")
             raise SystemExit(2)
