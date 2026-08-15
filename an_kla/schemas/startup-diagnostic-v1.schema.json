@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:startup-diagnostic:v1",
+  "title": "AN-KLA StartupDiagnostic v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "untrusted_memory_data", "store_presence", "store_integrity", "integrity_detail", "identity", "repo_context", "external_memory_evaluated"],
+  "properties": {
+    "schema": {"const": "an-kla/startup-diagnostic-v1"},
+    "untrusted_memory_data": {"const": true},
+    "store_presence": {"enum": ["present", "absent", "unreadable"]},
+    "store_integrity": {"enum": ["verified", "failed", "not_evaluated"]},
+    "integrity_detail": {"type": ["string", "null"]},
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity_status", "root_relocated", "error_code"],
+      "properties": {
+        "identity_status": {"type": ["string", "null"], "enum": ["absent", "intent_only", "store_only", "project_only", "partial_consistent", "identities_ready_root_pending", "complete", "legacy_unadopted", "conflict", null]},
+        "root_relocated": {"type": ["boolean", "null"]},
+        "error_code": {"type": ["string", "null"]}
+      }
+    },
+    "repo_context": {"enum": ["main_checkout", "linked_worktree", "not_a_repo", "git_unavailable"]},
+    "external_memory_evaluated": {"const": false}
+  }
+}

@@ -22,7 +22,7 @@ class AdrRegistryTests(unittest.TestCase):
         errors, states = MODULE.check_registry(ROOT)
         self.assertEqual(errors, [])
         self.assertEqual(states["Aceptada"], 32)
-        self.assertEqual(states["Propuesta"], 3)
+        self.assertEqual(states["Propuesta"], 4)
 
     def test_detects_gap_and_state_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
