@@ -31,6 +31,26 @@ Todo release beta pasa por ronda adversarial antes de publicarse (ver
 `store.py`, `retrieval.py`, `index.py`, `write_policy.py` o el contrato
 gestionado.
 
+## Worktrees y memoria
+
+`.an-kla/` es estado local ignorado por Git: un `git worktree` nuevo no lo
+recibe. Un worktree con su propia `.an-kla/` es un store distinto, con otro
+`project_uuid`, no una vista del canónico (ADR-0022, ADR-0031).
+
+Mientras #57 no separe `store_root` de `project_root`, la regla es: **los
+worktrees no inicializan memoria propia**. Toda invocación desde un worktree
+apunta al checkout canónico:
+
+```bash
+python3 -m an_kla --project-root /Users/krisnova/www/an-kla-memory status
+```
+
+Si `.an-kla/` falta donde la esperabas, eso es una señal a reportar, no un
+problema a resolver inicializando o copiando estado: copiar `.an-kla/` a mano
+rompe identidad y separación de stores. Al capturar un checkpoint, registra el
+SHA en `evidence`; `source_state` no puede ligarse a Git todavía (el schema
+`working-state-v2` sólo admite `profile: none/v1`).
+
 Las prácticas de ingeniería (ronda adversarial pre-code, spike
 pre-implementación, ADR-antes-que-código, secuenciación de releases, CI local,
 reporte RAG con evidencia) viven en `docs/practicas-ingenieria.md` — revísalas
