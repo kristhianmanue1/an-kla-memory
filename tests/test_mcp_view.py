@@ -207,7 +207,10 @@ class McpContextViewTests(unittest.TestCase):
         boolean_stale_after_days["freshness"]["stale_after_days"] = True
         malformed.append(boolean_stale_after_days)
 
-        from jsonschema import Draft202012Validator
+        try:
+            from jsonschema import Draft202012Validator
+        except ImportError:
+            self.skipTest("jsonschema unavailable")
 
         validator = Draft202012Validator(schema_document("context-view-v1"))
         for value in malformed:

@@ -8,7 +8,10 @@ import unittest
 from unittest.mock import patch
 import weakref
 
-from jsonschema import Draft202012Validator
+try:
+    from jsonschema import Draft202012Validator
+except ImportError:
+    Draft202012Validator = None  # type: ignore[assignment,misc]
 from an_kla.canonical import canonical_json, digest_json, exact_sized_payload
 from an_kla.context_view import _minimum_budget, context_view
 from an_kla.reader_gate import ReaderGateError, reader_gate_mode
@@ -65,9 +68,13 @@ def _error_without_detail():
 
 class ContextViewCoreTests(unittest.TestCase):
     def assertSchemaValid(self, name, value):
+        if Draft202012Validator is None:
+            self.skipTest("jsonschema unavailable")
         Draft202012Validator(schema_document(name)).validate(value)
 
     def assertSchemaInvalid(self, name, value):
+        if Draft202012Validator is None:
+            self.skipTest("jsonschema unavailable")
         self.assertFalse(Draft202012Validator(schema_document(name)).is_valid(value))
 
     def test_revision_is_required_and_snapshot_is_pinned(self):
