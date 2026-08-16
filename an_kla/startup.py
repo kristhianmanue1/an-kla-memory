@@ -7,6 +7,8 @@ intact store can still describe a stale project state (issue #79).
 
 from __future__ import annotations
 
+import os
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -16,6 +18,7 @@ from .store import StoreError
 
 
 SCHEMA = "an-kla/startup-diagnostic-v1"
+GIT_TIMEOUT_SECONDS = 5
 
 
 def _code(exc: Exception) -> str:
@@ -46,6 +49,10 @@ def _integrity(store: Any, presence: str) -> tuple[str, str | None]:
         return "not_evaluated", "store_not_present"
     try:
         store.verify()
+    except FileNotFoundError:
+        # Removed between the presence check and this one.  Reporting `failed`
+        # would call a store that no longer exists "broken".
+        return "not_evaluated", "store_disappeared"
     except ReaderGateError as exc:
         # A read-only tree cannot take the gate.  That is not a broken store.
         return "not_evaluated", str(exc)
@@ -55,7 +62,18 @@ def _integrity(store: Any, presence: str) -> tuple[str, str | None]:
 
 
 def _identity(store: Any, presence: str) -> dict[str, Any]:
-    empty = {"identity_status": None, "root_relocated": None, "error_code": None}
+    """Re-express `identity-status-v1` verbatim, or declare it unevaluated.
+
+    ``evaluated: false`` is what carries "could not observe".  The nine
+    published values keep their meaning exactly; none is reused to stand in for
+    a failure, because inventing an identity is worse than admitting none.
+    """
+    empty = {
+        "evaluated": False,
+        "identity_status": None,
+        "root_relocated": None,
+        "error_code": None,
+    }
     if presence == "unreadable":
         return {**empty, "error_code": "store_unreadable"}
     try:
@@ -63,6 +81,7 @@ def _identity(store: Any, presence: str) -> dict[str, Any]:
     except (StoreError, IdentityError, OSError, ValueError) as exc:
         return {**empty, "error_code": _code(exc)}
     return {
+        "evaluated": True,
         "identity_status": observed.get("identity_status"),
         "root_relocated": observed.get("root_relocated"),
         "error_code": observed.get("error_code"),
@@ -70,21 +89,36 @@ def _identity(store: Any, presence: str) -> dict[str, Any]:
 
 
 def _repo_context(project_root: Path) -> str:
-    """Classify the checkout without executing Git.
+    """Classify the checkout by asking Git, as ADR-0036 specifies.
 
-    A linked worktree carries ``.git`` as a file holding ``gitdir:``; a main
-    checkout carries it as a directory.  Reading that is enough, and keeps the
-    diagnostic free of subprocesses, ``PATH`` lookups and Git configuration.
+    An earlier version inspected whether ``.git`` was a file or a directory to
+    avoid a subprocess.  It misclassified a submodule as a linked worktree (its
+    ``.git`` is a gitlink file) and any subdirectory of a repository as
+    ``not_a_repo``.  Git resolves both correctly, so the ADR's mechanism stands.
+
+    ``GIT_*`` variables are stripped so the answer describes the path given and
+    not the ambient environment.
     """
-    marker = project_root / ".git"
+    environment = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
     try:
-        if marker.is_dir():
-            return "main_checkout"
-        if marker.is_file():
-            return "linked_worktree"
+        completed = subprocess.run(
+            ["git", "rev-parse", "--git-dir", "--git-common-dir"],
+            cwd=str(project_root), env=environment, capture_output=True,
+            timeout=GIT_TIMEOUT_SECONDS, check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        # Git absent from PATH, not executable, or timed out.
+        return "git_unavailable"
+    if completed.returncode != 0:
         return "not_a_repo"
+    lines = completed.stdout.decode("utf-8", "replace").splitlines()
+    if len(lines) != 2:
+        return "git_unavailable"
+    try:
+        resolved = [Path(project_root, line).resolve() for line in lines]
     except OSError:
         return "git_unavailable"
+    return "main_checkout" if resolved[0] == resolved[1] else "linked_worktree"
 
 
 def startup_diagnostic(store: Any) -> dict[str, Any]:

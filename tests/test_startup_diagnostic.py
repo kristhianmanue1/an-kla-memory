@@ -10,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 from an_kla.schemas import schema_document
@@ -44,6 +45,17 @@ class StartupDiagnosticTest(unittest.TestCase):
             except OSError:
                 pass
         self.temp.cleanup()
+
+    def _git_env(self) -> dict:
+        return {**os.environ, "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t",
+                "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t"}
+
+    def _repo(self, name: str) -> Path:
+        path = Path(self.root) / name
+        path.mkdir()
+        for command in (["init", "-q"], ["commit", "-q", "--allow-empty", "-m", "base"]):
+            subprocess.run(["git", *command], cwd=path, check=True, env=self._git_env())
+        return path
 
     def assertValid(self, result: dict) -> None:
         if Draft202012Validator is None:
@@ -146,6 +158,44 @@ class StartupDiagnosticTest(unittest.TestCase):
         self.assertEqual(main_result["store_presence"], "absent")
         self.assertEqual(linked_result["store_presence"], "absent")
         self.assertValid(linked_result)
+
+    def test_subdirectory_of_a_repo_is_still_a_checkout(self) -> None:
+        """The filesystem heuristic answered not_a_repo here; Git does not."""
+        main = self._repo("main")
+        nested = main / "sub" / "deeper"
+        nested.mkdir(parents=True)
+        self.assertEqual(
+            startup_diagnostic(MemoryStore(nested))["repo_context"], "main_checkout"
+        )
+
+    def test_submodule_is_not_mistaken_for_a_linked_worktree(self) -> None:
+        """A submodule carries .git as a gitlink file, like a worktree does."""
+        upstream = self._repo("upstream")
+        parent = self._repo("parent")
+        subprocess.run(
+            ["git", "-c", "protocol.file.allow=always", "submodule", "add", "-q",
+             str(upstream), "vendor"],
+            cwd=parent, check=True, capture_output=True, env=self._git_env(),
+        )
+        submodule = parent / "vendor"
+        self.assertTrue((submodule / ".git").is_file())
+        self.assertEqual(
+            startup_diagnostic(MemoryStore(submodule))["repo_context"], "main_checkout"
+        )
+
+    def test_ambient_git_dir_does_not_decide_the_answer(self) -> None:
+        plain = Path(self.root) / "plain"
+        plain.mkdir()
+        repo = self._repo("elsewhere")
+        with unittest.mock.patch.dict(os.environ, {"GIT_DIR": str(repo / ".git")}):
+            self.assertEqual(
+                startup_diagnostic(MemoryStore(plain))["repo_context"], "not_a_repo"
+            )
+
+    def test_identity_declares_when_it_could_not_be_evaluated(self) -> None:
+        result = startup_diagnostic(initialized(self.root))
+        self.assertTrue(result["identity"]["evaluated"])
+        self.assertEqual(result["identity"]["identity_status"], "complete")
 
     def test_plain_directory_is_not_a_repo(self) -> None:
         self.assertEqual(

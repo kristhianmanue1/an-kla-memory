@@ -426,7 +426,13 @@ def _run() -> None:
     elif args.command == "status":
         result = store.verify()
     elif args.command == "startup-diagnostic":
-        result = startup_diagnostic(store)
+        try:
+            result = startup_diagnostic(store)
+        except Exception:
+            # A diagnostic must never answer with a traceback: the caller is an
+            # agent deciding whether it has memory, and a stack trace carries
+            # absolute paths (§11.1).  Broader CLI coverage is issue #84.
+            raise CliUsageError("startup_diagnostic_failed")
     elif args.command == "verify":
         result = (
             store.verify_revision(args.revision)

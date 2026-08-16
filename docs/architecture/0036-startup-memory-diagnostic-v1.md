@@ -55,7 +55,7 @@ imposibilidad de observarlo.
 |---|---|---|
 | `store_presence` | `present` · `absent` · `unreadable` | Si hay algo bajo `.an-kla/memory/` en este project root. `unreadable` cubre permisos denegados y montaje no disponible |
 | `store_integrity` | `verified` · `failed` · `not_evaluated` | Resultado de la verificación. `not_evaluated` cuando la presencia no lo permite o cuando no se pudo tomar el reader gate |
-| `identity` | los 9 valores publicados de `identity-status-v1`, más `root_relocated` | Reexpuesto **verbatim**, sin redefinir |
+| `identity` | `evaluated` más los 9 valores publicados de `identity-status-v1` y `root_relocated` | Reexpuesto **verbatim**, sin redefinir |
 | `repo_context` | `main_checkout` · `linked_worktree` · `not_a_repo` · `git_unavailable` | Derivado de `git rev-parse --git-common-dir` |
 
 Propiedades del contrato:
@@ -71,6 +71,12 @@ Propiedades del contrato:
 - **Schema versionado** `an-kla/startup-diagnostic-v1`, cerrado
   (`additionalProperties: false`), con `untrusted_memory_data: true`. Añadir
   ejes es evolución aditiva conforme a §11.2 de `practicas-ingenieria.md`.
+- **La identidad no evaluable se declara, no se sustituye.** Cuando el store es
+  ilegible o la observación falla, `identity.evaluated` vale `false` y
+  `identity_status` queda nulo. Ninguno de los nueve valores publicados se
+  reutiliza para representar un fallo: inventar una identidad es peor que
+  admitir que no se pudo observar. Precisión incorporada tras la ronda
+  adversarial de la implementación.
 - **Contrato de error explícito.** Cuando el diagnóstico no puede emitirse, sale
   con código distinto de cero y una envolvente con `error_code` de enum cerrado.
   Los mensajes no emiten rutas absolutas (§11.1). La implementación no puede

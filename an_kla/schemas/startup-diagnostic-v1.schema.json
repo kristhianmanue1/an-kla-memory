@@ -14,8 +14,9 @@
     "identity": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["identity_status", "root_relocated", "error_code"],
+      "required": ["evaluated", "identity_status", "root_relocated", "error_code"],
       "properties": {
+        "evaluated": {"type": "boolean"},
         "identity_status": {"type": ["string", "null"], "enum": ["absent", "intent_only", "store_only", "project_only", "partial_consistent", "identities_ready_root_pending", "complete", "legacy_unadopted", "conflict", null]},
         "root_relocated": {"type": ["boolean", "null"]},
         "error_code": {"type": ["string", "null"]}
