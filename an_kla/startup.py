@@ -18,6 +18,18 @@ from .store import StoreError
 SCHEMA = "an-kla/startup-diagnostic-v1"
 
 
+def _code(exc: Exception) -> str:
+    """Stable code without the absolute path (§11.1).
+
+    ``StoreError``/``IdentityError`` carry closed codes such as
+    ``compaction_catalog_invalid``.  ``OSError`` stringifies as
+    ``[Errno 13] Permission denied: '/abs/path'``, so only its type travels.
+    """
+    if isinstance(exc, OSError):
+        return type(exc).__name__
+    return str(exc)
+
+
 def _presence(store: Any) -> tuple[str, str | None]:
     """Presence never raises: ``Path.exists()`` does, under ``EACCES``."""
     try:
@@ -38,7 +50,7 @@ def _integrity(store: Any, presence: str) -> tuple[str, str | None]:
         # A read-only tree cannot take the gate.  That is not a broken store.
         return "not_evaluated", str(exc)
     except (StoreError, IdentityError, OSError, ValueError) as exc:
-        return "failed", str(exc)
+        return "failed", _code(exc)
     return "verified", None
 
 
@@ -49,7 +61,7 @@ def _identity(store: Any, presence: str) -> dict[str, Any]:
     try:
         observed = identity_status(store)
     except (StoreError, IdentityError, OSError, ValueError) as exc:
-        return {**empty, "error_code": str(exc)}
+        return {**empty, "error_code": _code(exc)}
     return {
         "identity_status": observed.get("identity_status"),
         "root_relocated": observed.get("root_relocated"),

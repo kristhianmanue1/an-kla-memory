@@ -99,6 +99,20 @@ class StartupDiagnosticTest(unittest.TestCase):
         self.assertNotIn(self.root, json.dumps(result))
         self.assertValid(result)
 
+    @unittest.skipIf(os.name == "nt", "POSIX mode semantics")
+    @unittest.skipIf(os.geteuid() == 0, "root ignores mode bits")
+    def test_unreadable_object_reports_a_code_not_a_path(self) -> None:
+        """OSError stringifies with the absolute path; only its type may travel."""
+        store = initialized(self.root)
+        (store.root / "revisions").chmod(0o000)
+        result = startup_diagnostic(store)
+        (store.root / "revisions").chmod(0o700)
+        self.assertEqual(result["store_integrity"], "failed")
+        self.assertEqual(result["integrity_detail"], "PermissionError")
+        self.assertNotIn(self.root, json.dumps(result))
+        self.assertNotIn("/", json.dumps(result["identity"]))
+        self.assertValid(result)
+
     def test_copied_store_exposes_root_relocated(self) -> None:
         source = initialized(self.root)
         with tempfile.TemporaryDirectory() as other:
