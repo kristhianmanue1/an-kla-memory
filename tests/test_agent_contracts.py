@@ -88,6 +88,7 @@ class InstalledSchemaTests(unittest.TestCase):
         "retrieval-strategy-report-v1",
         "revision-v2",
         "revision-v3",
+        "startup-diagnostic-v1",
         "store-identity-v1",
         "subject-namespace-result-v1",
         "transaction-archived-v1",

@@ -36,6 +36,7 @@ from .reader_gate import ReaderGateError
 from .retrieval import SCAN_PROFILE, retrieve
 from .resume import resume
 from .schemas import schema_bytes, schema_catalog
+from .startup import startup_diagnostic
 from .store import ConcurrentUpdateError, MemoryStore, StoreError
 from .subject import resolve_namespace
 from .temporal import FRESHNESS_PROFILE, parse_freshness_now
@@ -111,6 +112,10 @@ def _run() -> None:
     sub.add_parser("status")
     verify_cmd = sub.add_parser("verify")
     verify_cmd.add_argument("--revision")
+    sub.add_parser(
+        "startup-diagnostic",
+        help="Clasificar la memoria disponible antes de trabajo material.",
+    )
     sub.add_parser(
         "capabilities", help="Descubrir contratos y límites sin leer memoria."
     )
@@ -420,6 +425,14 @@ def _run() -> None:
         result = store.initialize_with_outcome(transaction_id=args.transaction_id)
     elif args.command == "status":
         result = store.verify()
+    elif args.command == "startup-diagnostic":
+        try:
+            result = startup_diagnostic(store)
+        except Exception:
+            # A diagnostic must never answer with a traceback: the caller is an
+            # agent deciding whether it has memory, and a stack trace carries
+            # absolute paths (§11.1).  Broader CLI coverage is issue #84.
+            raise CliUsageError("startup_diagnostic_failed")
     elif args.command == "verify":
         result = (
             store.verify_revision(args.revision)
