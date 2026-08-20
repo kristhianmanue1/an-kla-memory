@@ -221,6 +221,7 @@ def capabilities() -> dict[str, Any]:
             "retrieval_requires_indexable_text": True,
             "no_text_warning_reason_code": "record_without_indexable_text",
             "context_diagnostics_in_write_result": True,
+            "context_diagnostics_in_init_result": True,
             "legacy_unguarded_cli": {
                 "available": False,
                 "removed_in": "v0.1.0-beta.11",

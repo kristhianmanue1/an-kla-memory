@@ -148,7 +148,13 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
 
         if store_identity is not None:
             raise StoreError("external_store_identity_not_allowed")
-        return bootstrap_initialize(self, transaction_id)
+        result = bootstrap_initialize(self, transaction_id)
+        # ADR-0020 pattern, extended to init (issue #87): a best-effort
+        # context snapshot so a bare ``init`` surfaces ``installed: false``
+        # instead of a clean commit that hides the missing agent entry
+        # point.  Computed outside any lock; never masks the outcome.
+        result["context_diagnostics"] = self._context_diagnostics()
+        return result
 
     def read_current(self) -> str:
         """Read and close CURRENT before doing any other I/O."""

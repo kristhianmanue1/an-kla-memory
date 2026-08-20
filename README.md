@@ -138,7 +138,9 @@ En Windows PowerShell, crea el entorno con `py -3.12 -m venv .venv` y sustituye
 Los pasos son deliberadamente distintos:
 
 1. `pip install` instala el programa;
-2. `init` crea la memoria local `.an-kla/memory/`;
+2. `init` crea la memoria local `.an-kla/memory/`; su resultado incluye
+   `context_diagnostics` señalizando si el bloque gestionado quedó pendiente
+   (`installed: false`) — el paso siguiente no es opcional;
 3. `context plan` muestra la mutación prevista sin aplicarla;
 4. `context install` reconstruye, revalida y aplica el plan bajo lock;
 5. `context status` y `verify` comprueban la integración y la memoria.

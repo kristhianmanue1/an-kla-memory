@@ -1,10 +1,25 @@
 # ADR-0020: `context_diagnostics` en el resultado de escritura
 
 - **Estado:** Aceptada e implementada en `v0.1.0-beta.11` (v2, tras ronda
-  adversarial `fix-and-retry`)
+  adversarial `fix-and-retry`); nota v3 de superficies (2026-08-20, #87)
 - **Fecha:** 2026-08-07
 - **Decide sobre:** cómo un agente que escribe recibe la salud objetiva del
   contrato en el instante de la escritura, sin correr `context status` aparte.
+
+## Superficies (nota v3, 2026-08-20, #87)
+
+El patrón se extendió al resultado de `init`: `initialize_with_outcome`
+incluye `context_diagnostics` tras el bootstrap (fuera de todo lock,
+best-effort, nunca enmascara el outcome). Motivo: un `init` limpio con
+`warnings: []` escondía que el bloque gestionado quedaba sin instalar
+(`installed: false`) — el hueco de descubribilidad de #45, ahora en la
+secuencia de instalación. `capabilities` declara
+`context_diagnostics_in_init_result: true`. La alternativa evaluada y
+rechazada en #87: un `next_step` dentro del outcome (`commit-outcome-v2`
+es schema cerrado, y los resultados son datos observables, no
+instrucciones). Superficies que NO lo emiten: `plan-write` (sigue la
+decisión v2), `context install/update` (son la mutación misma) y los
+comandos read-only puros.
 
 ## Contexto
 
