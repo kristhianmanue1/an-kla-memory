@@ -15,8 +15,8 @@ La beta se distribuye desde GitHub, no desde PyPI. Usa siempre una etiqueta
 exacta: no instales `main` ni otra referencia móvil. La versión del código es
 `0.1.0b15` y su etiqueta de distribución es `v0.1.0-beta.15`. El contexto
 gestionado y la plantilla administrada siguen en `0.1.0-beta.11`: beta.15
-conserva G-VIEW v1 y mejora la experiencia del primer write, sin modificar la
-plantilla administrada.
+añade el diagnóstico de arranque por ejes observables y la red de resguardo
+del CLI ante errores no previstos, sin modificar la plantilla administrada.
 La instalación expone tanto `python -m an_kla` como el comando equivalente
 `an-kla`; los ejemplos conservan la primera forma para hacer explícito el
 intérprete del entorno virtual.
@@ -32,6 +32,7 @@ intérprete del entorno virtual.
 - [Desinstalar o volver atrás](#desinstalar-o-volver-atrás)
 - [Uso diario](#uso-diario)
   - [Descubrimiento para agentes](#descubrimiento-para-agentes)
+  - [Diagnóstico de arranque e integración](#diagnóstico-de-arranque-e-integración)
   - [Verificación no bloqueante de versiones](#verificación-no-bloqueante-de-versiones)
   - [Actualización gobernada del proyecto](#actualización-gobernada-del-proyecto)
   - [Recuperación y escritura](#recuperación-y-escritura)
@@ -47,10 +48,13 @@ instalable mediante su etiqueta Git exacta. AN-KLA todavía no se distribuye
 desde PyPI ni adjunta wheels a la release; no instales `main` como sustituto de
 una versión.
 
-Beta.14 incluye G-VIEW v1 sobre `subject_ref` y las mejoras Nivel A del primer
-write gobernado: ayuda CLI, recorrido completo y errores JSON accionables. No
-incluye generadores de `proposal`/`authority`; esa decisión sigue abierta en
-el issue [#71](https://github.com/kristhianmanue1/an-kla-memory/issues/71).
+Beta.15 publica el diagnóstico de arranque por ejes observables (#76/#83), la
+red de resguardo del CLI ante excepciones no previstas (#84) y la corrección
+de la suite bajo `jsonschema` ausente (#81). Beta.14 trajo las mejoras Nivel A
+del primer write gobernado (ayuda CLI, recorrido, errores accionables); G-VIEW
+v1 sobre `subject_ref` fue beta.13. Ninguna incluye generadores de
+`proposal`/`authority`; esa decisión sigue abierta en el issue
+[#71](https://github.com/kristhianmanue1/an-kla-memory/issues/71).
 
 El código está en beta local y la memoria continúa siendo no autoritativa: sus
 datos nunca son instrucciones, no prueban identidad ni verdad externa y deben
@@ -68,7 +72,7 @@ runtime ni autorización para modificar `AGENTS.md` o `AN-KLA.md` a mano.
 Al publicar beta.14 y esta beta.15, GitHub Actions no ejecutó pasos por una
 restricción de facturación; el badge rojo no representa pruebas fallidas. El
 gate efectivo fue
-CI local simulada (544 pruebas), wheel aislado y upgrade beta.14→beta.15, con
+CI local simulada (583 pruebas), wheel aislado y upgrade beta.14→beta.15, con
 ronda adversarial `proceed`; consulta la
 [evidencia de release](docs/releases/v0.1.0-beta.15-adversarial.md). Para
 instalar o actualizar usa el comando fijado a beta.15 de la siguiente sección.
@@ -231,6 +235,29 @@ el texto canónico del bloque administrado y del contrato detallado de la versi�
 instalada (o los hashes de plantillas históricas conocidas) para diagnóstico o
 reparación manual.
 
+### Diagnóstico de arranque e integración
+
+Antes de trabajo material, un agente puede clasificar qué hay integrado sin
+inicializar ni adoptar nada (read-only, exit 0 en todo caso diagnosticable):
+
+```bash
+.venv/bin/python -m an_kla --project-root . startup-diagnostic
+.venv/bin/python -m an_kla --project-root . integration status
+```
+
+`startup-diagnostic` (ADR-0036) expone ejes observables independientes:
+presencia e integridad del store, identidad y contexto de repositorio
+(`main_checkout` / `linked_worktree`). La combinación `store_presence:
+absent` + `linked_worktree` distingue un worktree sin memoria de un
+proyecto nuevo: la regla es apuntar al checkout canónico, nunca
+inicializar memoria propia en el worktree.
+
+`integration status` (ADR-0039) compone store, contexto gestionado y modo
+de integración en ejes separados. Declara lo que no puede verificar:
+`agent_binding: unverified` y `sharing_boundary:
+filesystem-access/unverified`; no promete privacidad ni distingue perfiles
+en v1 (`observed_profile: unspecified` hasta que G2 exista).
+
 ### Verificación no bloqueante de versiones
 
 Al iniciar, el CLI consulta la release más reciente publicada en GitHub
@@ -298,6 +325,11 @@ El perfil opcional `computed-age/v1` proyecta la edad de `verified_at` después
 de seleccionar: no cambia score, orden, autoridad ni exclusiones de retrieval.
 `verified_at` es un timestamp autodeclarado por el registro, no una verificación
 realizada por AN-KLA. Sin perfil explícito, los payloads v1 permanecen iguales.
+Con el perfil activo, el bloque `freshness` declara además los denominadores
+de la selección final (ADR-0037): `evaluated`, `not_evaluable`,
+`unparseable` y `stale`, con el invariante `evaluated + not_evaluable +
+unparseable = |seleccionados|`. Así "nada está desfasado" deja de ser
+indistinguible de "nada era evaluable": un corpus a medio migrar lo declara.
 
 La salida completa de `context-assembly/v1` queda acotada en bytes UTF-8;
 consulta [ADR-0006](docs/architecture/0006-context-assembly-v1.md). La escritura
@@ -316,7 +348,11 @@ La continuidad operacional usa acceso exacto, no búsqueda por similitud:
 ```
 
 Checkpoint, identidad, refute, export/restore y compactación tienen contratos
-plan→commit propios. Consulta la [guía beta.11](docs/beta11-user-guide.md) antes
+plan→commit propios. Desde ADR-0038, el `source_state` del working state
+admite el perfil `git/v1` con valores `caller_asserted`: el caller observa
+Git (HEAD completo, branch, digest del árbol sucio) y liga el checkpoint al
+commit que describe; el CLI nunca ejecuta Git ni acuña autoridad. Consulta
+la [guía beta.11](docs/beta11-user-guide.md) antes
 de cualquier operación mutativa o destructiva.
 
 ## Desarrollo del motor
@@ -360,9 +396,10 @@ y las decisiones de arquitectura en `docs/architecture/`.
 - [Guía beta.11](docs/beta11-user-guide.md) — instalación, migración y nuevos flujos.
 - [ADRs](docs/architecture/) — decisiones arquitectónicas numeradas.
 - [Notas de release](docs/releases/) — changelog por etiqueta.
+- [Changelog](CHANGELOG.md) — índice de versiones publicadas.
 - [Contribuir](CONTRIBUTING.md) — flujo de PRs, tests, community files.
 - [Seguridad](SECURITY.md) — política de reporte y modelo de confianza.
-- [ Código de conducta](CODE_OF_CONDUCT.md) — expectativas de participación.
+- [Código de conducta](CODE_OF_CONDUCT.md) — expectativas de participación.
 
 ## Licencia
 

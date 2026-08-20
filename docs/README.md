@@ -14,7 +14,7 @@ Para instalar o migrar un proyecto consumidor, empieza por la
 Los ADRs viven en [`architecture/`](architecture/) y siguen una numeración
 secuencial. Cada uno documenta una decisión arquitectónica irreversible o
 difícil de revertir. Este índice es el registro canónico de inventario y estado
-decisional, actualizado al 2026-08-12. `Aceptada` no implica que toda extensión
+decisional, actualizado al 2026-08-20. `Aceptada` no implica que toda extensión
 prospectiva esté implementada; la última columna conserva esa distinción.
 
 | # | ADR | Tema | Estado | Vigencia o evidencia |
@@ -49,15 +49,15 @@ prospectiva esté implementada; la última columna conserva esa distinción.
 | 0028 | [governed-compaction-v1](architecture/0028-governed-compaction-v1.md) | Corte de epoch, tombstones y archivo verificable | Aceptada | Publicada en [beta.11](releases/v0.1.0-beta.11.md) |
 | 0029 | [derived-semantic-retrieval-v1](architecture/0029-derived-semantic-retrieval-v1.md) | Índice semántico derivado y recuperación híbrida opt-in | Propuesta | Sin implementación ni proveedor autorizado |
 | 0030 | [milestone-checkpoint-obligation-v1](architecture/0030-milestone-checkpoint-obligation-v1.md) | Obligación gobernada de continuidad al cerrar hitos | Propuesta | En reevaluación; §4 reserva `git/v1` para tool_observed, supersedido por ADR-0038 |
-| 0031 | [agent-owned-memory-host-managed-v1](architecture/0031-agent-owned-memory-host-managed-v1.md) | Memoria del agente con alcance de proyecto y perfil host-managed | Aceptada | Reconocido host-managed como perfil soportado; G1 (observabilidad) no iniciado |
+| 0031 | [agent-owned-memory-host-managed-v1](architecture/0031-agent-owned-memory-host-managed-v1.md) | Memoria del agente con alcance de proyecto y perfil host-managed | Aceptada | Reconocido host-managed como perfil soportado; G1 publicado como ADR-0039 (PR #85); G2–G4 con diseños de entrada |
 | 0032 | [derived-contextual-view-v1](architecture/0032-derived-contextual-view-v1.md) | Vista contextual vigente derivada, non-authoritative, sobre sustrato de afirmaciones | Aceptada | G-SUBJECT publicado en [beta.12](releases/v0.1.0-beta.12.md); G-VIEW publicado en [beta.13](releases/v0.1.0-beta.13.md) |
 | 0033 | [subject-ref-v1](architecture/0033-subject-ref-v1.md) | Identidad contextual estable `subject_ref`, namespace derivado de project identity y binding bajo lock | Aceptada | Publicada en [beta.12](releases/v0.1.0-beta.12.md) |
 | 0034 | [derived-context-view-contract-v1](architecture/0034-derived-context-view-contract-v1.md) | Contrato G-VIEW v1: vista contextual determinista, non-authoritative, paginada y recuperable | Aceptada | CORE+CLI+MCP+CAP publicados en [beta.13](releases/v0.1.0-beta.13.md); auditoría REL `proceed` |
 | 0035 | [explicit-project-context-baseline-adoption-v1](architecture/0035-explicit-project-context-baseline-adoption-v1.md) | Adopción explícita de baseline project-owned sin debilitar target drift | Propuesta | Sin implementación; issue #45 |
 | 0036 | [startup-memory-diagnostic-v1](architecture/0036-startup-memory-diagnostic-v1.md) | Diagnóstico de arranque read-only por ejes observables totales, sin enum de estados compuestos | Aceptada | Implementada en `main` (#83, post-beta.14): comando `startup-diagnostic`; `repo_context` refinado a `git rev-parse` tras rondas adversariales de #76 |
-| 0037 | [freshness-denominators-v1](architecture/0037-freshness-denominators-v1.md) | G-FRESH: recuentos evaluated/not_evaluable/unparseable/stale sobre la selección final en el bloque freshness | Aceptada | Implementada en `plan/backlog-prioridades-2026-08-20` (#50): retrieve, assemble-context y MCP; denominador de view diferido |
-| 0038 | [source-state-git-v1](architecture/0038-source-state-git-v1.md) | `source_state` con perfil `git/v1` caller_asserted para ligar el checkpoint al commit que describe (#79) | Aceptada | Implementada en `plan/backlog-prioridades-2026-08-20`: policy+schema aditivos, CLI sin subprocesos |
-| 0039 | [integration-status-v1](architecture/0039-integration-status-v1.md) | G1: contrato observable de la integración por ejes (store, contexto gestionado, modo) sin enum compuesto (#55) | Aceptada | Implementada en `plan/backlog-prioridades-2026-08-20`: comando `integration status`, read-only |
+| 0037 | [freshness-denominators-v1](architecture/0037-freshness-denominators-v1.md) | G-FRESH: recuentos evaluated/not_evaluable/unparseable/stale sobre la selección final en el bloque freshness | Aceptada | Implementada en `main` (PR #85, hacia beta.16): retrieve, assemble-context y MCP; denominador de view diferido |
+| 0038 | [source-state-git-v1](architecture/0038-source-state-git-v1.md) | `source_state` con perfil `git/v1` caller_asserted para ligar el checkpoint al commit que describe (#79) | Aceptada | Implementada en `main` (PR #85, hacia beta.16): policy+schema aditivos, CLI sin subprocesos |
+| 0039 | [integration-status-v1](architecture/0039-integration-status-v1.md) | G1: contrato observable de la integración por ejes (store, contexto gestionado, modo) sin enum compuesto (#55) | Aceptada | Implementada en `main` (PR #85, hacia beta.16): comando `integration status`, read-only |
 
 Resumen: **39 ADRs**, sin huecos; **36 aceptadas** y **3 propuestas**. No hay
 ADRs rechazadas ni reemplazadas en el registro actual.
@@ -95,8 +95,8 @@ Los reportes son evidencia experimental, no decisiones de ranking.
 de publicación. Cumplen el rol de `CHANGELOG.md`.
 
 La release documentada más reciente es
-[`v0.1.0-beta.14`](releases/v0.1.0-beta.14.md), con su
-[ronda adversarial](releases/v0.1.0-beta.14-adversarial.md).
+[`v0.1.0-beta.15`](releases/v0.1.0-beta.15.md), con su
+[ronda adversarial](releases/v0.1.0-beta.15-adversarial.md).
 
 ### Planificación y respuestas históricas
 
@@ -121,6 +121,16 @@ El backlog abierto y su secuencia para trabajo con agentes están en el
 [plan técnico de ejecución](planning/plan-ejecucion-backlog-agentes-2026-08-11.md),
 acompañado por su
 [ronda adversarial documental](planning/plan-ejecucion-backlog-agentes-adversarial-2026-08-11.md).
+
+La ejecución más reciente del backlog prioritario (doce puntos con ronda
+adversarial por punto, tres rondas de hito y acta final con las decisiones
+pendientes del maintainer) es el
+[plan 2026-08-20](planning/plan-backlog-2026-08-20.md), cerrado por el
+[PR #85](https://github.com/kristhianmanue1/an-kla-memory/pull/85); su
+priorización adversarial vive en
+[`backlog-prioridades-adversarial-2026-08-20.md`](planning/backlog-prioridades-adversarial-2026-08-20.md)
+y el cierre en
+[`hito-final-adversarial-2026-08-20.md`](planning/hito-final-adversarial-2026-08-20.md).
 
 La implementación de `subject_ref` v1 (issue #59, ADR-0033) se secuencia en
 [plan técnico por fases](planning/issue-59-subject-ref-implementation-2026-08-11.md);
