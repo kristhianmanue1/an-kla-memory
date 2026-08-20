@@ -1,4 +1,4 @@
-"""Exercise a beta.13 consumer upgraded to the candidate wheel."""
+"""Exercise a beta.14 consumer upgraded to the candidate wheel."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import zipfile
 
 
 ROOT = Path(__file__).resolve().parents[1]
-PREVIOUS_TAG = "v0.1.0-beta.13"
+PREVIOUS_TAG = "v0.1.0-beta.14"
 
 
 def _run(command: list[str], **kwargs: object) -> subprocess.CompletedProcess[bytes]:
@@ -46,7 +46,7 @@ def _wheel(source: Path, destination: Path, error: str) -> Path:
 def main() -> int:
     with tempfile.TemporaryDirectory() as directory:
         temporary = Path(directory)
-        archive = temporary / "beta13.zip"
+        archive = temporary / "beta14.zip"
         _run(
             ["git", "archive", "--format=zip", "--output", str(archive), PREVIOUS_TAG],
             cwd=ROOT,
@@ -57,7 +57,7 @@ def main() -> int:
             for name in bundle.namelist():
                 path = Path(name)
                 if path.is_absolute() or ".." in path.parts:
-                    raise SystemExit("beta13_upgrade_unsafe_archive")
+                    raise SystemExit("beta14_upgrade_unsafe_archive")
             bundle.extractall(previous_source)
 
         previous_dir = temporary / "previous-wheel"
@@ -65,10 +65,10 @@ def main() -> int:
         previous_dir.mkdir()
         candidate_dir.mkdir()
         previous_wheel = _wheel(
-            previous_source, previous_dir, "beta13_upgrade_invalid_previous_wheel_count"
+            previous_source, previous_dir, "beta14_upgrade_invalid_previous_wheel_count"
         )
         candidate_wheel = _wheel(
-            ROOT, candidate_dir, "beta13_upgrade_invalid_candidate_wheel_count"
+            ROOT, candidate_dir, "beta14_upgrade_invalid_candidate_wheel_count"
         )
 
         environment_dir = temporary / "venv"
@@ -77,8 +77,8 @@ def main() -> int:
         python = scripts / ("python.exe" if os.name == "nt" else "python")
         cli = scripts / ("an-kla.exe" if os.name == "nt" else "an-kla")
         _run([str(python), "-m", "pip", "install", "--no-deps", str(previous_wheel)])
-        if _run([str(cli), "--version"]).stdout.decode().strip() != "an-kla-memory 0.1.0b13":
-            raise SystemExit("beta13_upgrade_wrong_previous_version")
+        if _run([str(cli), "--version"]).stdout.decode().strip() != "an-kla-memory 0.1.0b14":
+            raise SystemExit("beta14_upgrade_wrong_previous_version")
 
         consumer = temporary / "consumer"
         consumer.mkdir()
@@ -89,7 +89,7 @@ def main() -> int:
         before = json.loads(_run([*command, "verify"]).stdout)
         revision = before.get("revision")
         if before.get("ok") is not True or not isinstance(revision, str):
-            raise SystemExit("beta13_upgrade_invalid_baseline")
+            raise SystemExit("beta14_upgrade_invalid_baseline")
 
         _run(
             [
@@ -103,31 +103,33 @@ def main() -> int:
             ]
         )
         if _run([str(cli), "--version"]).stdout.decode().strip() != "an-kla-memory 0.1.0b15":
-            raise SystemExit("beta13_upgrade_wrong_candidate_version")
+            raise SystemExit("beta14_upgrade_wrong_candidate_version")
         after = json.loads(_run([*command, "verify"]).stdout)
         if after.get("ok") is not True or after.get("revision") != revision:
-            raise SystemExit("beta13_upgrade_revision_changed")
+            raise SystemExit("beta14_upgrade_revision_changed")
         context = json.loads(_run([*command, "context", "status"]).stdout)
         if context.get("ok") is not True or context.get("template_version") != "0.1.0-beta.11":
-            raise SystemExit("beta13_upgrade_context_changed")
+            raise SystemExit("beta14_upgrade_context_changed")
 
-        plan_help = _run([str(cli), "--no-update-check", "plan-write", "--help"])
-        commit_help = _run(
-            [str(cli), "--no-update-check", "commit-write-plan", "--help"]
+        diagnostic = json.loads(
+            _run([*command, "startup-diagnostic"]).stdout
         )
-        plan_text = plan_help.stdout.decode()
-        commit_text = commit_help.stdout.decode()
         if (
-            "an-kla/write-proposal-v1" not in plan_text
-            or "an-kla/write-authority-v1" not in plan_text
-            or "stdout exacto de plan-write" not in commit_text
-            or "Cada commit mueve CURRENT" not in commit_text
+            diagnostic.get("schema") != "an-kla/startup-diagnostic-v1"
+            or diagnostic.get("repo_context") not in {
+                "main_checkout", "linked_worktree", "not_a_repo", "git_unavailable",
+            }
         ):
-            raise SystemExit("beta13_upgrade_missing_first_write_guidance")
+            raise SystemExit("beta14_upgrade_startup_diagnostic_missing")
+
+        capabilities = json.loads(_run([*command, "capabilities"]).stdout)
+        surface = capabilities.get("cli_error_surface", {}).get("unexpected_failure")
+        if not surface or surface.get("exit_code") != 1:
+            raise SystemExit("beta14_upgrade_cli_error_surface_missing")
 
     print(
-        "check_beta13_upgrade: OK — revisión y contexto beta.13 preservados; "
-        "ayuda del primer write disponible en wheel candidato 0.1.0b15"
+        "check_beta14_upgrade: OK — revisión y contexto beta.14 preservados; "
+        "startup-diagnostic y cli_error_surface presentes en wheel candidato 0.1.0b15"
     )
     return 0
 
