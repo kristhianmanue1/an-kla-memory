@@ -396,6 +396,7 @@ y las decisiones de arquitectura en `docs/architecture/`.
 - [Guía beta.11](docs/beta11-user-guide.md) — instalación, migración y nuevos flujos.
 - [ADRs](docs/architecture/) — decisiones arquitectónicas numeradas.
 - [Notas de release](docs/releases/) — changelog por etiqueta.
+- [Changelog](CHANGELOG.md) — índice de versiones publicadas.
 - [Contribuir](CONTRIBUTING.md) — flujo de PRs, tests, community files.
 - [Seguridad](SECURITY.md) — política de reporte y modelo de confianza.
 - [Código de conducta](CODE_OF_CONDUCT.md) — expectativas de participación.
