@@ -20,7 +20,7 @@ fix-and-retry → aplicada. Cierre: **escalate** (el esperado del punto).
 Cero deps runtime (`[project]` sin `dependencies`); export actual 100%
 stdlib; `pip install "an-kla-memory[extra] @ git+…@rama"` funcional
 (sintaxis verificado con pip 25.3); `cryptography` sin XChaCha20
-(nonce 12 B); ADR-0039 libre; frontera de confianza intacta.
+(nonce 12 B); siguiente número de ADR libre; frontera de confianza intacta.
 
 ## Decisión
 
@@ -28,4 +28,4 @@ stdlib; `pip install "an-kla-memory[extra] @ git+…@rama"` funcional
 - [ ] fix-and-retry
 - [x] escalate — en la mesa del maintainer: **B vs D** (crypto auditada
   en core con extra opt-in vs adaptador total zero-dep) y autorización
-  del ADR-0039 con ronda pre-code de foco cripto.
+  del ADR de sealed-export (siguiente número libre) con ronda pre-code de foco cripto.

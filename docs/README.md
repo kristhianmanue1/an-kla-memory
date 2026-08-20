@@ -57,8 +57,9 @@ prospectiva esté implementada; la última columna conserva esa distinción.
 | 0036 | [startup-memory-diagnostic-v1](architecture/0036-startup-memory-diagnostic-v1.md) | Diagnóstico de arranque read-only por ejes observables totales, sin enum de estados compuestos | Aceptada | Implementada en `main` (#83, post-beta.14): comando `startup-diagnostic`; `repo_context` refinado a `git rev-parse` tras rondas adversariales de #76 |
 | 0037 | [freshness-denominators-v1](architecture/0037-freshness-denominators-v1.md) | G-FRESH: recuentos evaluated/not_evaluable/unparseable/stale sobre la selección final en el bloque freshness | Aceptada | Implementada en `plan/backlog-prioridades-2026-08-20` (#50): retrieve, assemble-context y MCP; denominador de view diferido |
 | 0038 | [source-state-git-v1](architecture/0038-source-state-git-v1.md) | `source_state` con perfil `git/v1` caller_asserted para ligar el checkpoint al commit que describe (#79) | Aceptada | Implementada en `plan/backlog-prioridades-2026-08-20`: policy+schema aditivos, CLI sin subprocesos |
+| 0039 | [integration-status-v1](architecture/0039-integration-status-v1.md) | G1: contrato observable de la integración por ejes (store, contexto gestionado, modo) sin enum compuesto (#55) | Aceptada | Implementada en `plan/backlog-prioridades-2026-08-20`: comando `integration status`, read-only |
 
-Resumen: **38 ADRs**, sin huecos; **35 aceptadas** y **3 propuestas**. No hay
+Resumen: **39 ADRs**, sin huecos; **36 aceptadas** y **3 propuestas**. No hay
 ADRs rechazadas ni reemplazadas en el registro actual.
 
 ### Documentación normativa

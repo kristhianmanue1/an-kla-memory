@@ -33,6 +33,7 @@ from .context_view import (
 )
 from .index import INDEX_PROFILE, build_index, detect_fts5, verify_index_deep
 from .identity import IdentityError, adopt, identity_status, plan_adoption, repair
+from .integration import integration_status
 from .evaluation import evaluate_retrieval, evaluate_retrieval_v2
 from .export_restore import ExportError, create_export, restore_export, verify_export
 from .reader_gate import ReaderGateError
@@ -119,6 +120,18 @@ def _run() -> None:
         "startup-diagnostic",
         help="Clasificar la memoria disponible antes de trabajo material.",
     )
+    integration_cmd = sub.add_parser(
+        "integration",
+        help="Observar la integración (store, contexto gestionado, modo).",
+    )
+    integration_sub = integration_cmd.add_subparsers(
+        dest="integration_command", required=True
+    )
+    integration_status_cmd = integration_sub.add_parser(
+        "status",
+        help="Ejes observables de la integración (ADR-0039), read-only.",
+    )
+    integration_status_cmd.add_argument("--target", default="AGENTS.md")
     sub.add_parser(
         "capabilities", help="Descubrir contratos y límites sin leer memoria."
     )
@@ -436,6 +449,8 @@ def _run() -> None:
             # agent deciding whether it has memory, and a stack trace carries
             # absolute paths (§11.1).  Broader CLI coverage is issue #84.
             raise CliUsageError("startup_diagnostic_failed")
+    elif args.command == "integration":
+        result = integration_status(store, args.target)
     elif args.command == "verify":
         result = (
             store.verify_revision(args.revision)

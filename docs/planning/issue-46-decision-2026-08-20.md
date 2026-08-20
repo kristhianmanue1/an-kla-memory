@@ -83,7 +83,7 @@ Este punto no puede avanzar sin el maintainer:
 - **¿B (extra `[sealed]`, crypto auditada en core, garantías testeables)
   o D (adaptador total, core puro, corrección criptográfica fuera de
   pruebas del core)?** Es política de riesgo, no técnica.
-- **¿Autorizar el ADR-0039 (sealed-export/v1)** con la base del issue,
+- **¿Autorizar el ADR de sealed-export/v1 (siguiente número libre)** con la base del issue,
   la opción elegida y su ronda adversarial pre-code con foco cripto?
 
 Mientras tanto, el estado actual es honesto y declarado: capabilities

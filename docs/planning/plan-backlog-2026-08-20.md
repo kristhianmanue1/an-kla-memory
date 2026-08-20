@@ -176,9 +176,11 @@ esperado si el maintainer quiere generación.
 ## Punto 9 — #68: inventario físico por revisión (P4, media)
 
 Comando read-only `inventory --revision <sha> [--stream] [--cursor]`:
-enumeración de records físicos con estado observable
-(vigente/sustituida/refutada/eliminada), sin query ni score, paginada,
-ligada a revisión. ADR-0039 (contrato) + CORE + CLI + tests + ronda.
+enumeración de records físicos con estado observable, sin query ni
+score, paginada, ligada a revisión. *Ejecutado como spike (el issue
+exigía spike primero; implementación pendiente de ADR).* Nota de
+numeración: ADR-0039 quedó asignado a G1 (punto 12); el inventario
+usará el siguiente número libre.
 
 ## Punto 10 — #46: export sellado (P4, decisión)
 
@@ -197,8 +199,8 @@ cubren los casos observados) + ronda.
 ## Punto 12 — G1–G4 (#55–#58) (P5, alta c/u)
 
 Alcance realista de esta rama: **G1 (#55) implementado** (contrato
-observable del perfil host-managed: campo en `context status`/cap sin
-instalar contexto, ADR-0040) y **G2–G4 como decisiones/diseño**
+observable de integración: comando `integration status` con ejes
+independientes, ADR-0039) y **G2–G4 como decisiones/diseño**
 (ADR-0041 si procede, secuencia y dependencias documentadas). Intentar
 G2–G4 completos en esta rama rompería el presupuesto de revisión; la
 ronda final declara ese límite.

@@ -66,6 +66,16 @@ def capabilities() -> dict[str, Any]:
                 },
                 "resume": "an-kla/resume-v1",
             },
+            "integration": {
+                "command": "integration status",
+                "schema": "an-kla/integration-status-v1",
+                "read_only": True,
+                "supported_profiles": ["agent-owned/v1", "host-managed/v1"],
+                "observed_profile_v1": "unspecified",
+                "agent_binding": "unverified",
+                "sharing_boundary": "filesystem-access/unverified",
+                "decision": "ADR-0039",
+            },
             "transactions": {
                 "attempt": "an-kla/transaction-attempt-v1",
                 "outcome": "an-kla/commit-outcome-v2",
