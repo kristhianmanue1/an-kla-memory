@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import sys
+import traceback
 from typing import Any
 
 from .capabilities import capabilities
+from .cli_error_log import DEBUG_ENV, display_path, write_error_log
 from .benchmark_fixture import run_reference_benchmark
 from .canonical import canonical_json
 from .checkpoint_policy import CheckpointPolicyError
@@ -675,6 +678,19 @@ def main() -> None:
             detail = "refresh_status_and_replan"
         suffix = f" ({detail})" if detail else ""
         raise SystemExit(f"an-kla error: {exc}{suffix}")
+    except Exception:
+        # Safety net (#84): an unexpected failure must never answer with a
+        # traceback on stderr (it leaks absolute paths, §11.1).  The full
+        # traceback goes to a private local log; AN_KLA_DEBUG=1 restores it
+        # on stderr for development.  Exit code stays 1, matching the
+        # uncaught-crash behavior this replaces.
+        traceback_text = traceback.format_exc()
+        log_path = write_error_log(traceback_text)
+        if os.environ.get(DEBUG_ENV) == "1":
+            sys.stderr.write(traceback_text)
+            raise SystemExit(1)
+        hint = f" (traceback: {display_path(log_path)})" if log_path else ""
+        raise SystemExit(f"an-kla error: cli_unexpected_failure{hint}")
 
 
 if __name__ == "__main__":

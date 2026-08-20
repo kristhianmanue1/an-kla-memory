@@ -223,6 +223,25 @@ def capabilities() -> dict[str, Any]:
             "install_or_self_replace": False,
             "notice_channel": "stderr",
         },
+        "cli_error_surface": {
+            "unexpected_failure": {
+                "stderr": "an-kla error: cli_unexpected_failure",
+                "stderr_note": "Relative log hint appended when the local log is enabled and writable; never an absolute path.",
+                "exit_code": 1,
+                "stderr_traceback": False,
+                "local_log": {
+                    "enabled": True,
+                    "mode": "0600",
+                    "parent_mode": "0700",
+                    "path_convention": "$XDG_CACHE_HOME|$LOCALAPPDATA|~/.cache /an-kla/cli-errors.log",
+                    "contents": "argv + full traceback",
+                    "max_bytes": 5242880,
+                    "overflow_policy": "reset",
+                },
+                "debug_stderr_traceback_env": "AN_KLA_DEBUG",
+                "disable_local_log_env": "AN_KLA_NO_CLI_ERROR_LOG",
+            },
+        },
         "schemas": schema_catalog()["schemas"],
         "mcp": {
             "protocol_version": PROTOCOL_VERSION,
