@@ -12,9 +12,15 @@ en fase de pre-release `0.1.0`.
 
 ## [No publicadas]
 
-Desarrollo hacia beta.16 en `main`: G-FRESH/ADR-0037 (denominadores de
-frescura), `source_state` `git/v1`/ADR-0038, `integration status`/ADR-0039
-(G1). Requieren ronda de release propia antes de etiquetar.
+Nada aún.
+
+## [v0.1.0-beta.16] — 2026-08-20
+
+Denominadores de frescura (ADR-0037), `source_state` `git/v1`
+(ADR-0038), `integration status` G1 (ADR-0039), señal de contexto en
+`init` (#87) y ayuda CLI completa.
+[Notas](docs/releases/v0.1.0-beta.16.md) ·
+[Ronda adversarial](docs/releases/v0.1.0-beta.16-adversarial.md)
 
 ## [v0.1.0-beta.15] — 2026-08-20
 
