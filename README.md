@@ -32,6 +32,7 @@ intérprete del entorno virtual.
 - [Desinstalar o volver atrás](#desinstalar-o-volver-atrás)
 - [Uso diario](#uso-diario)
   - [Descubrimiento para agentes](#descubrimiento-para-agentes)
+  - [Diagnóstico de arranque e integración](#diagnóstico-de-arranque-e-integración)
   - [Verificación no bloqueante de versiones](#verificación-no-bloqueante-de-versiones)
   - [Actualización gobernada del proyecto](#actualización-gobernada-del-proyecto)
   - [Recuperación y escritura](#recuperación-y-escritura)
@@ -234,6 +235,29 @@ el texto canónico del bloque administrado y del contrato detallado de la versi�
 instalada (o los hashes de plantillas históricas conocidas) para diagnóstico o
 reparación manual.
 
+### Diagnóstico de arranque e integración
+
+Antes de trabajo material, un agente puede clasificar qué hay integrado sin
+inicializar ni adoptar nada (read-only, exit 0 en todo caso diagnosticable):
+
+```bash
+.venv/bin/python -m an_kla --project-root . startup-diagnostic
+.venv/bin/python -m an_kla --project-root . integration status
+```
+
+`startup-diagnostic` (ADR-0036) expone ejes observables independientes:
+presencia e integridad del store, identidad y contexto de repositorio
+(`main_checkout` / `linked_worktree`). La combinación `store_presence:
+absent` + `linked_worktree` distingue un worktree sin memoria de un
+proyecto nuevo: la regla es apuntar al checkout canónico, nunca
+inicializar memoria propia en el worktree.
+
+`integration status` (ADR-0039) compone store, contexto gestionado y modo
+de integración en ejes separados. Declara lo que no puede verificar:
+`agent_binding: unverified` y `sharing_boundary:
+filesystem-access/unverified`; no promete privacidad ni distingue perfiles
+en v1 (`observed_profile: unspecified` hasta que G2 exista).
+
 ### Verificación no bloqueante de versiones
 
 Al iniciar, el CLI consulta la release más reciente publicada en GitHub
@@ -301,6 +325,11 @@ El perfil opcional `computed-age/v1` proyecta la edad de `verified_at` después
 de seleccionar: no cambia score, orden, autoridad ni exclusiones de retrieval.
 `verified_at` es un timestamp autodeclarado por el registro, no una verificación
 realizada por AN-KLA. Sin perfil explícito, los payloads v1 permanecen iguales.
+Con el perfil activo, el bloque `freshness` declara además los denominadores
+de la selección final (ADR-0037): `evaluated`, `not_evaluable`,
+`unparseable` y `stale`, con el invariante `evaluated + not_evaluable +
+unparseable = |seleccionados|`. Así "nada está desfasado" deja de ser
+indistinguible de "nada era evaluable": un corpus a medio migrar lo declara.
 
 La salida completa de `context-assembly/v1` queda acotada en bytes UTF-8;
 consulta [ADR-0006](docs/architecture/0006-context-assembly-v1.md). La escritura
@@ -319,7 +348,11 @@ La continuidad operacional usa acceso exacto, no búsqueda por similitud:
 ```
 
 Checkpoint, identidad, refute, export/restore y compactación tienen contratos
-plan→commit propios. Consulta la [guía beta.11](docs/beta11-user-guide.md) antes
+plan→commit propios. Desde ADR-0038, el `source_state` del working state
+admite el perfil `git/v1` con valores `caller_asserted`: el caller observa
+Git (HEAD completo, branch, digest del árbol sucio) y liga el checkpoint al
+commit que describe; el CLI nunca ejecuta Git ni acuña autoridad. Consulta
+la [guía beta.11](docs/beta11-user-guide.md) antes
 de cualquier operación mutativa o destructiva.
 
 ## Desarrollo del motor
