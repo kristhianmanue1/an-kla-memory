@@ -41,14 +41,14 @@ prospectiva esté implementada; la última columna conserva esa distinción.
 | 0020 | [context-diagnostics-in-write-result](architecture/0020-context-diagnostics-in-write-result.md) | Salud del contrato en el resultado de escritura | Aceptada | Publicada en [beta.11](releases/v0.1.0-beta.11.md) |
 | 0021 | [verified-at-freshness-v1](architecture/0021-verified-at-freshness-v1.md) | `verified_at` autodeclarado y frescura computada en lectura | Aceptada | Publicada en [beta.9](releases/v0.1.0-beta.9.md) |
 | 0022 | [store-project-identity-v1](architecture/0022-store-project-identity-v1.md) | Identidad lógica separada de proyecto y store | Aceptada | Publicada en [beta.11](releases/v0.1.0-beta.11.md) |
-| 0023 | [governed-checkpoint-handoff-v2](architecture/0023-governed-checkpoint-handoff-v2.md) | Checkpoint exacto y handoff gobernado | Aceptada | Publicada en [beta.11](releases/v0.1.0-beta.11.md) |
+| 0023 | [governed-checkpoint-handoff-v2](architecture/0023-governed-checkpoint-handoff-v2.md) | Checkpoint exacto y handoff gobernado | Aceptada | Publicada en [beta.11](releases/v0.1.0-beta.11.md); su perfil reservado `git/v1` fue supersedido por ADR-0038 |
 | 0024 | [commit-outcome-v2](architecture/0024-commit-outcome-v2.md) | Resultado transaccional y durabilidad explícita | Aceptada | Publicada en [beta.11](releases/v0.1.0-beta.11.md) |
 | 0025 | [retrieval-evaluation-v2](architecture/0025-retrieval-evaluation-v2.md) | Benchmark de ranking y presupuesto sin cambiar retrieval | Aceptada | Publicada en [beta.11](releases/v0.1.0-beta.11.md) |
 | 0026 | [governed-refute-v1](architecture/0026-governed-refute-v1.md) | Refutación gobernada, auditable y sin sucesor | Aceptada | Publicada en [beta.11](releases/v0.1.0-beta.11.md) |
 | 0027 | [verifiable-export-restore-v1](architecture/0027-verifiable-export-restore-v1.md) | Export/backup verificable y restore fail-closed | Aceptada | Publicada en [beta.11](releases/v0.1.0-beta.11.md) |
 | 0028 | [governed-compaction-v1](architecture/0028-governed-compaction-v1.md) | Corte de epoch, tombstones y archivo verificable | Aceptada | Publicada en [beta.11](releases/v0.1.0-beta.11.md) |
 | 0029 | [derived-semantic-retrieval-v1](architecture/0029-derived-semantic-retrieval-v1.md) | Índice semántico derivado y recuperación híbrida opt-in | Propuesta | Sin implementación ni proveedor autorizado |
-| 0030 | [milestone-checkpoint-obligation-v1](architecture/0030-milestone-checkpoint-obligation-v1.md) | Obligación gobernada de continuidad al cerrar hitos | Propuesta | En reevaluación; sin cambio de contrato ni código |
+| 0030 | [milestone-checkpoint-obligation-v1](architecture/0030-milestone-checkpoint-obligation-v1.md) | Obligación gobernada de continuidad al cerrar hitos | Propuesta | En reevaluación; §4 reserva `git/v1` para tool_observed, supersedido por ADR-0038 |
 | 0031 | [agent-owned-memory-host-managed-v1](architecture/0031-agent-owned-memory-host-managed-v1.md) | Memoria del agente con alcance de proyecto y perfil host-managed | Aceptada | Reconocido host-managed como perfil soportado; G1 (observabilidad) no iniciado |
 | 0032 | [derived-contextual-view-v1](architecture/0032-derived-contextual-view-v1.md) | Vista contextual vigente derivada, non-authoritative, sobre sustrato de afirmaciones | Aceptada | G-SUBJECT publicado en [beta.12](releases/v0.1.0-beta.12.md); G-VIEW publicado en [beta.13](releases/v0.1.0-beta.13.md) |
 | 0033 | [subject-ref-v1](architecture/0033-subject-ref-v1.md) | Identidad contextual estable `subject_ref`, namespace derivado de project identity y binding bajo lock | Aceptada | Publicada en [beta.12](releases/v0.1.0-beta.12.md) |
@@ -56,8 +56,9 @@ prospectiva esté implementada; la última columna conserva esa distinción.
 | 0035 | [explicit-project-context-baseline-adoption-v1](architecture/0035-explicit-project-context-baseline-adoption-v1.md) | Adopción explícita de baseline project-owned sin debilitar target drift | Propuesta | Sin implementación; issue #45 |
 | 0036 | [startup-memory-diagnostic-v1](architecture/0036-startup-memory-diagnostic-v1.md) | Diagnóstico de arranque read-only por ejes observables totales, sin enum de estados compuestos | Aceptada | Implementada en `main` (#83, post-beta.14): comando `startup-diagnostic`; `repo_context` refinado a `git rev-parse` tras rondas adversariales de #76 |
 | 0037 | [freshness-denominators-v1](architecture/0037-freshness-denominators-v1.md) | G-FRESH: recuentos evaluated/not_evaluable/unparseable/stale sobre la selección final en el bloque freshness | Aceptada | Implementada en `plan/backlog-prioridades-2026-08-20` (#50): retrieve, assemble-context y MCP; denominador de view diferido |
+| 0038 | [source-state-git-v1](architecture/0038-source-state-git-v1.md) | `source_state` con perfil `git/v1` caller_asserted para ligar el checkpoint al commit que describe (#79) | Aceptada | Implementada en `plan/backlog-prioridades-2026-08-20`: policy+schema aditivos, CLI sin subprocesos |
 
-Resumen: **37 ADRs**, sin huecos; **34 aceptadas** y **3 propuestas**. No hay
+Resumen: **38 ADRs**, sin huecos; **35 aceptadas** y **3 propuestas**. No hay
 ADRs rechazadas ni reemplazadas en el registro actual.
 
 ### Documentación normativa

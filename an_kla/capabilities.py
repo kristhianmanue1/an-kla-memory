@@ -60,6 +60,10 @@ def capabilities() -> dict[str, Any]:
                 "governed_plan_commit": True,
                 "working_state_is_not_lexical_memory": True,
                 "tool_observed_adapter": False,
+                "source_state_profiles": {
+                    "none/v1": "head/branch/dirty_digest unavailable",
+                    "git/v1": "caller_asserted only; full object id for head (ADR-0038); CLI never runs git",
+                },
                 "resume": "an-kla/resume-v1",
             },
             "transactions": {
