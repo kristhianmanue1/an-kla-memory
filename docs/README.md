@@ -54,10 +54,9 @@ prospectiva esté implementada; la última columna conserva esa distinción.
 | 0033 | [subject-ref-v1](architecture/0033-subject-ref-v1.md) | Identidad contextual estable `subject_ref`, namespace derivado de project identity y binding bajo lock | Aceptada | Publicada en [beta.12](releases/v0.1.0-beta.12.md) |
 | 0034 | [derived-context-view-contract-v1](architecture/0034-derived-context-view-contract-v1.md) | Contrato G-VIEW v1: vista contextual determinista, non-authoritative, paginada y recuperable | Aceptada | CORE+CLI+MCP+CAP publicados en [beta.13](releases/v0.1.0-beta.13.md); auditoría REL `proceed` |
 | 0035 | [explicit-project-context-baseline-adoption-v1](architecture/0035-explicit-project-context-baseline-adoption-v1.md) | Adopción explícita de baseline project-owned sin debilitar target drift | Propuesta | Sin implementación; issue #45 |
+| 0036 | [startup-memory-diagnostic-v1](architecture/0036-startup-memory-diagnostic-v1.md) | Diagnóstico de arranque read-only por ejes observables totales, sin enum de estados compuestos | Aceptada | Implementada en `main` (#83, post-beta.14): comando `startup-diagnostic`; `repo_context` refinado a `git rev-parse` tras rondas adversariales de #76 |
 
-| 0036 | [startup-memory-diagnostic-v1](architecture/0036-startup-memory-diagnostic-v1.md) | Diagnóstico de arranque read-only por ejes observables totales, sin enum de estados compuestos | Propuesta | Sin implementación; issue #76, Fase 0 en `main`; ronda adversarial `fix-and-retry` absorbida |
-
-Resumen: **36 ADRs**, sin huecos; **32 aceptadas** y **4 propuestas**. No hay
+Resumen: **36 ADRs**, sin huecos; **33 aceptadas** y **3 propuestas**. No hay
 ADRs rechazadas ni reemplazadas en el registro actual.
 
 ### Documentación normativa
