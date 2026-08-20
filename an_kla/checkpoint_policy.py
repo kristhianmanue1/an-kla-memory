@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from copy import deepcopy
 from typing import Any, Mapping
 
@@ -15,6 +16,9 @@ FIELDS = (
     "source_state", "captured_at",
 )
 PROVENANCE = {"caller_asserted", "unavailable"}
+SOURCE_PROFILES = ("none/v1", "git/v1")
+# Full Git object id: SHA-1 (40 hex) or SHA-256 (64 hex) repositories.
+GIT_OBJECT_ID = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 REASONS = {
     "authority_binding_mismatch", "authority_scope_mismatch",
     "unresolved_authority", "invalid_checkpoint_provenance",
@@ -25,7 +29,7 @@ _CONFIG = {
     "profile": PROFILE,
     "fields": list(FIELDS),
     "accepted_provenance": sorted(PROVENANCE),
-    "source_profiles": ["none/v1"],
+    "source_profiles": list(SOURCE_PROFILES),
     "maximum_items_per_list": 50,
     "maximum_item_bytes": 8192,
     "maximum_working_state_bytes": 65536,
@@ -102,6 +106,27 @@ def _items(value: Any) -> None:
             raise CheckpointPolicyError("invalid_working_state") from exc
 
 
+def _git_source_field(value: Any, *, object_id: bool) -> None:
+    """Validate a git/v1 source field: caller_asserted, never unavailable.
+
+    ADR-0038: choosing profile git/v1 declares caller-observed values;
+    ``unavailable`` belongs to none/v1. ``tool_observed`` still requires
+    a host adapter.
+    """
+
+    checked = _exact(value, {"value", "provenance"}, "invalid_working_state")
+    if checked["provenance"] == "tool_observed":
+        raise CheckpointPolicyError("tool_observed_requires_adapter")
+    if checked["provenance"] != "caller_asserted":
+        raise CheckpointPolicyError("invalid_checkpoint_provenance")
+    raw = checked["value"]
+    if object_id:
+        if not isinstance(raw, str) or not GIT_OBJECT_ID.fullmatch(raw):
+            raise CheckpointPolicyError("invalid_working_state")
+    elif raw is not None and not isinstance(raw, str):
+        raise CheckpointPolicyError("invalid_working_state")
+
+
 def validate_working_state(value: Mapping[str, Any]) -> None:
     state = _exact(
         value,
@@ -119,16 +144,17 @@ def validate_working_state(value: Mapping[str, Any]) -> None:
         state["source_state"], {"profile", "head", "branch", "dirty_digest"},
         "invalid_working_state",
     )
-    if source["profile"] != "none/v1":
-        raise CheckpointPolicyError(
-            "tool_observed_requires_adapter"
-            if source["profile"] == "git/v1"
-            else "invalid_working_state"
-        )
-    for name in ("head", "branch", "dirty_digest"):
-        _field(source[name])
-        if source[name] != {"value": None, "provenance": "unavailable"}:
-            raise CheckpointPolicyError("invalid_checkpoint_provenance")
+    if source["profile"] == "none/v1":
+        for name in ("head", "branch", "dirty_digest"):
+            _field(source[name])
+            if source[name] != {"value": None, "provenance": "unavailable"}:
+                raise CheckpointPolicyError("invalid_checkpoint_provenance")
+    elif source["profile"] == "git/v1":
+        _git_source_field(source["head"], object_id=True)
+        _git_source_field(source["branch"], object_id=False)
+        _git_source_field(source["dirty_digest"], object_id=False)
+    else:
+        raise CheckpointPolicyError("invalid_working_state")
     _field(state["captured_at"], timestamp=True)
     _digest(state["supersedes_checkpoint"], "invalid_working_state")
     try:
@@ -286,7 +312,7 @@ def verify_plan(
 
 
 __all__ = [
-    "CheckpointPolicyError", "FIELDS", "PROFILE", "build_plan", "evaluate",
-    "policy_fingerprint", "validate_authority", "validate_proposal",
-    "validate_working_state", "verify_plan",
+    "CheckpointPolicyError", "FIELDS", "PROFILE", "SOURCE_PROFILES",
+    "build_plan", "evaluate", "policy_fingerprint", "validate_authority",
+    "validate_proposal", "validate_working_state", "verify_plan",
 ]

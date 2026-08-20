@@ -60,7 +60,21 @@ def capabilities() -> dict[str, Any]:
                 "governed_plan_commit": True,
                 "working_state_is_not_lexical_memory": True,
                 "tool_observed_adapter": False,
+                "source_state_profiles": {
+                    "none/v1": "head/branch/dirty_digest unavailable",
+                    "git/v1": "caller_asserted only; full object id for head (ADR-0038); CLI never runs git",
+                },
                 "resume": "an-kla/resume-v1",
+            },
+            "integration": {
+                "command": "integration status",
+                "schema": "an-kla/integration-status-v1",
+                "read_only": True,
+                "supported_profiles": ["agent-owned/v1", "host-managed/v1"],
+                "observed_profile_v1": "unspecified",
+                "agent_binding": "unverified",
+                "sharing_boundary": "filesystem-access/unverified",
+                "decision": "ADR-0039",
             },
             "transactions": {
                 "attempt": "an-kla/transaction-attempt-v1",
@@ -136,6 +150,12 @@ def capabilities() -> dict[str, Any]:
                 "activation": "explicit_profile",
                 "semantics": "self_asserted_timestamp",
                 "source_field": "record.verified_at",
+                "denominators": {
+                    "population": "final_selected",
+                    "counts": ["evaluated", "not_evaluable", "unparseable", "stale"],
+                    "invariant": "evaluated + not_evaluable + unparseable = len(selected); stale <= evaluated",
+                    "decision": "ADR-0037",
+                },
                 "result_schemas": [
                     "an-kla/retrieval-result-v2",
                     "an-kla/context-assembly-v2",
@@ -222,6 +242,25 @@ def capabilities() -> dict[str, Any]:
             "ci_skip_env": ["CI", "GITHUB_ACTIONS", "AN_KLA_DISABLE_UPDATE_CHECK"],
             "install_or_self_replace": False,
             "notice_channel": "stderr",
+        },
+        "cli_error_surface": {
+            "unexpected_failure": {
+                "stderr": "an-kla error: cli_unexpected_failure",
+                "stderr_note": "Relative log hint appended when the local log is enabled and writable; never an absolute path.",
+                "exit_code": 1,
+                "stderr_traceback": False,
+                "local_log": {
+                    "enabled": True,
+                    "mode": "0600",
+                    "parent_mode": "0700",
+                    "path_convention": "$XDG_CACHE_HOME|$LOCALAPPDATA|~/.cache /an-kla/cli-errors.log",
+                    "contents": "argv + full traceback",
+                    "max_bytes": 5242880,
+                    "overflow_policy": "reset",
+                },
+                "debug_stderr_traceback_env": "AN_KLA_DEBUG",
+                "disable_local_log_env": "AN_KLA_NO_CLI_ERROR_LOG",
+            },
         },
         "schemas": schema_catalog()["schemas"],
         "mcp": {

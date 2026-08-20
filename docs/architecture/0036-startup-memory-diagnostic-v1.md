@@ -1,7 +1,11 @@
 # ADR-0036: declarar el estado de la memoria en el arranque
 
-- **Estado:** Propuesta
-- **Implementación:** No iniciada
+- **Estado:** Aceptada e implementada; publicada en `main` tras #83
+  (post-beta.14, sin tag propio todavía)
+- **Implementación:** Comando `startup-diagnostic`, schema
+  `an-kla/startup-diagnostic-v1`; el mecanismo de `repo_context` fue
+  refinado a `git rev-parse` tras las rondas adversariales de #76
+  (ver "Historia del mecanismo de `repo_context`")
 - **Fecha:** 2026-08-15
 - **Decide sobre:** qué ejes observables debe publicar un diagnóstico de
   arranque read-only para que un agente decida sin improvisar custodia; no
@@ -56,7 +60,7 @@ imposibilidad de observarlo.
 | `store_presence` | `present` · `absent` · `unreadable` | Si hay algo bajo `.an-kla/memory/` en este project root. `unreadable` cubre permisos denegados y montaje no disponible |
 | `store_integrity` | `verified` · `failed` · `not_evaluated` | Resultado de la verificación. `not_evaluated` cuando la presencia no lo permite o cuando no se pudo tomar el reader gate |
 | `identity` | `evaluated` más los 9 valores publicados de `identity-status-v1` y `root_relocated` | Reexpuesto **verbatim**, sin redefinir |
-| `repo_context` | `main_checkout` · `linked_worktree` · `not_a_repo` · `git_unavailable` | Derivado de `git rev-parse --git-common-dir` |
+| `repo_context` | `main_checkout` · `linked_worktree` · `not_a_repo` · `git_unavailable` | Derivado de comparar `git rev-parse --git-dir` con `--git-common-dir`; subproceso con timeout y entorno `GIT_*` saneado. Git ausente, timeout o salida inesperada → `git_unavailable`; código ≠ 0 → `not_a_repo` |
 
 Propiedades del contrato:
 
@@ -103,6 +107,20 @@ No hay eje de memoria externa. Un `store_root` declarado fuera del project root
 no existe hasta #57, y nombrar hoy sus valores sería congelar vocabulario para
 una capacidad cuyo diseño todavía puede cambiar. Su ausencia significa "no
 evaluado", nunca "no hay".
+
+## Historia del mecanismo de `repo_context`
+
+La primera implementación evitó el subproceso leyendo si `.git` es archivo
+(directiva `gitdir:` de un worktree enlazado) o directorio (checkout
+principal), desviación declarada en el commit `a8e94b5`. La ronda
+adversarial de implementación la refutó: un submódulo lleva `.git` como
+gitlink y quedaba clasificado `linked_worktree`, y cualquier subdirectorio
+de un repositorio quedaba `not_a_repo`. La implementación final
+(`e249994`, absorbida en #83) volvió al mecanismo de este ADR: comparar
+`git rev-parse --git-dir` con `--git-common-dir`, con timeout,
+`GIT_*` saneado y mapeo explícito de fallos a `git_unavailable` /
+`not_a_repo`. El ADR siempre citó el comando como mecanismo, no como
+requisito literal de flags; esta sección fija cómo se resolvió.
 
 ## Por qué no congelar un enum de cuatro estados compuestos
 

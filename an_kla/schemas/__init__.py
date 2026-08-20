@@ -37,6 +37,7 @@ SCHEMA_FILES = {
     "identity-intent-v1": "identity-intent-v1.schema.json",
     "identity-operation-result-v1": "identity-operation-result-v1.schema.json",
     "identity-status-v1": "identity-status-v1.schema.json",
+    "integration-status-v1": "integration-status-v1.schema.json",
     "mcp-retrieve-v2": "mcp-retrieve-v2.schema.json",
     "provenance-manifest-v1": "provenance-manifest-v1.schema.json",
     "reference-benchmark-v1": "reference-benchmark-v1.schema.json",

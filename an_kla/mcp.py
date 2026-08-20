@@ -31,6 +31,7 @@ from .temporal import (
     TemporalError,
     VERIFIED_AT_PATTERN,
     parse_freshness_now,
+    summarize_freshness,
 )
 from .version import VERSION
 
@@ -390,7 +391,12 @@ class ReadOnlyMcp:
                     "used_bytes": used, "excluded_summary": exclusions, "records": selected}
             if freshness_enabled:
                 payload["freshness_profile"] = FRESHNESS_PROFILE
-                payload["freshness"] = source["freshness"]
+                # ADR-0037: counts describe the records served after the
+                # envelope budget cut, not the unbounded retrieval set.
+                payload["freshness"] = {
+                    **source["freshness"],
+                    **summarize_freshness(selected),
+                }
             return payload
 
         for item in candidates:

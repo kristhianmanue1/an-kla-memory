@@ -148,6 +148,38 @@ def project_record_freshness(
     return compute_freshness(record.get("verified_at"), now, stale_after_days)
 
 
+def summarize_freshness(items: list[dict[str, Any]]) -> dict[str, int]:
+    """Count freshness states over the final selected population (ADR-0037).
+
+    ``items`` are selected retrieval items already carrying the projected
+    freshness keys.  States are total and mutually exclusive:
+    ``evaluated`` (``days_since_verified`` present), ``not_evaluable``
+    (no ``verified_at``), ``unparseable`` (``freshness_error`` present).
+    ``stale`` counts items flagged stale and is a subset of
+    ``evaluated``.
+    """
+
+    evaluated = 0
+    not_evaluable = 0
+    unparseable = 0
+    stale = 0
+    for item in items:
+        if item.get("freshness_error") is not None:
+            unparseable += 1
+        elif "days_since_verified" in item:
+            evaluated += 1
+            if item.get("stale") is True:
+                stale += 1
+        else:
+            not_evaluable += 1
+    return {
+        "evaluated": evaluated,
+        "not_evaluable": not_evaluable,
+        "unparseable": unparseable,
+        "stale": stale,
+    }
+
+
 __all__ = [
     "FRESHNESS_PROFILE",
     "FRESHNESS_PROJECTION_KEYS",
@@ -162,5 +194,6 @@ __all__ = [
     "parse_freshness_now",
     "parse_verified_at",
     "project_record_freshness",
+    "summarize_freshness",
     "validate_stale_after_days",
 ]

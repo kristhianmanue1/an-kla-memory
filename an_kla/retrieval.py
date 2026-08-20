@@ -25,6 +25,7 @@ from .temporal import (
     format_utc,
     normalize_freshness_now,
     project_record_freshness,
+    summarize_freshness,
     validate_stale_after_days,
 )
 
@@ -272,6 +273,7 @@ def _retrieve_under_gate(
             "source_field": FRESHNESS_SOURCE_FIELD,
             "computed_at": format_utc(freshness_now),
             "stale_after_days": freshness_threshold,
+            **summarize_freshness(selected),
         }
     return result
 

@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:integration-status-v1",
+  "title": "AN-KLA IntegrationStatus v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "store", "managed_context", "integration"],
+  "properties": {
+    "schema": {"const": "an-kla/integration-status-v1"},
+    "store": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["store_presence", "store_integrity", "integrity_detail", "identity", "repo_context", "external_memory_evaluated"],
+      "properties": {
+        "store_presence": {"enum": ["present", "absent", "unreadable"]},
+        "store_integrity": {"enum": ["verified", "failed", "not_evaluated"]},
+        "integrity_detail": {"type": ["string", "null"]},
+        "identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["evaluated", "identity_status", "root_relocated"],
+          "properties": {
+            "evaluated": {"type": "boolean"},
+            "identity_status": {"type": ["string", "null"]},
+            "root_relocated": {"type": ["boolean", "null"]},
+            "error_code": {"type": ["string", "null"]}
+          }
+        },
+        "repo_context": {"enum": ["main_checkout", "linked_worktree", "not_a_repo", "git_unavailable"]},
+        "external_memory_evaluated": {"const": false}
+      }
+    },
+    "managed_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target", "presence", "template_version", "context_schema", "ok", "diagnostics", "warnings"],
+      "properties": {
+        "target": {"type": "string", "minLength": 1},
+        "presence": {"enum": ["present", "absent", "unreadable"]},
+        "template_version": {"type": ["string", "null"]},
+        "context_schema": {"type": "string"},
+        "ok": {"type": "boolean"},
+        "diagnostics": {"type": "array", "items": {"type": "string"}},
+        "warnings": {"type": "array", "items": {"type": "string"}},
+        "observation_error": {"type": "string", "minLength": 1}
+      }
+    },
+    "integration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["supported_profiles", "observed_profile", "agent_binding", "sharing_boundary", "host_hooks_evaluated"],
+      "properties": {
+        "supported_profiles": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {"enum": ["agent-owned/v1", "host-managed/v1"]}
+        },
+        "observed_profile": {"const": "unspecified"},
+        "agent_binding": {"const": "unverified"},
+        "sharing_boundary": {"const": "filesystem-access/unverified"},
+        "host_hooks_evaluated": {"const": false}
+      }
+    }
+  }
+}
