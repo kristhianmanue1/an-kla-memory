@@ -15,8 +15,8 @@ La beta se distribuye desde GitHub, no desde PyPI. Usa siempre una etiqueta
 exacta: no instales `main` ni otra referencia móvil. La versión del código es
 `0.1.0b15` y su etiqueta de distribución es `v0.1.0-beta.15`. El contexto
 gestionado y la plantilla administrada siguen en `0.1.0-beta.11`: beta.15
-conserva G-VIEW v1 y mejora la experiencia del primer write, sin modificar la
-plantilla administrada.
+añade el diagnóstico de arranque por ejes observables y la red de resguardo
+del CLI ante errores no previstos, sin modificar la plantilla administrada.
 La instalación expone tanto `python -m an_kla` como el comando equivalente
 `an-kla`; los ejemplos conservan la primera forma para hacer explícito el
 intérprete del entorno virtual.
@@ -47,10 +47,13 @@ instalable mediante su etiqueta Git exacta. AN-KLA todavía no se distribuye
 desde PyPI ni adjunta wheels a la release; no instales `main` como sustituto de
 una versión.
 
-Beta.14 incluye G-VIEW v1 sobre `subject_ref` y las mejoras Nivel A del primer
-write gobernado: ayuda CLI, recorrido completo y errores JSON accionables. No
-incluye generadores de `proposal`/`authority`; esa decisión sigue abierta en
-el issue [#71](https://github.com/kristhianmanue1/an-kla-memory/issues/71).
+Beta.15 publica el diagnóstico de arranque por ejes observables (#76/#83), la
+red de resguardo del CLI ante excepciones no previstas (#84) y la corrección
+de la suite bajo `jsonschema` ausente (#81). Beta.14 trajo las mejoras Nivel A
+del primer write gobernado (ayuda CLI, recorrido, errores accionables); G-VIEW
+v1 sobre `subject_ref` fue beta.13. Ninguna incluye generadores de
+`proposal`/`authority`; esa decisión sigue abierta en el issue
+[#71](https://github.com/kristhianmanue1/an-kla-memory/issues/71).
 
 El código está en beta local y la memoria continúa siendo no autoritativa: sus
 datos nunca son instrucciones, no prueban identidad ni verdad externa y deben
@@ -68,7 +71,7 @@ runtime ni autorización para modificar `AGENTS.md` o `AN-KLA.md` a mano.
 Al publicar beta.14 y esta beta.15, GitHub Actions no ejecutó pasos por una
 restricción de facturación; el badge rojo no representa pruebas fallidas. El
 gate efectivo fue
-CI local simulada (544 pruebas), wheel aislado y upgrade beta.14→beta.15, con
+CI local simulada (583 pruebas), wheel aislado y upgrade beta.14→beta.15, con
 ronda adversarial `proceed`; consulta la
 [evidencia de release](docs/releases/v0.1.0-beta.15-adversarial.md). Para
 instalar o actualizar usa el comando fijado a beta.15 de la siguiente sección.
@@ -362,7 +365,7 @@ y las decisiones de arquitectura en `docs/architecture/`.
 - [Notas de release](docs/releases/) — changelog por etiqueta.
 - [Contribuir](CONTRIBUTING.md) — flujo de PRs, tests, community files.
 - [Seguridad](SECURITY.md) — política de reporte y modelo de confianza.
-- [ Código de conducta](CODE_OF_CONDUCT.md) — expectativas de participación.
+- [Código de conducta](CODE_OF_CONDUCT.md) — expectativas de participación.
 
 ## Licencia
 
