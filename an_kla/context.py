@@ -8,7 +8,11 @@ from typing import Any
 from .canonical import exact_sized_payload
 from .retrieval import retrieve
 from .store import MemoryStore
-from .temporal import FRESHNESS_PROFILE, FRESHNESS_PROJECTION_KEYS
+from .temporal import (
+    FRESHNESS_PROFILE,
+    FRESHNESS_PROJECTION_KEYS,
+    summarize_freshness,
+)
 
 
 ASSEMBLY_PROFILE = "context-assembly/v1"
@@ -91,7 +95,13 @@ def assemble_context(
         }
         if freshness_enabled:
             payload["freshness_profile"] = FRESHNESS_PROFILE
-            payload["freshness"] = source["freshness"]
+            # ADR-0037: counts must describe the records this payload
+            # actually serves after the global budget cut, not the
+            # unbounded retrieval population.
+            payload["freshness"] = {
+                **source["freshness"],
+                **summarize_freshness(records),
+            }
         return payload
 
     _required, required_size = exact_sized_payload(build)

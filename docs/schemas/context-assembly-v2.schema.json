@@ -54,12 +54,16 @@
     "freshness": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["semantics", "source_field", "computed_at", "stale_after_days"],
+      "required": ["semantics", "source_field", "computed_at", "stale_after_days", "evaluated", "not_evaluable", "unparseable", "stale"],
       "properties": {
         "semantics": {"const": "self_asserted_timestamp"},
         "source_field": {"const": "record.verified_at"},
         "computed_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z$"},
-        "stale_after_days": {"oneOf": [{"type": "integer", "minimum": 0}, {"type": "null"}]}
+        "stale_after_days": {"oneOf": [{"type": "integer", "minimum": 0}, {"type": "null"}]},
+        "evaluated": {"type": "integer", "minimum": 0},
+        "not_evaluable": {"type": "integer", "minimum": 0},
+        "unparseable": {"type": "integer", "minimum": 0},
+        "stale": {"type": "integer", "minimum": 0}
       }
     },
     "record": {

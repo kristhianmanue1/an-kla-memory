@@ -136,6 +136,12 @@ def capabilities() -> dict[str, Any]:
                 "activation": "explicit_profile",
                 "semantics": "self_asserted_timestamp",
                 "source_field": "record.verified_at",
+                "denominators": {
+                    "population": "final_selected",
+                    "counts": ["evaluated", "not_evaluable", "unparseable", "stale"],
+                    "invariant": "evaluated + not_evaluable + unparseable = len(selected); stale <= evaluated",
+                    "decision": "ADR-0037",
+                },
                 "result_schemas": [
                     "an-kla/retrieval-result-v2",
                     "an-kla/context-assembly-v2",

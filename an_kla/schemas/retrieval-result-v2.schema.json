@@ -72,7 +72,16 @@
     "freshness": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["semantics", "source_field", "computed_at", "stale_after_days"],
+      "required": [
+        "semantics",
+        "source_field",
+        "computed_at",
+        "stale_after_days",
+        "evaluated",
+        "not_evaluable",
+        "unparseable",
+        "stale"
+      ],
       "properties": {
         "semantics": {"const": "self_asserted_timestamp"},
         "source_field": {"const": "record.verified_at"},
@@ -85,7 +94,11 @@
             {"type": "integer", "minimum": 0},
             {"type": "null"}
           ]
-        }
+        },
+        "evaluated": {"type": "integer", "minimum": 0},
+        "not_evaluable": {"type": "integer", "minimum": 0},
+        "unparseable": {"type": "integer", "minimum": 0},
+        "stale": {"type": "integer", "minimum": 0}
       }
     }
   },

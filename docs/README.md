@@ -55,8 +55,9 @@ prospectiva esté implementada; la última columna conserva esa distinción.
 | 0034 | [derived-context-view-contract-v1](architecture/0034-derived-context-view-contract-v1.md) | Contrato G-VIEW v1: vista contextual determinista, non-authoritative, paginada y recuperable | Aceptada | CORE+CLI+MCP+CAP publicados en [beta.13](releases/v0.1.0-beta.13.md); auditoría REL `proceed` |
 | 0035 | [explicit-project-context-baseline-adoption-v1](architecture/0035-explicit-project-context-baseline-adoption-v1.md) | Adopción explícita de baseline project-owned sin debilitar target drift | Propuesta | Sin implementación; issue #45 |
 | 0036 | [startup-memory-diagnostic-v1](architecture/0036-startup-memory-diagnostic-v1.md) | Diagnóstico de arranque read-only por ejes observables totales, sin enum de estados compuestos | Aceptada | Implementada en `main` (#83, post-beta.14): comando `startup-diagnostic`; `repo_context` refinado a `git rev-parse` tras rondas adversariales de #76 |
+| 0037 | [freshness-denominators-v1](architecture/0037-freshness-denominators-v1.md) | G-FRESH: recuentos evaluated/not_evaluable/unparseable/stale sobre la selección final en el bloque freshness | Aceptada | Implementada en `plan/backlog-prioridades-2026-08-20` (#50): retrieve, assemble-context y MCP; denominador de view diferido |
 
-Resumen: **36 ADRs**, sin huecos; **33 aceptadas** y **3 propuestas**. No hay
+Resumen: **37 ADRs**, sin huecos; **34 aceptadas** y **3 propuestas**. No hay
 ADRs rechazadas ni reemplazadas en el registro actual.
 
 ### Documentación normativa

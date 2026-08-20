@@ -112,6 +112,10 @@ class RetrievalFreshnessTests(unittest.TestCase):
                 "source_field": "record.verified_at",
                 "computed_at": "2026-08-08T00:00:00.000000Z",
                 "stale_after_days": 6,
+                "evaluated": 1,
+                "not_evaluable": 3,
+                "unparseable": 1,
+                "stale": 1,
             },
         )
 
