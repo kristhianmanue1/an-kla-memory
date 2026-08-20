@@ -111,11 +111,19 @@ def _run() -> None:
         help="Omitir la verificación no bloqueante de nuevas versiones.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
-    init_cmd = sub.add_parser("init")
+    init_cmd = sub.add_parser(
+        "init", help="Crear la memoria local .an-kla/memory/ en el proyecto."
+    )
     init_cmd.add_argument("--transaction-id")
-    sub.add_parser("status")
-    verify_cmd = sub.add_parser("verify")
-    verify_cmd.add_argument("--revision")
+    sub.add_parser(
+        "status", help="Resumen verificable de la revisión vigente."
+    )
+    verify_cmd = sub.add_parser(
+        "verify", help="Verificar integridad de la memoria (o de una revisión)."
+    )
+    verify_cmd.add_argument(
+        "--revision", help="Digest sha256 exacto de una revisión específica (histórica)."
+    )
     sub.add_parser(
         "startup-diagnostic",
         help="Clasificar la memoria disponible antes de trabajo material.",
@@ -142,41 +150,90 @@ def _run() -> None:
     schema_sub.add_parser("list")
     schema_show_cmd = schema_sub.add_parser("show")
     schema_show_cmd.add_argument("name")
-    doctor_cmd = sub.add_parser("doctor")
+    doctor_cmd = sub.add_parser(
+        "doctor", help="Salud del store, índice FTS5 y entorno."
+    )
     doctor_cmd.add_argument("--deep-index", action="store_true")
-    sub.add_parser("recover")
-    index_cmd = sub.add_parser("rebuild-index")
-    index_cmd.add_argument("--revision", default=None)
-    retrieve_cmd = sub.add_parser("retrieve")
-    retrieve_cmd.add_argument("--query", required=True)
-    retrieve_cmd.add_argument("--budget", type=int, required=True)
+    sub.add_parser(
+        "recover", help="Diagnosticar y reportar estado recuperable tras un fallo."
+    )
+    index_cmd = sub.add_parser(
+        "rebuild-index",
+        help="Regenerar el índice FTS5 derivado para una revisión."
+    )
+    index_cmd.add_argument(
+        "--revision", default=None,
+        help="Revisión objetivo; por defecto la vigente (CURRENT).",
+    )
+    retrieve_cmd = sub.add_parser(
+        "retrieve", help="Recuperar registros por consulta bajo presupuesto exacto."
+    )
+    retrieve_cmd.add_argument(
+        "--query", required=True, help="Consulta léxica; los términos se intersectan con el texto."
+    )
+    retrieve_cmd.add_argument(
+        "--budget", type=int, required=True, help="Presupuesto exacto en bytes UTF-8 del texto servido."
+    )
     retrieve_cmd.add_argument(
         "--profile", choices=(SCAN_PROFILE, INDEX_PROFILE), default=SCAN_PROFILE
     )
-    retrieve_cmd.add_argument("--freshness-profile", choices=(FRESHNESS_PROFILE,))
-    retrieve_cmd.add_argument("--now")
-    retrieve_cmd.add_argument("--stale-after-days", type=int)
+    retrieve_cmd.add_argument(
+        "--freshness-profile", choices=(FRESHNESS_PROFILE,),
+        help="Activar proyección de frescura (edad de verified_at); añade denominadores.",
+    )
+    retrieve_cmd.add_argument(
+        "--now", help="Reloj inyectable ISO-8601 (UTC) para frescura reproducible."
+    )
+    retrieve_cmd.add_argument(
+        "--stale-after-days", type=int,
+        help="Umbral opcional de días para marcar registros como stale.",
+    )
     retrieve_cmd.add_argument(
         "--streams",
         default="facts",
         help="Streams a recuperar (CSV); por defecto 'facts' para respetar la beta.",
     )
-    assemble_cmd = sub.add_parser("assemble-context")
-    assemble_cmd.add_argument("--query", required=True)
-    assemble_cmd.add_argument("--budget", type=int, required=True)
-    assemble_cmd.add_argument("--new-information")
-    assemble_cmd.add_argument("--freshness-profile", choices=(FRESHNESS_PROFILE,))
-    assemble_cmd.add_argument("--now")
-    assemble_cmd.add_argument("--stale-after-days", type=int)
-    evaluate_cmd = sub.add_parser("evaluate")
+    assemble_cmd = sub.add_parser(
+        "assemble-context",
+        help="Ensamblar checkpoint, información nueva y memoria en un presupuesto."
+    )
+    assemble_cmd.add_argument(
+        "--query", required=True, help="Consulta léxica para la sección de memoria."
+    )
+    assemble_cmd.add_argument(
+        "--budget", type=int, required=True,
+        help="Presupuesto global exacto del contenido servido; el framing del host no se mide.",
+    )
+    assemble_cmd.add_argument(
+        "--new-information", help="Texto del caller incluido como sección indivisible."
+    )
+    assemble_cmd.add_argument(
+        "--freshness-profile", choices=(FRESHNESS_PROFILE,),
+        help="Activar proyección de frescura; mismo contrato que retrieve.",
+    )
+    assemble_cmd.add_argument(
+        "--now", help="Reloj inyectable ISO-8601 (UTC) para frescura reproducible."
+    )
+    assemble_cmd.add_argument(
+        "--stale-after-days", type=int,
+        help="Umbral opcional de días para marcar registros como stale.",
+    )
+    evaluate_cmd = sub.add_parser(
+        "evaluate", help="Evaluar recuperación (v1); para ranking usa evaluate-v2."
+    )
     evaluate_cmd.add_argument("--queries", required=True)
     evaluate_cmd.add_argument("--budget", type=int, required=True)
-    evaluate_v2_cmd = sub.add_parser("evaluate-v2")
+    evaluate_v2_cmd = sub.add_parser(
+        "evaluate-v2", help="Evaluar ranking y presupuesto por consulta y k."
+    )
     evaluate_v2_cmd.add_argument("--queries", required=True)
     evaluate_v2_cmd.add_argument("--budgets", required=True)
     evaluate_v2_cmd.add_argument("--k-values", default="1,3,5,10")
     evaluate_v2_cmd.add_argument("--measure-latency", action="store_true")
-    reference_benchmark_cmd = sub.add_parser("benchmark-reference")
+    reference_benchmark_cmd = sub.add_parser(
+        "benchmark-reference",
+        help="Ejecutar el corpus de referencia empaquetado."
+    )
     reference_benchmark_cmd.add_argument("--measure-latency", action="store_true")
     plan_write_cmd = sub.add_parser(
         "plan-write",
@@ -246,7 +303,10 @@ def _run() -> None:
     )
     transaction_inspect = transaction_sub.add_parser("inspect")
     transaction_inspect.add_argument("transaction_id")
-    transaction_repair = transaction_sub.add_parser("repair-durability")
+    transaction_repair = transaction_sub.add_parser(
+        "repair-durability",
+        help="Reparar registro de durabilidad de un outcome (MUTATIVO; requiere autoridad vigente).",
+    )
     transaction_repair.add_argument("transaction_id")
     refute_cmd = sub.add_parser("refute", help="Refutación gobernada sin sucesor.")
     refute_sub = refute_cmd.add_subparsers(dest="refute_command", required=True)
@@ -337,7 +397,9 @@ def _run() -> None:
     upgrade_inspect_cmd.add_argument("--target", required=True)
     upgrade_inspect_cmd.add_argument("--context-target", default="AGENTS.md")
     upgrade_apply_cmd = upgrade_sub.add_parser("apply")
-    upgrade_apply_cmd.add_argument("expected_fingerprint")
+    upgrade_apply_cmd.add_argument(
+        "expected_fingerprint", help="plan_fingerprint devuelto por upgrade inspect."
+    )
     upgrade_apply_cmd.add_argument("--plan", required=True)
     upgrade_apply_cmd.add_argument(
         "--confirm-target-drift",
