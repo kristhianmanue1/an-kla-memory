@@ -16,6 +16,27 @@ AN-KLA no acuña, deriva ni almacena material de clave — mismo patrón
 que la autoridad privilegiada de write/refute. Nada de eso se replica
 aquí; se da por bueno como base del ADR futuro.
 
+> **NOTA DE SUPERSESIÓN (2026-08-20, registro posterior)**: la frase
+> anterior describía la **premisa vigente antes de elegir la opción B**
+> y quedó **superseda por ADR-0042** al aceptarse esa opción. Bajo B,
+> el core **genera una CEK efímera** (os.urandom) y **deriva subclaves**
+> (aead_key/bundle_id/mac_key) en memoria de proceso. Lo que permanece
+> **exclusivamente externo** es la **custodia de la capacidad de
+> wrap/unwrap** (KEK, clave privada, passphrase, Keychain, KMS): ese
+> material jamás entra al core, y el core **no persiste clave alguna en
+> disco de forma intencional** (persisten `wrapped_cek` —único artefacto
+> destinado a recuperar la CEK— y los derivados no-secretos
+> `bundle_id`/`manifest_mac`; swap, hibernación, crash dumps y copias
+> del runtime quedan fuera de la garantía: ver ADR-0042 §1/§Límites). El registro histórico se conserva
+> intacto; esta nota es la vigente.
+>
+> **También supersede el mecanismo de nonce descrito arriba** ("AEAD por
+> entrada con nonce derivado por HKDF del índice"): ADR-0042 lo
+> reemplazó por un **contador puro** `i.to_bytes(12,"big")` — la
+> derivación HKDF truncada a 96 bits no era inyectiva entre índices
+> (hallazgo F1 del maintainer). La mención de HKDF en el párrafo
+> resumido del issue #46 es histórica y no normativa.
+
 ## Threat model (mini)
 
 **Atacante**: quien obtiene lectura del bundle en su destino (disco

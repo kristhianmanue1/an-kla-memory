@@ -21,7 +21,7 @@ class AdrRegistryTests(unittest.TestCase):
     def test_repository_registry_is_consistent(self) -> None:
         errors, states = MODULE.check_registry(ROOT)
         self.assertEqual(errors, [])
-        self.assertEqual(states["Aceptada"], 39)
+        self.assertEqual(states["Aceptada"], 40)
         self.assertEqual(states["Propuesta"], 2)
 
     def test_detects_gap_and_state_mismatch(self) -> None:

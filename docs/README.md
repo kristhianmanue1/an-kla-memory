@@ -60,8 +60,9 @@ prospectiva esté implementada; la última columna conserva esa distinción.
 | 0039 | [integration-status-v1](architecture/0039-integration-status-v1.md) | G1: contrato observable de la integración por ejes (store, contexto gestionado, modo) sin enum compuesto (#55) | Aceptada | Implementada en `main` (PR #85, hacia beta.16): comando `integration status`, read-only |
 | 0040 | [baseline-adoption-contract-v1](architecture/0040-baseline-adoption-contract-v1.md) | Adopción explícita de baseline project-owned (`adopt-baseline` plan→commit, update fail-closed, upgrade-plan v3) | Aceptada | Implementada en `main` (PR #90, hacia beta.17); cierra el ciclo ADR-0035 |
 | 0041 | [inventory-v1](architecture/0041-inventory-v1.md) | Inventario físico por revisión: metadata-only, paginado, planos físico/observable separados (#68) | Aceptada | Implementada en `main` (PR #91, hacia beta.17); sin MCP en v1 |
+| 0042 | [sealed-export-v1](architecture/0042-sealed-export-v1.md) | Export sellado: AES-256-GCM con extra opcional `[sealed]`, adaptador externo de claves, fail-closed sin downgrade (#46) | Aceptada | Diseño pre-code aceptado por decisión del dueño (🔒 2026-08-21; once rondas R1–R11); implementación no iniciada y pendiente de orden separada |
 
-Resumen: **41 ADRs**, sin huecos; **39 aceptadas** y **2 propuestas**. No hay
+Resumen: **42 ADRs**, sin huecos; **40 aceptadas** y **2 propuestas**. No hay
 ADRs rechazadas ni reemplazadas en el registro actual.
 
 ### Documentación normativa
