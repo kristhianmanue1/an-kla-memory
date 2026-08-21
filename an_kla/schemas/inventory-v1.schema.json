@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:inventory:v1",
+  "title": "AN-KLA Inventory v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "revision", "streams_searched", "untrusted_memory_data", "counts", "pagination", "records"],
+  "properties": {
+    "schema": {"const": "an-kla/inventory-v1"},
+    "revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "streams_searched": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"enum": ["facts", "events", "episodes"]}},
+    "untrusted_memory_data": {"const": true},
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "patternProperties": {"^(facts|events|episodes)$": {
+        "type": "object",
+        "required": ["total", "vigente", "sustituida", "refutada", "eliminada"],
+        "properties": {
+          "total": {"type": "integer", "minimum": 0},
+          "vigente": {"type": "integer", "minimum": 0},
+          "sustituida": {"type": "integer", "minimum": 0},
+          "refutada": {"type": "integer", "minimum": 0},
+          "eliminada": {"type": "integer", "minimum": 0}
+        },
+        "additionalProperties": {"type": "integer", "minimum": 0}
+      }}
+    },
+    "pagination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["complete", "next_cursor", "served_records", "total_records"],
+      "properties": {
+        "complete": {"type": "boolean"},
+        "next_cursor": {"type": ["string", "null"]},
+        "served_records": {"type": "integer", "minimum": 0},
+        "total_records": {"type": "integer", "minimum": 0}
+      }
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["stream", "id", "record_sha256", "physical_status", "status", "status_source", "has_subject_ref", "bytes"],
+        "properties": {
+          "stream": {"enum": ["facts", "events", "episodes"]},
+          "id": {"type": "string", "minLength": 1},
+          "record_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+          "physical_status": {"type": "string", "minLength": 1},
+          "status": {"type": "string", "minLength": 1},
+          "status_source": {"enum": ["physical", "supersede_overlay", "refute_overlay"]},
+          "has_subject_ref": {"type": "boolean"},
+          "bytes": {"type": "integer", "minimum": 0}
+        }
+      }
+    }
+  }
+}
