@@ -10,7 +10,12 @@ import tempfile
 import time
 import unittest
 
+from an_kla.baseline_adoption import (
+    apply_baseline_adoption,
+    plan_baseline_adoption,
+)
 from an_kla.context_package import (
+
     BLOCK_ID,
     COMPACT_PAYLOAD,
     CONTRACT_RELATIVE,
@@ -364,7 +369,15 @@ class ContextFilesystemTests(unittest.TestCase):
             self.assertIn(
                 "context_target_changed_outside_managed_block", status["warnings"]
             )
-            apply_context_plan(root, plan_context_change(root, "update"))
+            # ADR-0040 §6: update no absorbe drift; exige adopcion explicita.
+            with self.assertRaisesRegex(
+                ContextPackageError, "context_target_drift_adoption_required"
+            ):
+                plan_context_change(root, "update")
+            # La adopcion explicita resuelve el drift y preserva el contenido.
+            apply_baseline_adoption(root, plan_baseline_adoption(root))
+            status = context_status(root)
+            self.assertEqual(status["warnings"], [])
             self.assertIn("Regla nueva del usuario.", target.read_text(encoding="utf-8"))
 
     def test_clean_clone_without_local_manifest_is_healthy_with_warning(self) -> None:
@@ -400,17 +413,48 @@ class ContextFilesystemTests(unittest.TestCase):
             root = Path(directory)
             apply_context_plan(root, plan_context_change(root, "install"))
             plan = plan_context_change(root, "update")
+            # Mutating the baseline hash now triggers the drift gate first
+            # (ADR-0040 §6); plan invalidation is exercised through the
+            # contract hash, which belongs to the plan payload.
             manifest_path = root / MANIFEST_RELATIVE
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            manifest["target_sha256"] = "sha256:" + "0" * 64
+            manifest["contract_sha256"] = "sha256:" + "0" * 64
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            # Contract hash changed -> rebuilt plan differs -> CAS mismatch
+            # (the baseline hash itself did not move: no drift gate).
             with self.assertRaisesRegex(ContextPackageError, "context_plan_mismatch"):
                 apply_context_plan(root, plan)
+            # Adoption also rejects the fake hash: semantic conformance
+            # treats it as corruption, not adoptable drift.
+            with self.assertRaisesRegex(
+                ContextPackageError,
+                "context_baseline_semantic_mismatch",
+            ):
+                plan_baseline_adoption(root)
 
             manifest["unexpected"] = True
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
             status = context_status(root)
             self.assertIn("context_manifest_invalid", status["diagnostics"])
+
+    def test_adoption_cas_rejects_manifest_changed_after_plan(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            apply_context_plan(root, plan_context_change(root, "install"))
+            target = root / "AGENTS.md"
+            target.write_text(
+                target.read_text(encoding="utf-8") + "\nNota del proyecto.\n",
+                encoding="utf-8",
+            )
+            adoption = plan_baseline_adoption(root)
+            manifest_path = root / MANIFEST_RELATIVE
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest["target_sha256"] = "sha256:" + "1" * 64
+            manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+            with self.assertRaisesRegex(
+                ContextPackageError, "context_manifest_concurrent_update"
+            ):
+                apply_baseline_adoption(root, adoption)
 
     def test_create_manifest_contract_backup_update_and_uninstall(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

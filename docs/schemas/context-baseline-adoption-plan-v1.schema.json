@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:context-baseline-adoption-plan:v1",
+  "title": "AN-KLA ContextBaselineAdoptionPlan v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "operation", "target", "template_version", "base_manifest_sha256", "manifest_target_sha256_before", "observed_target_sha256", "managed_content_sha256", "contract_sha256", "will_update_manifest", "plan_fingerprint"],
+  "properties": {
+    "schema": {"const": "an-kla/context-baseline-adoption-plan/v1"},
+    "operation": {"const": "adopt-baseline"},
+    "target": {"const": "AGENTS.md"},
+    "template_version": {"type": "string", "minLength": 1},
+    "base_manifest_sha256": {"oneOf": [{"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, {"const": "missing"}]},
+    "manifest_target_sha256_before": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "observed_target_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "managed_content_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "contract_sha256": {"oneOf": [{"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, {"const": "missing"}]},
+    "will_update_manifest": {"type": "boolean"},
+    "plan_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

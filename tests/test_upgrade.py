@@ -195,7 +195,7 @@ class TargetDriftTests(unittest.TestCase):
         self.assertFalse(drift["outside_managed_block"])
         self.assertFalse(drift["will_be_absorbed_by_apply"])
         self.assertEqual(
-            drift["manifest_target_sha256_at_install"],
+            drift["manifest_target_sha256_at_baseline"],
             drift["observed_target_sha256"],
         )
 
@@ -208,7 +208,7 @@ class TargetDriftTests(unittest.TestCase):
         self.assertTrue(drift["outside_managed_block"])
         self.assertTrue(drift["will_be_absorbed_by_apply"])
         self.assertNotEqual(
-            drift["manifest_target_sha256_at_install"],
+            drift["manifest_target_sha256_at_baseline"],
             drift["observed_target_sha256"],
         )
 
@@ -238,13 +238,13 @@ class TargetDriftTests(unittest.TestCase):
         )
         self.assertTrue(result["target_drift"]["outside_managed_block"])
         self.assertNotEqual(
-            result["target_drift"]["manifest_target_sha256_at_install"],
+            result["target_drift"]["manifest_target_sha256_at_baseline"],
             result["target_drift"]["observed_target_sha256"],
         )
 
-    def test_inspect_emits_v2_schema_with_target_drift_field(self) -> None:
+    def test_inspect_emits_v3_schema_with_target_drift_field(self) -> None:
         plan = inspect_upgrade(self.root, TARGET)
-        self.assertEqual(plan["schema"], "an-kla/upgrade-plan-v2")
+        self.assertEqual(plan["schema"], "an-kla/upgrade-plan-v3")
         self.assertIn("target_drift", plan["core"])
 
 

@@ -185,6 +185,21 @@ identificado por contenido bajo `.an-kla/context/backups/`. Si el bloque o el
 contrato fueron modificados localmente, la actualización falla en cerrado y no
 sobrescribe esos cambios.
 
+Cuando edites contenido propio fuera del bloque gestionado (referencias a
+`CONTRIBUTING.md`, ADRs, convenciones), el warning
+`context_target_changed_outside_managed_block` es la señal esperada.
+`context update` ya no lo absorbe silenciosamente: adóptalo de forma explícita
+para que la detección de cambios futuros siga viva:
+
+```bash
+.venv/bin/python -m an_kla --project-root . context adopt-baseline
+```
+
+La operación planifica y aplica con CAS bajo el lock de contexto: adopta los
+bytes observados como nueva baseline del manifiesto, sin interpretar ni
+modificar tu contenido; un cambio posterior vuelve a activar el warning
+(ADR-0040).
+
 Las integraciones alfa sin marcadores no se migran automáticamente. Sigue el
 procedimiento manual de la [guía de integración](docs/context-package.md).
 Si el proyecto ya tiene un store beta.8, beta.11 exigirá además adoptar su

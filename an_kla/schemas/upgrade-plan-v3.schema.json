@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:upgrade-plan:v3",
+  "title": "AN-KLA UpgradePlan v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "core", "context_plan", "plan_fingerprint"],
+  "properties": {
+    "schema": {"const": "an-kla/upgrade-plan-v3"},
+    "core": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profile", "target_release", "installed_version", "package_action", "context_operation", "context_target", "context_template_version", "context_plan_sha256", "target_drift"],
+      "properties": {
+        "profile": {"const": "project-context-upgrade/v1"},
+        "target_release": {"type": "string", "minLength": 1},
+        "installed_version": {"type": "string", "minLength": 1},
+        "package_action": {"const": "already_installed"},
+        "context_operation": {"enum": ["install", "update"]},
+        "context_target": {"const": "AGENTS.md"},
+        "context_template_version": {"type": "string", "minLength": 1},
+        "context_plan_sha256": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+        "target_drift": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["outside_managed_block", "manifest_target_sha256_at_baseline", "observed_target_sha256", "managed_content_sha256", "will_be_absorbed_by_apply"],
+          "properties": {
+            "outside_managed_block": {"type": "boolean"},
+            "manifest_target_sha256_at_baseline": {"oneOf": [{"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, {"type": "null"}]},
+            "observed_target_sha256": {"oneOf": [{"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, {"const": "missing"}]},
+            "managed_content_sha256": {"oneOf": [{"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}, {"type": "null"}]},
+            "will_be_absorbed_by_apply": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    "context_plan": {"type": "object"},
+    "plan_fingerprint": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}
