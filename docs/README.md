@@ -58,8 +58,8 @@ prospectiva esté implementada; la última columna conserva esa distinción.
 | 0037 | [freshness-denominators-v1](architecture/0037-freshness-denominators-v1.md) | G-FRESH: recuentos evaluated/not_evaluable/unparseable/stale sobre la selección final en el bloque freshness | Aceptada | Implementada en `main` (PR #85, hacia beta.16): retrieve, assemble-context y MCP; denominador de view diferido |
 | 0038 | [source-state-git-v1](architecture/0038-source-state-git-v1.md) | `source_state` con perfil `git/v1` caller_asserted para ligar el checkpoint al commit que describe (#79) | Aceptada | Implementada en `main` (PR #85, hacia beta.16): policy+schema aditivos, CLI sin subprocesos |
 | 0039 | [integration-status-v1](architecture/0039-integration-status-v1.md) | G1: contrato observable de la integración por ejes (store, contexto gestionado, modo) sin enum compuesto (#55) | Aceptada | Implementada en `main` (PR #85, hacia beta.16): comando `integration status`, read-only |
-| 0040 | [baseline-adoption-contract-v1](architecture/0040-baseline-adoption-contract-v1.md) | Adopción explícita de baseline project-owned (`adopt-baseline` plan→commit, update fail-closed, upgrade-plan v3) | Aceptada | Implementada en `feat/issue-45-adr-0035` (#45); cierra el ciclo ADR-0035 |
-| 0041 | [inventory-v1](architecture/0041-inventory-v1.md) | Inventario físico por revisión: metadata-only, paginado, planos físico/observable separados (#68) | Aceptada | Implementada en `feat/issue-68-inventario`; sin MCP en v1 |
+| 0040 | [baseline-adoption-contract-v1](architecture/0040-baseline-adoption-contract-v1.md) | Adopción explícita de baseline project-owned (`adopt-baseline` plan→commit, update fail-closed, upgrade-plan v3) | Aceptada | Implementada en `main` (PR #90, hacia beta.17); cierra el ciclo ADR-0035 |
+| 0041 | [inventory-v1](architecture/0041-inventory-v1.md) | Inventario físico por revisión: metadata-only, paginado, planos físico/observable separados (#68) | Aceptada | Implementada en `main` (PR #91, hacia beta.17); sin MCP en v1 |
 
 Resumen: **41 ADRs**, sin huecos; **39 aceptadas** y **2 propuestas**. No hay
 ADRs rechazadas ni reemplazadas en el registro actual.
@@ -97,8 +97,8 @@ Los reportes son evidencia experimental, no decisiones de ranking.
 de publicación. Cumplen el rol de `CHANGELOG.md`.
 
 La release documentada más reciente es
-[`v0.1.0-beta.16`](releases/v0.1.0-beta.16.md), con su
-[ronda adversarial](releases/v0.1.0-beta.16-adversarial.md).
+[`v0.1.0-beta.17`](releases/v0.1.0-beta.17.md), con su
+[ronda adversarial](releases/v0.1.0-beta.17-adversarial.md).
 
 ### Planificación y respuestas históricas
 
