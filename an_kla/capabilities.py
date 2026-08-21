@@ -66,6 +66,16 @@ def capabilities() -> dict[str, Any]:
                 },
                 "resume": "an-kla/resume-v1",
             },
+            "inventory": {
+                "command": "inventory --revision <sha256>",
+                "schema": "an-kla/inventory-v1",
+                "read_only": True,
+                "content": "metadata-only",
+                "default_limit": 200,
+                "max_limit": 1000,
+                "mcp": False,
+                "decision": "ADR-0041",
+            },
             "integration": {
                 "command": "integration status",
                 "schema": "an-kla/integration-status-v1",

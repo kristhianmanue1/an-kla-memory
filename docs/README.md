@@ -59,8 +59,9 @@ prospectiva esté implementada; la última columna conserva esa distinción.
 | 0038 | [source-state-git-v1](architecture/0038-source-state-git-v1.md) | `source_state` con perfil `git/v1` caller_asserted para ligar el checkpoint al commit que describe (#79) | Aceptada | Implementada en `main` (PR #85, hacia beta.16): policy+schema aditivos, CLI sin subprocesos |
 | 0039 | [integration-status-v1](architecture/0039-integration-status-v1.md) | G1: contrato observable de la integración por ejes (store, contexto gestionado, modo) sin enum compuesto (#55) | Aceptada | Implementada en `main` (PR #85, hacia beta.16): comando `integration status`, read-only |
 | 0040 | [baseline-adoption-contract-v1](architecture/0040-baseline-adoption-contract-v1.md) | Adopción explícita de baseline project-owned (`adopt-baseline` plan→commit, update fail-closed, upgrade-plan v3) | Aceptada | Implementada en `feat/issue-45-adr-0035` (#45); cierra el ciclo ADR-0035 |
+| 0041 | [inventory-v1](architecture/0041-inventory-v1.md) | Inventario físico por revisión: metadata-only, paginado, planos físico/observable separados (#68) | Aceptada | Implementada en `feat/issue-68-inventario`; sin MCP en v1 |
 
-Resumen: **40 ADRs**, sin huecos; **38 aceptadas** y **2 propuestas**. No hay
+Resumen: **41 ADRs**, sin huecos; **39 aceptadas** y **2 propuestas**. No hay
 ADRs rechazadas ni reemplazadas en el registro actual.
 
 ### Documentación normativa
