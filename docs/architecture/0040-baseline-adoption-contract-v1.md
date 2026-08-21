@@ -75,6 +75,15 @@ conserva before==after). Exits: éxito 0; errores por la superficie estable del 
 
 ### 4. Precondiciones y códigos (enum cerrado)
 
+> **Enmienda v2 (2026-08-20, dogfooding):** la validación del contrato es
+> **semántica** (equivalencia con plantilla vigente o conocida).
+> `manifest.contract_sha256` puede describir legítimamente bytes que ya no
+> están en disco (contrato restaurado a canónico fuera de un update); ese
+> estado es sano para `context status` y la adopción lo acepta. El hash
+> sirve al CAS de concurrencia (campo del plan), no como invariant de
+> corrupción. La corrupción detectable es la de `managed_content_sha256`
+> (verificado contra el bloque observado) y `template_version`.
+
 Precondiciones verificadas **en plan y re-verificadas en commit**:
 
 | Código | Condición |

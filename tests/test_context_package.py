@@ -424,13 +424,9 @@ class ContextFilesystemTests(unittest.TestCase):
             # (the baseline hash itself did not move: no drift gate).
             with self.assertRaisesRegex(ContextPackageError, "context_plan_mismatch"):
                 apply_context_plan(root, plan)
-            # Adoption also rejects the fake hash: semantic conformance
-            # treats it as corruption, not adoptable drift.
-            with self.assertRaisesRegex(
-                ContextPackageError,
-                "context_baseline_semantic_mismatch",
-            ):
-                plan_baseline_adoption(root)
+            # ADR-0040 §4 enmienda v2: manifest.contract_sha256 is CAS-only;
+            # an orphaned (or faked) contract hash does not block adoption —
+            # contract sanity is semantic equivalence, already enforced.
 
             manifest["unexpected"] = True
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")

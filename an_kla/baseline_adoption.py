@@ -63,16 +63,14 @@ def _baseline_adoption_preconditions(
     known_outdated = _known_template_equivalent(block, contract_text)
     if not known_outdated and not _contract_equivalent(contract_text):
         raise ContextPackageError("context_baseline_managed_state_invalid")
-    # Semantic conformance for the recorded contract hash: the manifest must
-    # match raw, desired-newline, or canonical-LF encodings of the observed
-    # contract (a healthy re-encode is NOT corruption); a well-formed hash
-    # matching none of them is corruption, not adoptable drift (ADR-0040 §2).
-    if contract_bytes is not None and manifest.get("contract_sha256") not in {
-        _sha(contract_bytes),
-        _sha(_desired_contract_bytes(contract_text)),
-        _sha(contract_text.replace("\r\n", "\n").replace("\r", "\n").encode("utf-8")),
-    }:
-        raise ContextPackageError("context_baseline_semantic_mismatch")
+    # Contract validation is SEMANTIC (ADR-0040 §4, enmienda v2): the observed
+    # contract must be the current template or a known historical one (checked
+    # above). manifest.contract_sha256 may legitimately describe bytes that
+    # no longer exist on disk (e.g. the contract was restored to canonical
+    # outside an update flow) — the same state context_status reports healthy
+    # and update reconciles. The hash is used for CAS concurrency detection,
+    # not as a corruption invariant; a hand-modified contract is already
+    # rejected by the equivalence check above.
     return {
         "observed_target_sha256": _sha(target_bytes),
         "contract_sha256": _observed_sha(contract_bytes),

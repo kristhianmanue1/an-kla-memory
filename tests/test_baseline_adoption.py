@@ -399,6 +399,21 @@ class FrozenListGapTests(unittest.TestCase):
         ):
             plan_context_change(self.root, "install")
 
+    def test_orphaned_manifest_contract_hash_is_healthy_state(self) -> None:
+        # Dogfooding regression (ADR-0040 §4 enmienda v2): this repo's real
+        # manifest carries a contract hash whose bytes no longer exist on
+        # disk (contract restored to canonical outside an update). context
+        # status reports healthy; adoption must accept it.
+        self.project.edit_project_owned()
+        manifest_path = self.root / MANIFEST_RELATIVE
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        manifest["contract_sha256"] = "sha256:" + "e" * 64  # orphaned/fake
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        result = apply_baseline_adoption(
+            self.root, plan_baseline_adoption(self.root)
+        )
+        self.assertEqual(result["action"], "adopted")
+
 
 if __name__ == "__main__":
     unittest.main()
