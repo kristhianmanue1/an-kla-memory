@@ -24,6 +24,11 @@ from an_kla.context_package import (
 
 ROOT = Path(__file__).resolve().parents[1]
 
+from an_kla.version import VERSION as _VERSION
+
+_INSTALLED_TAG = "v" + _VERSION.replace("b", "-beta.", 1)
+INSTALLED_TAG = _INSTALLED_TAG if "b" in _VERSION else f"v{_VERSION}"
+
 
 class AdoptionProject:
     """Fresh consumer with project-owned content outside the block."""
@@ -205,7 +210,7 @@ class UpgradeAdoptionFlowTests(unittest.TestCase):
         from an_kla.upgrade import apply_upgrade, inspect_upgrade
 
         self.project.edit_project_owned()
-        plan = inspect_upgrade(self.root, "v0.1.0-beta.16")
+        plan = inspect_upgrade(self.root, INSTALLED_TAG)
         self.assertEqual(plan["schema"], "an-kla/upgrade-plan-v3")
         self.assertTrue(plan["core"]["target_drift"]["outside_managed_block"])
         # Sin flag falla cerrado.
@@ -222,7 +227,7 @@ class UpgradeAdoptionFlowTests(unittest.TestCase):
     def test_v3_plan_names_baseline_not_install(self) -> None:
         from an_kla.upgrade import inspect_upgrade
 
-        plan = inspect_upgrade(self.root, "v0.1.0-beta.16")
+        plan = inspect_upgrade(self.root, INSTALLED_TAG)
         drift = plan["core"]["target_drift"]
         self.assertIn("manifest_target_sha256_at_baseline", drift)
         self.assertNotIn("manifest_target_sha256_at_install", drift)
@@ -234,7 +239,7 @@ class UpgradeAdoptionFlowTests(unittest.TestCase):
         apply_baseline_adoption(
             self.root, plan_baseline_adoption(self.root)
         )
-        plan = inspect_upgrade(self.root, "v0.1.0-beta.16")
+        plan = inspect_upgrade(self.root, INSTALLED_TAG)
         self.assertFalse(plan["core"]["target_drift"]["outside_managed_block"])
 
     def test_plan_and_result_schemas_validate(self) -> None:
@@ -368,7 +373,7 @@ class FrozenListGapTests(unittest.TestCase):
         from an_kla.upgrade import apply_upgrade, inspect_upgrade
 
         self.project.edit_project_owned()
-        v3_plan = inspect_upgrade(self.root, "v0.1.0-beta.16")
+        v3_plan = inspect_upgrade(self.root, INSTALLED_TAG)
         # Forjar un v2 a partir del v3 (como lo haría un binario viejo).
         v2_plan = {
             **v3_plan,

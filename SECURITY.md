@@ -7,8 +7,8 @@ security fixes.
 
 | Version | Supported |
 |---|---|
-| `v0.1.0-beta.16` | ✅ |
-| `< v0.1.0-beta.16` | ❌ |
+| `v0.1.0-beta.17` | ✅ |
+| `< v0.1.0-beta.17` | ❌ |
 | `main` | ❌ (development branch; pin an exact tag for production) |
 
 ## Reporting a vulnerability

@@ -14,6 +14,16 @@ en fase de pre-release `0.1.0`.
 
 Nada aún.
 
+## [v0.1.0-beta.17] — 2026-08-20
+
+Adopción explícita de baseline (`adopt-baseline`, ADR-0040/0035) con
+`context update` fail-closed ante drift no adoptado; inventario físico
+por revisión (`inventory --revision`, ADR-0041) metadata-only con planos
+físico/observable y bucket `eliminada`; upgrade-plan v3
+(`manifest_target_sha256_at_baseline`).
+[Notas](docs/releases/v0.1.0-beta.17.md) ·
+[Ronda adversarial](docs/releases/v0.1.0-beta.17-adversarial.md)
+
 ## [v0.1.0-beta.16] — 2026-08-20
 
 Denominadores de frescura (ADR-0037), `source_state` `git/v1`
