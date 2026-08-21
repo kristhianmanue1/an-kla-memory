@@ -18,6 +18,10 @@ from .checkpoint_policy import CheckpointPolicyError
 from .compaction import CompactionError, commit_compaction, plan_compaction
 from .checkpoints import commit_checkpoint, plan_checkpoint, show_checkpoint
 from .context import assemble_context
+from an_kla.baseline_adoption import (
+    apply_baseline_adoption,
+    plan_baseline_adoption,
+)
 from .context_package import (
     apply_context_plan,
     context_status,
@@ -381,7 +385,9 @@ def _run() -> None:
     )
     context_plan_cmd = context_sub.add_parser("plan")
     context_plan_cmd.add_argument(
-        "--operation", choices=("install", "update", "uninstall"), required=True
+        "--operation",
+        choices=("install", "update", "uninstall", "adopt-baseline"),
+        required=True,
     )
     context_plan_cmd.add_argument("--target", default="AGENTS.md")
     context_apply_cmd = context_sub.add_parser("apply")
@@ -389,6 +395,11 @@ def _run() -> None:
     for operation in ("install", "update", "uninstall"):
         operation_cmd = context_sub.add_parser(operation)
         operation_cmd.add_argument("--target", default="AGENTS.md")
+    adopt_cmd = context_sub.add_parser(
+        "adopt-baseline",
+        help="Adoptar los bytes observados del target como baseline (ADR-0040).",
+    )
+    adopt_cmd.add_argument("--target", default="AGENTS.md")
     upgrade_cmd = sub.add_parser(
         "upgrade", help="Planificar y verificar la integración de una versión instalada."
     )
@@ -470,11 +481,20 @@ def _run() -> None:
         elif args.context_command == "show-template":
             result = get_template(args.version)
         elif args.context_command == "plan":
-            result = plan_context_change(
-                args.project_root, args.operation, args.target
-            )
+            if args.operation == "adopt-baseline":
+                result = plan_baseline_adoption(args.project_root, args.target)
+            else:
+                result = plan_context_change(
+                    args.project_root, args.operation, args.target
+                )
         elif args.context_command == "apply":
             result = apply_context_plan(args.project_root, _json(args.plan))
+        elif args.context_command == "adopt-baseline":
+            plan = plan_baseline_adoption(args.project_root, args.target)
+            result = {
+                "plan": plan,
+                "result": apply_baseline_adoption(args.project_root, plan),
+            }
         else:
             plan = plan_context_change(
                 args.project_root, args.context_command, args.target

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:context-baseline-adoption-result:v1",
+  "title": "AN-KLA ContextBaselineAdoptionResult v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "operation", "target", "action", "manifest_target_sha256_before", "manifest_target_sha256_after"],
+  "properties": {
+    "schema": {"const": "an-kla/context-baseline-adoption-result/v1"},
+    "operation": {"const": "adopt-baseline"},
+    "target": {"const": "AGENTS.md"},
+    "action": {"enum": ["adopted", "noop"]},
+    "manifest_target_sha256_before": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "manifest_target_sha256_after": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+  }
+}

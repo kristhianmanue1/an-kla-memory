@@ -232,6 +232,9 @@ def capabilities() -> dict[str, Any]:
             "operations": ["inspect", "apply", "verify"],
             "package_self_update": False,
             "requires_exact_installed_target": True,
+            "baseline_adoption": "adopt-baseline (ADR-0040)",
+            "context_drift_adoption_required": True,
+            "plan_schema": "an-kla/upgrade-plan-v3",
         },
         "update_check": {
             "enabled": True,

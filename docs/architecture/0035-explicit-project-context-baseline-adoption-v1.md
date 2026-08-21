@@ -1,7 +1,8 @@
 # ADR-0035: adoptar explícitamente la baseline project-owned de `AGENTS.md`
 
-- **Estado:** Propuesta
-- **Implementación:** No iniciada
+- **Estado:** Aceptada
+- **Implementación:** Contrato congelado e implementado por
+  ADR-0040 (#45, 2026-08-20)
 - **Fecha:** 2026-08-12
 - **Decide sobre:** la arquitectura y secuencia para reconocer cambios
   intencionales fuera del bloque sin debilitar el drift del archivo completo;

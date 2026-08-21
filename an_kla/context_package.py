@@ -18,6 +18,7 @@ import stat
 import tempfile
 from typing import Any, Iterator
 
+from an_kla.canonical import digest_json
 from an_kla.context_text import (
     BLOCK_ID,
     COMPACT_PAYLOAD,
@@ -341,7 +342,11 @@ def _observed_sha(payload: bytes | None) -> str:
 
 
 def plan_context_change(
-    project_root: str | Path, operation: str, target: str = "AGENTS.md"
+    project_root: str | Path,
+    operation: str,
+    target: str = "AGENTS.md",
+    *,
+    allow_target_drift: bool = False,
 ) -> dict[str, Any]:
     root = _project_root(project_root)
     target_path = _target_path(root, target)
@@ -352,6 +357,18 @@ def plan_context_change(
     manifest_bytes = manifest_path.read_bytes() if manifest_path.exists() else None
     if manifest is not None and manifest.get("target") != target:
         raise ContextPackageError("context_manifest_target_mismatch")
+    if (
+        operation in {"update", "install"}
+        and not allow_target_drift
+        and manifest is not None
+        and before_bytes is not None
+        and manifest.get("target_sha256") != _sha(before_bytes)
+    ):
+        # ADR-0040 §6: update (and reinstall over an existing manifest)
+        # must not silently absorb unrecognized drift; the only escape
+        # hatches are adopt-baseline and upgrade's --confirm-target-drift
+        # (carve-out passed by inspect/apply_upgrade).
+        raise ContextPackageError("context_target_drift_adoption_required")
     if operation == "uninstall" and result_text is None and not (
         manifest and manifest.get("file_created_by_an_kla") is True
     ):
@@ -522,7 +539,12 @@ def _load_manifest(root: Path) -> dict[str, Any] | None:
     return value
 
 
-def apply_context_plan(project_root: str | Path, plan: dict[str, Any]) -> dict[str, Any]:
+def apply_context_plan(
+    project_root: str | Path,
+    plan: dict[str, Any],
+    *,
+    allow_target_drift: bool = False,
+) -> dict[str, Any]:
     root = _project_root(project_root)
     if not isinstance(plan, dict) or plan.get("schema") != PLAN_SCHEMA:
         raise ContextPackageError("invalid_context_plan")
@@ -533,7 +555,9 @@ def apply_context_plan(project_root: str | Path, plan: dict[str, Any]) -> dict[s
     target_path = _target_path(root, target)
 
     with _context_lock(root):
-        rebuilt = plan_context_change(root, operation, target)
+        rebuilt = plan_context_change(
+            root, operation, target, allow_target_drift=allow_target_drift
+        )
         if rebuilt != plan:
             if rebuilt.get("base_target_sha256") != plan.get("base_target_sha256"):
                 raise ContextConcurrentUpdate("context_file_concurrent_update")

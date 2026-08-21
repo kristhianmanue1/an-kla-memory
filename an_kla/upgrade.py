@@ -23,6 +23,7 @@ from .version import VERSION, normalized_release_tag
 
 UPGRADE_PLAN_SCHEMA = "an-kla/upgrade-plan-v1"
 UPGRADE_PLAN_SCHEMA_V2 = "an-kla/upgrade-plan-v2"
+UPGRADE_PLAN_SCHEMA_V3 = "an-kla/upgrade-plan-v3"
 UPGRADE_RESULT_SCHEMA = "an-kla/upgrade-apply-result/v1"
 UPGRADE_VERIFY_SCHEMA = "an-kla/upgrade-verify-result/v1"
 UPGRADE_PROFILE = "project-context-upgrade/v1"
@@ -81,6 +82,7 @@ def _detect_target_drift(
         return {
             "outside_managed_block": False,
             "manifest_target_sha256_at_install": None,
+            "manifest_target_sha256_at_baseline": None,
             "observed_target_sha256": observed,
             "managed_content_sha256": None,
             "will_be_absorbed_by_apply": False,
@@ -94,6 +96,7 @@ def _detect_target_drift(
     return {
         "outside_managed_block": bool(drifted),
         "manifest_target_sha256_at_install": manifest_target,
+        "manifest_target_sha256_at_baseline": manifest_target,
         "observed_target_sha256": observed,
         "managed_content_sha256": manifest.get("managed_content_sha256"),
         "will_be_absorbed_by_apply": bool(drifted),
@@ -109,7 +112,9 @@ def inspect_upgrade(
     _require_installed_target(target_release)
     status = context_status(project_root, context_target)
     operation = "update" if status["installed"] else "install"
-    context_plan = plan_context_change(project_root, operation, context_target)
+    context_plan = plan_context_change(
+        project_root, operation, context_target, allow_target_drift=True
+    )
     target_drift = _detect_target_drift(project_root, context_target)
     core = {
         "profile": UPGRADE_PROFILE,
@@ -120,10 +125,15 @@ def inspect_upgrade(
         "context_target": context_target,
         "context_template_version": TEMPLATE_VERSION,
         "context_plan_sha256": digest_json(context_plan),
-        "target_drift": target_drift,
+        "target_drift": {
+            key: value
+            for key, value in target_drift.items()
+            if not key.startswith("__")
+            and key != "manifest_target_sha256_at_install"
+        },
     }
     return {
-        "schema": UPGRADE_PLAN_SCHEMA_V2,
+        "schema": UPGRADE_PLAN_SCHEMA_V3,
         "core": core,
         "context_plan": context_plan,
         "plan_fingerprint": digest_json(core),
@@ -138,7 +148,9 @@ def _validate_plan(plan: Any, expected_fingerprint: str) -> dict[str, Any]:
     context_plan = plan.get("context_plan")
     fingerprint = plan.get("plan_fingerprint")
     if (
-        schema not in {UPGRADE_PLAN_SCHEMA, UPGRADE_PLAN_SCHEMA_V2}
+        schema not in {
+            UPGRADE_PLAN_SCHEMA, UPGRADE_PLAN_SCHEMA_V2, UPGRADE_PLAN_SCHEMA_V3
+        }
         or not isinstance(core, dict)
         or set(core) not in (_CORE_KEYS, _CORE_KEYS_V2)
         or not isinstance(context_plan, dict)
@@ -158,13 +170,24 @@ def _validate_plan(plan: Any, expected_fingerprint: str) -> dict[str, Any]:
     # When a v2 plan carries target_drift, the field must be well-formed.
     target_drift = core.get("target_drift")
     if target_drift is not None:
-        if not isinstance(target_drift, dict) or set(target_drift) != {
-            "outside_managed_block",
-            "manifest_target_sha256_at_install",
-            "observed_target_sha256",
-            "managed_content_sha256",
-            "will_be_absorbed_by_apply",
-        }:
+        drift_keys = (
+            {
+                "outside_managed_block",
+                "manifest_target_sha256_at_baseline",
+                "observed_target_sha256",
+                "managed_content_sha256",
+                "will_be_absorbed_by_apply",
+            }
+            if schema == UPGRADE_PLAN_SCHEMA_V3
+            else {
+                "outside_managed_block",
+                "manifest_target_sha256_at_install",
+                "observed_target_sha256",
+                "managed_content_sha256",
+                "will_be_absorbed_by_apply",
+            }
+        )
+        if not isinstance(target_drift, dict) or set(target_drift) != drift_keys:
             raise ValueError("invalid_upgrade_plan")
         if not isinstance(target_drift["outside_managed_block"], bool) or not isinstance(
             target_drift["will_be_absorbed_by_apply"], bool
@@ -223,7 +246,11 @@ def apply_upgrade(
     pre_apply_drift = (
         deepcopy(target_drift) if target_drift is not None else None
     )
-    result = apply_context_plan(project_root, checked["context_plan"])
+    result = apply_context_plan(
+        project_root,
+        checked["context_plan"],
+        allow_target_drift=confirm_target_drift,
+    )
     verification = verify_upgrade(
         project_root,
         checked["core"]["target_release"],
@@ -247,6 +274,7 @@ def apply_upgrade(
 __all__ = [
     "UPGRADE_PLAN_SCHEMA",
     "UPGRADE_PLAN_SCHEMA_V2",
+    "UPGRADE_PLAN_SCHEMA_V3",
     "UPGRADE_PROFILE",
     "apply_upgrade",
     "inspect_upgrade",
