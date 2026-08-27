@@ -472,7 +472,48 @@ class ErrorDetailTests(unittest.TestCase):
         bad = proposal()
         bad["extra_key"] = "noise"
         self._assert_detail(
-            "invalid_write_proposal", "proposal:keys", lambda: validate_write_proposal(bad)
+            "invalid_write_proposal", "proposal:keys:extra=extra_key", lambda: validate_write_proposal(bad)
+        )
+
+    def test_proposal_keys_detail_names_missing_keys(self) -> None:
+        # Issue #93: the trace that motivated it — a proposal missing several
+        # required keys must name them, not just the area.
+        bad = {
+            "schema": "an-kla/write-proposal-v1",
+            "base_revision": DIGEST_A,
+            "record": {"id": "f-new", "payload": {"text": "decisión durable"}},
+        }
+        self._assert_detail(
+            "invalid_write_proposal",
+            "proposal:keys:missing=lineage,operation,requested_representation,stream",
+            lambda: validate_write_proposal(bad),
+        )
+
+    def test_proposal_keys_detail_names_missing_and_extra(self) -> None:
+        bad = proposal()
+        del bad["lineage"]
+        bad["record_keys"] = "misplaced"
+        self._assert_detail(
+            "invalid_write_proposal",
+            "proposal:keys:missing=lineage;extra=record_keys",
+            lambda: validate_write_proposal(bad),
+        )
+
+    def test_authority_keys_detail_names_missing_scope(self) -> None:
+        bad = authority(proposal())
+        del bad["scope"]
+        self._assert_detail(
+            "invalid_write_authority", "authority:keys:missing=scope", lambda: validate_write_authority(bad)
+        )
+
+    def test_scope_keys_detail_names_missing_keys(self) -> None:
+        # Issue #93 attempt 2: scope sent in another shape.
+        bad = authority(proposal())
+        bad["scope"] = {"stream": "facts"}
+        self._assert_detail(
+            "invalid_write_authority",
+            "scope:keys:missing=operations,representations,streams;extra=stream",
+            lambda: validate_write_authority(bad),
         )
 
     def test_proposal_lineage_detail(self) -> None:

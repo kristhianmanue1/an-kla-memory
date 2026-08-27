@@ -125,8 +125,19 @@ def _require_exact_keys(
     detail: str,
 ) -> None:
     keys = set(value)
-    if not required.issubset(keys) or not keys.issubset(required | optional):
-        raise WritePolicyError(code, detail)
+    missing = sorted(required - keys)
+    extra = sorted(keys - (required | optional))
+    if not missing and not extra:
+        return
+    # Issue #93: name the offending keys, not just the area.  Key names come
+    # from the schema (deterministic, sorted), never from values — same
+    # standard as ``summary_required_for_authority_ceiling``.
+    parts = []
+    if missing:
+        parts.append(f"missing={','.join(missing)}")
+    if extra:
+        parts.append(f"extra={','.join(extra)}")
+    raise WritePolicyError(code, f"{detail}:{';'.join(parts)}")
 
 
 def _is_digest(value: Any) -> bool:
