@@ -15,6 +15,12 @@ authors = [{name = "The AN-KLA Memory Authors"}]
 # Sólo para la suite. El runtime no tiene dependencias y no debe adquirirlas:
 # `jsonschema` valida schemas publicados en los tests, nunca en producción.
 test = ["jsonschema>=4.18"]
+# Perfil sellado (issue #46, T1). Se DECLARA pero no se instala con el core:
+# sin este extra, `an_kla.sealed.sealed_available` es False y todo comando
+# sellado falla cerrado con `SealedExtraNotInstalledError` (código canónico
+# `sealing_extra_not_installed`). La detección es perezosa: `cryptography`
+# jamás se importa a nivel top-level del core.
+sealed = ["cryptography>=42"]
 
 [project.scripts]
 an-kla = "an_kla.__main__:main"
