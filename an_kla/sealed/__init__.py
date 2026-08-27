@@ -16,6 +16,19 @@ Contrato de esta fase (solo esqueleto; sin criptografía funcional — T2+):
 T2+ (KDF/CEK/adaptador/cifrado del bundle) NO vive aquí todavía; las
 señales canónicas que ese futuro código consuma se declaran en este módulo
 para que el error de disponibilidad sea estable desde ya.
+
+T2 (issue #46) — KDF y CEK YA VIVEN en los submódulos ``an_kla.sealed.kdf``
+y ``an_kla.sealed.cek`` (HKDF-SHA256 solo-Expand con separación de dominio
+por propósito, y CEK efímera con wrap/unwrap como contrato de función con
+KEK inyectable). Se re-exportan aquí para superficie estable, SIN cambiar
+nada del contrato T1: estos submódulos importan ``cryptography`` solo
+perezosamente (dentro de funciones), por lo que ``import an_kla.sealed``
+sigue siendo stdlib-only y fail-closed.
+
+Nota del adversarial T1 honrada: ``sealed_available`` es una señal
+**por-proceso** (se calcula al importar este módulo); KDF/CEK NO se acoplan
+a ese flag — sus operaciones fallan por su propio import real, de forma
+independiente del estado del flag.
 """
 
 from __future__ import annotations
@@ -84,3 +97,30 @@ def sealed_restore(args: list) -> None:
     con extra hasta T4)."""
     _require_sealed_extra()
     raise NotImplementedError("sealed_restore arrives in T4 (issue #46)")
+
+
+# --- T2 (issue #46): re-exportación de la superficie KDF/CEK ----------------
+# Import de submódulos stdlib-safe: kdf/cek importan cryptography SOLO dentro
+# de funciones (perezoso), así que este import top-level no rompe la promesa
+# stdlib-only del core.
+from an_kla.sealed.cek import (  # noqa: E402
+    WRAP_NONCE_LENGTH,
+    WRAPPED_CEK_BLOB_LENGTH,
+    SealedCekUnwrapError,
+    WrappedCek,
+    generate_cek,
+    unwrap_cek,
+    wrap_cek,
+)
+from an_kla.sealed.kdf import (  # noqa: E402
+    AEAD_KEY_LENGTH,
+    BUNDLE_ID_RAW_LENGTH,
+    CEK_LENGTH,
+    INFO_AEAD_KEY,
+    INFO_BUNDLE_ID,
+    INFO_MANIFEST_MAC,
+    MAC_KEY_LENGTH,
+    SealedSubkeys,
+    derive_subkeys,
+    hkdf_expand,
+)
