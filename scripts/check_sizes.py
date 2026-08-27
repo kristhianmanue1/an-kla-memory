@@ -48,6 +48,12 @@ REGLAS = [
 TECH_DEBT = {
     # context_package.py (era 1011) se partió en #23 extrayendo el texto
     # canónico a context_text.py; ahora cumple el límite de 800 sin gracia.
+    # ADR-0042 (622 líneas) pendiente de partir en ADR corto + detalle
+    # técnico aparte — seguimiento en #95.
+    "docs/architecture/0042-sealed-export-v1.md": (
+        700,
+        "#95 — partir en ADR normativo + apéndice técnico",
+    ),
 }
 
 
