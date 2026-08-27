@@ -124,3 +124,23 @@ from an_kla.sealed.kdf import (  # noqa: E402
     derive_subkeys,
     hkdf_expand,
 )
+
+# --- T3 (issue #46): runner seguro del adaptador externo de claves --------
+# key_adapter es stdlib PURA (sin cryptography en ningún camino) y ejecuta
+# el proceso adaptador externo con el contrato JSON cerrado por stdio del
+# ADR-0042 §4. Código de error canónico adicional: sealing_adapter_error /
+# sealing_adapter_required (ADR §5).
+from an_kla.sealed.key_adapter import (  # noqa: E402
+    ADAPTER_STDERR_LIMIT,
+    ADAPTER_STDIN_LIMIT,
+    ADAPTER_STDOUT_LIMIT,
+    ADAPTER_TERM_GRACE_SECONDS,
+    ADAPTER_TIMEOUT_SECONDS,
+    ADAPTER_WRAPPED_CEK_MAX_CHARS,
+    SEALING_ADAPTER_ERROR_CODE,
+    SEALING_ADAPTER_REQUIRED_CODE,
+    AdapterResult,
+    SealingAdapterError,
+    SealingAdapterRequiredError,
+    SealingAdapterRunner,
+)
