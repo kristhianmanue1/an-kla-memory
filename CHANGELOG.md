@@ -53,6 +53,16 @@ del respaldo en reposo como extra opcional `[sealed]`
   (upgrade beta.17→18); sólo para gates, nunca en el paquete.
 - Guía de uso: [docs/sealed-export-guide.md](docs/sealed-export-guide.md).
 
+## [v0.1.0-beta.18]
+
+Perfil sellado `sealed-export/v1` completo (ADR-0042, issue #46):
+`export create --seal` con adaptador externo de claves, `export verify`
+dual (estructural sin clave / autenticado con clave), `export restore`
+sellado fail-closed y matriz de pruebas §9 consolidada. Extra opcional
+`[sealed]`; camino `export/v1` intacto. Sin rupturas deliberadas.
+[Notas](docs/releases/v0.1.0-beta.18.md) ·
+[Ronda adversarial](docs/releases/v0.1.0-beta.18-adversarial.md)
+
 ## [v0.1.0-beta.17] — 2026-08-20
 
 Adopción explícita de baseline (`adopt-baseline`, ADR-0040/0035) con
@@ -105,7 +115,8 @@ gobernados, identidad store/proyecto, retiro del `write` legado.
 
 ## Anteriores
 
-- [v0.1.0-beta.10](docs/releases/v0.1.0-beta.10.md)
+- v0.1.0-beta.10 (sin nota) ·
+  [ronda](docs/releases/v0.1.0-beta.10-adversarial.md)
 - [v0.1.0-beta.9](docs/releases/v0.1.0-beta.9.md) ·
   [ronda](docs/releases/v0.1.0-beta.9-adversarial.md)
 - [v0.1.0-beta.8](docs/releases/v0.1.0-beta.8.md) ·
