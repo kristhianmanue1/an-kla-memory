@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:sealing-adapter-contract:v1",
+  "title": "AN-KLA sealing key adapter stdio contract (sealed-export/v1, ADR-0042 §4)",
+  "oneOf": [
+    {"$ref": "#/$defs/wrap_request"},
+    {"$ref": "#/$defs/wrap_response"},
+    {"$ref": "#/$defs/unwrap_request"},
+    {"$ref": "#/$defs/unwrap_response"}
+  ],
+  "$defs": {
+    "base64_32": {"type": "string", "pattern": "^(?:[A-Za-z0-9+/]{43}=)$"},
+    "base64_blob": {"type": "string", "pattern": "^[A-Za-z0-9+/]+={0,2}$", "minLength": 1, "maxLength": 4096},
+    "adapter_id": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$", "not": {"enum": [".", ".."]}},
+    "wrap_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "cek_b64"],
+      "properties": {
+        "op": {"const": "wrap"},
+        "cek_b64": {"$ref": "#/$defs/base64_32"}
+      }
+    },
+    "wrap_response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["wrapped_cek", "adapter_id"],
+      "properties": {
+        "wrapped_cek": {"$ref": "#/$defs/base64_blob"},
+        "adapter_id": {"$ref": "#/$defs/adapter_id"}
+      }
+    },
+    "unwrap_request": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["op", "wrapped_cek"],
+      "properties": {
+        "op": {"const": "unwrap"},
+        "wrapped_cek": {"$ref": "#/$defs/base64_blob"}
+      }
+    },
+    "unwrap_response": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cek_b64"],
+      "properties": {
+        "cek_b64": {"$ref": "#/$defs/base64_32"}
+      }
+    }
+  }
+}
