@@ -36,6 +36,7 @@ intérprete del entorno virtual.
   - [Verificación no bloqueante de versiones](#verificación-no-bloqueante-de-versiones)
   - [Actualización gobernada del proyecto](#actualización-gobernada-del-proyecto)
   - [Recuperación y escritura](#recuperación-y-escritura)
+  - [Respaldo sellado (opcional)](#respaldo-sellado-opcional)
 - [Desarrollo del motor](#desarrollo-del-motor)
 - [Límites de la beta](#límites-de-la-beta)
 - [Documentación](#documentación)
@@ -366,6 +367,30 @@ La continuidad operacional usa acceso exacto, no búsqueda por similitud:
 .venv/bin/python -m an_kla --project-root . export verify --bundle RESPALDO
 ```
 
+### Respaldo sellado (opcional)
+
+El perfil `sealed-export/v1` (ADR-0042) cifra el respaldo en reposo
+como extra opcional — sin él, el camino `export/v1` en claro queda
+intacto y el paquete sigue siendo stdlib-only:
+
+```bash
+.venv/bin/python -m pip install 'an-kla-memory[sealed]'
+.venv/bin/python -m an_kla --project-root . export create \
+    --bundle RESPALDO_SELLADO \
+    --seal sealed-export/v1 \
+    --key-adapter /ruta/al/adaptador
+.venv/bin/python -m an_kla export verify --bundle RESPALDO_SELLADO \
+    --key-adapter /ruta/al/adaptador
+```
+
+La CEK de cada bundle la custodia un adaptador externo de claves
+(contrato JSON por stdio, sin shell; en producción: Keychain, KMS,
+age). Sin clave, `export verify` es estructural y jamás afirma
+`verified: true`; con clave, autentica AEAD + MAC por entrada. El
+sello da integridad bajo una clave, no atestación de origen: registra
+el `bundle_id` que devuelve `create` y compáralo antes de restaurar.
+Consulta la [guía del perfil sellado](docs/sealed-export-guide.md).
+
 Checkpoint, identidad, refute, export/restore y compactación tienen contratos
 plan→commit propios. Desde ADR-0038, el `source_state` del working state
 admite el perfil `git/v1` con valores `caller_asserted`: el caller observa
@@ -399,6 +424,10 @@ y las decisiones de arquitectura en `docs/architecture/`.
 - administra sólo el `AGENTS.md` raíz y no adapta archivos de proveedores;
 - la compactación es explícita, gobernada y destructiva: exige un export
   verificable, autoridad y un plan exacto; no existe GC automático;
+- el perfil sellado (`sealed-export/v1`) da confidencialidad del bundle
+  en reposo, no del store vivo ni del transporte, y no es atestación de
+  origen: la defensa anti re-sellado es la comparación manual del
+  `bundle_id` (ADR-0042 §Límites);
 - el CLI independiente no puede autodeclarar autoridad privilegiada para
   `refute`: esa capacidad debe ser resuelta por un host confiable.
 
@@ -406,6 +435,9 @@ y las decisiones de arquitectura en `docs/architecture/`.
 
 - [Contrato del agente](AN-KLA.md) — desarrollo del bloque administrado.
 - [Documentación evergreen](docs/README.md) — índice de la carpeta `docs/`.
+- [Guía del perfil sellado](docs/sealed-export-guide.md) — respaldos
+  cifrados en reposo (`sealed-export/v1`, ADR-0042): uso, perfiles,
+  warnings y errores canónicos.
 - [Notas de beta.17](docs/releases/v0.1.0-beta.17.md) — adopción de
   baseline e inventario físico.
 - [Notas de beta.16](docs/releases/v0.1.0-beta.16.md) — denominadores de

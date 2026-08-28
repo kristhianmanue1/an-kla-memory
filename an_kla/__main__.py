@@ -45,10 +45,20 @@ from .inventory import inventory
 from .integration import integration_status
 from .evaluation import evaluate_retrieval, evaluate_retrieval_v2
 from .export_restore import ExportError
+from .sealed import SEALED_EXTRA_ERROR_CODE, SealedExtraNotInstalledError
+from .sealed.bundle import (
+    SealedAdapterIdInvalidError,
+    SealedEntryTooLargeError,
+    SealedPayloadAuthFailedError,
+)
 from .sealed.cli_dispatch import (
     dispatch_export_create,
     dispatch_export_restore,
     dispatch_export_verify,
+)
+from .sealed.key_adapter import (
+    SealingAdapterError,
+    SealingAdapterRequiredError,
 )
 from .reader_gate import ReaderGateError
 from .retrieval import SCAN_PROFILE, retrieve
@@ -463,10 +473,29 @@ def main() -> None:
         suffix = f" ({exc.detail})" if exc.detail else ""
         sys.stderr.write(f"an-kla error: {exc}{suffix}\n")
         raise SystemExit(2)
-    except (CheckpointPolicyError, CompactionError, ExportError, StoreError, ConcurrentUpdateError, IdentityError, ReaderGateError, TransactionError, ValueError, OSError) as exc:
+    except (CheckpointPolicyError, CompactionError, ExportError, StoreError, ConcurrentUpdateError, IdentityError, ReaderGateError, TransactionError, SealingAdapterError, SealingAdapterRequiredError, SealedPayloadAuthFailedError, SealedEntryTooLargeError, SealedAdapterIdInvalidError, SealedExtraNotInstalledError, ValueError, OSError) as exc:
         if isinstance(exc, TransactionError) and str(exc) == "invalid_transaction_id":
             sys.stderr.write("an-kla error: invalid_transaction_id\n")
             raise SystemExit(2)
+        # H1 (deuda T5, issue #46): los errores sellados con código canónico
+        # se reportan por su código, no por el mensaje genérico del safety
+        # net. Son RuntimeErrors que de otro modo caerían en
+        # cli_unexpected_failure: el operador vería "unexpected" donde hay
+        # un código canónico del ADR-0042 §5.
+        canonical_code = getattr(exc, "ERROR_CODE", None)
+        if canonical_code is None and isinstance(
+                exc, SealedExtraNotInstalledError):
+            # SealedExtraNotInstalledError porta su código como constante
+            # de módulo (SEALED_EXTRA_ERROR_CODE), no como atributo.
+            canonical_code = SEALED_EXTRA_ERROR_CODE
+        if canonical_code is not None:
+            sys.stderr.write(f"an-kla error: {canonical_code}\n")
+            if canonical_code == SEALED_EXTRA_ERROR_CODE:
+                sys.stderr.write(
+                    "hint: pip install 'an-kla-memory[sealed]' to use "
+                    "sealed-export/v1\n"
+                )
+            raise SystemExit(1)
         detail = getattr(exc, "detail", None)
         if str(exc) == "write_plan_base_changed" and detail is None:
             detail = "refresh_status_and_replan"
