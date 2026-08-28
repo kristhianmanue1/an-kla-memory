@@ -77,7 +77,10 @@ class GitSourceStateValidationTests(unittest.TestCase):
             CheckpointPolicyError, "invalid_working_state"
         ):
             validate_working_state(state)
-        from jsonschema.exceptions import ValidationError
+        try:
+            from jsonschema.exceptions import ValidationError
+        except ImportError:
+            self.skipTest("jsonschema unavailable")
 
         validator = self._validator_schema()
         with self.assertRaises(ValidationError):
@@ -186,7 +189,10 @@ class GitSourceStateSchemaTests(unittest.TestCase):
         validator.validate(state)
 
     def test_schema_rejects_unavailable_head_under_git_v1(self) -> None:
-        from jsonschema.exceptions import ValidationError
+        try:
+            from jsonschema.exceptions import ValidationError
+        except ImportError:
+            self.skipTest("jsonschema unavailable")
 
         validator = self._validator()
         state = _git_state("sha256:" + "0" * 64)
