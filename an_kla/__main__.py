@@ -44,7 +44,12 @@ from .inventory import STREAMS as INVENTORY_STREAMS
 from .inventory import inventory
 from .integration import integration_status
 from .evaluation import evaluate_retrieval, evaluate_retrieval_v2
-from .export_restore import ExportError, create_export, restore_export, verify_export
+from .export_restore import ExportError
+from .sealed.cli_dispatch import (
+    dispatch_export_create,
+    dispatch_export_restore,
+    dispatch_export_verify,
+)
 from .reader_gate import ReaderGateError
 from .retrieval import SCAN_PROFILE, retrieve
 from .resume import resume
@@ -238,12 +243,34 @@ def _run() -> None:
                 revision=args.revision,
             )
     elif args.command == "export":
+        # Dispatcher dual ADR-0042 §2/§3/§8 (T5): sin --seal el camino es
+        # EXACTAMENTE export/v1 (delega en create_export/verify_export/
+        # restore_export sin cambios); con --seal sealed-export/v1 exige
+        # adaptador y usa la capa sellada de T4.
         if args.export_command == "create":
-            result = create_export(store, args.bundle)
+            result = dispatch_export_create(
+                store, args.bundle,
+                seal=args.seal,
+                key_adapter=args.key_adapter,
+                key_adapter_args=args.key_adapter_arg,
+                key_adapter_env=args.key_adapter_env,
+            )
         elif args.export_command == "verify":
-            result = verify_export(args.bundle)
+            result = dispatch_export_verify(
+                args.bundle,
+                seal=args.seal,
+                key_adapter=args.key_adapter,
+                key_adapter_args=args.key_adapter_arg,
+                key_adapter_env=args.key_adapter_env,
+            )
         else:
-            result = restore_export(args.bundle, args.project_root)
+            result = dispatch_export_restore(
+                args.bundle, args.project_root,
+                seal=args.seal,
+                key_adapter=args.key_adapter,
+                key_adapter_args=args.key_adapter_arg,
+                key_adapter_env=args.key_adapter_env,
+            )
     elif args.command == "compact":
         if args.compact_command == "plan":
             result = plan_compaction(store, _json(args.proposal), args.bundle)
