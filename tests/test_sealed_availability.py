@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import importlib
 import subprocess
+import pathlib
 import sys
 import unittest
 
@@ -109,7 +110,7 @@ class TestCoreStdlibOnly(unittest.TestCase):
         result = subprocess.run(
             [sys.executable, "-c", code],
             capture_output=True, text=True,
-            cwd=__file__.rsplit("/tests/", 1)[0] or ".",
+            cwd=str(pathlib.Path(__file__).resolve().parents[1]),
         )
         self.assertEqual(
             result.returncode, 0,
@@ -144,7 +145,7 @@ class TestCoreStdlibOnly(unittest.TestCase):
         result = subprocess.run(
             [sys.executable, "-c", code],
             capture_output=True, text=True,
-            cwd=__file__.rsplit("/tests/", 1)[0] or ".",
+            cwd=str(pathlib.Path(__file__).resolve().parents[1]),
         )
         self.assertEqual(
             result.returncode, 0,

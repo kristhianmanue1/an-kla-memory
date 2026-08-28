@@ -726,8 +726,17 @@ class TestEnvironmentAllowlist(unittest.TestCase):
         runner = self._env_probe_runner(env_allowlist=[])
         runner.unwrap_cek("A" * 88)
         seen = json.loads(self.seen_path.read_text())
+        # Windows: el runner añade vars de runtime del SO (SystemRoot etc.)
+        # para que el proceso hijo pueda inicializar — no son datos del host.
+        platform_runtime = (
+            {"SystemRoot", "SYSTEMROOT", "SystemDrive", "COMSPEC"}
+            if os.name == "nt"
+            else set()
+        )
         self.assertLessEqual(
-            set(seen["all_keys"]), {"PATH", "LANG", "LC_ALL", "TMPDIR", "HOME", "__CF_USER_TEXT_ENCODING"}
+            set(seen["all_keys"]),
+            {"PATH", "LANG", "LC_ALL", "TMPDIR", "HOME", "__CF_USER_TEXT_ENCODING"}
+            | platform_runtime,
         )
 
     def test_allowlisted_missing_in_parent_is_absent(self):

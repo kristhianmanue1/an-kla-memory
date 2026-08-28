@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from an_kla.storage_primitives import (
     StorageOperationError,
@@ -93,13 +93,30 @@ class PrimitiveFaultTests(unittest.TestCase):
                 fsync_file(target)
         self.assertEqual(opened.exception.code, "file_open_failed")
 
+        # En Windows un close "fallado" deja el descriptor vivo y el
+        # archivo bloqueado: tearDown no puede limpiar (WinError 32).
+        # El patch falla UNA vez y después cierra de verdad.
+        real_close = os.close
+        flaky_close = Mock(
+            side_effect=[OSError(errno.EIO, "close")]
+        )
+
+        def close_then_real(fd):
+            result = flaky_close(fd)
+            if isinstance(result, BaseException):
+                raise result
+            real_close(fd)
+
         with patch(
             "an_kla.storage_primitives.os.close",
-            side_effect=OSError(errno.EIO, "close"),
+            side_effect=close_then_real,
         ):
             with self.assertRaises(StorageOperationError) as closed:
                 fsync_file(target)
         self.assertEqual(closed.exception.code, "file_close_failed")
+        # Cierre real del descriptor que el patch dejó vivo (Windows
+        # mantiene el archivo bloqueado hasta que se libera).
+        real_close(flaky_close.call_args.args[0])
 
 
 if __name__ == "__main__":

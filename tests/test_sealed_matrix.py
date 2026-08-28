@@ -299,6 +299,16 @@ class MatrixReRunTests(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 
+#: Capacidad export descriptor-relative (ADR-0027): sin O_NOFOLLOW/
+#: O_DIRECTORY/dir_fd (Windows) el camino funcional de export falla
+#: cerrado; las filas que lo ejercitan se saltan ahí.
+_EXPORT_CAPABLE = (
+    getattr(os, "O_NOFOLLOW", None) is not None
+    and getattr(os, "O_DIRECTORY", None) is not None
+    and os.open in os.supports_dir_fd
+)
+
+@unittest.skipUnless(_EXPORT_CAPABLE, "export no soportado en esta plataforma (ADR-0027)")
 class Row8UnkeyedNeverVerifiedTests(unittest.TestCase):
     """Fila 8: ``verify`` sin clave jamás devuelve ``verified: true``.
 
@@ -448,6 +458,7 @@ class Row9FullBundleRewriteTests(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 
+@unittest.skipUnless(_EXPORT_CAPABLE, "export no soportado en esta plataforma (ADR-0027)")
 class Row10DowngradeTests(unittest.TestCase):
     """Fila 10 completa (sin cryptography).
 
@@ -515,6 +526,7 @@ class Row10DowngradeTests(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 
+@unittest.skipUnless(_EXPORT_CAPABLE, "export no soportado en esta plataforma (ADR-0027)")
 class Row11V1BundlesUnchangedTests(unittest.TestCase):
     """Fila 11: bundles v1 en claro: create/verify/restore sin cambios y
     suite v1 intacta sin el extra instalado.
@@ -598,6 +610,7 @@ class Row11V1BundlesUnchangedTests(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 
+@unittest.skipUnless(_EXPORT_CAPABLE, "export no soportado en esta plataforma (ADR-0027)")
 class Row12CompactionRejectsSealedTests(unittest.TestCase):
     """Fila 12: compactación con bundle sellado como insumo → rechazado
     con ``export_manifest_invalid`` por el lector v1 vigente. Sellado es

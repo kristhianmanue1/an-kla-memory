@@ -36,6 +36,7 @@ import hmac
 import importlib
 import json
 import subprocess
+import pathlib
 import sys
 import unittest
 
@@ -336,7 +337,7 @@ class TestKdfFailClosedWithoutExtra(unittest.TestCase):
         return subprocess.run(
             [sys.executable, "-c", wrapper + code],
             capture_output=True, text=True,
-            cwd=__file__.rsplit("/tests/", 1)[0] or ".",
+            cwd=str(pathlib.Path(__file__).resolve().parents[1]),
         )
 
     def test_hkdf_expand_fails_closed_with_import_blocked(self):

@@ -13,6 +13,7 @@ from an_kla.context_package import (
     ContextPackageError,
     MANIFEST_RELATIVE,
     _atomic_write,
+    _canonical_payload,
     _context_lock,
     _contract_equivalent,
     _desired_contract_bytes,
@@ -53,7 +54,13 @@ def _baseline_adoption_preconditions(
         raise ContextPackageError("context_baseline_managed_state_invalid")
     if str(block.metadata.get("version")) != str(manifest.get("template_version")):
         raise ContextPackageError("context_baseline_managed_state_invalid")
-    observed_block_payload = _sha(block.payload.encode("utf-8"))
+    # El hash del manifiesto es canónico (LF): el payload observado se
+    # normaliza igual, porque un editor con CRLF (Windows) no altera el
+    # contenido gestionado — misma semántica que aplica
+    # parse_managed_block a su self-hash interno.
+    observed_block_payload = _sha(
+        _canonical_payload(block.payload).encode("utf-8")
+    )
     # Semantic conformance for the contract (raw bytes may differ by encoding);
     # the manifest fields must match observation where equality is semantic.
     if manifest.get("managed_content_sha256") != observed_block_payload:
@@ -109,7 +116,9 @@ def plan_baseline_adoption(
         "base_manifest_sha256": _observed_sha(manifest_bytes),
         "manifest_target_sha256_before": before,
         "observed_target_sha256": observed["observed_target_sha256"],
-        "managed_content_sha256": _sha(block.payload.encode("utf-8")),
+        "managed_content_sha256": _sha(
+            _canonical_payload(block.payload).encode("utf-8")
+        ),
         "contract_sha256": observed["contract_sha256"],
         "will_update_manifest": will_update,
     }

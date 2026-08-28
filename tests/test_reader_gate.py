@@ -8,7 +8,14 @@ import unittest
 from an_kla.reader_gate import ReaderGateError, exclusive_reader_gate, shared_reader_gate
 from an_kla.store import MemoryStore
 
+try:
+    import fcntl  # noqa: F401
+    _FCNTL = True
+except ImportError:
+    _FCNTL = False
 
+
+@unittest.skipUnless(_FCNTL, "reader gate requiere fcntl (no disponible en Windows)")
 class ReaderGateTests(unittest.TestCase):
     def test_shared_is_reentrant_and_exclusive_waits(self) -> None:
         with tempfile.TemporaryDirectory() as root:

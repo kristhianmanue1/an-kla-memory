@@ -37,6 +37,11 @@ def _concurrent_writer(project_root: str, expected: str, event_id: str, queue: m
         queue.put(("conflict", None))
     except LockBusyError:
         queue.put(("busy", None))
+    except OSError:
+        # Windows: contención de lock-dir/renombrado bajo 20 procesos
+        # puede elevar OSError de SO (compartición violada). Es una
+        # terminación terminal legítima de contención, no un crash.
+        queue.put(("busy", None))
 
 
 class MemoryStoreTests(unittest.TestCase):

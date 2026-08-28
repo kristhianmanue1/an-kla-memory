@@ -18,6 +18,14 @@ STARTUP_COMMANDS = (
 )
 
 
+try:
+    import fcntl  # noqa: F401
+    _FCNTL = True
+except ImportError:
+    _FCNTL = False
+
+
+@unittest.skipUnless(_FCNTL, "reader gate requiere fcntl (no disponible en Windows)")
 class StartupWithoutMemoryTest(unittest.TestCase):
     def _run(self, project_root: str, command: list[str]) -> subprocess.CompletedProcess[str]:
         return subprocess.run(

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import io
+import os
 from pathlib import Path
 import shutil
 import sys
@@ -14,7 +15,18 @@ from an_kla.export_restore import ExportError, create_export, restore_export, ve
 from an_kla.export_io import rename_noreplace
 from an_kla.store import MemoryStore
 
+#: ADR-0027: sin O_NOFOLLOW/O_DIRECTORY/dir_fd (Windows) el camino
+#: funcional de export falla cerrado con export_platform_unsafe. Los
+#: tests que ejercitan ese camino sólo corren donde la plataforma lo
+#: ofrece; el fail-closed en sí lo cubre test_export_io.
+_EXPORT_CAPABLE = (
+    getattr(os, "O_NOFOLLOW", None) is not None
+    and getattr(os, "O_DIRECTORY", None) is not None
+    and os.open in os.supports_dir_fd
+)
 
+
+@unittest.skipUnless(_EXPORT_CAPABLE, "plataforma sin export descriptor-relative (ADR-0027)")
 class ExportRestoreTests(unittest.TestCase):
     def _source_bundle(self, root: str) -> tuple[Path, Path, str]:
         source = Path(root) / "source"

@@ -38,6 +38,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -349,6 +350,14 @@ class SealedCliCryptoTests(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 
+_EXPORT_CAPABLE = (
+    getattr(os, "O_NOFOLLOW", None) is not None
+    and getattr(os, "O_DIRECTORY", None) is not None
+    and os.open in os.supports_dir_fd
+)
+
+
+@unittest.skipUnless(_EXPORT_CAPABLE, "plataforma sin export descriptor-relative (ADR-0027)")
 class DispatcherDualTests(unittest.TestCase):
     """Dispatcher dual §3 + fail-closed §5 — SIN cryptography."""
 
@@ -459,6 +468,7 @@ class DispatcherDualTests(unittest.TestCase):
                 dispatch_export_verify(bundle)
 
 
+@unittest.skipUnless(_EXPORT_CAPABLE, "plataforma sin export descriptor-relative (ADR-0027)")
 class UnkeyedDiagnosticsTests(unittest.TestCase):
     """Las 6 categorías del enum estructural §8 — SIN cryptography, sobre
     bundles sellados reales en estructura (el unkeyed jamás desencripta)."""
@@ -598,6 +608,7 @@ class UnkeyedDiagnosticsTests(unittest.TestCase):
             self.assertEqual(result["warnings"], [UNKEYED_WARNING])
 
 
+@unittest.skipUnless(_EXPORT_CAPABLE, "plataforma sin export descriptor-relative (ADR-0027)")
 class KeyAdapterFlagsTests(unittest.TestCase):
     """--key-adapter: PROHIBIDO el split de string con espacios (§2);
     flags repetibles construyen argv sin shell."""

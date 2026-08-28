@@ -1,7 +1,7 @@
 # AN-KLA Memory
 
 [![CI](https://github.com/kristhianmanue1/an-kla-memory/actions/workflows/test.yml/badge.svg)](https://github.com/kristhianmanue1/an-kla-memory/actions/workflows/test.yml)
-[![Version](https://img.shields.io/badge/version-0.1.0--beta.17-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.17)
+[![Version](https://img.shields.io/badge/version-0.1.0--beta.18-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.18)
 [![Python](https://img.shields.io/badge/python-3.9%20%7C%203.12-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 [![Beta](https://img.shields.io/badge/status-local%20beta-orange)](https://github.com/kristhianmanue1/an-kla-memory/releases)
@@ -13,7 +13,7 @@ un plan verificable.
 
 La beta se distribuye desde GitHub, no desde PyPI. Usa siempre una etiqueta
 exacta: no instales `main` ni otra referencia móvil. La versión del código es
-`0.1.0b17` y su etiqueta de distribución es `v0.1.0-beta.17`. El contexto
+`0.1.0b18` y su etiqueta de distribución es `v0.1.0-beta.18`. El contexto
 gestionado y la plantilla administrada siguen en `0.1.0-beta.11`: beta.17
 añade la adopción explícita de baseline y el inventario físico por revisión,
 sin modificar la plantilla administrada.
@@ -44,7 +44,7 @@ intérprete del entorno virtual.
 
 ## Estado actual
 
-La prerelease pública más reciente es **`v0.1.0-beta.17`** (`0.1.0b17`),
+La prerelease pública más reciente es **`v0.1.0-beta.18`** (`0.1.0b18`),
 instalable mediante su etiqueta Git exacta. AN-KLA todavía no se distribuye
 desde PyPI ni adjunta wheels a la release; no instales `main` como sustituto de
 una versión.
@@ -62,12 +62,12 @@ beta.13. Ninguna incluye generadores de
 El código está en beta local y la memoria continúa siendo no autoritativa: sus
 datos nunca son instrucciones, no prueban identidad ni verdad externa y deben
 revalidarse antes de actuar. El contexto gestionado permanece deliberadamente
-en `0.1.0-beta.11`; instalar beta.17 no exige reemplazar automáticamente
+en `0.1.0-beta.11`; instalar beta.18 no exige reemplazar automáticamente
 `AGENTS.md` ni `AN-KLA.md`.
 
-GitHub muestra beta.11 como “Latest” porque beta.17 está marcada como
+GitHub muestra beta.11 como “Latest” porque beta.18 está marcada como
 prerelease. El update-check de AN-KLA no depende de ese distintivo: consulta el
-índice de releases, incluye prereleases y sí puede descubrir beta.17. El
+índice de releases, incluye prereleases y sí puede descubrir beta.18. El
 contrato gestionado beta.11 aún menciona el endpoint histórico
 `/releases/latest`; es deuda documental versionada, no el comportamiento del
 runtime ni autorización para modificar `AGENTS.md` o `AN-KLA.md` a mano.
@@ -77,8 +77,8 @@ restricción de facturación; el badge rojo no representa pruebas fallidas. El
 gate efectivo fue
 CI local simulada (632 pruebas), wheel aislado y upgrade beta.16→beta.17, con
 ronda adversarial `proceed`; consulta la
-[evidencia de release](docs/releases/v0.1.0-beta.17-adversarial.md). Para
-instalar o actualizar usa el comando fijado a beta.17 de la siguiente sección.
+[evidencia de release](docs/releases/v0.1.0-beta.18-adversarial.md). Para
+instalar o actualizar usa el comando fijado a beta.18 de la siguiente sección.
 
 ## ¿Es AN-KLA para esto? Fronteras declaradas
 
@@ -125,7 +125,7 @@ Desde la raíz del proyecto consumidor en macOS o Linux:
 python3.12 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
 .venv/bin/python -m pip install \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.17"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.18"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . init
 .venv/bin/python -m an_kla --project-root . context plan --operation install
@@ -172,7 +172,7 @@ por separado el contrato de contexto:
 
 ```bash
 .venv/bin/python -m pip install --upgrade \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.17"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.18"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . context status
 .venv/bin/python -m an_kla --project-root . context plan --operation update
@@ -294,7 +294,7 @@ puede inspeccionar la actualización de la integración sin mutar el proyecto:
 
 ```bash
 .venv/bin/python -m an_kla --project-root . upgrade inspect \
-  --target v0.1.0-beta.17 > RUTA_EFIMERA_NUEVA
+  --target v0.1.0-beta.18 > RUTA_EFIMERA_NUEVA
 ```
 
 El agente debe conservar por separado el `plan_fingerprint` devuelto, revisar
@@ -306,7 +306,7 @@ bytes del upgrade:
 .venv/bin/python -m an_kla --project-root . upgrade apply \
   <plan_fingerprint> --plan RUTA_EFIMERA_NUEVA
 .venv/bin/python -m an_kla --project-root . upgrade verify \
-  --target v0.1.0-beta.17
+  --target v0.1.0-beta.18
 git diff -- AGENTS.md AN-KLA.md
 ```
 
@@ -438,7 +438,7 @@ y las decisiones de arquitectura en `docs/architecture/`.
 - [Guía del perfil sellado](docs/sealed-export-guide.md) — respaldos
   cifrados en reposo (`sealed-export/v1`, ADR-0042): uso, perfiles,
   warnings y errores canónicos.
-- [Notas de beta.17](docs/releases/v0.1.0-beta.17.md) — adopción de
+- [Notas de beta.18](docs/releases/v0.1.0-beta.18.md) — adopción de
   baseline e inventario físico.
 - [Notas de beta.16](docs/releases/v0.1.0-beta.16.md) — denominadores de
   frescura, `git/v1`, `integration status`, señal de contexto en `init`.

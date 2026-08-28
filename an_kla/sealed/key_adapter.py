@@ -359,12 +359,21 @@ class SealingAdapterRunner:
 
         El adaptador NO hereda el entorno del proceso AN-KLA (podría
         contener secretos del host). Sin allowlist, sin variables extra.
+        Excepción NT: SystemRoot es imprescindible para que el proceso
+        hijo (python.exe incluido) inicialice CRT/crypto — sin ella el
+        adaptador muere antes de ejecutar una línea. No es un dato del
+        host: es infraestructura del SO.
         """
         env = {
             "PATH": os.defpath,
             "LANG": "C.UTF-8",
             "LC_ALL": "C.UTF-8",
         }
+        if os.name == "nt":
+            for runtime_var in ("SystemRoot", "SYSTEMROOT", "SystemDrive", "COMSPEC"):
+                value = os.environ.get(runtime_var)
+                if value is not None:
+                    env[runtime_var] = value
         for name in self._env_allowlist:
             value = os.environ.get(name)
             if value is not None:

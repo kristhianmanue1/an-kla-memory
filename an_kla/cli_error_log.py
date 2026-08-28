@@ -50,7 +50,10 @@ def display_path(path: Path) -> str:
     try:
         home = Path.home()
         try:
-            return "~/" + str(path.relative_to(home))
+            # Render canónico con "/" independiente de plataforma: en NT
+            # str(relative) saldría con "\" y el CLI mostraría separadores
+            # distintos según el SO.
+            return "~/" + path.relative_to(home).as_posix()
         except ValueError:
             parts = [part for part in path.parts[-2:] if part != "/"]
             return "/".join(parts) if parts else _NO_PATH

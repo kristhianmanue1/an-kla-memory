@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import json
 import os
+import pathlib
 import pickle
 import subprocess
 import sys
@@ -88,7 +89,7 @@ class TestGenerateCek(unittest.TestCase):
         result = subprocess.run(
             [sys.executable, "-c", code],
             capture_output=True, text=True,
-            cwd=__file__.rsplit("/tests/", 1)[0] or ".",
+            cwd=str(pathlib.Path(__file__).resolve().parents[1]),
         )
         self.assertEqual(result.returncode, 0,
                          msg=f"stderr: {result.stderr}\nstdout: {result.stdout}")
@@ -322,7 +323,7 @@ class TestCekFailClosedWithoutExtra(unittest.TestCase):
         return subprocess.run(
             [sys.executable, "-c", wrapper + code],
             capture_output=True, text=True,
-            cwd=__file__.rsplit("/tests/", 1)[0] or ".",
+            cwd=str(pathlib.Path(__file__).resolve().parents[1]),
         )
 
     def test_wrap_fails_closed_with_import_blocked(self):

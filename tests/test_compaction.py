@@ -21,7 +21,12 @@ from an_kla.schemas import schema_document
 from tests.test_checkpoints import _authority, _state
 from tests.test_refute import Resolver, proposal_and_claim
 
+#: ADR-0028: Windows mantiene reads pero compact falla cerrado con
+#: compaction_platform_unsupported (gate de lectores requiere fcntl).
+_COMPACT_CAPABLE = __import__("fcntl", fromlist=[""]) is not None
 
+
+@unittest.skipUnless(_COMPACT_CAPABLE, "compactación no soportada en esta plataforma (ADR-0028)")
 class CompactionTests(unittest.TestCase):
     def test_first_epoch_projects_active_and_archives_source(self) -> None:
         with tempfile.TemporaryDirectory() as root:
