@@ -29,7 +29,7 @@ an-kla = "an_kla.__main__:main"
 version = {attr = "an_kla.version.VERSION"}
 
 [tool.setuptools]
-packages = ["an_kla", "an_kla.schemas"]
+packages = ["an_kla", "an_kla.schemas", "an_kla.sealed"]
 
 [tool.setuptools.package-data]
 "an_kla" = ["resources/retrieval-benchmark-v2/*.json", "resources/retrieval-benchmark-v2/*.jsonl"]
