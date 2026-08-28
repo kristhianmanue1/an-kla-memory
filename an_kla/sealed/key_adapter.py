@@ -277,7 +277,10 @@ class SealingAdapterRunner:
         self._env_allowlist = tuple(env_allowlist or ())
         for name in self._env_allowlist:
             if not isinstance(name, str) or not name or "=" in name:
-                raise ValueError("env_allowlist entries must be non-empty variable names")
+                raise ValueError(
+                    "key_adapter_env expects environment variable names "
+                    "(non-empty, without '=')"
+                )
         if timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be positive")
         self._timeout_seconds = float(timeout_seconds)

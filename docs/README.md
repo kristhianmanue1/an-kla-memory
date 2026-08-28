@@ -72,6 +72,7 @@ ADRs rechazadas ni reemplazadas en el registro actual.
 - [`context-package.md`](context-package.md) — Guía de integración del bloque administrado.
 - [`upgrade-agent-flow.md`](upgrade-agent-flow.md) — Flujo de actualización para agentes.
 - [`write-policy-cli.md`](write-policy-cli.md) — CLI de escritura gobernada.
+- [`sealed-export-guide.md`](sealed-export-guide.md) — Guía del perfil sellado `sealed-export/v1` (ADR-0042): uso, adaptador de claves, warnings y errores canónicos.
 - [`mcp-readonly.md`](mcp-readonly.md) — Servidor MCP de sólo lectura.
 - [`mathematical-foundations.md`](mathematical-foundations.md) — Fundamentos matemáticos.
 

@@ -44,6 +44,7 @@ los errores sellados son perezosos (los lanza la capa T4 al cifrar).
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -240,4 +241,12 @@ def dispatch_export_restore(
     runner = _runner_override if _runner_override is not None else (
         adapter_runner(key_adapter, key_adapter_args, key_adapter_env)
     )
-    return restore_sealed_bundle(bundle, project_root, runner=runner)
+    result = restore_sealed_bundle(bundle, project_root, runner=runner)
+    # H2 (deuda T4/T5): tras el éxito el staging temporal queda vacío en
+    # disco — sin dueño visible para el operador. Se retira aquí, en el
+    # wiring del dispatcher (bundle.py se mantiene <=800 líneas). Sólo
+    # directorios CONOCIDOS de staging sellado, nunca otra cosa.
+    for residual in Path(project_root).glob(".an-kla-sealed-restore-*"):
+        if residual.is_dir() and not any(residual.iterdir()):
+            shutil.rmtree(residual, ignore_errors=True)
+    return result
