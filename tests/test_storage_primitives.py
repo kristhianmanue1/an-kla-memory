@@ -65,6 +65,10 @@ class PrimitiveFaultTests(unittest.TestCase):
         self.assertTrue(raised.exception.close_incomplete)
         self.assertTrue(raised.exception.cleanup_incomplete)
 
+    @unittest.skipIf(
+        os.name == "nt",
+        "fsync_directory es no-op en NT (sin dir-fsync en Windows)",
+    )
     def test_directory_fsync_points_do_not_mask_primary(self) -> None:
         with patch(
             "an_kla.storage_primitives.os.fsync",

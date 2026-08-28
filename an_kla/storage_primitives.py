@@ -57,8 +57,14 @@ def fsync_directory(path: Path) -> None:
 def fsync_file(path: Path) -> None:
     """Flush an existing file without rewriting it."""
 
+    # En NT, fsync() delega en _commit(), que exige un handle con acceso
+    # de ESCRITURA: sobre O_RDONLY devuelve EBADF y todo receipt moriría
+    # con durability_incomplete. O_RDWR satisface _commit() sin alterar
+    # bytes (nunca se escribe con este descriptor). En POSIX, O_RDONLY
+    # basta y es el modo mínimo.
+    flags = os.O_RDWR if os.name == "nt" else os.O_RDONLY
     try:
-        descriptor = os.open(path, os.O_RDONLY)
+        descriptor = os.open(path, flags)
     except OSError as exc:
         raise storage_error("file_open_failed", exc) from exc
     primary: StorageOperationError | None = None

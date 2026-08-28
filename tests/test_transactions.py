@@ -594,6 +594,10 @@ class TransactionContractTests(unittest.TestCase):
 
 
 class StrictFsyncTests(unittest.TestCase):
+    @unittest.skipIf(
+        os.name == "nt",
+        "fsync_directory es no-op en NT (sin dir-fsync en Windows)",
+    )
     def test_directory_open_failure_is_not_silenced(self) -> None:
         target = Path(tempfile.gettempdir())
         with patch("an_kla.storage_primitives.os.open", side_effect=OSError("EIO")):
