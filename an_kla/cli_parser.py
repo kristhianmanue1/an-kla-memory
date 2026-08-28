@@ -9,6 +9,7 @@ from .index import INDEX_PROFILE
 from .inventory import DEFAULT_LIMIT as INVENTORY_DEFAULT_LIMIT
 from .inventory import MAX_LIMIT as INVENTORY_MAX_LIMIT
 from .retrieval import SCAN_PROFILE
+from .sealed.bundle import SEALED_PROFILE
 from .temporal import FRESHNESS_PROFILE
 from .version import VERSION
 
@@ -259,10 +260,74 @@ def build_parser() -> argparse.ArgumentParser:
     export_sub = export_cmd.add_subparsers(dest="export_command", required=True)
     export_create = export_sub.add_parser("create")
     export_create.add_argument("--bundle", required=True)
+    export_create.add_argument(
+        "--seal",
+        choices=(SEALED_PROFILE,),
+        help=(
+            "Sellar el bundle (perfil sealed-export/v1, ADR-0042); sin este "
+            "flag el camino es exactamente export/v1."
+        ),
+    )
+    export_create.add_argument(
+        "--key-adapter",
+        help=(
+            "Ejecutable del adaptador externo de claves (ruta absoluta "
+            "recomendada); jamás una línea con espacios (sin split)."
+        ),
+    )
+    export_create.add_argument(
+        "--key-adapter-arg",
+        action="append",
+        default=[],
+        help=(
+            "Argumento del adaptador (flag repetible; un elemento de argv "
+            "por uso, sin shell)."
+        ),
+    )
+    export_create.add_argument(
+        "--key-adapter-env",
+        action="append",
+        default=[],
+        help="Nombre de variable de entorno autorizada para el adaptador (repetible).",
+    )
     export_verify = export_sub.add_parser("verify")
     export_verify.add_argument("--bundle", required=True)
+    export_verify.add_argument(
+        "--seal",
+        choices=(SEALED_PROFILE,),
+        help=(
+            "Exigir el perfil sellado; sin este flag el camino sigue al "
+            "manifiesto (dispatcher dual, ADR-0042 §3)."
+        ),
+    )
+    export_verify.add_argument("--key-adapter", help="Ejecutable del adaptador (solo bundles sellados).")
+    export_verify.add_argument(
+        "--key-adapter-arg", action="append", default=[],
+        help="Argumento del adaptador (flag repetible, sin shell).",
+    )
+    export_verify.add_argument(
+        "--key-adapter-env", action="append", default=[],
+        help="Nombre de variable de entorno autorizada para el adaptador (repetible).",
+    )
     export_restore = export_sub.add_parser("restore")
     export_restore.add_argument("--bundle", required=True)
+    export_restore.add_argument(
+        "--seal",
+        choices=(SEALED_PROFILE,),
+        help=(
+            "Exigir el perfil sellado; sin este flag el camino sigue al "
+            "manifiesto (dispatcher dual, ADR-0042 §3)."
+        ),
+    )
+    export_restore.add_argument("--key-adapter", help="Ejecutable del adaptador (solo bundles sellados).")
+    export_restore.add_argument(
+        "--key-adapter-arg", action="append", default=[],
+        help="Argumento del adaptador (flag repetible, sin shell).",
+    )
+    export_restore.add_argument(
+        "--key-adapter-env", action="append", default=[],
+        help="Nombre de variable de entorno autorizada para el adaptador (repetible).",
+    )
     compact_cmd = sub.add_parser("compact", help="Compactación gobernada ligada a export.")
     compact_sub = compact_cmd.add_subparsers(dest="compact_command", required=True)
     compact_plan = compact_sub.add_parser("plan")
