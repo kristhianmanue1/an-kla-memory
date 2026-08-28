@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:export-verify-result:v2",
+  "title": "AN-KLA sealed export verify result (ADR-0042 §2/§8: keyed and unkeyed variants)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "verified", "structure_verified", "payloads_verified", "warnings"],
+  "oneOf": [
+    {"$ref": "#/$defs/keyed_result"},
+    {"$ref": "#/$defs/unkeyed_result"}
+  ],
+  "properties": {
+    "schema": {"const": "an-kla/export-verify-result-v2"},
+    "verified": {"type": "boolean"},
+    "structure_verified": {"type": "boolean"},
+    "payloads_verified": {"type": "boolean"},
+    "manifest_sha256": {"$ref": "#/$defs/digest"},
+    "current_revision": {"$ref": "#/$defs/digest"},
+    "bundle_id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+    "diagnostics": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"enum": ["manifest_invalid", "entry_size_mismatch", "entry_missing", "entry_unexpected", "unsafe_path", "count_mismatch"]}
+    },
+    "warnings": {"type": "array", "minItems": 1, "maxItems": 1, "items": {"type": "string"}}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "keyed_result": {
+      "description": "Authenticated verify (with key): everything verified, sealed warning (§8).",
+      "properties": {
+        "verified": {"const": true},
+        "structure_verified": {"const": true},
+        "payloads_verified": {"const": true},
+        "warnings": {"const": ["sealed_export_untrusted_memory_data"]}
+      },
+      "required": ["manifest_sha256", "current_revision", "bundle_id"],
+      "not": {"required": ["diagnostics"]}
+    },
+    "unkeyed_result": {
+      "description": "Structural verify (no key): never verified, unkeyed warning (§8).",
+      "properties": {
+        "verified": {"const": false},
+        "payloads_verified": {"const": false},
+        "warnings": {"const": ["sealed_payloads_unverified_without_key"]}
+      }
+    }
+  }
+}

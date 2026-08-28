@@ -144,3 +144,32 @@ from an_kla.sealed.key_adapter import (  # noqa: E402
     SealingAdapterRequiredError,
     SealingAdapterRunner,
 )
+
+# --- T4 (issue #46): capa de cifrado del bundle sellado --------------------
+# bundle.py implementa el perfil sealed-export/v1 (ADR-0042 §6): AES-256-GCM
+# por entrada con nonce contador 12B y AAD = perfil || bundle_id_raw ||
+# canonical_json(entry), manifiesto v2 con manifest_mac (HMAC-SHA256 sobre
+# el transcript canónico) y verificación/restore autenticados fail-closed.
+# Import perezoso idéntico al de T2: cryptography sólo dentro de funciones
+# de cifrado; los errores autenticados usan UN código sin oráculo (§5) y
+# CEK/subclaves jamás se serializan (F7).
+from an_kla.sealed.bundle import (  # noqa: E402
+    AAD_PREFIX,
+    GCM_TAG_BYTES,
+    MAX_ENTRY_BYTES,
+    NONCE_BYTES,
+    SEALED_PROFILE,
+    SEALED_WARNING,
+    UNKEYED_VERIFY_WARNING,
+    SealedAdapterIdInvalidError,
+    SealedEntryTooLargeError,
+    SealedPayloadAuthFailedError,
+    compute_manifest_mac,
+    create_sealed_bundle,
+    entry_aad,
+    entry_nonce,
+    manifest_transcript,
+    restore_sealed_bundle,
+    verify_manifest_mac,
+    verify_sealed_bundle,
+)
