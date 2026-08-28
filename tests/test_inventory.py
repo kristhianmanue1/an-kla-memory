@@ -216,6 +216,10 @@ class InventoryPopulationTests(unittest.TestCase):
         self.assertEqual(by_id["f-2"]["status_source"], "physical")
         _validator().validate(mixed)
 
+    @unittest.skipIf(
+        __import__("os").name == "nt",
+        "export+compaction no soportados en NT (ADR-0027/0028)",
+    )
     def test_archived_revision_fails_closed_even_with_manifest_present(self) -> None:
         """H1: catalog-first; the committed_cleanup_incomplete window must
         not serve an archived revision whose manifest is still on disk."""

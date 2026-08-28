@@ -348,9 +348,11 @@ class FrozenListGapTests(unittest.TestCase):
         self.project.edit_project_owned()
         plan = plan_baseline_adoption(self.root)
         contract = self.root / "AN-KLA.md"
-        contract.write_text(
-            contract.read_text(encoding="utf-8").replace("\n", "\r\n"),
-            encoding="utf-8",
+        # Portable: bytes CRLF literales. write_text con newline=None
+        # en Windows traduciría cada \n a os.linesep y un \r\n escrito
+        # terminaría como \r\r\n (corrupción, no un fin de línea CRLF).
+        contract.write_bytes(
+            contract.read_bytes().replace(b"\n", b"\r\n"),
         )
         with self.assertRaisesRegex(
             ContextConcurrentUpdate, "context_contract_concurrent_update"

@@ -23,7 +23,11 @@ from tests.test_refute import Resolver, proposal_and_claim
 
 #: ADR-0028: Windows mantiene reads pero compact falla cerrado con
 #: compaction_platform_unsupported (gate de lectores requiere fcntl).
-_COMPACT_CAPABLE = __import__("fcntl", fromlist=[""]) is not None
+try:
+    import fcntl  # noqa: F401
+    _COMPACT_CAPABLE = True
+except ImportError:
+    _COMPACT_CAPABLE = False
 
 
 @unittest.skipUnless(_COMPACT_CAPABLE, "compactación no soportada en esta plataforma (ADR-0028)")

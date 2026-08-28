@@ -48,12 +48,28 @@ class PrimitiveFaultTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, "temporary_write_failed")
 
     def test_primary_error_survives_close_and_cleanup_errors(self) -> None:
+        # El close "fallado" debe seguir siendo real una vez capturado:
+        # en NT un descriptor vivo bloquea el archivo y tearDown no
+        # puede limpiar (WinError 32). Igual que en
+        # test_file_fsync_open_and_close_codes: el patch falla UNA vez
+        # y después cierra de verdad; el unlink parcheado falla siempre
+        # pero al ser el tmp-file (no el directorio) cleanup() lo
+        # elimina con su propio onexc sin bloquear.
+        real_close = os.close
+        flaky_close = Mock(side_effect=[OSError(errno.ENOSPC, "close")])
+
+        def close_then_real(fd):
+            result = flaky_close(fd)
+            if isinstance(result, BaseException):
+                raise result
+            real_close(fd)
+
         with patch(
             "an_kla.storage_primitives.os.fsync",
             side_effect=OSError(errno.EIO, "primary"),
         ), patch(
             "an_kla.storage_primitives.os.close",
-            side_effect=OSError(errno.ENOSPC, "close"),
+            side_effect=close_then_real,
         ), patch.object(
             Path,
             "unlink",
@@ -64,6 +80,7 @@ class PrimitiveFaultTests(unittest.TestCase):
         self.assertEqual(raised.exception.code, "temporary_fsync_failed")
         self.assertTrue(raised.exception.close_incomplete)
         self.assertTrue(raised.exception.cleanup_incomplete)
+        real_close(flaky_close.call_args.args[0])
 
     @unittest.skipIf(
         os.name == "nt",

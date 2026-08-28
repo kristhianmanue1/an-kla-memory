@@ -65,7 +65,11 @@ def _sha(payload: bytes) -> str:
 
 
 def _semantic_text_sha(text: str) -> str:
-    return _sha(text.replace("\r\n", "\n").encode("utf-8"))
+    # Normaliza TODO separador de línea a LF. Además del CRLF de un
+    # editor, en NT write_text con newline=None convierte un "\r\n"
+    # ya presente en "\r\r\n" (el \n final se traduce a os.linesep) —
+    # la semántica del texto no cambia en ningún caso.
+    return _sha(_canonical_payload(text).encode("utf-8"))
 
 
 def _known_template_equivalent(block: ManagedBlock | None, contract_text: str | None) -> bool:
