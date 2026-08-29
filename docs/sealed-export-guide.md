@@ -2,9 +2,11 @@
 
 Esta guía describe el uso del perfil sellado de export/restore
 (ADR-0042): respaldos cifrados en reposo con verificación autenticada.
-La norma vinculante completa es
-[`docs/architecture/0042-sealed-export-v1.md`](architecture/0042-sealed-export-v1.md);
-aquí sólo el uso práctico.
+La norma vinculante es
+[`docs/architecture/0042-sealed-export-v1.md`](architecture/0042-sealed-export-v1.md),
+con el desglose técnico de sus reglas congeladas en
+[`docs/architecture/refs/sealed-export-v1-appendix.md`](architecture/refs/sealed-export-v1-appendix.md)
+(#95); aquí sólo el uso práctico.
 
 ## Qué da y qué no da
 

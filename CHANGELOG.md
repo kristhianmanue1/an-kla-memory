@@ -12,46 +12,18 @@ en fase de pre-release `0.1.0`.
 
 ## [No publicadas]
 
-**Perfil sellado `sealed-export/v1` (ADR-0042, issue #46)** — cifrado
-del respaldo en reposo como extra opcional `[sealed]`
-(`cryptography>=42`), sin romper el camino `export/v1` en claro:
+Nada aún.
 
-- `export create --seal sealed-export/v1` con adaptador externo de
-  claves (`--key-adapter`/`--key-adapter-arg`/`--key-adapter-env`,
-  argv estructurado sin shell, contrato JSON por stdio). AES-256-GCM
-  por entrada con nonce contador inyectivo, AAD por entrada,
-  `manifest_mac` HMAC-SHA256 sobre el transcript completo del
-  manifiesto v2; publicación con staging + renombrado atómico.
-- `export verify` dual: sin clave es estructural (jamás
-  `verified: true`, enum cerrado de `diagnostics`); con adaptador,
-  autenticado completo (AEAD + MAC + `content_sha256` del plano).
-- `export restore` sellado: desencripta TODO antes de tocar destino;
-  semántica v1 intacta (no-overwrite, no-merge). Sin degradación a
-  claro: sin adaptador → `sealing_adapter_required`; sin extra →
-  `sealing_extra_not_installed`; downgrade →
-  `unsupported_export_profile`.
-- `export-result-v2` expone `bundle_id` + `manifest_sha256` como
-  anclas manuales anti re-sellado (el sello da integridad bajo una
-  clave, no atestación de origen — ver ADR §Límites).
-- Warnings §7 sin cruce: v1 conserva
-  `plaintext_export_contains_untrusted_memory_data`; sellado emite
-  `sealed_export_untrusted_memory_data`; verify sin clave
-  `sealed_payloads_unverified_without_key`.
-- CLI (H1): los errores sellados llegan a stderr con su código
-  canónico (`sealing_adapter_required`, `sealing_adapter_error`,
-  `sealed_payload_auth_failed`, `sealing_extra_not_installed` + hint
-  del extra), no como `cli_unexpected_failure`.
-- Restore sellado (H2): sin directorios de staging residuales tras el
-  éxito.
-- Matriz de pruebas §9 del ADR-0042 consolidada
-  (`tests/test_sealed_matrix.py`): filas 1-16 identificables una a una,
-  incluida la reescritura completa del bundle por un atacante (fila 9)
-  y la taxonomía de warnings por perfil (fila 14). Suite verde con el
-  extra (criptografía) y sin él (skips honestos).
-- `scripts/gate_sealed_adapter.py`: adaptador DETERMINÍSTICO
-  (mismo input → mismo `wrapped_cek`) para los gates de publicación
-  (upgrade beta.17→18); sólo para gates, nunca en el paquete.
-- Guía de uso: [docs/sealed-export-guide.md](docs/sealed-export-guide.md).
+## [v0.1.0-beta.19]
+
+Preparación documental del ciclo de release: deuda C-2 de la ronda REL
+beta.18 resuelta (CHANGELOG sin doble estado, índice `docs/README.md`
+actualizado a la release vigente, frase de wheels del README corregida,
+`check_clean_wheel.py` versionado con el bump), ADR-0042 partido en ADR
+corto + apéndice técnico (#95, gate de tamaños sin gracia) y nota de
+release propia. Sin cambios de código: el runtime no muta respecto de
+beta.18 salvo el bump de versión.
+[Notas](docs/releases/v0.1.0-beta.19.md)
 
 ## [v0.1.0-beta.18]
 
