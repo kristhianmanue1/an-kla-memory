@@ -169,6 +169,32 @@ El protocolo de comparación (definiciones + probes + predicciones) se sellan AN
 
 ---
 
+## Enmienda 1 — 2026-08-31 (incorpora verificación del orquestador, receipt 375162b en krathos)
+
+Verificación de tercera parte: 6/6 comandos re-ejecutados desde contexto distinto con resultados idénticos — `ci_local` 4/4, suite 886 OK/72 skips, status rev 36, `verify` ok, mismos 4 issues. La tabla §3.1 deja de ser auto-certificada. Correcciones abiertas incorporadas:
+
+- **[a] Orden invertido en H1c:** mi recomendación de formulación débil (§2.1 P-1, §4.1 PR-5, §5 paso 1) anticipaba una conclusión antes de la evidencia — exactamente el patrón que el propio mandato prohíbe. **Queda corregido así:** primero se ejecuta G-3 (red-team de reescritura consistente); la formulación de H1c (fuerte vs débil-con-anclaje) se decide **después**, sobre la caracterización observada. Toda mención de "formulación débil" en este documento se lee como hipótesis de trabajo a decidir post-G-3, no como recomendación.
+- **[b] Umbrales sin derivar eliminados:** el 80% de celdas y el ≥8 probes de P-6 quedan sustituidos por regla simple: **celda de la matriz §9 sin probe ejecutable = esa celda cuenta como D (evidencia insuficiente)**. El veredicto global hereda: cualquier celda D bloquea A/B/C en esa propiedad.
+- **[c] Costos estimados añadidos** (norma de escalado — ver tabla §E1 abajo).
+- **[d] B-parcial con salida definida:** B-parcial se cierra por **re-evaluación obligatoria a 30 días** de emitido el veredicto (o antes, si el subconjunto corregido cierra): a esa fecha, o las propiedades corregidas tienen probe verde (→ re-veredicto), o el ítem se degrada a B pleno con decisión de dueño sobre abandonar el subconjunto. Sin re-evaluación, B-parcial caduca a B.
+- **[e] Anclaje externo de PR-5 — custodia desplazada, no resuelta:** el anclaje externo mueve el problema de "¿puede el atacante reescribir la memoria?" a "¿quién custodia el digest y con qué confianza?", que es una decisión de custodia de credenciales/artefactos del **dueño**, no del especialista. Queda marcado **PENDIENTE-DE-DUEÑO**: medio de anclaje, rotación y quién puede publicar digests.
+
+### Tabla §E1 — Costos estimados (honestos, en horas de agente; S<2h, M 2-6h, L >6h)
+
+| Ítem | Costo | Nota |
+|---|---|---|
+| G-1 threat model (ADR-0043) | M (3-4.5h) | redacción 2-3h + ronda adversarial 1-1.5h |
+| G-3 red-team reescritura consistente | M (3-4.5h) | script 2-3h + ejecución/documentación 1-1.5h |
+| G-2 catálogo de invariantes | S-M (1.5-3h) | consolidación de lo ya disperso en tests |
+| P-1 desdoblar H1 (enmienda del mandato) | S (<1h) | edición del texto del mandato, lado orquestador |
+| P-3 pre-registro protocolo de comparación | M (2-4h) | definiciones operativas de 13 propiedades |
+| P-7 tarjeta incidente 2.0.1 (línea A, Basanos) | M (2-4h) | parte del diff F1-T3 existente |
+| Paso ① (= G-1+G-3) | M-L (7-10h) | una sesión de ejecutor + revisor fresco |
+| Paso ② protocolo + contrato Basanos | M (3-5h) | incluye P-3 y P-5 |
+| Paso ③ labels + issues + #95 | S-M (2-4h) | #95 ya estimado P1 ≤ medio día |
+
+---
+
 ## Anexo — Trazabilidad
 
 - Mandato analizado: recibido in-band por el orquestador (D-oral dueño 2026-08-31), texto íntegro en el mensaje de encargo.
@@ -176,3 +202,5 @@ El protocolo de comparación (definiciones + probes + predicciones) se sellan AN
 - Fuentes documentales: `docs/gobernanza/INDEX.md`, `docs/architecture/0042-sealed-export-v1.md` + `refs/sealed-export-v1-appendix.md`, `docs/mathematical-foundations.md` §7, `docs/practicas-ingenieria.md`, `basanos/docs/reports/2026-08-25-f1-t3-diff.md`, `krathos/docs/research/memoria-prioritaria/00-protocolo-v2.md` (patrón de gates lexicográficos), `docs/integrations/enforcement.md` (precedente de límites L3 evadibles).
 
 **VEREDICTO DEL ANÁLISIS: PROCEED-WITH-AMENDMENTS** — el mandato es sólido en estructura falsable e independencia, pero H1 debe desdoblarse (H1a/b/c), el criterio A/B/C/D necesita gates pre-registrados y salida de cobertura parcial, y la línea AN-KLA tiene un rojo (threat model inexistente) y un límite arquitectónico (independencia del verificador sin anclaje externo) que deben declararse antes de cualquier comparación. Ninguna acción de integración fue ejecutada ni lo será bajo este mandato.
+
+**Enmienda 1 (2026-08-31, post-verificación del orquestador — receipt 375162b):** veredicto se mantiene. Correcciones [a]-[e] incorporadas arriba; la formulación de H1c queda explícitamente **pospuesta a post-G-3**. Tarjeta para G-1+G-3 preparada como `docs/planning/task-card-2026-08-31-g1-g3-threat-model-redteam.json` (no ejecutada — pendiente ronda adversarial post-tarjeta y aprobación del dueño).

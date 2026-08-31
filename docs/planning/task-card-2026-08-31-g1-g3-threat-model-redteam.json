@@ -1,0 +1,62 @@
+{
+  "schema": "epistates/task-card/v1",
+  "task_id": "ankla-g1-g3-threat-model-redteam",
+  "objective": "Cerrar el único ROJO de las 16 comprobaciones del mandato (§7.5: modelo de amenazas) y caracterizar experimentalmente el límite de detección del store frente a un adversario con control del medio (reescritura consistente). Dos entregables: (1) ADR-0043 threat model del store (activos, adversarios, superficies, garantías ofrecidas y NO ofrecidas, con la regla tamper-evidence≠tamper-proofness como frontera declarada); (2) script red-team + ejecución documentada que responde: ¿qué detecta `verify` ante reescritura consistente de memoria+índices+CURRENT+hashes? La formulación de H1c (fuerte vs débil-con-anclaje) NO se decide en esta tarjeta — se decide después, con estos resultados (corrección [a] del orquestador).",
+  "target": {
+    "repository": "an-kla-memory",
+    "base_sha": "d7086dd",
+    "branch": "main",
+    "worktree": "/Users/krisnova/www/an-kla-memory"
+  },
+  "role": "qa",
+  "authority": {
+    "grant_id": "krathos-ankla-g1-g3",
+    "granted_by": "orquestador-pendiente-dueño",
+    "granted_actions": ["read", "write_docs", "write_tests", "run_checks"],
+    "protected_operations_authorized": []
+  },
+  "allowed_paths": [
+    "docs/architecture/0043-store-threat-model-v1.md",
+    "docs/architecture/refs/",
+    "scripts/redteam_consistent_rewrite.py",
+    "tests/test_redteam_consistent_rewrite.py",
+    "docs/planning/2026-08-31-g1-g3-reporte-rag.md"
+  ],
+  "allowed_actions": ["read", "write_docs", "write_tests", "run_checks"],
+  "forbidden_operations": ["commit", "push", "open_pr", "merge", "release", "install_dependencies", "change_scope", "git_reset", "create_branch", "create_worktree", "salir_del_workspace", "tocar_.an-kla_canonico"],
+  "inputs": [
+    "docs/analisis-mandato-orquestacion-2026-08-31.md (secciones 3.3 y 4.1)",
+    "docs/architecture/ (42 ADRs vigentes, esp. 0022, 0027, 0031, 0033, 0042)",
+    "an_kla/store.py, an_kla/index.py, an_kla/verify (superficies a modelar)",
+    "tests/test_store.py, tests/test_canonical.py, tests/test_storage_primitives.py"
+  ],
+  "cost_estimate_honest": {
+    "g1_threat_model_adr": "3-4.5h agente (redacción 2-3h + ronda adversarial 1-1.5h)",
+    "g3_redteam_script_y_ejecucion": "3-4.5h agente (script 2-3h + ejecución/documentación 1-1.5h)",
+    "total_tarjeta": "6-9h agente; una sesión de ejecutor + una sesión de revisor fresco",
+    "costo_si_se_aborda_g2_tambien": "+1.5-3h (catálogo de invariantes) — NO incluido en esta tarjeta"
+  },
+  "checks": [
+    { "check_id": "suite_completa", "expected": "exit 0 — .venv/bin/python -m unittest discover -s tests -p 'test_*.py' → 886+n tests OK (n = tests nuevos), skips declarados" },
+    { "check_id": "ci_local", "expected": "exit 0 — .venv/bin/python scripts/ci_local.py → 4/4 OK (incluye check_adr_registry con ADR-0043 registrada)" },
+    { "check_id": "adr_registry", "expected": "scripts/check_adr_registry.py reconoce 0043 con estado aceptada o propuesta (si propuesta: nota de ronda pendiente)" },
+    { "check_id": "check_sizes", "expected": "exit 0 — ADR-0043 ≤400 líneas; si excede, apéndice en refs/ desde el inicio" },
+    { "check_id": "redteam_reproducible", "expected": "python3 scripts/redteam_consistent_rewrite.py --selftest → exit 0; el ataque opera sobre COPIA del store en tmp (--project-root tmp), jamás sobre .an-kla/ canónico" },
+    { "check_id": "resultado_caracterizado", "expected": "el reporte declara, con comando y salida: qué detecta verify tras reescritura consistente y qué no; cero ambigüedad entre 'no detecta' y 'no probado'" },
+    { "check_id": "sin_respuesta_h1c", "expected": "grep -i 'h1c' docs/planning/2026-08-31-g1-g3-reporte-rag.md NO contiene decisión de formulación (fuerte/débil) — solo caracterización; la decisión es tarjeta/decisión posterior" },
+    { "check_id": "git_status", "expected": "git status --porcelain → SOLO allowed_paths de esta tarjeta" }
+  ],
+  "evidence": {
+    "report_format": "rag/v1",
+    "required": ["worktree_status", "diff_check", "check_results", "tabla_adversario_por_superficie"]
+  },
+  "delivery": "Reporte RAG (docs/planning/2026-08-31-g1-g3-reporte-rag.md) con: sha256 de esta tarjeta, tabla preflight, resultados de los 8 checks con exit codes, la caracterización experimental de la reescritura consistente (predicción pre-registrada vs observada, incluyendo la predicción negativa honesta: se ESPERA que verify no detecte reescritura consistente sin anclaje — confirmarla o refutarla con evidencia), tabla adversario×superficie del ADR-0043, y lista de límites que quedan como PENDIENTE-DE-DUEÑO (custodia del digest de anclaje, medio de publicación). Files en working tree SIN commit; detenerse después y emitir AGENT_DONE.",
+  "stop_condition": "Parar y reportar si: (1) el ataque requiere tocar .an-kla/ canónico en lugar de copia tmp; (2) la suite base falla por causa ajena a los archivos nuevos; (3) el red-team encuentra una vía de reescritura que verify SÍ detecta de forma no obvia (hallazgo positivo inesperado → documentar y parar antes de interpretar, sin derivar conclusiones de H1c); (4) HEAD ≠ base_sha.",
+  "new_decision_required_for": [
+    "cualquier operación Git (commit/push/branch/merge)",
+    "decidir la formulación de H1c (post-evidencia, decisión del dueño)",
+    "elegir medio de anclaje externo y su custodia (PENDIENTE-DE-DUEÑO)",
+    "ampliar alcance a G-2 (catálogo de invariantes)",
+    "publicar o compartir artefactos fuera del repo"
+  ]
+}
