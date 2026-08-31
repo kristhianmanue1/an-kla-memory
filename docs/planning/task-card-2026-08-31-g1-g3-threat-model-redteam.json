@@ -4,7 +4,7 @@
   "objective": "Cerrar el único ROJO de las 16 comprobaciones del mandato (§7.5: modelo de amenazas) y caracterizar experimentalmente el límite de detección del store frente a un adversario con control del medio (reescritura consistente). Dos entregables: (1) ADR-0043 threat model del store (activos, adversarios, superficies, garantías ofrecidas y NO ofrecidas, con la regla tamper-evidence≠tamper-proofness como frontera declarada); (2) script red-team + ejecución documentada que responde: ¿qué detecta `verify` ante reescritura consistente de memoria+índices+CURRENT+hashes? La formulación de H1c (fuerte vs débil-con-anclaje) NO se decide en esta tarjeta — se decide después, con estos resultados (corrección [a] del orquestador).",
   "target": {
     "repository": "an-kla-memory",
-    "base_sha": "641adf3",
+    "base_sha": "a7c019d",
     "branch": "main",
     "worktree": "/Users/krisnova/www/an-kla-memory"
   },
