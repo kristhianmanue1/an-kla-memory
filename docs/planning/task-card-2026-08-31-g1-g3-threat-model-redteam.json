@@ -4,11 +4,14 @@
   "objective": "Cerrar el único ROJO de las 16 comprobaciones del mandato (§7.5: modelo de amenazas) y caracterizar experimentalmente el límite de detección del store frente a un adversario con control del medio (reescritura consistente). Dos entregables: (1) ADR-0043 threat model del store (activos, adversarios, superficies, garantías ofrecidas y NO ofrecidas, con la regla tamper-evidence≠tamper-proofness como frontera declarada); (2) script red-team + ejecución documentada que responde: ¿qué detecta `verify` ante reescritura consistente de memoria+índices+CURRENT+hashes? La formulación de H1c (fuerte vs débil-con-anclaje) NO se decide en esta tarjeta — se decide después, con estos resultados (corrección [a] del orquestador).",
   "target": {
     "repository": "an-kla-memory",
-    "base_sha": "d7086dd",
+    "base_sha": "641adf3",
     "branch": "main",
     "worktree": "/Users/krisnova/www/an-kla-memory"
   },
-  "role": "qa",
+  "role": "dev",
+  "role_note": "renombrado de 'qa' por ronda adversarial 2026-08-31: la tarjeta combina escritura de docs/tests + red-team, no es QA puro; granted_actions es el campo normativo",
+  "round_record": "ronda adversarial fresca 2026-08-31 (crítico sin contexto): FIX con 3 bloqueantes (allowed_paths sin docs/README.md; base_sha obsoleto; guard de .an-kla/ prosa no compuerta) + 4 notas. Correcciones aplicadas por orquestador SIN re-ronda (norma vigente).",
+  "base_note": "base_sha actualizada d7086dd→641adf3 (la tarjeta v1 se commiteó encima de su propia base; stop_condition (4) habría forzado aborto inmediato)",
   "authority": {
     "grant_id": "krathos-ankla-g1-g3",
     "granted_by": "orquestador-pendiente-dueño",
@@ -20,8 +23,12 @@
     "docs/architecture/refs/",
     "scripts/redteam_consistent_rewrite.py",
     "tests/test_redteam_consistent_rewrite.py",
-    "docs/planning/2026-08-31-g1-g3-reporte-rag.md"
+    "docs/planning/2026-08-31-g1-g3-reporte-rag.md",
+    "docs/README.md"
   ],
+  "allowed_paths_notes": {
+    "docs/README.md": "SOLO la fila de registro de ADR-0043 (exigida por scripts/check_adr_registry.py); cualquier otra edición de docs/README.md viola esta tarjeta (fix de bloqueante 1 de la ronda)"
+  },
   "allowed_actions": ["read", "write_docs", "write_tests", "run_checks"],
   "forbidden_operations": ["commit", "push", "open_pr", "merge", "release", "install_dependencies", "change_scope", "git_reset", "create_branch", "create_worktree", "salir_del_workspace", "tocar_.an-kla_canonico"],
   "inputs": [
@@ -36,14 +43,17 @@
     "total_tarjeta": "6-9h agente; una sesión de ejecutor + una sesión de revisor fresco",
     "costo_si_se_aborda_g2_tambien": "+1.5-3h (catálogo de invariantes) — NO incluido en esta tarjeta"
   },
+  "checks_summary": "10 checks (8 originales + guard_store_canonico + check_sizes_script, y resultado_caracterizado/sin_respuesta_h1c endurecidos según ronda)",
   "checks": [
     { "check_id": "suite_completa", "expected": "exit 0 — .venv/bin/python -m unittest discover -s tests -p 'test_*.py' → 886+n tests OK (n = tests nuevos), skips declarados" },
     { "check_id": "ci_local", "expected": "exit 0 — .venv/bin/python scripts/ci_local.py → 4/4 OK (incluye check_adr_registry con ADR-0043 registrada)" },
     { "check_id": "adr_registry", "expected": "scripts/check_adr_registry.py reconoce 0043 con estado aceptada o propuesta (si propuesta: nota de ronda pendiente)" },
     { "check_id": "check_sizes", "expected": "exit 0 — ADR-0043 ≤400 líneas; si excede, apéndice en refs/ desde el inicio" },
     { "check_id": "redteam_reproducible", "expected": "python3 scripts/redteam_consistent_rewrite.py --selftest → exit 0; el ataque opera sobre COPIA del store en tmp (--project-root tmp), jamás sobre .an-kla/ canónico" },
-    { "check_id": "resultado_caracterizado", "expected": "el reporte declara, con comando y salida: qué detecta verify tras reescritura consistente y qué no; cero ambigüedad entre 'no detecta' y 'no probado'" },
-    { "check_id": "sin_respuesta_h1c", "expected": "grep -i 'h1c' docs/planning/2026-08-31-g1-g3-reporte-rag.md NO contiene decisión de formulación (fuerte/débil) — solo caracterización; la decisión es tarjeta/decisión posterior" },
+    { "check_id": "guard_store_canonico", "expected": "COMPUESTA MECÁNICA, no prosa (fix de bloqueante 3 de la ronda): (a) el script RECHAZA ejecutar (exit ≠ 0, mensaje canónico) si el target root contiene .git/ o docs/architecture/ — fail-closed en código contra el default '.'; (b) test en tests/test_redteam_consistent_rewrite.py prueba el rechazo; (c) el reporte incluye sha256 recursivo de .an-kla/ del repo ANTES y DESPUÉS de toda la ejecución, idénticos, como evidencia de no-tocamiento" },
+    { "check_id": "resultado_caracterizado", "expected": "el reporte declara, con comando y salida: qué detecta verify tras reescritura consistente y qué no; cero ambigüedad entre 'no detecta' y 'no probado'; debe incluir digests sha256 de la COPIA atacada before/after reescritura y exit codes de verify, de modo que un revisor tercero re-ejecute y compare (nota (ii) de la ronda)" },
+    { "check_id": "sin_respuesta_h1c", "expected": "grep -i 'h1c' sobre docs/planning/2026-08-31-g1-g3-reporte-rag.md Y sobre docs/architecture/0043-store-threat-model-v1.md NO contiene decisión de formulación (fuerte/débil) — solo caracterización; la decisión es tarjeta/decisión posterior (nota (i) de la ronda: el grep anterior solo cubría el reporte)" },
+    { "check_id": "check_sizes_script", "expected": "scripts/redteam_consistent_rewrite.py ≤400 líneas (misma regla que ADRs; nota (iii) de la ronda); si la lógica lo excede, dividir en módulo bajo scripts/ dentro de allowed_paths" },
     { "check_id": "git_status", "expected": "git status --porcelain → SOLO allowed_paths de esta tarjeta" }
   ],
   "evidence": {
