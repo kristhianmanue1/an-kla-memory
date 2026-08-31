@@ -1,0 +1,157 @@
+# ADR-0043: modelo de amenazas del store (`store-threat-model/v1`)
+
+- **Estado:** Propuesta (ronda adversarial pendiente — esta tarjeta produce
+  la primera versión; su aceptación formal es decisión del maintainer tras
+  ronda).
+- **Fecha:** 2026-08-31 (tarjeta `ankla-g1-g3-threat-model-redteam`, run
+  sobre LAUNCH_HEAD `2649ea8`).
+- **Decide sobre:** qué adversarios y superficies modela el store
+  `.an-kla/memory`, y qué garantías ofrece y NO ofrece frente a cada uno.
+  No decide arquitectura de anclaje externo, ni la formulación de hipótesis
+  de comparación con otros sistemas (eso excede este ADR y es decisión
+  posterior sobre la evidencia aquí caracterizada).
+- **Origen:** análisis del mandato de orquestación AN-KLA↔TencentDB
+  (`docs/analisis-mandato-orquestacion-2026-08-31.md` §3.3 G-1/G-3) — el
+  único ROJO de las 16 comprobaciones §7 era la inexistencia de este
+  documento.
+
+## Contexto
+
+AN-KLA declara integridad verificable (content-addressing sha256 de punta a
+punta: segmentos, manifiestos, checkpoints, refutaciones; cadena de
+revisiones validada estructuralmente hasta la revisión 0; binding de
+identidad del store). Esa declaración ha sido leída — incorrectamente —
+como resistencia a manipulación deliberada. Este ADR fija la frontera real
+con evidencia experimental: **AN-KLA ofrece tamper-evidence (detección de
+corrupción y de manipulación inconsistente), no tamper-proofness
+(resistencia a un adversario con control del medio de almacenamiento)**.
+
+## Decisión
+
+El store se modela contra los siguientes adversarios, en orden de
+capacidad creciente. Para cada uno se declara qué garantía ofrece el diseño
+vigente y cuál NO.
+
+### A1 — Fallos accidentales (bit rot, escrituras truncadas, crashes)
+
+- **Qué lo causa:** fallos de disco/RAM, procesos interrumpidos
+  mid-write, bugs de herramientas externas.
+- **Garantía OFRECIDA:** detección completa. Todo objeto se lee
+  re-hasheando su contenido (`_read_json_object` /
+  `_read_segment`: `object_hash_mismatch`, `segment_hash_or_framing_invalid`);
+  la canonicidad JSON se re-verifica por objeto; `verify` falla cerrado con
+  código exacto ante cualquier divergencia.
+- **Evidencia:** `tests/test_store.py`, `tests/test_canonical.py`,
+  `tests/test_storage_primitives.py`; matriz sellada filas 2-5 (ADR-0042).
+
+### A2 — Manipulación inconsistente (editar un objeto sin recomputar la cadena)
+
+- **Qué lo causa:** edición manual de un registro, sustitución de un
+  segmento, borrado selectivo de un manifiesto.
+- **Garantía OFRECIDA:** detección completa. El identificador de cada
+  objeto ES su hash; cualquier edición cambia el contenido y rompe el
+  enlace desde el manifiesto padre o desde `CURRENT`. La validación de
+  cadena (`revision_validation.py`) rechaza transiciones inválidas,
+  downgrades de schema, y superposiciones de overlay contradictorias.
+
+### A3 — Adversario con control del medio (reescritura CONSISTENTE)
+
+- **Qué lo causa:** un atacante con acceso de escritura al directorio del
+  store que fabrica una cadena alternativa internamente coherente:
+  nuevos segmentos (incluyendo registros falsos con provenance fabricado),
+  un manifiesto nuevo que los referencia, y `CURRENT` apuntando a ese
+  manifiesto. Nada existente se corrompe: la cadena parental permanece
+  íntegra y cada eslabón sigue verificando.
+- **Garantía OFRECIDA: NINGUNA.** Esta es la frontera declarada.
+- **Evidencia experimental (G-3, 2026-08-31):**
+  `scripts/redteam_consistent_rewrite.py` ejecuta exactamente este ataque
+  sobre una copia del store en tmp. Resultado observado:
+  `verify` → `ok:true`, revisión falsificada aceptada como válida
+  (rev 36 → 37 forjada); `retrieve` → sirve el registro mentiroso
+  (`f-adversarial-consistent-rewrite-v1`) al consumidor como si fuera
+  memoria legítima. El attack no usó los writers gobernados de an_kla
+  (un atacante no respeta write-policy): escribió objetos content-addressed
+  directamente y mutó `CURRENT`.
+- **Lectura correcta:** el content-addressing de AN-KLA es una estructura
+  de auto-consistencia, no una raíz de confianza. Todo el sistema descansa
+  en que `refs/CURRENT` y el árbol de objetos no están bajo control del
+  adversario. Sin un anclaje EXTERNO al medio atacable (digest publicado
+  en otro canal custodiado), la verificación es tautológica respecto de un
+  atacante de A3: verifica la consistencia interna de un mundo que el
+  atacante puede reescribir completo.
+- **Nota sobre `root_relocated`:** en la corrida experimental el resultado
+  falsificado incluyó `root_relocated: true` (la copia vive fuera del
+  checkout canónico). Ese campo advierte reubicación del ROOT, no
+  falsificación — un atacante que operara sobre el root real no lo
+  dispararía. No constituye detección.
+
+### A4 — Adversario con control del host (procesos, memoria, binarios)
+
+- **Garantía OFRECIDA: NINGUNA, y está fuera de alcance por diseño**
+  (ADR-0031: frontera de custodia agente-dueño/host). Un adversario que
+  controla el proceso puede falsificar resultados de `verify` sin tocar el
+  disco. Ninguna herramienta local resistente a su propio host.
+
+## Tabla adversario × superficie
+
+| Superficie | A1 accidental | A2 inconsistente | A3 consistente | A4 host |
+|---|---|---|---|---|
+| Segmentos (registros) | detecta | detecta | NO detecta | fuera de alcance |
+| Manifiestos de revisión | detecta | detecta | NO detecta | fuera de alcance |
+| `refs/CURRENT` | detecta (sintaxis/longitud) | detecta (apunta a objeto inexistente/hash ajeno) | NO detecta (apunta a cadena forjada) | fuera de alcance |
+| Checkpoint v2 | detecta | detecta | NO detecta (reutilizable tal cual) | fuera de alcance |
+| Identidad del store (`identity.json`, binding) | detecta | detecta | NO detecta (reutilizable) | fuera de alcance |
+| Índices derivados (sqlite-fts5) | auto-rebuild | auto-rebuild | NO detecta (derivado del mundo falsificado) | fuera de alcance |
+| Export sellado (ADR-0042) | detecta | detecta (MAC/AAD) | confidencialidad intacta; autenticidad solo contra sustitución bajo la clave correcta — el EXTRACTO del contenido puede ser falsificado antes del sellado si el ataque precede al export | fuera de alcance |
+| Transacciones/staging | detecta | detecta | NO detecta (staging sintético pasa `required_candidate_files`) | fuera de alcance |
+
+## Consecuencias
+
+- **Positivas:** la frontera queda declarada con evidencia ejecutable, no
+  como sobreafirmación latente. Cualquier evaluación futura de AN-KLA como
+  capa de assurance puede citar este ADR y su script para saber exactamente
+  qué prueba y qué no. La distinción memoria-legible/memoria-íntegra/
+  memoria-auténtica del mandato de orquestación queda materializada: AN-KLA
+  certifica íntegra (A1/A2), no auténtica (A3/A4).
+- **Negativas:** confirmado que la independencia del verificador NO está
+  cubierta por el diseño vigente sin anclaje externo. Cualquier consumo que
+  requiera resistencia a A3 necesita un mecanismo adicional fuera del scope
+  de este ADR (p. ej. digest de `CURRENT` publicado en canal custodiado).
+  La elección del medio de anclaje, su custodia y rotación es decisión del
+  dueño (custodia de artefactos de confianza = ámbito del dueño), no de la
+  línea de desarrollo.
+- **Neutras:** el ataque de A3 es, hoy, el camino de MÍNIMO esfuerzo para
+  un atacante con control del medio — no se necesitan colisiones sha256 ni
+  romper criptografía alguna; basta fabricar objetos nuevos coherentes.
+
+## Límites de esta modelización
+
+- No modela canales de red (el store es local; el transporte es de otros
+  componentes).
+- No modela ataques de canal lateral ni Timing.
+- La evidencia A3 fue producida sobre una bifurcación de la revisión
+  corriente con un fact añadido; variantes del ataque (borrar historial
+  re-anclando a una cadena más corta, falsificar refutaciones) comparten la
+  misma propiedad estructural y no se ejecutaron una a una — la causa raíz
+  (ausencia de raíz de confianza externa) es idéntica.
+- `verify` valida la revisión corriente y su cadena; no promete auditoría
+  forense del árbol completo de objetos huérfanos.
+
+## Test de regresión
+
+- `tests/test_redteam_consistent_rewrite.py` — guard mecánico fail-closed
+  del script (rechaza roots con `.git/` o `docs/architecture/`; exit codes
+  canónicos) y forma del ataque.
+- `scripts/redteam_consistent_rewrite.py --selftest` — camino completo:
+  guard + copia desechable + ataque + verificación post-ataque. El
+  resultado esperado (`forgery_accepted_by_verify: true`) ES la frontera:
+  si una mejora futura lo voltea a `false`, este ADR debe revisarse.
+
+## Referencias
+
+- ADR-0027 (export/restore verificable; "hashes dan integridad accidental,
+  no autenticidad"), ADR-0031 (frontera de custodia agente/host),
+  ADR-0022 (identidad de store), ADR-0042 (export sellado).
+- Mandato de orquestación y su análisis (`docs/analisis-mandato-2026-08-31.md`,
+  §3.3, §4.1 PR-5).
+- Reporte del run: `docs/planning/2026-08-31-g1-g3-reporte-rag.md`.

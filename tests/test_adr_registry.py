@@ -22,7 +22,9 @@ class AdrRegistryTests(unittest.TestCase):
         errors, states = MODULE.check_registry(ROOT)
         self.assertEqual(errors, [])
         self.assertEqual(states["Aceptada"], 40)
-        self.assertEqual(states["Propuesta"], 2)
+        # 0043 (store-threat-model) suma una Propuesta mientras su ronda
+        # adversarial y aceptación formal están pendientes.
+        self.assertEqual(states["Propuesta"], 3)
 
     def test_detects_gap_and_state_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
