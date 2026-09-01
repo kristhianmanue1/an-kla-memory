@@ -61,9 +61,9 @@ prospectiva esté implementada; la última columna conserva esa distinción.
 | 0040 | [baseline-adoption-contract-v1](architecture/0040-baseline-adoption-contract-v1.md) | Adopción explícita de baseline project-owned (`adopt-baseline` plan→commit, update fail-closed, upgrade-plan v3) | Aceptada | Implementada en `main` (PR #90, hacia beta.17); cierra el ciclo ADR-0035 |
 | 0041 | [inventory-v1](architecture/0041-inventory-v1.md) | Inventario físico por revisión: metadata-only, paginado, planos físico/observable separados (#68) | Aceptada | Implementada en `main` (PR #91, hacia beta.17); sin MCP en v1 |
 | 0042 | [sealed-export-v1](architecture/0042-sealed-export-v1.md) | Export sellado: AES-256-GCM con extra opcional `[sealed]`, adaptador externo de claves, fail-closed sin downgrade (#46) | Aceptada | Diseño pre-code aceptado por decisión del dueño (🔒 2026-08-21; once rondas R1–R11); implementada en beta.18 (PRs #93–#101). Detalle técnico en [refs/sealed-export-v1-appendix.md](architecture/refs/sealed-export-v1-appendix.md) (#95) |
-| 0043 | [store-threat-model-v1](architecture/0043-store-threat-model-v1.md) | Modelo de amenazas del store: adversarios A1-A4, frontera declarada tamper-evidence≠tamper-proofness con evidencia experimental de reescritura consistente | Propuesta | Primera versión producida por tarjeta ankla-g1-g3 (2026-08-31); aceptación formal pendiente de ronda adversarial y decisión del maintainer |
+| 0043 | [store-threat-model-v1](architecture/0043-store-threat-model-v1.md) | Modelo de amenazas del store: adversarios A1-A4, frontera declarada tamper-evidence≠tamper-proofness con evidencia experimental de reescritura consistente | Aceptada | Producida por tarjeta ankla-g1-g3 (2026-08-31); ronda adversarial fresca (APROBADO CON CORRECCIONES, 6 hallazgos corregidos en `bd4ba27`); 🔒 aceptada por decisión del dueño 2026-08-31 con anclaje externo de digest (protocolo anclajes/) |
 
-Resumen: **43 ADRs**, sin huecos; **40 aceptadas** y **3 propuestas**. No hay
+Resumen: **43 ADRs**, sin huecos; **41 aceptadas** y **2 propuestas**. No hay
 ADRs rechazadas ni reemplazadas en el registro actual.
 
 ### Documentación normativa

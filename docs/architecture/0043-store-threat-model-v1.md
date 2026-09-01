@@ -1,8 +1,11 @@
 # ADR-0043: modelo de amenazas del store (`store-threat-model/v1`)
 
-- **Estado:** Propuesta (ronda adversarial pendiente — esta tarjeta produce
-  la primera versión; su aceptación formal es decisión del maintainer tras
-  ronda).
+- **Estado:** Aceptada (🔒 decisión del dueño 2026-08-31, tras ronda
+  adversarial fresca con veredicto APROBADO CON CORRECCIONES — 6
+  hallazgos, 2 críticos, corregidos en `bd4ba27` y verificados con
+  ci_local/selftest en verde; el núcleo tamper-evidence≠tamper-proofness
+  resistió todos los ataques, incluido re-anclaje a cadena corta con
+  borrado de historial).
 - **Fecha:** 2026-08-31 (tarjeta `ankla-g1-g3-threat-model-redteam`, run
   sobre LAUNCH_HEAD `2649ea8`).
 - **Decide sobre:** qué adversarios y superficies modela el store

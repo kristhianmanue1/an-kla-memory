@@ -21,10 +21,10 @@ class AdrRegistryTests(unittest.TestCase):
     def test_repository_registry_is_consistent(self) -> None:
         errors, states = MODULE.check_registry(ROOT)
         self.assertEqual(errors, [])
-        self.assertEqual(states["Aceptada"], 40)
-        # 0043 (store-threat-model) suma una Propuesta mientras su ronda
-        # adversarial y aceptación formal están pendientes.
-        self.assertEqual(states["Propuesta"], 3)
+        self.assertEqual(states["Aceptada"], 41)
+        # 0043 aceptada 2026-08-31 (ronda + decisión del dueño); las 2
+        # Propuestas vigentes son posteriores.
+        self.assertEqual(states["Propuesta"], 2)
 
     def test_detects_gap_and_state_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
