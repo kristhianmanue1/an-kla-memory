@@ -88,9 +88,10 @@ class AttackShapeTests(unittest.TestCase):
 
     def test_result_schema_constant(self) -> None:
         module = _load_script()
+        # Sin fallback hasattr: si el atributo desaparece o cambia de nombre,
+        # el test debe FALLAR, no comparar el literal contra sí mismo.
         self.assertEqual(
-            module.RESULT_SCHEMA if hasattr(module, "RESULT_SCHEMA") else
-            "an-kla/redteam-consistent-rewrite-result/v1",
+            module.RESULT_SCHEMA,
             "an-kla/redteam-consistent-rewrite-result/v1",
         )
 

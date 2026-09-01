@@ -44,6 +44,8 @@ from an_kla.canonical import canonical_json, digest_bytes, digest_json  # noqa: 
 
 GUARD_MESSAGE = "redteam_refused: target root looks like a repository checkout (contains .git/ or docs/architecture/); attack only runs on disposable copies in tmp"
 
+RESULT_SCHEMA = "an-kla/redteam-consistent-rewrite-result/v1"
+
 FORBIDDEN_MARKERS = (".git", "docs/architecture")
 
 
@@ -182,7 +184,7 @@ def attack(target_root: Path) -> dict:
     accepted = verify_after["exit_code"] == 0
     lie_served = falsification["lie_record_id"] in (retrieve_after["stdout"] or "")
     return {
-        "schema": "an-kla/redteam-consistent-rewrite-result/v1",
+        "schema": RESULT_SCHEMA,
         "target_root": str(target_root),
         "memory_tree_sha256_before": before_digest,
         "memory_tree_sha256_after": after_digest,
@@ -223,12 +225,23 @@ def selftest() -> int:
     copy_root = make_disposable_copy()
     try:
         result = attack(copy_root)
-        ok_shape = (
+        # Frontera ADR-0043 §Test de regresión: el resultado esperado es que
+        # verify ACEPTE la falsificación y retrieve sirva la mentira. Si una
+        # mejora futura voltea la frontera, es un evento visible con exit
+        # code propio (5), no un éxito silencioso del `or` que antes
+        # aceptaba también el caso contrario.
+        boundary_holds = (
             result["forgery_accepted_by_verify"] is True
-            or result["verify_after"]["exit_code"] != 0
+            and result["lie_served_to_consumer"] is True
         )
-        print(json.dumps({"selftest": "ok" if ok_shape else "unexpected_shape", "guard": "refused_repo_root", "forgery_accepted_by_verify": result["forgery_accepted_by_verify"], "lie_served_to_consumer": result["lie_served_to_consumer"]}, indent=2))
-        return 0 if ok_shape else 1
+        if not boundary_holds and result["forgery_accepted_by_verify"] is not True:
+            print(
+                "redteam_boundary_changed: verify now rejects consistent "
+                "rewrite; ADR-0043 must be reviewed",
+                file=sys.stderr,
+            )
+        print(json.dumps({"selftest": "ok" if boundary_holds else "unexpected_shape", "guard": "refused_repo_root", "forgery_accepted_by_verify": result["forgery_accepted_by_verify"], "lie_served_to_consumer": result["lie_served_to_consumer"]}, indent=2))
+        return 0 if boundary_holds else 5
     finally:
         shutil.rmtree(copy_root.parent, ignore_errors=True)
 

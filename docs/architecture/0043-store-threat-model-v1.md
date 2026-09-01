@@ -36,11 +36,15 @@ vigente y cuál NO.
 
 - **Qué lo causa:** fallos de disco/RAM, procesos interrumpidos
   mid-write, bugs de herramientas externas.
-- **Garantía OFRECIDA:** detección completa. Todo objeto se lee
-  re-hasheando su contenido (`_read_json_object` /
+- **Garantía OFRECIDA:** detección completa de CORRUPCIÓN de objetos. Todo
+  objeto se lee re-hasheando su contenido (`_read_json_object` /
   `_read_segment`: `object_hash_mismatch`, `segment_hash_or_framing_invalid`);
   la canonicidad JSON se re-verifica por objeto; `verify` falla cerrado con
-  código exacto ante cualquier divergencia.
+  código exacto ante cualquier divergencia. NO cubre rollback: restaurar
+  `refs/CURRENT` a una revisión previa LEGÍTIMA (bug de backup/sync,
+  sincronizador de archivos, máquina del tiempo) deja `verify → ok:true`
+  con datos silenciosamente viejos — la detección de regresión requiere
+  anclaje externo (ver Consecuencias).
 - **Evidencia:** `tests/test_store.py`, `tests/test_canonical.py`,
   `tests/test_storage_primitives.py`; matriz sellada filas 2-5 (ADR-0042).
 
@@ -105,6 +109,17 @@ vigente y cuál NO.
 | Export sellado (ADR-0042) | detecta | detecta (MAC/AAD) | confidencialidad intacta; autenticidad solo contra sustitución bajo la clave correcta — el EXTRACTO del contenido puede ser falsificado antes del sellado si el ataque precede al export | fuera de alcance |
 | Transacciones/staging | detecta | detecta | NO detecta (staging sintético pasa `required_candidate_files`) | fuera de alcance |
 
+**Nota — path de lectura vs path de verify (ronda adversarial 2026-08-31):**
+la detección de las celdas "detecta" se ejercita al llamar `verify` (y, para
+corrupción de objetos, en toda lectura de segmento vía re-hash). El binding
+de identidad NO se enforcea en el camino de `retrieve`/`snapshot`: existen
+manipulaciones (p. ej. cadena forjada con `store_identity` ausente) que
+`verify` rechaza y que `retrieve` sirve con exit 0 — verificado
+experimentalmente. Un consumidor que solo lee NO hereda la detección de
+`verify`; el consumo de assurance debe ejecutar `verify` explícitamente
+antes de confiar. (Enforce del binding en el camino de lectura: trabajo
+futuro de la línea de desarrollo, no de este ADR.)
+
 ## Consecuencias
 
 - **Positivas:** la frontera queda declarada con evidencia ejecutable, no
@@ -117,9 +132,12 @@ vigente y cuál NO.
   cubierta por el diseño vigente sin anclaje externo. Cualquier consumo que
   requiera resistencia a A3 necesita un mecanismo adicional fuera del scope
   de este ADR (p. ej. digest de `CURRENT` publicado en canal custodiado).
-  La elección del medio de anclaje, su custodia y rotación es decisión del
-  dueño (custodia de artefactos de confianza = ámbito del dueño), no de la
-  línea de desarrollo.
+  La mitigación exige además verificación ACTIVA del digest en el camino de
+  lectura (un digest que nadie consulta no detecta nada) y anclaje
+  confiable de la primera publicación (TOFU); la mecánica es trabajo
+  posterior del dueño. La elección del medio de anclaje, su custodia y
+  rotación es decisión del dueño (custodia de artefactos de confianza =
+  ámbito del dueño), no de la línea de desarrollo.
 - **Neutras:** el ataque de A3 es, hoy, el camino de MÍNIMO esfuerzo para
   un atacante con control del medio — no se necesitan colisiones sha256 ni
   romper criptografía alguna; basta fabricar objetos nuevos coherentes.
@@ -130,10 +148,19 @@ vigente y cuál NO.
   componentes).
 - No modela ataques de canal lateral ni Timing.
 - La evidencia A3 fue producida sobre una bifurcación de la revisión
-  corriente con un fact añadido; variantes del ataque (borrar historial
-  re-anclando a una cadena más corta, falsificar refutaciones) comparten la
-  misma propiedad estructural y no se ejecutaron una a una — la causa raíz
-  (ausencia de raíz de confianza externa) es idéntica.
+  corriente con un fact añadido. Las variantes naïve del ataque encuentran
+  TRIPWIRES PARCIALES en `verify` — la ventana de revisión del checkpoint
+  (`1 <= revision <= manifest_revision` → `checkpoint_v2_invalid`) y el
+  binding de `store_identity` (`store_identity_lineage_mismatch`). Lo no
+  garantizado es la resistencia contra un atacante que los rodee
+  reutilizando el checkpoint del génesis y el `store_identity` adoptado:
+  verificado experimentalmente (re-anclaje a cadena corta con ambos
+  reutilizados → `verify → ok:true` sobre 1 revisión forjada que reemplaza
+  37). Falsificar refutaciones comparte la misma causa raíz (ausencia de
+  raíz de confianza externa) y no se ejecutó.
+- Sin confidencialidad en reposo: el store local (~2.7 MB) vive en claro;
+  un adversario de solo lectura (robo de backup) lee toda la memoria sin
+  tocar nada. La confidencialidad del export es de ADR-0042, no del store.
 - `verify` valida la revisión corriente y su cadena; no promete auditoría
   forense del árbol completo de objetos huérfanos.
 
@@ -144,14 +171,18 @@ vigente y cuál NO.
   canónicos) y forma del ataque.
 - `scripts/redteam_consistent_rewrite.py --selftest` — camino completo:
   guard + copia desechable + ataque + verificación post-ataque. El
-  resultado esperado (`forgery_accepted_by_verify: true`) ES la frontera:
-  si una mejora futura lo voltea a `false`, este ADR debe revisarse.
+  resultado esperado (`forgery_accepted_by_verify: true` AND
+  `lie_served_to_consumer: true`) ES la frontera: el selftest exige ambas
+  condiciones mecánicamente y si `verify` deja de aceptar la falsificación
+  sale con exit code 5 y mensaje canónico
+  (`redteam_boundary_changed: … ADR-0043 must be reviewed`) — el cambio de
+  frontera es un evento visible, no un éxito silencioso.
 
 ## Referencias
 
 - ADR-0027 (export/restore verificable; "hashes dan integridad accidental,
   no autenticidad"), ADR-0031 (frontera de custodia agente/host),
   ADR-0022 (identidad de store), ADR-0042 (export sellado).
-- Mandato de orquestación y su análisis (`docs/analisis-mandato-2026-08-31.md`,
-  §3.3, §4.1 PR-5).
+- Mandato de orquestación y su análisis
+  (`docs/analisis-mandato-orquestacion-2026-08-31.md`, §3.3, §4.1 PR-5).
 - Reporte del run: `docs/planning/2026-08-31-g1-g3-reporte-rag.md`.
