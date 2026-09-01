@@ -22,9 +22,10 @@ class AdrRegistryTests(unittest.TestCase):
         errors, states = MODULE.check_registry(ROOT)
         self.assertEqual(errors, [])
         self.assertEqual(states["Aceptada"], 41)
-        # 0043 aceptada 2026-08-31 (ronda + decisión del dueño); las 2
-        # Propuestas vigentes son posteriores.
-        self.assertEqual(states["Propuesta"], 2)
+        # 0043 aceptada 2026-08-31 (ronda + decisión del dueño); 0044
+        # propuesta (tarjeta ankla-h1c-formalizacion-anclaje) — las 3
+        # Propuestas vigentes son posteriores a 0043.
+        self.assertEqual(states["Propuesta"], 3)
 
     def test_detects_gap_and_state_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
