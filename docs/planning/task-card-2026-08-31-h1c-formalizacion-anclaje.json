@@ -29,12 +29,14 @@
     "docs/planning/2026-08-31-h1c-reporte-rag.md",
     "docs/README.md",
     "docs/analisis-mandato-orquestacion-2026-08-31.md",
-    "docs/gobernanza/anclajes/"
+    "docs/gobernanza/anclajes/",
+    "tests/test_adr_registry.py"
   ],
   "allowed_paths_notes": {
     "docs/README.md": "SOLO la fila de registro del nuevo ADR y el contador del resumen; cualquier otra edición viola esta tarjeta (lección de la ronda G-1/G-3)",
+    "tests/test_adr_registry.py": "SOLO actualizar los conteos esperados del test de repositorio (Aceptada/Propuesta — el registro de ADR-0044 los desplaza; lección ronda G-1/G-3, bloqueante B1 de la ronda de esta tarjeta)",
     "docs/analisis-mandato-orquestacion-2026-08-31.md": "SOLO la fila PR-5/§7.5 y la nota de corrección [a]: actualizar estado de H1c a resuelto con puntero; no reescribir secciones históricas",
-    "docs/gobernanza/anclajes/": "SOLO agregar filas al registro de anclas si el run verifica el digest; jamás editar el ancla TOFU ni filas previas",
+    "docs/gobernanza/anclajes/": "agregar filas al registro SOLO con comparación exit 0 (match); con divergencia, parar (stop_condition 4) y JAMÁS agregar fila — cierra la ventana de auto-validación circular (nota N2 de la ronda); jamás editar el ancla TOFU ni filas previas",
     "0044": "número tentativo: si el ejecutor propone documento de evaluación en vez de ADR, usar docs/architecture/refs/h1c-formalizacion-v1.md y ajustar sin violar allowed_paths (nota declarada, no desviación)"
   },
   "allowed_actions": [
@@ -74,15 +76,15 @@
   "checks": [
     {
       "check_id": "suite_completa",
-      "expected": "exit 0 — .venv/bin/python -m unittest discover -s tests -p 'test_*.py' → 900+n tests OK (n = tests nuevos del script), skips declarados"
+      "expected": "exit 0 — .venv/bin/python -m unittest discover -s tests -p 'test_*.py' → 893+n tests OK (n = tests nuevos del script; línea base 893 medida 2026-08-31 por la ronda), skips declarados"
     },
     {
       "check_id": "ci_local",
-      "expected": "exit 0 — scripts/ci_local.py 4/4 OK (incluye check_adr_registry con la nueva entrada registrada)"
+      "expected": "exit 0 — scripts/ci_local.py 4/4 OK (incluye check_adr_registry CON la nueva entrada registrada si se eligió la variante ADR; si se eligió documento de evaluación en refs/, esta check corre igualmente y el registro queda intacto — variante condicional, nota N3 de la ronda)"
     },
     {
       "check_id": "adr_registry",
-      "expected": "scripts/check_adr_registry.py exit 0 — nueva entrada reconocida con estado aceptada o propuesta (si propuesta: nota de ronda pendiente)"
+      "expected": "scripts/check_adr_registry.py exit 0 — si variante ADR: nueva entrada reconocida con estado aceptada o propuesta (si propuesta: nota de ronda pendiente); si variante documento: exit 0 con registro intacto (variante condicional, nota N3)"
     },
     {
       "check_id": "check_sizes",
@@ -90,11 +92,11 @@
     },
     {
       "check_id": "guard_anclaje_script",
-      "expected": "COMPUESTA MECÁNICA: (a) scripts/verificar_anclaje.py calcula el digest con el MISMO comando del protocolo (find .an-kla/memory/refs -type f -exec shasum | sort | shasum), lee el último ancla del registro, compara; (b) exit codes canónicos: 0 match, 1 divergencia (mensaje canónico 'anchor_divergence: stop fail-closed + escalar al dueño', sha256 ambos lados en stderr), 2 sin registro de anclas, 3 store sin refs/, 4 falta registro en allowed location; (c) JAMÁS escribe fuera de allowed_paths; jamás 'corrige' el ancla para que coincida (fail-closed, no auto-reparación)"
+      "expected": "COMPUESTA MECÁNICA: (a) scripts/verificar_anclaje.py calcula el digest con el comando EXACTO y VERBATIM del protocolo: find .an-kla/memory/refs -type f -exec shasum -a 256 {} + | sort -k2 | shasum -a 256 (bloqueante B3 de la ronda: la versión abreviada 'shasum | sort | shasum' produce sha1 y divergencia FALSA contra el ancla TOFU); lee el último ancla del registro (parsear el sha256 sin backticks), compara; (b) exit codes canónicos: 0 match, 1 divergencia (mensaje canónico 'anchor_divergence: stop fail-closed + escalar al dueño', sha256 ambos lados en stderr), 2 registro PRESENTE sin fila parseable, 3 store sin refs/, 4 archivo de registro AUSENTE, ≥10 errores de uso/IO (nota N1 solapamiento 2/4 resuelto, N6); (c) interfaz declarada: acepta --refs-root y --registry (default cwd-relativo al protocolo) para que el test corra sobre copias tmp (nota N4); (d) JAMÁS escribe fuera de allowed_paths; jamás 'corrige' el ancla para que coincida (fail-closed, no auto-reparación)"
     },
     {
       "check_id": "test_script",
-      "expected": "tests/test_verificar_anclaje.py cubre al menos: match → 0; divergencia (store mutado vs registro tmp) → 1 con mensaje canónico; sin registro → 2; y el test corre sobre COPIA tmp del store/registro, nunca sobre .an-kla/ canónico"
+      "expected": "tests/test_verificar_anclaje.py cubre al menos: match → 0; divergencia (store mutado vs registro tmp) → 1 con mensaje canónico; registro presente sin fila parseable → 2; registro ausente → 4; usa --refs-root/--registry sobre COPIA tmp, nunca sobre .an-kla/ canónico"
     },
     {
       "check_id": "cierre_rojo",
@@ -102,7 +104,7 @@
     },
     {
       "check_id": "sin_tocar_anclas_previas",
-      "expected": "el digest sha256 de las filas previas del registro de anclas es idéntico antes/después del run (verificado en el reporte con comando reproducible)"
+      "expected": "el digest sha256 de las filas previas del registro de anclas es idéntico antes/después del run — mecanismo: head -n K del archivo (K = número de líneas al preflight, anclado en el reporte) pasado por shasum -a 256, antes vs después (nota N5 de la ronda)"
     },
     {
       "check_id": "git_status",
@@ -121,6 +123,6 @@
     "verification_pre_cierre": "git diff verificado en disco ANTES de redactar el cierre del reporte; hashes recalculados, nunca de memoria de la sesión",
     "reporte": "docs/planning/2026-08-31-h1c-reporte-rag.md con la misma estructura del reporte G-1/G-3 (preflight, entregables con sha256, checks, desviaciones, pendiente-de-dueño)"
   },
-  "round_record": "tarjeta redactada por el orquestador 2026-08-31 siguiendo el patrón v2 de G-1/G-3 con lecciones incorporadas (allowed_paths con notas por archivo, verificación pre-cierre, guard mecánico, costes honestos). PENDIENTE: ronda adversarial fresca de esta tarjeta antes del lanzamiento.",
+  "round_record": "ronda adversarial fresca 2026-08-31 (crítico sin contexto, 6 líneas de ataque, hash f0ff28e4 verificado): FIX con 3 bloqueantes (B1 tests/test_adr_registry.py faltaba en allowed_paths — recidiva del patrón G-1/G-3; B2 línea base 900→893 medida; B3 comando de digest abreviado producía divergencia FALSA contra el ancla TOFU) + notas N1-N6 (solapamiento exit 2/4, agregado de filas condicionado a match, checks condicionales variante documento, interfaz --refs-root/--registry, mecanismo head -n K, errores ≥10). Correcciones aplicadas por el orquestador SIN re-ronda (norma vigente). Veredicto post-fix implícito: lista para lanzar.",
   "notes": "El ejecutor NO decide sola la aceptación final de la formulación de H1c: la formalización se propone en el documento y la aceptación sigue el flujo ronda→correcciones→dueño. El script de anclaje es herramienta de parada fail-closed, no de reparación automática."
 }
