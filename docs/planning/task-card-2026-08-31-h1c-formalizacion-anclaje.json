@@ -1,0 +1,126 @@
+{
+  "schema": "epistates/task-card/v1",
+  "task_id": "ankla-h1c-formalizacion-anclaje",
+  "objective": "Formalizar la formulación de H1c (independencia del verificador) que el análisis del mandato reservó a post-G-3 (corrección [a]): decidir sobre la evidencia caracterizada si H1c se evalúa como formulación fuerte (verificación sin anclaje externo — refutada por G-3/v4) o formulación débil-con-anclaje (verify + digest externo con verificación activa — el protocolo docs/gobernanza/anclajes/ en operación). Entregables: (1) documento de formalización H1c/v1 (nuevo ADR o documento de evaluación según el ejecutor proponga, con la decisión justificada contra la evidencia de G-3, v4 de la ronda adversarial, y el protocolo de anclaje vigente); (2) script bin/verificar-anclaje (o scripts/) que ejecute la verificación activa del protocolo: calcular digest de refs/CURRENT, comparar contra el último ancla del registro, exit 0 match / exit ≠0 divergencia con mensaje canónico, y test del script; (3) cierre del ROJO §7.5 restante en el análisis del mandato (fila PR-5/H1c pasa a estado resuelto con puntero a la formalización).",
+  "target": {
+    "repository": "an-kla-memory",
+    "base_sha": "LAUNCH_HEAD",
+    "branch": "main",
+    "worktree": "/Users/krisnova/www/an-kla-memory",
+    "base_sha_rule": "base_sha simbólico: se resuelve a HEAD exacto en el momento del lanzamiento, registrado en el reporte RAG del run; stop_condition (4) evalúa contra ese valor anclado"
+  },
+  "role": "dev",
+  "role_note": "tarjeta de formalización+implementación: decisión justificada en documento + script verificador con test",
+  "authority": {
+    "grant_id": "krathos-ankla-h1c",
+    "granted_by": "orquestador-pendiente-dueño",
+    "granted_actions": [
+      "read",
+      "write_docs",
+      "write_tests",
+      "run_checks"
+    ],
+    "protected_operations_authorized": []
+  },
+  "allowed_paths": [
+    "docs/architecture/0044-h1c-formalizacion-v1.md",
+    "scripts/verificar_anclaje.py",
+    "tests/test_verificar_anclaje.py",
+    "docs/planning/2026-08-31-h1c-reporte-rag.md",
+    "docs/README.md",
+    "docs/analisis-mandato-orquestacion-2026-08-31.md",
+    "docs/gobernanza/anclajes/"
+  ],
+  "allowed_paths_notes": {
+    "docs/README.md": "SOLO la fila de registro del nuevo ADR y el contador del resumen; cualquier otra edición viola esta tarjeta (lección de la ronda G-1/G-3)",
+    "docs/analisis-mandato-orquestacion-2026-08-31.md": "SOLO la fila PR-5/§7.5 y la nota de corrección [a]: actualizar estado de H1c a resuelto con puntero; no reescribir secciones históricas",
+    "docs/gobernanza/anclajes/": "SOLO agregar filas al registro de anclas si el run verifica el digest; jamás editar el ancla TOFU ni filas previas",
+    "0044": "número tentativo: si el ejecutor propone documento de evaluación en vez de ADR, usar docs/architecture/refs/h1c-formalizacion-v1.md y ajustar sin violar allowed_paths (nota declarada, no desviación)"
+  },
+  "allowed_actions": [
+    "read",
+    "write_docs",
+    "write_tests",
+    "run_checks"
+  ],
+  "forbidden_operations": [
+    "commit",
+    "push",
+    "open_pr",
+    "merge",
+    "release",
+    "install_dependencies",
+    "change_scope",
+    "git_reset",
+    "create_branch",
+    "create_worktree",
+    "salir_del_workspace",
+    "tocar_.an-kla_canonico"
+  ],
+  "inputs": [
+    "docs/architecture/0043-store-threat-model-v1.md (frontera A3, nota path de lectura vs verify, límites con tripwires y v4)",
+    "docs/planning/2026-08-31-g1-g3-reporte-rag.md (evidencia G-3 caracterizada)",
+    "docs/gobernanza/anclajes/2026-08-31-anclaje-inicial.md (protocolo vigente, requisitos H6, TOFU)",
+    "docs/analisis-mandato-orquestacion-2026-08-31.md (§2.1 P-1, §4.1 PR-5, §5 paso 1, corrección [a])",
+    "scripts/redteam_consistent_rewrite.py (patrón de guard/exit codes canónicos)"
+  ],
+  "cost_estimate_honest": {
+    "formalizacion_h1c": "2-3.5h agente (documento 1.5-2.5h + ronda adversarial de la tarjeta 1h)",
+    "script_verificar_anclaje": "1.5-2.5h agente (script 1h + test 0.5-1h)",
+    "cierre_rojo_mandato": "0.5h",
+    "total_tarjeta": "4-6.5h agente; una sesión de ejecutor + revisor fresco"
+  },
+  "checks_summary": "9 checks (suite, ci_local, adr_registry, check_sizes, guard_anclaje_script, test_script, cierre_rojo, sin_tocar_anclas_previas, git_status)",
+  "checks": [
+    {
+      "check_id": "suite_completa",
+      "expected": "exit 0 — .venv/bin/python -m unittest discover -s tests -p 'test_*.py' → 900+n tests OK (n = tests nuevos del script), skips declarados"
+    },
+    {
+      "check_id": "ci_local",
+      "expected": "exit 0 — scripts/ci_local.py 4/4 OK (incluye check_adr_registry con la nueva entrada registrada)"
+    },
+    {
+      "check_id": "adr_registry",
+      "expected": "scripts/check_adr_registry.py exit 0 — nueva entrada reconocida con estado aceptada o propuesta (si propuesta: nota de ronda pendiente)"
+    },
+    {
+      "check_id": "check_sizes",
+      "expected": "exit 0 — documento nuevo ≤400 líneas; si excede, apéndice en refs/ desde el inicio"
+    },
+    {
+      "check_id": "guard_anclaje_script",
+      "expected": "COMPUESTA MECÁNICA: (a) scripts/verificar_anclaje.py calcula el digest con el MISMO comando del protocolo (find .an-kla/memory/refs -type f -exec shasum | sort | shasum), lee el último ancla del registro, compara; (b) exit codes canónicos: 0 match, 1 divergencia (mensaje canónico 'anchor_divergence: stop fail-closed + escalar al dueño', sha256 ambos lados en stderr), 2 sin registro de anclas, 3 store sin refs/, 4 falta registro en allowed location; (c) JAMÁS escribe fuera de allowed_paths; jamás 'corrige' el ancla para que coincida (fail-closed, no auto-reparación)"
+    },
+    {
+      "check_id": "test_script",
+      "expected": "tests/test_verificar_anclaje.py cubre al menos: match → 0; divergencia (store mutado vs registro tmp) → 1 con mensaje canónico; sin registro → 2; y el test corre sobre COPIA tmp del store/registro, nunca sobre .an-kla/ canónico"
+    },
+    {
+      "check_id": "cierre_rojo",
+      "expected": "grep en docs/analisis-mandato-orquestacion-2026-08-31.md sobre la fila PR-5/§7.5 muestra estado resuelto con puntero al documento de formalización; la corrección [a] queda marcada ejecutada (H1c decidido POST-evidencia)"
+    },
+    {
+      "check_id": "sin_tocar_anclas_previas",
+      "expected": "el digest sha256 de las filas previas del registro de anclas es idéntico antes/después del run (verificado en el reporte con comando reproducible)"
+    },
+    {
+      "check_id": "git_status",
+      "expected": "git status --porcelain → SOLO allowed_paths de esta tarjeta"
+    }
+  ],
+  "stop_conditions": [
+    "HEAD != LAUNCH_HEAD anclado en el reporte (commit solo por orden posterior del orquestador)",
+    "cualquier escritura fuera de allowed_paths",
+    "necesidad de tocar .an-kla/ canónico",
+    "divergencia real del digest de anclaje al inicio del run (parar y escalar — es exactamente el escenario del protocolo)",
+    "la evidencia disponible no sostiene NINGUNA formulación de H1c (parar y escalar con opciones, no forzar conclusión)"
+  ],
+  "delivery": {
+    "definition_of_done": "los 9 checks en verde con exit codes reales en el reporte; todo hash declarado se recalcula del disco en el mismo comando que escribe el cierre (lección G-1/G-3); desviaciones declaradas en sección propia; PENDIENTE-DE-DUEÑO explícito si algo queda fuera del alcance",
+    "verification_pre_cierre": "git diff verificado en disco ANTES de redactar el cierre del reporte; hashes recalculados, nunca de memoria de la sesión",
+    "reporte": "docs/planning/2026-08-31-h1c-reporte-rag.md con la misma estructura del reporte G-1/G-3 (preflight, entregables con sha256, checks, desviaciones, pendiente-de-dueño)"
+  },
+  "round_record": "tarjeta redactada por el orquestador 2026-08-31 siguiendo el patrón v2 de G-1/G-3 con lecciones incorporadas (allowed_paths con notas por archivo, verificación pre-cierre, guard mecánico, costes honestos). PENDIENTE: ronda adversarial fresca de esta tarjeta antes del lanzamiento.",
+  "notes": "El ejecutor NO decide sola la aceptación final de la formulación de H1c: la formalización se propone en el documento y la aceptación sigue el flujo ronda→correcciones→dueño. El script de anclaje es herramienta de parada fail-closed, no de reparación automática."
+}
