@@ -185,7 +185,9 @@ def parse_managed_block(document: str) -> ManagedBlock | None:
     prose or inside inline code spans are ignored so the managed-block mechanism
     can be documented inside ``AGENTS.md`` itself. Anchored candidates still fail
     closed when malformed, indented, fenced, duplicated, nested or out of order,
-    as required by ADR-0009.
+    as required by ADR-0009; the fenced case raises the distinct code
+    ``managed_block_inside_fence`` (issue #105) so an unclosed fence is not
+    indistinguishable from corruption.
     """
 
     lines = document.splitlines(keepends=True)
@@ -206,7 +208,12 @@ def parse_managed_block(document: str) -> ManagedBlock | None:
             continue
         if not stripped.startswith((_BEGIN_ANCHOR, _END_ANCHOR)):
             continue
-        if fence is not None or line.startswith((" ", "\t")):
+        if fence is not None:
+            # Issue #105 (H4): a fence around the markers is a distinct,
+            # recoverable authoring mistake (bug real del consumidor
+            # infosalud, 2026-09-01); distinguishable from corruption.
+            raise ContextPackageError("managed_block_inside_fence")
+        if line.startswith((" ", "\t")):
             raise ContextPackageError("managed_block_structure_invalid")
         if line.startswith(_BEGIN_PREFIX):
             begins.append(index)

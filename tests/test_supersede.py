@@ -40,7 +40,11 @@ from unittest.mock import patch
 
 from an_kla.canonical import digest_json
 from an_kla.store import MemoryStore
-from an_kla.write_policy import WritePolicyError
+from an_kla.write_policy import (
+    WritePolicyError,
+    build_write_plan,
+    evaluate_write,
+)
 
 
 def proposal(base: str, record_id: str = "f-policy", *, representation: str = "summary") -> dict:
@@ -119,9 +123,18 @@ class SupersedeCharacterizationTests(unittest.TestCase):
         return result["revision"]
 
     def _supersede_planning(self, base: str, new_id: str, target_id: str):
+        # Issue #103 (H1): plan_write now fails closed earlier for missing or
+        # non-vigente targets (plan_* codes). This file characterizes the
+        # commit-time resolution block, so plans are built through the pure
+        # policy API — exactly how a caller racing the TOCTOU window reaches
+        # the block under the write lock.
         candidate = _supersede_proposal(base, new_id, target_id)
         auth = authority(candidate)
-        return candidate, auth, self.store.plan_write(candidate, auth)
+        decision = evaluate_write(candidate, auth)
+        return candidate, auth, {
+            "plan": build_write_plan(candidate, auth, decision),
+            "decision": decision,
+        }
 
     def _commit(self, base, candidate, auth, planning):
         return self.store.commit_write_plan(
@@ -233,10 +246,21 @@ class SupersedeCharacterizationTests(unittest.TestCase):
         # once to build the child revision, and the post-commit FTS reindex adds
         # further calls. Stub _maybe_reindex to remove that variance and isolate
         # the resolution block, which must contribute exactly one extra
-        # snapshot(observed) call iff a supersede item is present.
+        # snapshot(observed) call iff a supersede item is present. Both plans
+        # are built through the pure policy API (bypass helpers) so the
+        # plan-time guard added by issue #103 stays out of the count.
         with patch.object(self.store, "_maybe_reindex"):
+            base = self.store.read_current()
+            add_candidate = proposal(base, "f-lone", representation="summary")
+            add_candidate["record"]["indexable_text"] = "f-lone"
+            add_auth = authority(add_candidate)
+            add_decision = evaluate_write(add_candidate, add_auth)
+            add_planning = {
+                "plan": build_write_plan(add_candidate, add_auth, add_decision),
+                "decision": add_decision,
+            }
             with patch.object(self.store, "snapshot", side_effect=real_snapshot) as spy:
-                self._add(self.root_revision, "f-lone")
+                self._commit(base, add_candidate, add_auth, add_planning)
                 add_only_calls = spy.call_count
             self.assertEqual(add_only_calls, 1)
 

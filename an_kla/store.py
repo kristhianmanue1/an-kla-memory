@@ -33,6 +33,8 @@ from .initialization import existing_initialization
 from .storage_primitives import atomic_write, fsync_directory, write_immutable
 from .refute_store_mixin import RefuteStoreMixin
 from .reader_gate import shared_reader_gate
+from .record_text import record_text
+from .plan_guard import guard_plan_against_snapshot
 from .subject_binding import check_subject_ref_binding
 from .supersede import resolve_supersede_targets
 from .transactions import (
@@ -304,6 +306,13 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         decision = evaluate_write(proposal, authority)
         if proposal["base_revision"] != observed:
             raise WritePolicyError("write_plan_base_changed")
+        if decision["decision"] != "skip":
+            # Issue #103 (H1): fail closed at planning time on conditions that
+            # previously surfaced only as terminal commit errors. Read-only;
+            # the authoritative resolution under the write lock (supersede.py,
+            # _assign_records) stays so the TOCTOU window remains closed. The
+            # policy core remains pure: nothing here feeds evaluate_write.
+            guard_plan_against_snapshot(self.snapshot(observed).records, proposal)
         plan = build_write_plan(proposal, authority, decision)
         return {
             "schema": "an-kla/write-planning-result-v1",
@@ -438,6 +447,17 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
                 outcome["operation_error_code"] = "lock_release_incomplete"
         if outcome["committed"] is True and revision != observed:
             self._maybe_reindex(observed, revision)
+        if outcome["committed"] is True and not record_text(
+            checked_proposal["record"]
+        ):
+            # Issue #104 (H2): surface the unindexable-record warning on the
+            # commit outcome as well; the reason code already travels in the
+            # decision (write_policy.py), but consumers missed it there and
+            # the record stays invisible to retrieval (ADR-0018, issue #15).
+            outcome = deepcopy(outcome)
+            outcome["warnings"] = sorted(
+                set([*outcome["warnings"], "record_without_indexable_text"])
+            )
         return {
             "schema": "an-kla/write-commit-result-v1",
             "committed": outcome["committed"] is True,
