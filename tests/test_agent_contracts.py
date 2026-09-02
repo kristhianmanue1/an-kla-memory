@@ -261,6 +261,16 @@ class AgentCapabilityTests(unittest.TestCase):
                 "removed_in": "v0.1.0-beta.11",
             },
         )
+        # Issue #103 follow-up (adversarial pre-release beta.20): la clave
+        # queda pineada para que una remoción silenciosa no pase en verde.
+        self.assertEqual(
+            first["write_policy"]["plan_time_error_codes"],
+            [
+                "plan_duplicate_id",
+                "plan_supersede_target_missing",
+                "plan_supersede_target_not_vigente",
+            ],
+        )
         self.assertEqual(
             [item["name"] for item in first["schemas"]], list(schema_names())
         )

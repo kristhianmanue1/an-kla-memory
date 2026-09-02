@@ -1,8 +1,7 @@
 # AN-KLA Memory
 
-[![CI](https://github.com/kristhianmanue1/an-kla-memory/actions/workflows/test.yml/badge.svg)](https://github.com/kristhianmanue1/an-kla-memory/actions/workflows/test.yml)
 [![Version](https://img.shields.io/badge/version-0.1.0--beta.19-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.19)
-[![Python](https://img.shields.io/badge/python-3.9%20%7C%203.12-blue)](https://www.python.org/downloads/)
+[![Python](https://img.shields.io/badge/python-3.9%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 [![Beta](https://img.shields.io/badge/status-local%20beta-orange)](https://github.com/kristhianmanue1/an-kla-memory/releases)
 
@@ -73,8 +72,8 @@ GitHub muestra beta.11 como “Latest” porque beta.19 está marcada como
 prerelease. El update-check de AN-KLA no depende de ese distintivo: consulta el
 índice de releases, incluye prereleases y sí puede descubrir beta.19.
 **Limitación conocida**: el soporte de Windows permanece diferido por
-decisión del operador (CI remota en rojo; la candidata se declara
-procedible para macOS/Linux) — ver la
+decisión del operador (el protocolo de anclaje y partes de la suite son
+POSIX; la candidata se declara procedible para macOS/Linux) — ver la
 [ronda REL de beta.18](docs/releases/v0.1.0-beta.18-adversarial.md),
 §Límites. El contrato gestionado beta.11 aún menciona el endpoint histórico
 `/releases/latest`; es deuda documental versionada, no el comportamiento del
@@ -82,10 +81,11 @@ runtime ni autorización para modificar `AGENTS.md` o `AN-KLA.md` a mano.
 
 En varias betas (14–18), GitHub Actions corrió con presupuesto limitado o
 sin ejecutar pasos por facturación; el badge rojo no siempre representa
-pruebas fallidas. El gate documentado complementario es la CI local: suite
-canónica, wheel aislado y upgrades por etiqueta, con ronda adversarial
-`proceed`; la evidencia de beta.18 está en su
-[ronda REL](docs/releases/v0.1.0-beta.18-adversarial.md). Para
+pruebas fallidas. Desde beta.20 el repo **no define CI remota**: la única
+verificación canónica es la CI local — suite, wheel aislado, upgrades por
+etiqueta y gates de tamaños/registro, con ronda adversarial `proceed` antes
+de cada tag (la evidencia de beta.18 está en su
+[ronda REL](docs/releases/v0.1.0-beta.18-adversarial.md)). Para
 instalar o actualizar usa el comando fijado a beta.19 de la siguiente sección.
 
 ## ¿Es AN-KLA para esto? Fronteras declaradas
@@ -444,7 +444,8 @@ defensa del update-check aplica en hooks también: exporta
 
 ### Verificación sin CI remota (principio local-only)
 
-Todo push/PR de este repo debe poder verificarse **sin GitHub Actions**:
+Este repo **no define workflows de GitHub Actions** (decisión del operador,
+beta.20): todo push/tag debe poder verificarse localmente con
 
 ```bash
 .venv/bin/python scripts/ci_local.py --simulate-ci
@@ -452,9 +453,9 @@ Todo push/PR de este repo debe poder verificarse **sin GitHub Actions**:
 .venv/bin/python scripts/check_adr_registry.py
 ```
 
-La CI remota es validación adicional (3 SO × Python 3.9/3.12/3.13), nunca
-requisito de consumo: ningún consumidor debe depender de Actions para
-operar o verificar AN-KLA (issue #102 §3.8).
+Ningún consumidor debe depender de Actions para operar o verificar AN-KLA
+(issue #102 §3.8). La suite local cubre Python 3.9/3.12/3.13 en
+macOS/Linux; Windows permanece diferido.
 
 ## Límites de la beta
 

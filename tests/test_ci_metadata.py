@@ -8,20 +8,22 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class CiMetadataTests(unittest.TestCase):
-    def test_node24_actions_are_pinned_to_reviewed_commits(self) -> None:
-        payload = (ROOT / ".github" / "workflows" / "test.yml").read_text(
-            encoding="utf-8"
+    def test_no_remote_ci_workflows_local_only_policy(self) -> None:
+        """beta.20 (decisión del operador, issue #102 §3.8): el repo no
+        define workflows remotos; la verificación canónica es local
+        (``scripts/ci_local.py --simulate-ci`` + gates de tamaños y
+        registro). Si se reintroduce un workflow, este test obliga a
+        re-congelar el pineo de acciones a commits revisados (la versión
+        anterior de este test congelaba ``actions/checkout`` y
+        ``actions/setup-python`` pineados en ``test.yml``).
+        """
+
+        workflows = ROOT / ".github" / "workflows"
+        self.assertFalse(
+            workflows.exists() and any(workflows.iterdir()),
+            "workflows remotos retirados en beta.20; si se reintroducen, "
+            "re-establece el pineo a commit revisado (test_ci_metadata)",
         )
-        self.assertIn(
-            "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1",
-            payload,
-        )
-        self.assertIn(
-            "actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0",
-            payload,
-        )
-        self.assertNotIn("actions/checkout@v4", payload)
-        self.assertNotIn("actions/setup-python@v5", payload)
 
 
 if __name__ == "__main__":

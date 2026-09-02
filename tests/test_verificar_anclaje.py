@@ -33,6 +33,12 @@ def run_script(refs_root: Path, registry: Path) -> subprocess.CompletedProcess[s
     )
 
 
+@unittest.skipIf(
+    sys.platform == "win32",
+    "el protocolo de anclaje usa un pipeline POSIX (find|shasum|sort); "
+    "sin shasum/cmd.exe el repro no es ejecutable (ronda adversarial "
+    "pre-release beta.20)",
+)
 class VerificarAnclajeTests(unittest.TestCase):
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()

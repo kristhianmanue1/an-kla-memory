@@ -27,7 +27,7 @@ fi
 # 3) Diagnósticos del contexto: warning por defecto; fatales sólo con
 #    MEM_GUARD_STRICT=1 (opt-in explícito del operador).
 salida=$("$AN_KLA" -m an_kla --no-update-check --project-root . context status 2>/dev/null)
-diagnosticos=$(printf '%s' "$salida" | python3 -c 'import json,sys
+diagnosticos=$(printf '%s' "$salida" | "$AN_KLA" -c 'import json,sys
 try:
     print(",".join(json.load(sys.stdin).get("diagnostics", [])))
 except Exception:
