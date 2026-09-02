@@ -38,6 +38,8 @@ intérprete del entorno virtual.
   - [Recuperación y escritura](#recuperación-y-escritura)
   - [Respaldo sellado (opcional)](#respaldo-sellado-opcional)
 - [Desarrollo del motor](#desarrollo-del-motor)
+  - [Hooks locales de memoria (plantilla, opcional)](#hooks-locales-de-memoria-plantilla-opcional)
+  - [Verificación sin CI remota (principio local-only)](#verificación-sin-ci-remota-principio-local-only)
 - [Límites de la beta](#límites-de-la-beta)
 - [Documentación](#documentación)
 - [Licencia](#licencia)
@@ -422,6 +424,37 @@ python3.12 -m venv .venv
 
 Consulta [AN-KLA.md](AN-KLA.md), los [fundamentos matemáticos](docs/mathematical-foundations.md)
 y las decisiones de arquitectura en `docs/architecture/`.
+
+### Hooks locales de memoria (plantilla, opcional)
+
+`core.hooksPath` no se clona con el repositorio: instala la guardia con
+
+```bash
+git config core.hooksPath docs/hooks-template
+chmod +x docs/hooks-template/pre-commit
+```
+
+La plantilla (`docs/hooks-template/pre-commit`) es **disciplina, no
+atestación**: avisa sobre diagnósticos del contexto gestionado y recuerda
+sembrar checkpoint de sesión; falla sólo con `MEM_GUARD_STRICT=1` y se
+escapa con `git commit --no-verify` (degradación declarada). La doble
+defensa del update-check aplica en hooks también: exporta
+`AN_KLA_NO_UPDATE_CHECK=1` (la plantilla ya lo hace) además de
+`--no-update-check` por invocación.
+
+### Verificación sin CI remota (principio local-only)
+
+Todo push/PR de este repo debe poder verificarse **sin GitHub Actions**:
+
+```bash
+.venv/bin/python scripts/ci_local.py --simulate-ci
+.venv/bin/python scripts/check_sizes.py
+.venv/bin/python scripts/check_adr_registry.py
+```
+
+La CI remota es validación adicional (3 SO × Python 3.9/3.12/3.13), nunca
+requisito de consumo: ningún consumidor debe depender de Actions para
+operar o verificar AN-KLA (issue #102 §3.8).
 
 ## Límites de la beta
 

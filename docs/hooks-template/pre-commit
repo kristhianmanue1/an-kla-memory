@@ -1,0 +1,49 @@
+#!/bin/bash
+# pre-commit — plantilla de guardia de memoria AN-KLA (issue #102 §3.7, H7).
+# NO es atestación: eleva el piso y hace visible la omisión. Adaptada del
+# consumidor real infosalud (2026-09-01).
+#
+# Instalación (core.hooksPath NO se clona):
+#   git config core.hooksPath docs/hooks-template
+#   chmod +x docs/hooks-template/pre-commit
+# Escape documentado: git commit --no-verify (degradación declarada).
+
+export AN_KLA_NO_UPDATE_CHECK="1"
+AN_KLA="${AN_KLA_PYTHON:-.venv/bin/python}"
+
+# 1) Exención: reparar AGENTS.md/AN-KLA.md vive en un commit; bloquearlo
+#    sería un deadlock (ronda adversarial F3-04 del consumidor).
+if git diff --cached --name-only 2>/dev/null | grep -qE '^(AGENTS\.md|AN-KLA\.md)$'; then
+  echo "mem-guard: commit exento (toca AGENTS.md/AN-KLA.md)"
+  exit 0
+fi
+
+# 2) Sin intérprete con an_kla (clone fresco): degradación declarada.
+if ! [ -x "$AN_KLA" ]; then
+  echo "mem-guard: aviso — $AN_KLA ausente, guardia omitido" >&2
+  exit 0
+fi
+
+# 3) Diagnósticos del contexto: warning por defecto; fatales sólo con
+#    MEM_GUARD_STRICT=1 (opt-in explícito del operador).
+salida=$("$AN_KLA" -m an_kla --no-update-check --project-root . context status 2>/dev/null)
+diagnosticos=$(printf '%s' "$salida" | python3 -c 'import json,sys
+try:
+    print(",".join(json.load(sys.stdin).get("diagnostics", [])))
+except Exception:
+    print("status_ilegible")' 2>/dev/null)
+if [ -n "$diagnosticos" ]; then
+  if [ "$MEM_GUARD_STRICT" = "1" ]; then
+    echo "mem-guard: BLOQ — diagnósticos an-kla: $diagnosticos" >&2
+    echo "mem-guard: reporta el diagnóstico; no lo repares automáticamente" >&2
+    exit 1
+  fi
+  echo "mem-guard: aviso — diagnósticos an-kla ($diagnosticos); commit continúa" >&2
+fi
+
+# 4) Continuidad: recuerda sembrar checkpoint de sesión si falta.
+"$AN_KLA" -m an_kla --no-update-check --project-root . checkpoint show 2>/dev/null \
+  | grep -q '"objective"' \
+  || echo "mem-guard: recordatorio — sin checkpoint de sesión (flujo gobernado checkpoint plan -> commit)" >&2
+
+exit 0

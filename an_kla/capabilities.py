@@ -230,6 +230,11 @@ def capabilities() -> dict[str, Any]:
             "privileged_authority_requires_external_adapter": True,
             "retrieval_requires_indexable_text": True,
             "no_text_warning_reason_code": "record_without_indexable_text",
+            "plan_time_error_codes": [
+                "plan_duplicate_id",
+                "plan_supersede_target_missing",
+                "plan_supersede_target_not_vigente",
+            ],
             "context_diagnostics_in_write_result": True,
             "context_diagnostics_in_init_result": True,
             "legacy_unguarded_cli": {
