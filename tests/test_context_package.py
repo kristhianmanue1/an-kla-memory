@@ -187,6 +187,31 @@ class PureContextBlockTests(unittest.TestCase):
                 with self.assertRaises(ContextPackageError):
                     parse_managed_block(payload)
 
+    def test_fenced_markers_fail_with_distinct_code(self) -> None:
+        """Issue #105 (H4): un fence sin cerrar es un error de autoría
+        distinguible, no corrupción del bloque gestionado."""
+
+        valid = render_managed_block()
+        for payload in (
+            "```markdown\n" + valid + "```\n",
+            "~~~\n" + valid + "~~~\n",
+            "texto\n\n```ts\ncodigo\n" + valid + "```\n",
+        ):
+            with self.subTest(payload=payload[:40]):
+                with self.assertRaisesRegex(
+                    ContextPackageError, "managed_block_inside_fence"
+                ):
+                    parse_managed_block(payload)
+        # El caso indentado conserva el código genérico.
+        with self.assertRaisesRegex(
+            ContextPackageError, "managed_block_structure_invalid"
+        ):
+            parse_managed_block(
+                valid.replace(
+                    "<!-- an-kla:managed-begin", " <!-- an-kla:managed-begin"
+                )
+            )
+
     def test_prose_and_inline_code_mentions_of_markers_are_ignored(self) -> None:
         """Regression for issue #44.
 

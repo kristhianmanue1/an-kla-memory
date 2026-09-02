@@ -14,7 +14,12 @@ from unittest.mock import patch
 from an_kla.canonical import digest_json
 from an_kla.retrieval import retrieve
 from an_kla.store import LockBusyError, MemoryStore
-from an_kla.write_policy import WritePolicyError, verify_write_plan as pure_verify_write_plan
+from an_kla.write_policy import (
+    WritePolicyError,
+    build_write_plan as pure_build_write_plan,
+    evaluate_write as pure_evaluate_write,
+    verify_write_plan as pure_verify_write_plan,
+)
 
 
 DIGEST_B = "sha256:" + "b" * 64
@@ -928,20 +933,52 @@ class SupersedeStoreTests(unittest.TestCase):
 
     def test_supersede_missing_target_is_terminal(self) -> None:
         rev1 = self._add(self.root_revision, "f-old")
+        # Issue #103 (H1): the condition now fails closed at planning time
+        # with the stable ``plan_*`` code (no plan is produced).
         with self.assertRaises(WritePolicyError) as caught:
             self._supersede(rev1, "f-new", "f-never-existed")
+        self.assertEqual(caught.exception.code, "plan_supersede_target_missing")
+        # No CURRENT moved, no side effects.
+        self.assertEqual(self.store.read_current(), rev1)
+
+    def test_supersede_missing_target_still_terminal_at_commit(self) -> None:
+        # Issue #103 (H1): the commit-time resolution stays authoritative for
+        # the TOCTOU window. A plan built through the pure policy API
+        # (bypassing plan_write's early checks) must still terminate under
+        # the write lock with the legacy code.
+        rev1 = self._add(self.root_revision, "f-old")
+        candidate = {
+            "schema": "an-kla/write-proposal-v1",
+            "base_revision": rev1,
+            "stream": "facts",
+            "operation": "supersede",
+            "requested_representation": "summary",
+            "record": {"id": "f-new", "indexable_text": "f-new"},
+            "lineage": {"derived_from_retrieval": False, "refs": []},
+            "supersedes": "f-never-existed",
+        }
+        auth = authority(candidate)
+        decision = pure_evaluate_write(candidate, auth)
+        plan = pure_build_write_plan(candidate, auth, decision)
+        with self.assertRaises(WritePolicyError) as caught:
+            self.store.commit_write_plan(
+                expected_current_hash=rev1,
+                plan=plan,
+                proposal=candidate,
+                authority=auth,
+                decision=decision,
+            )
         self.assertEqual(caught.exception.code, "invalid_supersede_target")
         self.assertEqual(caught.exception.detail, "target_missing")
-        # No CURRENT moved, no side effects.
         self.assertEqual(self.store.read_current(), rev1)
 
     def test_supersede_already_sustituida_target_is_terminal(self) -> None:
         rev1 = self._add(self.root_revision, "A")
         rev2 = self._supersede(rev1, "B", "A")
+        # Issue #103 (H1): fails closed at planning time.
         with self.assertRaises(WritePolicyError) as caught:
             self._supersede(rev2, "C", "A")  # A is already sustituida
-        self.assertEqual(caught.exception.code, "invalid_supersede_target")
-        self.assertEqual(caught.exception.detail, "target_not_vigente")
+        self.assertEqual(caught.exception.code, "plan_supersede_target_not_vigente")
         self.assertEqual(self.store.read_current(), rev2)
 
     def test_retrieve_excludes_sustituida_target(self) -> None:
@@ -979,8 +1016,9 @@ class SupersedeStoreTests(unittest.TestCase):
         )["revision"]
         with self.assertRaises(WritePolicyError) as caught:
             self._supersede(rev2, "f-new", "shared-id")  # shared-id lives in events, not facts
-        self.assertEqual(caught.exception.code, "invalid_supersede_target")
-        self.assertEqual(caught.exception.detail, "target_missing")
+        # Issue #103 (H1): now caught at planning time; axes remain
+        # non-interchangeable (ADR-0019 decision 3).
+        self.assertEqual(caught.exception.code, "plan_supersede_target_missing")
 
     def test_add_only_revision_has_no_supersedes_map_field(self) -> None:
         # Backwards-compat: a plain add revision omits the field entirely

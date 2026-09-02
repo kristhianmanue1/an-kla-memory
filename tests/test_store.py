@@ -21,7 +21,11 @@ from an_kla.mcp import ReadOnlyMcp
 from an_kla.store import ConcurrentUpdateError, IntegrityError, LockBusyError, MemoryStore
 from an_kla.subject_binding import check_subject_ref_binding
 from an_kla.subject_ref import derive_namespace
-from an_kla.write_policy import WritePolicyError
+from an_kla.write_policy import (
+    WritePolicyError,
+    build_write_plan,
+    evaluate_write,
+)
 
 
 def _concurrent_writer(project_root: str, expected: str, event_id: str, queue: multiprocessing.Queue) -> None:
@@ -617,7 +621,14 @@ class SubjectRefBindingTests(unittest.TestCase):
             supersedes="f-ghost",
         )
         sup_auth = _subject_authority(sup_candidate)
-        sup_planning = self.store.plan_write(sup_candidate, sup_auth)
+        # Issue #103 (H1): plan_write now rejects the missing target earlier
+        # (plan_supersede_target_missing); the commit-time zero-effect gate is
+        # frozen here via a plan built through the pure policy API.
+        sup_decision = evaluate_write(sup_candidate, sup_auth)
+        sup_planning = {
+            "plan": build_write_plan(sup_candidate, sup_auth, sup_decision),
+            "decision": sup_decision,
+        }
         with self.assertRaises(WritePolicyError) as caught:
             self._commit(sup_candidate, sup_auth, sup_planning)
         self.assertEqual(caught.exception.code, "invalid_supersede_target")
@@ -749,7 +760,16 @@ class SubjectRefBindingTests(unittest.TestCase):
             supersedes="f-ghost",
         )
         auth = _subject_authority(candidate)
-        planning = self.store.plan_write(candidate, auth)
+        # Issue #103 (H1): plan_write now fails closed earlier with
+        # plan_supersede_target_missing; this test freezes the commit-time
+        # order (supersede resolution immediately before the binding check),
+        # so the plan is built through the pure policy API — how a caller
+        # racing the TOCTOU window reaches the block.
+        decision = evaluate_write(candidate, auth)
+        planning = {
+            "plan": build_write_plan(candidate, auth, decision),
+            "decision": decision,
+        }
 
         current_before = self.store.read_current()
         files_before = self._file_state()

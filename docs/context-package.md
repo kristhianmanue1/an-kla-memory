@@ -119,6 +119,7 @@ evidencia mecánica de qué texto pertenece a AN-KLA y cuál al usuario.
 | `legacy_an_kla_context_detected` | Hay instrucciones antiguas sin límites; requieren migración revisada. |
 | `managed_block_modified` | Cambió el contenido protegido por la huella. |
 | `managed_block_structure_invalid` | Marcadores ambiguos, duplicados o mal formados. |
+| `managed_block_inside_fence` | Marcadores anclados dentro de una cerca de código sin cerrar (issue #105): error de autoría distinguible, no corrupción. |
 | `managed_contract_modified` | `AN-KLA.md` no coincide con el contrato distribuido ni con uno anterior conocido. |
 | `context_file_concurrent_update` | El archivo cambió después de planificar. |
 | `context_install_lock_busy` | Otro instalador local está aplicando cambios. |
@@ -146,9 +147,11 @@ sin invalidarlo (issue #44, ADR-0009):
   prosa o entre backticks sin romper el bloque.
 - Siguen **fallando cerrado** (`managed_block_structure_invalid` o
   `managed_block_modified`) los candidatos reales malformados (incluido un
-  marcador incompleto o sin el espacio separador), indentados, situados dentro
-  de una cerca de código (fenced), duplicados, anidados o fuera de orden, así
-  como cualquier alteración del contenido dentro del bloque.
+  marcador incompleto o sin el espacio separador), indentados, duplicados,
+  anidados o fuera de orden, así como cualquier alteración del contenido
+  dentro del bloque. Los candidatos situados dentro de una cerca de código
+  (fenced) fallan con el código distinto `managed_block_inside_fence`
+  (issue #105), que separa el error de autoría de la corrupción real.
 
 ## Límites operativos expuestos por el contrato
 
