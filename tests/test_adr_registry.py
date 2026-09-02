@@ -23,9 +23,10 @@ class AdrRegistryTests(unittest.TestCase):
         self.assertEqual(errors, [])
         self.assertEqual(states["Aceptada"], 42)
         # 0045 aceptada 2026-09-01 (orden explícita del dueño: adoptar
-        # Skevi); 0044 propuesta (tarjeta ankla-h1c-formalizacion-anclaje)
-        # — las 3 Propuestas vigentes son posteriores a 0043.
-        self.assertEqual(states["Propuesta"], 3)
+        # Skevi); 0044 propuesta (tarjeta ankla-h1c-formalizacion-anclaje);
+        # 0046 attest F0 y 0047 host-hooks propuestas (sesión #102,
+        # 2026-09-02) — las 4 Propuestas vigentes son posteriores a 0043.
+        self.assertEqual(states["Propuesta"], 4)
 
     def test_detects_gap_and_state_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
