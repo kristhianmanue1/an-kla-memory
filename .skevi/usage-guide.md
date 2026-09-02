@@ -4,9 +4,10 @@
 **Fase actual:** F3 — proyecto preexistente en ejecución; adopta el método sin
 re-ejecutar F0–F2 (el equivalente documental ya existe: ADRs en
 `docs/architecture/`, specs y contratos versionados).
-**Fuente del método:** `github.com/kristhianmanue1/skevi` @ `ee309bb` (main).
-Copiado sin edición; actualizaciones se re-inspeccionan por diff antes de
-adoptarse (Skevi está en alpha).
+**Fuente del método:** `github.com/kristhianmanue1/skevi` @ `v1.0.0`
+(estable desde 2026-09-01; corpus originalmente copiado de `ee309bb`,
+byte-idéntico en lo adoptado). Copiado sin edición; actualizaciones se
+re-inspeccionan por diff antes de adoptarse.
 
 ## Qué leer primero
 
