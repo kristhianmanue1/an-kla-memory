@@ -34,6 +34,9 @@ _PATTERNS = tuple(re.compile(value) for value in (
     rf"anchor/memory/transactions/{_UUID}\.json",
     rf"anchor/memory/transactions/{_UUID}/(?:stages|receipts)/sha256/{_HEX}\.json",
     rf"anchor/memory/compaction/(?:catalogs|epochs|restore-proofs)/sha256/{_HEX}\.json",
+    rf"anchor/receipts/receipts/sha256/{_HEX}\.json",
+    rf"anchor/receipts/nonces/sha256/{_HEX}\.json",
+    r"anchor/attest-whitelist\.json",
 ))
 
 
@@ -57,7 +60,7 @@ def _files(anchor: Path) -> list[tuple[str, Path]]:
             raise ExportError("export_unsafe_file")
         if _allowed(relative):
             rows.append((relative, path))
-        elif relative not in {"anchor/.identity.lock", "anchor/memory/.write.lock", "anchor/memory/.reader-gate"} and not relative.startswith(("anchor/context/", "anchor/memory/indexes/", "anchor/memory/leases/", "anchor/memory/quarantine/")):
+        elif relative not in {"anchor/.identity.lock", "anchor/memory/.write.lock", "anchor/memory/.reader-gate", "anchor/attest.key"} and not relative.startswith(("anchor/context/", "anchor/memory/indexes/", "anchor/memory/leases/", "anchor/memory/quarantine/")):
             raise ExportError("export_unrecognized_durable_path")
     return sorted(rows, key=lambda item: item[0].encode("utf-8"))
 

@@ -344,7 +344,9 @@ class WritePolicyTests(unittest.TestCase):
         )
         self.assertEqual(
             policy_fingerprint(),
-            "sha256:0d0133a5a91b1b0c01c3749b649802075efbccc797b81a413a5c8b6ad615afe1",
+            # ADR-0046: bump por write-authority-v2 (evidence kind attestation_receipt
+            # + bloque attestation). Pin intencional por release.
+            "sha256:2d13bb1dffe23c83de25bd763503970f1bf6f85e4fac166e37c952bcbc81a5c8",
         )
 
     def test_verified_at_is_validated_but_never_elevates_authority(self) -> None:
@@ -692,7 +694,9 @@ class SubjectRefPolicyTests(unittest.TestCase):
     def test_subject_ref_and_terminal_code_freeze_policy_fingerprint(self) -> None:
         self.assertEqual(
             policy_fingerprint(),
-            "sha256:0d0133a5a91b1b0c01c3749b649802075efbccc797b81a413a5c8b6ad615afe1",
+            # ADR-0046: bump por write-authority-v2 (evidence kind attestation_receipt
+            # + bloque attestation). Pin intencional por release.
+            "sha256:2d13bb1dffe23c83de25bd763503970f1bf6f85e4fac166e37c952bcbc81a5c8",
         )
         self.assertIn(
             "subject_ref_namespace_mismatch",

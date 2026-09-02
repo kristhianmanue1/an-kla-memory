@@ -50,7 +50,14 @@ class InitContextDiagnosticsTests(unittest.TestCase):
             store = MemoryStore(directory)
             result = store.initialize_with_outcome()
         self.assertEqual(
-            set(result), {"revision", "outcome", "identity", "context_diagnostics"}
+            set(result),
+            {
+                "revision",
+                "outcome",
+                "identity",
+                "attestation",
+                "context_diagnostics",
+            },
         )
 
 

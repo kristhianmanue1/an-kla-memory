@@ -52,6 +52,40 @@ _POLICY_CONFIGURATION = {
     "schema": "an-kla/write-policy-config-v1",
     "profile": WRITE_POLICY_PROFILE,
     "supported_operations": ["add", "supersede"],
+    "authority_schemas": [
+        "an-kla/write-authority-v1",
+        "an-kla/write-authority-v2",
+    ],
+    "evidence_kinds": {
+        "an-kla/write-authority-v1": [
+            "artifact",
+            "event",
+            "external",
+            "revision",
+        ],
+        "an-kla/write-authority-v2": [
+            "artifact",
+            "attestation_receipt",
+            "event",
+            "external",
+            "revision",
+        ],
+    },
+    "attestation": {
+        "decision": "ADR-0046",
+        "receipt_schema": "an-kla/attest-receipt-v1",
+        "signature": "hmac-sha256/local-key",
+        "verification_points": ["plan-write", "commit-write-plan"],
+        "terminal_error_codes": [
+            "attest_command_not_allowed",
+            "attest_not_initialized",
+            "attest_timeout",
+            "receipt_identity_mismatch",
+            "receipt_invalid",
+            "receipt_replayed",
+            "receipt_whitelist_changed",
+        ],
+    },
     "reason_codes": [
         "authority_scope_mismatch",
         "channel_confirmation_resolved",
@@ -259,11 +293,25 @@ def validate_write_proposal(proposal: Mapping[str, Any]) -> None:
     _validate_json_value(proposal, code, "proposal:invalid_json")
 
 
-def _validate_evidence(value: Any, code: str, detail: str) -> None:
+_EVIDENCE_KINDS = {
+    "an-kla/write-authority-v1": frozenset(
+        {"artifact", "event", "revision", "external"}
+    ),
+    "an-kla/write-authority-v2": frozenset(
+        {"artifact", "attestation_receipt", "event", "revision", "external"}
+    ),
+}
+
+_AUTHORITY_SCHEMAS = frozenset(_EVIDENCE_KINDS)
+
+
+def _validate_evidence(
+    value: Any, code: str, detail: str, allowed_kinds: frozenset[str]
+) -> None:
     if not isinstance(value, dict):
         raise WritePolicyError(code, detail)
     _require_exact_keys(value, {"kind", "id", "resolution"}, {"sha256"}, code, detail)
-    if value["kind"] not in {"artifact", "event", "revision", "external"}:
+    if value["kind"] not in allowed_kinds:
         raise WritePolicyError(code, detail)
     if not isinstance(value["id"], str) or not value["id"]:
         raise WritePolicyError(code, detail)
@@ -303,7 +351,7 @@ def validate_write_authority(authority: Mapping[str, Any]) -> None:
         code,
         "authority:keys",
     )
-    if authority["schema"] != "an-kla/write-authority-v1":
+    if authority["schema"] not in _AUTHORITY_SCHEMAS:
         raise WritePolicyError(code, "authority:schema")
     if not _is_digest(authority["proposal_sha256"]) or not _is_digest(
         authority["base_revision"]
@@ -336,7 +384,9 @@ def validate_write_authority(authority: Mapping[str, Any]) -> None:
     if not isinstance(evidence, list):
         raise WritePolicyError(code, "evidence:not_list")
     for item in evidence:
-        _validate_evidence(item, code, "evidence[]:invalid")
+        _validate_evidence(
+            item, code, "evidence[]:invalid", _EVIDENCE_KINDS[authority["schema"]]
+        )
     scope = authority["scope"]
     if not isinstance(scope, dict):
         raise WritePolicyError(code, "scope:not_object")

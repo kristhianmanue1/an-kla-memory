@@ -93,11 +93,22 @@ def _json(path: str, *, role: str | None = None) -> Any:
         raise CliUsageError("input_json_invalid", role) from None
 
 
-def _cli_authority(value: Any) -> Any:
-    """Fail closed when a JSON file claims authority the CLI cannot resolve."""
+def _cli_authority(value: Any, store: Any = None) -> Any:
+    """Fail closed when a JSON file claims authority the CLI cannot resolve.
 
+    ADR-0046: ``tool_observed`` is accepted only with a verified
+    ``attestation_receipt`` (HMAC + whitelist + live binding + tombstone
+    advisory). Everything else keeps the hard rejection.
+    """
+
+    if isinstance(value, dict) and value.get("authority_class") == "tool_observed":
+        from . import attest as attest_module
+
+        if store is None or attest_module.find_receipt_evidence(value) is None:
+            raise ValueError("cli_privileged_authority_unresolved")
+        attest_module.verify_receipt_for_authority(store, value)
+        return value
     if isinstance(value, dict) and value.get("authority_class") in {
-        "tool_observed",
         "channel_confirmed",
     }:
         raise ValueError("cli_privileged_authority_unresolved")
@@ -383,8 +394,23 @@ def _run() -> None:
     elif args.command == "plan-write":
         result = store.plan_write(
             _json(args.proposal, role="proposal"),
-            _cli_authority(_json(args.authority, role="authority")),
+            _cli_authority(_json(args.authority, role="authority"), store),
         )
+    elif args.command == "attest":
+        from . import attest as attest_module
+
+        if args.attest_command == "init":
+            result = attest_module.ensure_attest_files(args.project_root)
+        else:
+            command = list(getattr(args, "attest_argv", []))
+            if command and command[0] == "--":
+                command = command[1:]
+            result = attest_module.attest_run(
+                args.project_root,
+                command,
+                expected_current=args.expected_current,
+                timeout_seconds=args.timeout,
+            )
     else:
         decision, plan = _planning_result(
             _json(args.planning_result, role="planning_result"),
@@ -393,13 +419,14 @@ def _run() -> None:
         result = store.commit_write_plan(
             expected_current_hash=args.expected_current,
             proposal=_json(args.proposal, role="proposal"),
-            authority=_cli_authority(_json(args.authority, role="authority")),
+            authority=_cli_authority(_json(args.authority, role="authority"), store),
             decision=decision,
             plan=plan,
             transaction_id=args.transaction_id,
         )
     if args.command in {
         "assemble-context",
+        "attest",
         "benchmark-reference",
         "capabilities",
         "commit-write-plan",

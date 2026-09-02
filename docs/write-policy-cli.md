@@ -305,6 +305,46 @@ Los fallos al leer JSON se devuelven como `input_json_unreadable` o
 saneado `proposal`, `authority` o `planning_result`; nunca incluyen la ruta
 absoluta ni el contenido candidato.
 
+## Atestación de observación local (`attest`, ADR-0046)
+
+Desde beta.20+ el CLI puede acuñar autoridad `tool_observed` legítima con
+receipts firmados por el motor (HMAC-SHA256, clave local en
+`.an-kla/attest.key`, creada por `init`; stores previos: `attest init`).
+
+```bash
+python3 -m an_kla --project-root . attest run -- git rev-parse HEAD
+python3 -m an_kla --project-root . plan-write \
+  --proposal propuesta.json --authority autoridad-v2.json
+```
+
+- `attest run` ejecuta **argv estricto sin shell** un comando de la
+  whitelist (`.an-kla/attest-whitelist.json`: argv exacto o prefijo con
+  `deny_flags`; inicial: `git rev-parse HEAD`, `git diff` sin
+  `--ext-diff/--textconv/--output`, `unittest discover`, `sha256sum`).
+  Timeout por `--timeout` (default 120 s) → `attest_timeout`; salida
+  superior al cap se digiere en streaming y marca `truncated`.
+- El receipt (`an-kla/attest-receipt-v1`) es content-addressed bajo
+  `.an-kla/receipts/receipts/sha256/` e incrusta binding vigente,
+  `whitelist_digest`, `base_revision`, `nonce` y `policy_fingerprint`.
+- Para escribir con `tool_observed`: authority **v2**
+  (`an-kla/write-authority-v2`, `issuer.kind: "tool"`,
+  `issuer.id: "an-kla-attest"`) con evidence
+  `{kind: attestation_receipt, id: <receipt_id>, sha256: <digest del
+  receipt>, resolution: verified}`. La verificación ocurre en
+  `plan-write` y de nuevo dentro de `commit-write-plan` bajo lock, donde
+  el tombstone del nonce se crea O_EXCL: un receipt se consume una sola
+  vez (`receipt_replayed`).
+- Códigos estables: `attest_not_initialized`, `attest_command_not_allowed`,
+  `attest_timeout`, `receipt_invalid`, `receipt_whitelist_changed`,
+  `receipt_identity_mismatch`, `receipt_replayed`.
+- Límite honesto: la clave vive en el mismo host que el agente — esto es
+  **procedencia de ejecución auditable**, no defensa contra un agente
+  malicioso ni prueba de corrección semántica. Los receipts no cruzan
+  stores (worktree = otro `project_uuid`), no sobreviven export/restore
+  como verificables (la clave no viaja) y mueren con cada bump de
+  `policy_fingerprint`. `checkpoint` y `refute` siguen sin aceptar
+  receipts en esta beta.
+
 ## API interna
 
 El comando público heredado `write` fue retirado en beta.11. Toda escritura

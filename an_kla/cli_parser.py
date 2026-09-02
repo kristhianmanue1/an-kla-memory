@@ -193,6 +193,45 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         help="Archivo JSON con schema an-kla/write-authority-v1.",
     )
+    attest_cmd = sub.add_parser(
+        "attest",
+        help="Atestación de observación local firmada (ADR-0046).",
+        description=(
+            "Acuña receipts tool_observed firmados por el motor para "
+            "comandos whitelisteados. La clave es local: procedencia "
+            "auditable, no defensa contra un agente malicioso."
+        ),
+    )
+    attest_sub = attest_cmd.add_subparsers(dest="attest_command", required=True)
+    attest_sub.add_parser(
+        "init",
+        help="Crear clave y whitelist si faltan (idempotente; stores previos a beta.20).",
+    )
+    attest_run_parser = attest_sub.add_parser(
+        "run",
+        help="Ejecutar un comando whitelisteado y acuñar su receipt firmado.",
+        epilog=(
+            "Usa `--` antes del comando: attest run -- git rev-parse HEAD. "
+            "exit_code != 0 acuña el receipt para diagnóstico pero no "
+            "otorga autoridad."
+        ),
+    )
+    attest_run_parser.add_argument(
+        "--expected-current",
+        default=None,
+        help="Revisión esperada (diagnóstico; la ligadura real es CAS en plan/commit).",
+    )
+    attest_run_parser.add_argument(
+        "--timeout",
+        type=float,
+        default=120.0,
+        help="Segundos antes de matar el proceso (default: 120).",
+    )
+    attest_run_parser.add_argument(
+        "attest_argv",
+        nargs=argparse.REMAINDER,
+        help="Comando a ejecutar (argv estricto, sin shell).",
+    )
     commit_plan_cmd = sub.add_parser(
         "commit-write-plan",
         help="Revalidar y escribir un plan exacto bajo el lock.",

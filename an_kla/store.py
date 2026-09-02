@@ -16,6 +16,7 @@ import time
 import uuid
 from typing import Any, Iterable, Iterator, Mapping
 
+from . import attest as attest_module
 from .canonical import bare_digest, canonical_json, digest_bytes, digest_json
 from .checkpoint_policy import CheckpointPolicyError, validate_working_state
 from .compaction_store_mixin import CompactionStoreMixin
@@ -151,6 +152,7 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         if store_identity is not None:
             raise StoreError("external_store_identity_not_allowed")
         result = bootstrap_initialize(self, transaction_id)
+        result["attestation"] = attest_module.ensure_attest_files(self.project_root)
         # ADR-0020 pattern, extended to init (issue #87): a best-effort
         # context snapshot so a bare ``init`` surfaces ``installed: false``
         # instead of a clean commit that hides the missing agent entry
@@ -307,11 +309,7 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         if proposal["base_revision"] != observed:
             raise WritePolicyError("write_plan_base_changed")
         if decision["decision"] != "skip":
-            # Issue #103 (H1): fail closed at planning time on conditions that
-            # previously surfaced only as terminal commit errors. Read-only;
-            # the authoritative resolution under the write lock (supersede.py,
-            # _assign_records) stays so the TOCTOU window remains closed. The
-            # policy core remains pure: nothing here feeds evaluate_write.
+            # Issue #103 (H1): fail-closed temprano (TOCTOU cerrado en commit).
             guard_plan_against_snapshot(self.snapshot(observed).records, proposal)
         plan = build_write_plan(proposal, authority, decision)
         return {
@@ -366,6 +364,14 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
                 or checked_plan["core"]["base_revision"] != observed
             ):
                 raise WritePolicyError("write_plan_base_changed")
+
+            # ADR-0046: engine-level defense-in-depth bajo lock (detalle
+            # en an_kla/attest.enforce_for_commit).
+            if (
+                checked_decision["decision"] != "skip"
+                and checked_authority["authority_class"] == "tool_observed"
+            ):
+                attest_module.enforce_for_commit(self, checked_authority)
 
             if checked_decision["decision"] == "skip":
                 return {
@@ -450,10 +456,8 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         if outcome["committed"] is True and not record_text(
             checked_proposal["record"]
         ):
-            # Issue #104 (H2): surface the unindexable-record warning on the
-            # commit outcome as well; the reason code already travels in the
-            # decision (write_policy.py), but consumers missed it there and
-            # the record stays invisible to retrieval (ADR-0018, issue #15).
+            # Issue #104 (H2): warning visible en el outcome (el reason ya
+            # viaja en la decisión; ADR-0018/issue #15).
             outcome = deepcopy(outcome)
             outcome["warnings"] = sorted(
                 set([*outcome["warnings"], "record_without_indexable_text"])

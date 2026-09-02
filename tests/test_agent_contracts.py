@@ -36,6 +36,7 @@ SOURCE_SCHEMAS = ROOT / "docs" / "schemas"
 
 class InstalledSchemaTests(unittest.TestCase):
     expected_names = (
+        "attest-receipt-v1",
         "checkpoint-authority-v1",
         "checkpoint-decision-v1",
         "checkpoint-plan-v1",
@@ -103,6 +104,7 @@ class InstalledSchemaTests(unittest.TestCase):
         "view-error-v1",
         "working-state-v2",
         "write-authority-v1",
+        "write-authority-v2",
         "write-decision-v1",
         "write-plan-v1",
         "write-proposal-v1",

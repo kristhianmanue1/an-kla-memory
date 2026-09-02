@@ -115,14 +115,21 @@ significa: por CLI, sólo puede *invocar*.
    regresión: claim `tool_observed` con evidence receipt vía CLI →
    fallo cerrado por resolver ausente. F0-D4: attest requiere store con
    identidad completa.
-8. **Gobernanza de contratos observables** (ronda absorbida): al aterrizar
-   S2 deben actualizarse en el mismo PR: `capabilities()` — bloque
-   `attest` (spike §4), `cli_authority_classes += ["tool_observed"]`
-   condicionado a store con clave, y re-scoping de
-   `privileged_authority_requires_external_adapter` (true → "sólo
-   channel_confirmed y refute") — **AN-KLA.md §Resolver autoridad** (la
-   frase "requieren un adaptador externo" cambia a distinguir
-   `tool_observed` vía attest del resto).
+8. **Gobernanza de contratos observables** (ronda absorbida; enmienda de
+   fase S2): `capabilities()` es estático — no puede sondar el store
+   local — por lo que el condicionamiento "a store con clave" se expresa
+   por campos adyacentes: `attest.requires_store_with_key: true` y
+   `tool_observed_resolution: attest-receipt-v1`; `cli_authority_classes`
+   declara las clases que el CLI *puede* resolver y
+   `privileged_authority_requires_external_adapter: true` queda en true
+   con su alcance real acotado por esos campos (channel_confirmed y
+   refute siguen requiriendo adaptador externo; decisión final, no
+   pendiente). **AN-KLA.md §Resolver autoridad**: la edición textual del
+   contrato gestionado se ejecuta en el bump de plantilla (deuda ya
+   declarada en beta.20 — editar aquí dispararía
+   `managed_contract_modified` permanente en los stores); este ADR y
+   `docs/write-policy-cli.md` son la superficie normativa vigente mientras
+   tanto.
 
 ## Por qué no [alternativas]
 

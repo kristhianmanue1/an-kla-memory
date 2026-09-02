@@ -10,6 +10,7 @@ from ..canonical import digest_bytes
 
 
 SCHEMA_FILES = {
+    "attest-receipt-v1": "attest-receipt-v1.schema.json",
     "checkpoint-authority-v1": "checkpoint-authority-v1.schema.json",
     "checkpoint-decision-v1": "checkpoint-decision-v1.schema.json",
     "checkpoint-plan-v1": "checkpoint-plan-v1.schema.json",
@@ -76,6 +77,7 @@ SCHEMA_FILES = {
     "verify-revision-v1": "verify-revision-v1.schema.json",
     "view-error-v1": "view-error-v1.schema.json",
     "write-authority-v1": "write-authority-v1.schema.json",
+    "write-authority-v2": "write-authority-v2.schema.json",
     "write-decision-v1": "write-decision-v1.schema.json",
     "write-plan-v1": "write-plan-v1.schema.json",
     "write-proposal-v1": "write-proposal-v1.schema.json",
