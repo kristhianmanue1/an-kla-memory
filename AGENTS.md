@@ -13,6 +13,23 @@ No publicar, elegir licencia ni integrar adaptadores de proveedores sin una orde
 explícita del usuario. El formato físico vigente se define en
 `docs/architecture/0001-revision-commit.md`.
 
+## Estándar de proceso (Skevi)
+
+Este repo adopta Skevi como estándar de proceso (ADR-0045): guía F0→F3 en
+`docs/ai-agent-guide/`, capa normativa transversal en
+`docs/estandar-diseno-software-github.md`. Ante conflicto, `AGENTS.md` y
+`AN-KLA.md` mandan sobre el estándar adoptado. Gates obligatorios antes de
+declarar terminado un cambio: `python3 scripts/check_sizes.py` y
+`python3 scripts/check_plans.py` (salida `OK`/`BLOQ`).
+
+<!-- skevi:registry:start -->
+[skevi]
+usage        = .skevi/usage-guide.md
+architecture = .skevi/architecture-overview.md
+standard     = docs/estandar-diseno-software-github.md
+guide        = docs/ai-agent-guide/00-INDICE.md
+<!-- skevi:registry:end -->
+
 ## Este repositorio
 
 Este es el propio código fuente de an-kla-memory (no un consumidor). El
