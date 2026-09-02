@@ -1,0 +1,57 @@
+{
+  "limits": {
+    "AGENTS.md": 120,
+    "README.md": 500,
+    "docs/architecture/0042-sealed-export-v1.md": 700,
+    "tests/test_sealed_key_adapter.py": 1400,
+    "tests/test_write_commit.py": 1200,
+    "tests/test_sealed_matrix.py": 1200,
+    "tests/test_sealed_bundle.py": 1000,
+    "tests/test_store.py": 900
+  },
+  "default_limit": 800,
+  "root_markdown": [
+    "AN-KLA.md",
+    "CHANGELOG.md",
+    "CODE_OF_CONDUCT.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md"
+  ],
+  "skip_dirs": [
+    "planning",
+    "releases",
+    "mejoras_ejemplo"
+  ],
+  "required": [
+    "AGENTS.md",
+    "AN-KLA.md",
+    "README.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "skevi-gate.json",
+    "docs/README.md",
+    "docs/estandar-diseno-software-github.md",
+    "docs/ai-agent-guide/00-INDICE.md",
+    "docs/ai-agent-guide/01-analisis-y-requerimientos.md",
+    "docs/ai-agent-guide/02-specs-adr-contratos.md",
+    "docs/ai-agent-guide/03-cascaron-proyecto.md",
+    "docs/ai-agent-guide/04-ejecucion-y-verificacion.md",
+    "docs/ai-agent-guide/05-memoria-del-agente.md",
+    "docs/architecture/_TEMPLATE.md",
+    "docs/practicas-ingenieria.md",
+    "docs/adversarial-template.md",
+    "docs/agent-report-template.md",
+    "scripts/check_sizes.py",
+    "scripts/check_plans.py",
+    "scripts/check_adr_registry.py",
+    "scripts/ci_local.py",
+    "templates/registro-contexto.md",
+    "templates/plan-de-implementacion.md",
+    "templates/skevi/usage-guide.md",
+    "templates/skevi/architecture-overview.md",
+    ".skevi/usage-guide.md",
+    ".skevi/architecture-overview.md"
+  ],
+  "plans": "docs/plans"
+}
