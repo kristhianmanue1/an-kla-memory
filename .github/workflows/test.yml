@@ -27,6 +27,8 @@ jobs:
       - run: python -m unittest discover -s tests -p "test_*.py"
       - name: Validate file size limits
         run: python scripts/check_sizes.py
+      - name: Validate implementation plan structure
+        run: python scripts/check_plans.py
       - name: Validate ADR inventory and states
         run: python scripts/check_adr_registry.py
       - name: Validate release tag matches package version
