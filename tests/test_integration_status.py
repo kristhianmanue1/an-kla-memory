@@ -67,7 +67,7 @@ class IntegrationStatusTests(unittest.TestCase):
             result = integration_status(store)
         self.assertEqual(result["managed_context"]["presence"], "present")
         self.assertEqual(
-            result["managed_context"]["template_version"], "0.1.0-beta.11"
+            result["managed_context"]["template_version"], "0.1.0-beta.21"
         )
         self.assertTrue(result["managed_context"]["ok"])
         _validator().validate(result)

@@ -121,5 +121,31 @@ class AttackShapeTests(unittest.TestCase):
             self.assertIn("f-adversarial-consistent-rewrite-v1", stored.read_text())
 
 
+    def test_boundary_message_covers_both_failure_modes(self) -> None:
+        """Issue #109 punto 2: el mensaje canónico sale en ambos modos."""
+        module = _load_script()
+        frontera_ok = {
+            "forgery_accepted_by_verify": True,
+            "lie_served_to_consumer": True,
+        }
+        forgery_rechazada = {
+            "forgery_accepted_by_verify": False,
+            "lie_served_to_consumer": False,
+        }
+        lie_no_servida = {
+            "forgery_accepted_by_verify": True,
+            "lie_served_to_consumer": False,
+        }
+        self.assertIsNone(module.boundary_failure_mode(frontera_ok))
+        self.assertEqual(
+            module.boundary_failure_mode(forgery_rechazada),
+            "verify now rejects consistent rewrite",
+        )
+        self.assertEqual(
+            module.boundary_failure_mode(lie_no_servida),
+            "forgery accepted but lie not served to consumer",
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

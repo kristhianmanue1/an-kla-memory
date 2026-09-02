@@ -58,7 +58,7 @@ class VerificarAnclajeTests(unittest.TestCase):
         """Digest con el comando EXACTO del protocolo (misma forma que el script)."""
         result = subprocess.run(
             "find .an-kla/memory/refs -type f -exec shasum -a 256 {} + "
-            "| sort -k2 | shasum -a 256",
+            "| LC_ALL=C sort -k2 | shasum -a 256",
             shell=True,
             capture_output=True,
             text=True,

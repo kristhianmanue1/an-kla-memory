@@ -29,8 +29,13 @@ cumple este protocolo:
 **Anclar (cierre de cada run que escriba memoria):**
 
 ```bash
-find .an-kla/memory/refs -type f -exec shasum -a 256 {} + | sort -k2 | shasum -a 256
+find .an-kla/memory/refs -type f -exec shasum -a 256 {} + | LC_ALL=C sort -k2 | shasum -a 256
 ```
+
+`LC_ALL=C` fija la colación (decisión del dueño, 2026-09-02, issue #109
+punto 3): evita divergencia fail-closed espuria por locale en
+verificación cruzada macOS/Ubuntu. Fila del 2026-09-01 en adelante usan
+este comando.
 
 Añadir una fila a la tabla de abajo con fecha, digest, commit del run, y
 veredicto de comparación. Commit + push.
@@ -53,3 +58,4 @@ fuera de alcance por diseño (ADR-0031).
 | Fecha (UTC) | Digest sha256 (refs/) | Commit/origen | Comparación |
 |---|---|---|---|
 | 2026-09-01T00:41:40Z | `da10e7870477ed89badafb219f4d363f4079f315e4a8a2df8fb85b3c7621a7d8` | anclaje inicial (TOFU) — cierre del ciclo G-1/G-3, ADR-0043 aceptada | primera publicación |
+| 2026-09-02T15:32:55Z | `42d3f6be0eb005b0878cc4728454b5e63201a5f2b019bf1138c8e0117dde3eb7` | re-anclaje protocolo `LC_ALL=C` (issue #109 punto 3, decisión del dueño 2026-09-02) — digest idéntico con comando viejo y nuevo en el host canónico; `CURRENT` avanzó legítimamente a rev 37 desde el ancla previa sin fila intermedia | re-anclaje tras parada fail-closed confirmada (`anchor_divergence`, exit 1) |

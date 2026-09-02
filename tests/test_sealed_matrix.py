@@ -241,7 +241,7 @@ class MatrixReRunTests(unittest.TestCase):
             cwd=str(ROOT), capture_output=True, text=True,
             env={
                 **os.environ,
-                "ANKLA_NO_UPDATE_CHECK": "1",
+                "AN_KLA_NO_UPDATE_CHECK": "1",
                 # Anti-recursión: si el módulo re-ejecutado fuese la propia
                 # matriz, su fila 15 anidada se salta.
                 _ROW15_ENV: "1",
@@ -563,7 +563,7 @@ class Row11V1BundlesUnchangedTests(unittest.TestCase):
                     cwd=str(ROOT), capture_output=True, text=True,
                     env={
                         **os.environ,
-                        "ANKLA_NO_UPDATE_CHECK": "1",
+                        "AN_KLA_NO_UPDATE_CHECK": "1",
                         _ROW15_ENV: "1",
                     },
                 )
@@ -790,7 +790,7 @@ class Row15SuiteBothProfilesTests(unittest.TestCase):
             cwd=str(ROOT), capture_output=True, text=True,
             env={
                 **os.environ,
-                "ANKLA_NO_UPDATE_CHECK": "1",
+                "AN_KLA_NO_UPDATE_CHECK": "1",
                 _ROW15_ENV: "1",
             },
         )
@@ -818,7 +818,7 @@ class Row15SuiteBothProfilesTests(unittest.TestCase):
                 [interpreter, "-m", "unittest",
                  "tests.test_sealed_bundle", "-v"],
                 cwd=str(ROOT), capture_output=True, text=True,
-                env={**os.environ, "ANKLA_NO_UPDATE_CHECK": "1"},
+                env={**os.environ, "AN_KLA_NO_UPDATE_CHECK": "1"},
             )
             self.assertEqual(probe.returncode, 0, probe.stderr[-4000:])
             self.assertIn("... ok", probe.stderr)
@@ -837,7 +837,7 @@ class Row15SuiteBothProfilesTests(unittest.TestCase):
                     cwd=str(ROOT), capture_output=True, text=True,
                     env={
                         **os.environ,
-                        "ANKLA_NO_UPDATE_CHECK": "1",
+                        "AN_KLA_NO_UPDATE_CHECK": "1",
                         # Anti-recursión: ci_local lanza un discover que
                         # vuelve a cargar esta matriz; su fila 15 anidada
                         # se salta.

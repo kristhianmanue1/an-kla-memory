@@ -21,7 +21,10 @@ Exit codes canónicos (check guard_anclaje_script de la tarjeta):
 
 Nota sobre el digest: el pipeline canónico hace dos pasadas de
 `shasum -a 256` (una por archivo, una al agregado ordenado por nombre con
-`sort -k2`; el segundo shasum agrega el sufijo "  -" de stdin a su entrada).
+`LC_ALL=C sort -k2`; el segundo shasum agrega el sufijo "  -" de stdin a su
+entrada). `LC_ALL=C` fija la colación para que macOS y Ubuntu agreguen en
+el mismo orden (issue #109 punto 3; sin ella, un locale distinto produce
+divergencia FALSA en verificación cruzada de máquinas).
 Por eso este script delega en el pipeline textual vía subproceso con shell:
 reproducirlo en Python puro (hashlib) requeriría reimplementar el framing
 exacto de shasum y sería una segunda implementación divergente del
@@ -65,8 +68,9 @@ def compute_refs_digest(refs_root: Path) -> str:
     """Digest del directorio refs/ con el comando EXACTO del protocolo.
 
     La primera pasada es shasum -a 256 por archivo; el agregado se ordena
-    por nombre de archivo (sort -k2) y se vuelve a hashear. Se ejecuta vía
-    subproceso con el pipeline literal para no reimplementar el framing.
+    por nombre de archivo con colación C (LC_ALL=C sort -k2, issue #109
+    punto 3) y se vuelve a hashear. Se ejecuta vía subproceso con el
+    pipeline literal para no reimplementar el framing.
     """
     if not refs_root.is_dir():
         print(
@@ -88,7 +92,7 @@ def compute_refs_digest(refs_root: Path) -> str:
         relative = resolved.name
     command = (
         f"find {relative} -type f -exec shasum -a 256 {{}} + "
-        f"| sort -k2 | shasum -a 256"
+        f"| LC_ALL=C sort -k2 | shasum -a 256"
     )
     result = subprocess.run(
         command,

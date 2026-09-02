@@ -48,6 +48,11 @@
           "type": "string",
           "pattern": "^an-kla:subject:v1:(?:actor|api|decision|dependency|doc|environment|integration|issue|project|service|system):p-[0-9a-f]{32}:[a-z0-9._-]{1,64}$",
           "description": "Optional contextual identity (ADR-0033), separate from the physical record id and from lineage refs. Data, never AN-KLA authority; the namespace is bound to project identity under write_lock at commit time."
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Optional free text made available to the FTS index (priority: indexable_text > text > render > summary > p; issue #15/ADR-0018). A record committed without any indexable text succeeds but is invisible to retrieval: it is excluded with reason no_text and the commit outcome carries the warning record_without_indexable_text."
         }
       }
     },

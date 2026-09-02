@@ -54,7 +54,7 @@ def main() -> int:
         cli = scripts / ("an-kla.exe" if os.name == "nt" else "an-kla")
         _run([str(python), "-m", "pip", "install", "--no-deps", str(wheels[0])])
         version = _run([str(cli), "--version"])
-        if version.stdout.decode().strip() != "an-kla-memory 0.1.0b20":
+        if version.stdout.decode().strip() != "an-kla-memory 0.1.0b21":
             raise SystemExit("clean_wheel_wrong_version")
         help_result = _run([str(cli), "--no-update-check", "--help"])
         help_text = help_result.stdout.decode()
@@ -112,7 +112,7 @@ def main() -> int:
         )
         if context_status.get("ok") is not True or context_status.get(
             "template_version"
-        ) != "0.1.0-beta.11":
+        ) != "0.1.0-beta.21":
             raise SystemExit("clean_wheel_context_not_current")
         identity_status = json.loads(
             _run([*consumer_command, "identity", "status"]).stdout

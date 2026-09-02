@@ -1,6 +1,10 @@
 # ADR-0046: atestación de observación local firmada (`attest`)
 
-- **Estado:** Propuesta — corregida tras ronda adversarial pre-code (veredicto fix-and-retry, absorbido 2026-09-01); implementación requiere orden explícita del maintainer
+- **Estado:** Aceptada — implementación S2 completa en el ciclo beta.21
+  (commit ed64994, receipts HMAC, verificación bifásica CLI/engine,
+  anti-replay por tombstone); F0 adoptadas por el maintainer (2026-09-01);
+  ronda adversarial pre-code fix-and-retry absorbida; bump de plantilla
+  del contrato ejecutado según §8.
 - **Fecha:** 2026-09-01
 - **Decide sobre:** cómo un agente honesto operando el CLI standalone puede registrar autoridad `tool_observed` legítima (issue #102 Fase A); no decide hooks del host (#56/ADR-0047), identidad de agente (#58/G4) ni checkpoint-authority
 - **Entradas:** decisiones F0 adoptadas (plan #102 §4), spike S0 (veredicto proceed), ronda adversarial pre-code (`docs/planning/adr-0046-attest-precode-adversarial-2026-09-01.md`)

@@ -10,11 +10,19 @@ planning-result (gate de claves exactas en ``_planning_result``).
 
 from __future__ import annotations
 
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 
 from an_kla.canonical import digest_json
 from an_kla.store import MemoryStore
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 DIGEST_B = "sha256:" + "b" * 64
@@ -147,6 +155,102 @@ class CommitIndexableWarningTests(unittest.TestCase):
         self.assertIn(
             "record_without_indexable_text", result["outcome"]["warnings"]
         )
+
+
+class CommitIndexableWarningCliTests(unittest.TestCase):
+    """Issue #111 (P1): el warning debe verse sin leer JSON crudo.
+
+    La capa CLI replica ``record_without_indexable_text`` en stderr sin
+    contaminar el stdout programático (JSON canónico del resultado).
+    """
+
+    def test_commit_stderr_warns_and_stdout_stays_canonical(self) -> None:
+        with tempfile.TemporaryDirectory() as root:
+            env = {**os.environ, "AN_KLA_NO_UPDATE_CHECK": "1"}
+
+            def run(*argv: str) -> subprocess.CompletedProcess:
+                return subprocess.run(
+                    [
+                        sys.executable,
+                        "-m",
+                        "an_kla",
+                        "--project-root",
+                        root,
+                        *argv,
+                    ],
+                    cwd=ROOT,
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                    timeout=60,
+                )
+
+            run("init")
+            base = json.loads(run("status").stdout)["revision"]
+            proposal = {
+                "schema": "an-kla/write-proposal-v1",
+                "base_revision": base,
+                "stream": "facts",
+                "operation": "add",
+                "requested_representation": "summary",
+                "record": {"id": "f-cli-sin-texto", "contenido": "propio"},
+                "lineage": {"derived_from_retrieval": False, "refs": []},
+            }
+            authority = {
+                "schema": "an-kla/write-authority-v1",
+                "proposal_sha256": digest_json(proposal),
+                "base_revision": base,
+                "authority_class": "model_derived",
+                "issuer": {
+                    "kind": "model",
+                    "id": "test-authority",
+                    "configuration_fingerprint": DIGEST_B,
+                },
+                "evidence": [],
+                "scope": {
+                    "streams": ["facts"],
+                    "representations": ["summary"],
+                    "operations": ["add"],
+                },
+            }
+            proposal_path = Path(root) / "proposal.json"
+            authority_path = Path(root) / "authority.json"
+            proposal_path.write_text(json.dumps(proposal), encoding="utf-8")
+            authority_path.write_text(json.dumps(authority), encoding="utf-8")
+            planning = run(
+                "plan-write",
+                "--proposal",
+                str(proposal_path),
+                "--authority",
+                str(authority_path),
+            ).stdout
+            planning_path = Path(root) / "planning-result.json"
+            planning_path.write_text(planning, encoding="utf-8")
+
+            completed = run(
+                "commit-write-plan",
+                "--expected-current",
+                base,
+                "--proposal",
+                str(proposal_path),
+                "--authority",
+                str(authority_path),
+                "--planning-result",
+                str(planning_path),
+            )
+
+            self.assertIn(
+                "warning: record_without_indexable_text "
+                "(id=f-cli-sin-texto)",
+                completed.stderr,
+            )
+            payload = json.loads(completed.stdout)
+            self.assertIn(
+                "record_without_indexable_text",
+                payload["outcome"]["warnings"],
+            )
+            self.assertNotIn("warning:", completed.stdout)
 
 
 if __name__ == "__main__":

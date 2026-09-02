@@ -94,15 +94,21 @@ confirma con `checkpoint commit`; usa los schemas instalados
 `working-state-v2` y `checkpoint-authority-v1` como fuente normativa.
 
 Toda escritura de hechos usa `plan-write` → `commit-write-plan`. El comando
-público `write` ya no existe. Si una operación devuelve un resultado ambiguo o
-incompleto, inspecciona su UUID antes de reintentar:
+público `write` ya no existe. Un hecho sin texto indexable (campos
+`indexable_text` > `text` > `render` > `summary` > `p`) se confirma pero
+queda invisible para la recuperación: la CLI lo advierte en stderr con
+`record_without_indexable_text` y no es recuperable después. Si una
+operación devuelve un resultado ambiguo o incompleto, inspecciona su UUID
+antes de reintentar:
 
 ```bash
 .venv/bin/python -m an_kla --project-root . transaction inspect UUID
 ```
 
 Los estados distinguen no comprometido, comprometido, auditoría incompleta,
-durabilidad incompleta y resultado desconocido.
+durabilidad incompleta y resultado desconocido. El runbook completo de
+recuperación, con la tabla de decisión por estado, está en
+`docs/agent-recovery.md`.
 
 ### Escritura con `subject_ref`
 

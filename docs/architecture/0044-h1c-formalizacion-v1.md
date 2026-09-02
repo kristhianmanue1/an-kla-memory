@@ -113,8 +113,14 @@ El mecanismo ejecutable de C1 es `scripts/verificar_anclaje.py`, que corre
 el comando EXACTO del protocolo sobre `refs/`:
 
 ```bash
-find .an-kla/memory/refs -type f -exec shasum -a 256 {} + | sort -k2 | shasum -a 256
+find .an-kla/memory/refs -type f -exec shasum -a 256 {} + | LC_ALL=C sort -k2 | shasum -a 256
 ```
+
+`LC_ALL=C` fija la colación del `sort` (decisión del dueño, 2026-09-02,
+issue #109 punto 3): sin ella, macOS y Ubuntu pueden agregar en orden
+distinto y producir divergencia fail-closed espuria en verificación
+cruzada de máquinas. El cambio de protocolo se re-ancló en el registro de
+anclajes.
 
 ...compara el resultado contra el último ancla parseable del registro
 (`docs/gobernanza/anclajes/2026-08-31-anclaje-inicial.md`, digest sha256 sin

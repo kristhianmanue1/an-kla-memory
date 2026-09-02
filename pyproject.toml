@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "an-kla-memory"
 dynamic = ["version"]
 description = "Local revisioned memory for AI-agent projects"
-requires-python = ">=3.9"
+requires-python = ">=3.9,<3.14"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{name = "The AN-KLA Memory Authors"}]

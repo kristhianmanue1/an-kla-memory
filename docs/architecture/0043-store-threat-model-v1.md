@@ -176,10 +176,13 @@ futuro de la línea de desarrollo, no de este ADR.)
   guard + copia desechable + ataque + verificación post-ataque. El
   resultado esperado (`forgery_accepted_by_verify: true` AND
   `lie_served_to_consumer: true`) ES la frontera: el selftest exige ambas
-  condiciones mecánicamente y si `verify` deja de aceptar la falsificación
-  sale con exit code 5 y mensaje canónico
-  (`redteam_boundary_changed: … ADR-0043 must be reviewed`) — el cambio de
-  frontera es un evento visible, no un éxito silencioso.
+  condiciones mecánicamente y si la frontera cambia — `verify` deja de
+  aceptar la falsificación **o** la mentira deja de servirse — sale con
+  exit code 5 y mensaje canónico en ambos modos
+  (`redteam_boundary_changed: <modo>; ADR-0043 must be reviewed`, con modo
+  `verify now rejects consistent rewrite` o `forgery accepted but lie not
+  served to consumer`, issue #109 punto 2) — el cambio de frontera es un
+  evento visible, no un éxito silencioso.
 
 ## Referencias
 

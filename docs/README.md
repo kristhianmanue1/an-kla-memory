@@ -64,9 +64,9 @@ prospectiva esté implementada; la última columna conserva esa distinción.
 | 0043 | [store-threat-model-v1](architecture/0043-store-threat-model-v1.md) | Modelo de amenazas del store: adversarios A1-A4, frontera declarada tamper-evidence≠tamper-proofness con evidencia experimental de reescritura consistente | Aceptada | Producida por tarjeta ankla-g1-g3 (2026-08-31); ronda adversarial fresca (APROBADO CON CORRECCIONES, 6 hallazgos corregidos en `bd4ba27`); 🔒 aceptada por decisión del dueño 2026-08-31 con anclaje externo de digest (protocolo anclajes/) |
 | 0044 | [h1c-formalizacion-v1](architecture/0044-h1c-formalizacion-v1.md) | Formalización de H1c (independencia del verificador): formulación débil-con-anclaje decidida post-evidencia G-3/v4, con condiciones (C1)-(C3) y verificación activa ejecutable (`scripts/verificar_anclaje.py`) | Propuesta | Producida por tarjeta ankla-h1c-formalizacion-anclaje (2026-08-31); cierra la fila PR-5/§7.5 y la corrección [a] del análisis del mandato; pendiente ronda adversarial + decisión del dueño |
 | 0045 | [adopcion-skevi](architecture/0045-adopcion-skevi.md) | Adopción formal del estándar de proceso Skevi: corpus copiado sin edición, gate propio reemplazado por `check_sizes.py`/`check_plans.py` de Skevi configurados vía `skevi-gate.json`, registro en `AGENTS.md` + `.skevi/`, gates en CI | Aceptada | Orden explícita del maintainer (2026-09-01); corpus pinneado a skevi @ `ee309bb`; implementada en rama `feat/adopcion-skevi`, vigente al merge |
-| 0046 | [attest-local-signed-observation-v1](architecture/0046-attest-local-signed-observation-v1.md) | Atestación de observación local firmada (`attest`): receipts HMAC-SHA256 acuñados por el motor con whitelist fail-closed, nonce-addressing y binding vigente; convierte receipts verificados en autoridad `tool_observed` vía `write-authority-v2` | Propuesta | F0 adoptadas por orden del maintainer (2026-09-01); spike S0 proceed; ronda adversarial pre-code fix-and-retry absorbida (`planning/adr-0046-attest-precode-adversarial-2026-09-01.md`); pendiente orden de implementación S2 |
+| 0046 | [attest-local-signed-observation-v1](architecture/0046-attest-local-signed-observation-v1.md) | Atestación de observación local firmada (`attest`): receipts HMAC-SHA256 acuñados por el motor con whitelist fail-closed, nonce-addressing y binding vigente; convierte receipts verificados en autoridad `tool_observed` vía `write-authority-v2` | Aceptada | F0 adoptadas por orden del maintainer (2026-09-01); spike S0 proceed; ronda adversarial pre-code fix-and-retry absorbida (`planning/adr-0046-attest-precode-adversarial-2026-09-01.md`); S2 implementada (ed64994) y contrato bumped en beta.21 |
 
-Resumen: **45 ADRs**, sin huecos; **42 aceptadas** y **3 propuestas**. No hay
+Resumen: **46 ADRs**, sin huecos; **43 aceptadas** y **3 propuestas**. No hay
 ADRs rechazadas ni reemplazadas en el registro actual.
 
 ### Documentación normativa
@@ -103,9 +103,9 @@ Los reportes son evidencia experimental, no decisiones de ranking.
 de publicación. Cumplen el rol de `CHANGELOG.md`.
 
 La release documentada más reciente es
-[`v0.1.0-beta.20`](releases/v0.1.0-beta.20.md), con su
-[ronda adversarial](releases/v0.1.0-beta.20-adversarial.md); la anterior
-con ronda cerrada es [`v0.1.0-beta.18`](releases/v0.1.0-beta.18.md).
+[`v0.1.0-beta.21`](releases/v0.1.0-beta.21.md), con su
+[ronda adversarial](releases/v0.1.0-beta.21-adversarial.md); la anterior
+con ronda cerrada es [`v0.1.0-beta.20`](releases/v0.1.0-beta.20.md).
 
 ### Planificación y respuestas históricas
 

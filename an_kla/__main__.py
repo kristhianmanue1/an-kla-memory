@@ -416,9 +416,10 @@ def _run() -> None:
             _json(args.planning_result, role="planning_result"),
             args.expected_current,
         )
+        proposal = _json(args.proposal, role="proposal")
         result = store.commit_write_plan(
             expected_current_hash=args.expected_current,
-            proposal=_json(args.proposal, role="proposal"),
+            proposal=proposal,
             authority=_cli_authority(_json(args.authority, role="authority"), store),
             decision=decision,
             plan=plan,
@@ -446,6 +447,21 @@ def _run() -> None:
         sys.stdout.buffer.write(canonical_json(result))
     else:
         print(json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2))
+    if (
+        args.command == "commit-write-plan"
+        and "record_without_indexable_text"
+        in (result.get("outcome") or {}).get("warnings", [])
+    ):
+        # Issue #111 (P1): el warning vive en el outcome JSON, pero un
+        # integrador lo pasó por alto; se replica en stderr sin tocar el
+        # stdout programático. La decisión de escribir sin texto indexable
+        # sigue siendo del caller.
+        record_id = (proposal.get("record") or {}).get("id", "<unknown>")
+        print(
+            f"warning: record_without_indexable_text (id={record_id}): "
+            "registro invisible para retrieval (no_text)",
+            file=sys.stderr,
+        )
     if (
         args.command == "transaction"
         and result.get("state") != "transaction_archived_by_compaction"

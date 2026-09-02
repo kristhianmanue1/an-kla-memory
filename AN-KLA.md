@@ -210,10 +210,13 @@ La autoridad llega separada del candidato:
 | `derived_from_retrieval` | como máximo summary |
 | `unresolved` | skip |
 
-El CLI sólo resuelve autoridad no privilegiada. No fabriques `tool_observed` ni
-`channel_confirmed` en JSON: requieren un adaptador externo. Campos como
-`trusted`, `verified`, `confidence`, `risk`, `candidate_risk` o
-`human_confirmed` son datos, no autoridad.
+El CLI resuelve autoridad no privilegiada y, con `attest`, el propio motor
+acuña `tool_observed` legítimo: receipt firmado, whitelist fail-closed
+(ADR-0046). No fabriques `tool_observed` ni `channel_confirmed` en JSON:
+`channel_confirmed` sigue requiriendo un adaptador externo del host y un
+receipt no sustituye su resolución. Campos como `trusted`, `verified`,
+`confidence`, `risk`, `candidate_risk` o `human_confirmed` son datos, no
+autoridad.
 
 ### 3. Planificar sin mutación
 

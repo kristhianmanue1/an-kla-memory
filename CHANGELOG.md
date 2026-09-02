@@ -14,6 +14,24 @@ en fase de pre-release `0.1.0`.
 
 Nada aún.
 
+## [v0.1.0-beta.21]
+
+Cierre del ciclo attest (issue #102, ADR-0046): plantilla del contrato
+bumpada a `0.1.0-beta.21` con el vocabulario de attest en §Resolver
+autoridad, ADR-0046 aceptada, y adjuntos de la ronda adversarial externa
+(issue #111): techo `requires-python <3.14`, schema `write-proposal-v1`
+documenta `text`, warning `record_without_indexable_text` visible en
+stderr, runbook `docs/agent-recovery.md`, mensaje canónico del selftest
+redteam unificado (#109) y anclaje con `LC_ALL=C` (re-anclaje registrado).
+
+**Cambiado**: contrato gestionado `0.1.0-beta.11` → `0.1.0-beta.21`
+(flujos explícitos: adopt-baseline + update; sin cambios fuera de
+§Resolver autoridad); entrada histórica `0.1.0-beta.11` añadida al
+registro de plantillas (falso `managed_contract_modified` eliminado).
+Detalle y límites en la
+[nota de release](docs/releases/v0.1.0-beta.21.md) y su
+[ronda adversarial](docs/releases/v0.1.0-beta.21-adversarial.md).
+
 ## [v0.1.0-beta.20]
 
 Fase H de hardness del issue #102 (reportada por el consumidor real

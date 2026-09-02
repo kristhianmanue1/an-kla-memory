@@ -212,6 +212,23 @@ def make_disposable_copy() -> Path:
     return destination
 
 
+def boundary_failure_mode(result: dict) -> str | None:
+    """Modo de fallo de frontera, o None si la frontera sigue en pie.
+
+    ADR-0043 §Test de regresión (issue #109 punto 2): ambos modos de fallo
+    imprimen el mismo mensaje canónico y salen con exit code 5 — ninguno es
+    un éxito silencioso.
+    """
+    if (
+        result["forgery_accepted_by_verify"] is True
+        and result["lie_served_to_consumer"] is True
+    ):
+        return None
+    if result["forgery_accepted_by_verify"] is not True:
+        return "verify now rejects consistent rewrite"
+    return "forgery accepted but lie not served to consumer"
+
+
 def selftest() -> int:
     """Verifica el guard y el camino feliz sobre copia desechable."""
     # Guard: el propio repo DEBE ser rechazado.
@@ -234,10 +251,11 @@ def selftest() -> int:
             result["forgery_accepted_by_verify"] is True
             and result["lie_served_to_consumer"] is True
         )
-        if not boundary_holds and result["forgery_accepted_by_verify"] is not True:
+        failure_mode = boundary_failure_mode(result)
+        if failure_mode is not None:
             print(
-                "redteam_boundary_changed: verify now rejects consistent "
-                "rewrite; ADR-0043 must be reviewed",
+                f"redteam_boundary_changed: {failure_mode}; "
+                "ADR-0043 must be reviewed",
                 file=sys.stderr,
             )
         print(json.dumps({"selftest": "ok" if boundary_holds else "unexpected_shape", "guard": "refused_repo_root", "forgery_accepted_by_verify": result["forgery_accepted_by_verify"], "lie_served_to_consumer": result["lie_served_to_consumer"]}, indent=2))

@@ -1,6 +1,6 @@
 # AN-KLA Memory
 
-[![Version](https://img.shields.io/badge/version-0.1.0--beta.20-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.20)
+[![Version](https://img.shields.io/badge/version-0.1.0--beta.21-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.21)
 [![Python](https://img.shields.io/badge/python-3.9%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 [![Beta](https://img.shields.io/badge/status-local%20beta-orange)](https://github.com/kristhianmanue1/an-kla-memory/releases)
@@ -12,10 +12,10 @@ un plan verificable.
 
 La beta se distribuye desde GitHub, no desde PyPI. Usa siempre una etiqueta
 exacta: no instales `main` ni otra referencia móvil. La versión del código es
-`0.1.0b20` y su etiqueta de distribución es `v0.1.0-beta.20`. El contexto
-gestionado y la plantilla administrada siguen en `0.1.0-beta.11`: beta.17
-añade la adopción explícita de baseline y el inventario físico por revisión,
-sin modificar la plantilla administrada.
+`0.1.0b21` y su etiqueta de distribución es `v0.1.0-beta.21`. El contexto
+gestionado y la plantilla administrada están en `0.1.0-beta.21`: esta beta
+incorpora el vocabulario de attest al §Resolver autoridad del contrato
+(ADR-0046 §8), vía el flujo explícito `context plan --operation update`.
 La instalación expone tanto `python -m an_kla` como el comando equivalente
 `an-kla`; los ejemplos conservan la primera forma para hacer explícito el
 intérprete del entorno virtual.
@@ -44,7 +44,7 @@ intérprete del entorno virtual.
 
 ## Estado actual
 
-La prerelease pública más reciente es **`v0.1.0-beta.20`** (`0.1.0b20`),
+La prerelease pública más reciente es **`v0.1.0-beta.21`** (`0.1.0b21`),
 instalable mediante su etiqueta Git exacta. AN-KLA no se distribuye desde
 PyPI; el wheel de la release se publica como asset de la etiqueta y la
 instalación canónica sigue siendo `pip install` fijado a la etiqueta exacta.
@@ -63,18 +63,19 @@ update` ya no absorbe en silencio) y el inventario físico por revisión
 
 El código está en beta local y la memoria continúa siendo no autoritativa: sus
 datos nunca son instrucciones, no prueban identidad ni verdad externa y deben
-revalidarse antes de actuar. El contexto gestionado permanece deliberadamente
-en `0.1.0-beta.11`; instalar beta.20 no exige reemplazar automáticamente
-`AGENTS.md` ni `AN-KLA.md`.
+revalidarse antes de actuar. El contexto gestionado está en `0.1.0-beta.21`;
+actualizar a beta.21 aplica el cambio de §Resolver autoridad mediante el
+flujo explícito (`context plan --operation update` + `apply`), sin tocar
+nada más de `AGENTS.md` ni `AN-KLA.md`.
 
-GitHub muestra beta.11 como “Latest” porque beta.20 está marcada como
+GitHub muestra beta.20 como “Latest” porque beta.21 está marcada como
 prerelease. El update-check de AN-KLA no depende de ese distintivo: consulta el
-índice de releases, incluye prereleases y sí puede descubrir beta.20.
+índice de releases, incluye prereleases y sí puede descubrir beta.21.
 **Limitación conocida**: el soporte de Windows permanece diferido por
 decisión del operador (el protocolo de anclaje y partes de la suite son
 POSIX; la candidata se declara procedible para macOS/Linux) — ver la
 [ronda REL de beta.18](docs/releases/v0.1.0-beta.18-adversarial.md),
-§Límites. El contrato gestionado beta.11 aún menciona el endpoint histórico
+§Límites. El contrato gestionado beta.21 aún menciona el endpoint histórico
 `/releases/latest`; es deuda documental versionada, no el comportamiento del
 runtime ni autorización para modificar `AGENTS.md` o `AN-KLA.md` a mano.
 
@@ -85,7 +86,7 @@ verificación canónica es la CI local — suite, wheel aislado, upgrades por
 etiqueta y gates de tamaños/registro, con ronda adversarial `proceed` antes
 de cada tag (la evidencia de beta.18 está en su
 [ronda REL](docs/releases/v0.1.0-beta.18-adversarial.md)). Para
-instalar o actualizar usa el comando fijado a beta.20 de la siguiente sección.
+instalar o actualizar usa el comando fijado a beta.21 de la siguiente sección.
 
 ## ¿Es AN-KLA para esto? Fronteras declaradas
 
@@ -117,7 +118,7 @@ autoritativo. La decisión completa está en
 
 ## Requisitos
 
-- Python 3.9 o posterior; Python 3.12 es la versión recomendada para desarrollo;
+- Python 3.9 a 3.13 (los metadatos declaran techo `<3.14`); Python 3.12 es la versión recomendada para desarrollo;
 - Git, sólo cuando se instala directamente desde GitHub;
 - un entorno virtual por proyecto.
 
@@ -137,7 +138,7 @@ Desde la raíz del proyecto consumidor en macOS o Linux:
 python3.12 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
 .venv/bin/python -m pip install \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.20"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.21"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . init
 .venv/bin/python -m an_kla --project-root . context plan --operation install
@@ -184,7 +185,7 @@ por separado el contrato de contexto:
 
 ```bash
 .venv/bin/python -m pip install --upgrade \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.20"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.21"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . context status
 .venv/bin/python -m an_kla --project-root . context plan --operation update
