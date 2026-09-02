@@ -46,7 +46,7 @@ existentes (`plan-write`→`commit`, `checkpoint plan`→`commit`).
 el host registra sus hooks; `host_hooks_evaluated` pasa de `false` a ejes
 reales; los hooks dejan de ser disciplina del consumidor y pasan a contrato.
 
-## 2. Contrato propuesto (a congelar en ADR-0046)
+## 2. Contrato propuesto (a congelar en ADR-0047)
 
 **`host-hooks/v1`** — declaración del host, leída por AN-KLA en modo
 read-only:
@@ -75,7 +75,7 @@ correcciones de la ronda adversarial de este plan):
    mecanismo sólo cubre `checkpoint`. La evidencia de invocaciones
    read-only exige un **registro append-only nuevo** bajo `.an-kla/`
    (estilo receipts): su crecimiento, limpieza e idempotencia se congelan
-   en ADR-0046 (cambio de huella `.an-kla/` documentado — ADR-0039 declara
+   en ADR-0047 (cambio de huella `.an-kla/` documentado — ADR-0039 declara
    explícitamente "este ADR no añade archivos"). "Reciente" se define con
    reloj inyectable estilo `--now` (precedente repo), nunca `datetime.now`
    escondido.
@@ -85,7 +85,7 @@ correcciones de la ronda adversarial de este plan):
    shell; el host ejecuta su propia mecánica y llama al CLI.
    **Precisión adversarial (LOW)**: `status` ambiguo (4 comandos) y
    `retrieve`/`assemble-context` exigen `--query`/`--budget` que aporta el
-   host en runtime — ADR-0046 congela el mapeo acción→invocación CLI
+   host en runtime — ADR-0047 congela el mapeo acción→invocación CLI
    exacta y cómo el registro vincula una invocación read-only concreta.
 3. **`observed_profile`** se vuelve `host-managed/v1` sólo con declaración
    bien formada + al menos un `hook_invoked` reciente; en otro caso
@@ -150,7 +150,7 @@ veredicto `proceed | refine | escalate`:
   legado).
 - S2: registro append-only de invocaciones read-only: formato propio vs
   **derivar de/referenciar `attest-receipt-v1` (#102, aún sin ADR —
-  máximo ADR vigente: 0044)** — decisión explícita de ADR-0046 con
+  máximo ADR vigente: 0044)** — decisión explícita de ADR-0047 con
   precedencia declarada (§11.2 párrafo 2: dos formatos paralelos de
   evidencia observada bajo `.an-kla/` serían violación); crecimiento,
   limpieza e idempotencia; reloj inyectable (`--now`).
@@ -161,7 +161,7 @@ veredicto `proceed | refine | escalate`:
   `hook_invoked` por escritura directa del registro, (c) bump de schema
   rompiendo consumidores del consumidor real.
 
-### F2 — ADR-0046 + ronda adversarial pre-code
+### F2 — ADR-0047 + ronda adversarial pre-code
 
 Congelar: schema `host-hooks/v1`, diccionario de acciones con mapeo
 acción→invocación CLI exacta, semántica
@@ -186,12 +186,12 @@ Ronda adversarial con plantilla `docs/adversarial-template.md`; sin
   testeado) según F0-D5; tests dorados nuevos + compat legado.
 - F3-C: acciones gobernadas (`assemble-context`, `checkpoint` con
   `working-state-v2` y autoridad separada — cero atajos) + registro de
-  invocaciones que S2/ADR-0046 definan; continuidad pendiente visible vía
+  invocaciones que S2/ADR-0047 definan; continuidad pendiente visible vía
   vocabulario `checkpoint-obligation-v1` (evaluar entregar
   `checkpoint obligation` en el CLI).
 - F3-D: docs — AN-KLA.md (sección integración), README, guía para hosts;
   plantilla de declaración de ejemplo; **fila del registro en
-  docs/README.md en el mismo commit que ADR-0046 (§10)**; guía de
+  docs/README.md en el mismo commit que ADR-0047 (§10)**; guía de
   worktrees (el host escribe `host-hooks.json` en el checkout canónico —
   `.an-kla/` no viaja entre worktrees).
 

@@ -50,7 +50,7 @@ declara `cryptography>=42` con detección perezosa y fallo cerrado
 - B: extra opcional `attest = ["cryptography>=42"]` con Ed25519 (patrón
   sealed). Más hardness, más superficie. Decisión de maintainer (F0-D1).
 
-**Esquema propuesto (congelar en ADR-0045, no antes).**
+**Esquema propuesto (congelar en ADR-0046, no antes).**
 
 ```json
 {"schema": "an-kla/attest-receipt-v1",
@@ -227,7 +227,7 @@ adicional, no requisito de consumo.
 
 ## 3. Tareas — Fase A: attest (ADR + spike antes de código)
 
-Secuencia obligatoria (practicas §2, §3): spike → ADR-0045 con su ronda
+Secuencia obligatoria (practicas §2, §3): spike → ADR-0046 con su ronda
 adversarial pre-code → implementación por fases (§4) → ronda adversarial
 final. Toca `write_policy.py` → ronda adversarial no negociable antes de
 cualquier tag.
@@ -247,7 +247,7 @@ cualquier tag.
   (identity.py:474, :507) deben fallar cerrado con código estable
   (`receipt_identity_mismatch`); worktrees = otro `project_uuid` (ADR-0022):
   receipts no cruzan stores — documentar.
-- **S1 (ADR-0045)**: congelar receipt schema v1 (con `base_revision`, `nonce`
+- **S1 (ADR-0046)**: congelar receipt schema v1 (con `base_revision`, `nonce`
   y `whitelist_digest` anti-replay/anti-edición), whitelist fail-closed,
   flujo `attest run --expected-current <sha256> -- <cmd>` → receipt firmado
   + salida; política: `_cli_authority` acepta `tool_observed` con evidence
@@ -271,15 +271,25 @@ cualquier tag.
   sin clave → fail cerrado; suite completa + adversarial final con
   invariantes §8 con evidencia.
 
-## 4. Decisiones abiertas del maintainer (bloquean su fase, no el plan)
+## 4. Decisiones F0 del maintainer — ADOPTADAS (2026-09-01, orden explícita "adelante con firmas")
 
-| ID | Decisión | Propuesta |
-|---|---|---|
-| F0-D1 | Firma: HMAC stdlib vs extra Ed25519 | HMAC-SHA256 (A) |
-| F0-D2 | Registro sin texto indexable: warning vs flag exigido | warning (aditivo) primero |
-| F0-D3 | Alcance whitelist inicial | sólo-lectura: git rev-parse/diff, unittest, sha256sum |
-| F0-D4 | `attest` requiere store inicializado o funciona standalone | requiere store (ligar receipts a project_uuid + binding vigente) |
-| F0-D5 | checkpoint-authority: ¿mismo camino attest en v1? | fuera de alcance v1; ADR-0045 lo declara explícito |
+| ID | Decisión | Adoptada | Nota |
+|---|---|---|---|
+| F0-D1 | Firma: HMAC stdlib vs extra Ed25519 | **HMAC-SHA256 (A)** | stdlib-only; modelo de amenaza honesto documentado en ADR-0046 |
+| F0-D2 | Registro sin texto indexable: warning vs flag | **warning (aditivo) primero** | entregado en beta.20 (#104); flag diferido |
+| F0-D3 | Alcance whitelist inicial | **sólo-lectura: git rev-parse/diff, unittest, sha256sum** | fail-closed, patrones exactos/prefijo |
+| F0-D4 | attest requiere store inicializado | **sí** | receipts ligados a project_uuid + binding vigente (store_identity) |
+| F0-D5 | checkpoint-authority en v1 | **fuera de alcance v1** | ADR-0046 lo declara; paralelo checkpoint_policy.py intacto |
+
+Alcance añadido por el spike S0 (obligatorio, mismo PR que keygen/attest):
+actualizar `_PATTERNS`/ignorados de `export_restore.py` para
+`.an-kla/attest.key` (ignorado — la clave no viaja en export),
+`.an-kla/attest-whitelist.json` y `.an-kla/receipts/**`; sin ello
+`export create` falla con `export_unrecognized_durable_path`. Bump de
+`policy_fingerprint` (write) aceptado y documentado; planning-results en
+vuelo fallan cerrado (`write_policy_fingerprint_mismatch`). Nota: el
+número ADR-0045 fue tomado por la adopción de Skevi; attest pasa a
+**ADR-0046** (y G2/#56 a **ADR-0047**).
 
 ## 5. Riesgos
 
