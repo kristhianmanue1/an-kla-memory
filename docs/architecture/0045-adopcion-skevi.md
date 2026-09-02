@@ -126,3 +126,20 @@ cierra la deuda puntual.
 - `docs/history/` de Skevi: `drift-checkpoint-an-kla-2026-08-15.md`.
 - #95 (partir ADR-0042), #103/#104 (trabajo en curso que infla
   `store.py`), issues de deuda de tamaños creados con esta adopción.
+
+## Enmienda 1 (2026-09-02) — pin re-anclado a `v1.0.0`
+
+Skevi publicó `v1.0.0`: promoción Alpha→Estable (PROP-005; criterio de
+salida cumplido por el piloto infosalud, F0→F3 punta a punta con
+evidencia, 2026-09-01). La inspección `diff ee309bb v1.0.0` muestra
+**byte-idéntico** todo lo que esta ADR adopta (estándar, guía `00`–`05`,
+plantillas, `check_sizes.py`, `check_plans.py`); los cambios de `v1.0.0`
+son internos de Skevi — su propia adopción de AN-KLA Memory como memoria
+del agente, su `skevi-gate.json`, README/manifiesto e historial.
+
+Consecuencia: el pin vigente pasa a ser `v1.0.0` (`.skevi/usage-guide.md`
+actualizado en el mismo commit). Las menciones a «alpha» en Contexto y
+«Por qué no» quedan superadas por esta enmienda — el registro original no
+se reescribe. El criterio de re-inspección por diff no cambia: una
+actualización futura de Skevi se inspecciona y se adopta con enmienda o
+ADR nueva, nunca en silencio.
