@@ -37,8 +37,7 @@ intérprete del entorno virtual.
   - [Recuperación y escritura](#recuperación-y-escritura)
   - [Respaldo sellado (opcional)](#respaldo-sellado-opcional)
 - [Desarrollo del motor](#desarrollo-del-motor)
-  - [Hooks locales de memoria (plantilla, opcional)](#hooks-locales-de-memoria-plantilla-opcional)
-  - [Verificación sin CI remota (principio local-only)](#verificación-sin-ci-remota-principio-local-only)
+  - [Hooks locales y verificación local-only (opcional)](#hooks-locales-y-verificación-local-only-opcional)
 - [Límites de la beta](#límites-de-la-beta)
 - [Documentación](#documentación)
 - [Licencia](#licencia)
@@ -425,37 +424,20 @@ python3.12 -m venv .venv
 Consulta [AN-KLA.md](AN-KLA.md), los [fundamentos matemáticos](docs/mathematical-foundations.md)
 y las decisiones de arquitectura en `docs/architecture/`.
 
-### Hooks locales de memoria (plantilla, opcional)
+### Hooks locales y verificación local-only (opcional)
 
-`core.hooksPath` no se clona con el repositorio: instala la guardia con
-
-```bash
-git config core.hooksPath docs/hooks-template
-chmod +x docs/hooks-template/pre-commit
-```
-
-La plantilla (`docs/hooks-template/pre-commit`) es **disciplina, no
-atestación**: avisa sobre diagnósticos del contexto gestionado y recuerda
-sembrar checkpoint de sesión; falla sólo con `MEM_GUARD_STRICT=1` y se
-escapa con `git commit --no-verify` (degradación declarada). La doble
-defensa del update-check aplica en hooks también: exporta
-`AN_KLA_NO_UPDATE_CHECK=1` (la plantilla ya lo hace) además de
-`--no-update-check` por invocación.
-
-### Verificación sin CI remota (principio local-only)
-
-Este repo **no define workflows de GitHub Actions** (decisión del operador,
-beta.20): todo push/tag debe poder verificarse localmente con
-
-```bash
-.venv/bin/python scripts/ci_local.py --simulate-ci
-.venv/bin/python scripts/check_sizes.py
-.venv/bin/python scripts/check_adr_registry.py
-```
-
-Ningún consumidor debe depender de Actions para operar o verificar AN-KLA
-(issue #102 §3.8). La suite local cubre Python 3.9/3.12/3.13 en
-macOS/Linux; Windows permanece diferido.
+- **Hook de memoria** (`docs/hooks-template/pre-commit`): disciplina, no
+  atestación — avisa sobre diagnósticos del contexto y recuerda sembrar
+  checkpoint; falla sólo con `MEM_GUARD_STRICT=1`, escape con
+  `git commit --no-verify` (degradación declarada). `core.hooksPath` no
+  se clona: instalar con `git config core.hooksPath docs/hooks-template`.
+  Doble defensa del update-check: `AN_KLA_NO_UPDATE_CHECK=1` (ya incluida)
+  además de `--no-update-check` por invocación.
+- **Sin CI remota** (decisión del operador, beta.20; issue #102 §3.8): el
+  repo no define workflows de GitHub Actions; la verificación canónica es
+  local — `scripts/ci_local.py --simulate-ci` + `scripts/check_sizes.py`
+  + `scripts/check_plans.py` + `scripts/check_adr_registry.py`. Suite
+  local: Python 3.9/3.12/3.13 en macOS/Linux; Windows diferido.
 
 ## Límites de la beta
 

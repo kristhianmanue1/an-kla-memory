@@ -14,6 +14,23 @@ en fase de pre-release `0.1.0`.
 
 Nada aún.
 
+## [v0.1.0-beta.20]
+
+Fase H de hardness del issue #102 (reportada por el consumidor real
+infosalud), CI local-only (retiro de GitHub Actions, decisión del
+operador), ADR-0043/0044 y adopción de Skevi (ADR-0045). Sin cambios de
+formato físico ni de política de autoridad; los stores beta.19 se leen
+sin migración.
+
+**Cambiado**: `plan-write` falla cerrado con códigos `plan_*` nuevos
+(#103); marcadores dentro de un fence reportan
+`managed_block_inside_fence` (#105); `commit-write-plan` añade
+`record_without_indexable_text` a `outcome.warnings` (#104); el repo ya
+no define workflows remotos — verificación canónica local. Detalle y
+límites en la
+[nota de release](docs/releases/v0.1.0-beta.20.md) y su
+[ronda adversarial](docs/releases/v0.1.0-beta.20-adversarial.md).
+
 ## [v0.1.0-beta.19]
 
 Preparación documental del ciclo de release: deuda C-2 de la ronda REL
