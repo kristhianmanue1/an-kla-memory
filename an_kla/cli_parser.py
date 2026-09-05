@@ -31,9 +31,10 @@ def build_parser() -> argparse.ArgumentParser:
         "init", help="Crear la memoria local .an-kla/memory/ en el proyecto."
     )
     init_cmd.add_argument("--transaction-id")
-    sub.add_parser(
+    status_cmd = sub.add_parser(
         "status", help="Resumen verificable de la revisión vigente."
     )
+    status_cmd.add_argument("--on-behalf-of-hook", default=None)
     verify_cmd = sub.add_parser(
         "verify", help="Verificar integridad de la memoria (o de una revisión)."
     )
@@ -84,6 +85,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Instante inyectable para la recencia en v2 (ISO-8601; sin reloj escondido).",
     )
+    integration_status_cmd.add_argument("--on-behalf-of-hook", default=None)
     sub.add_parser(
         "capabilities", help="Descubrir contratos y límites sin leer memoria."
     )
@@ -121,6 +123,7 @@ def build_parser() -> argparse.ArgumentParser:
     retrieve_cmd.add_argument(
         "--profile", choices=(SCAN_PROFILE, INDEX_PROFILE), default=SCAN_PROFILE
     )
+    retrieve_cmd.add_argument("--on-behalf-of-hook", default=None)
     retrieve_cmd.add_argument(
         "--freshness-profile", choices=(FRESHNESS_PROFILE,),
         help="Activar proyección de frescura (edad de verified_at); añade denominadores.",
@@ -148,6 +151,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--budget", type=int, required=True,
         help="Presupuesto global exacto del contenido servido; el framing del host no se mide.",
     )
+    assemble_cmd.add_argument("--on-behalf-of-hook", default=None)
     assemble_cmd.add_argument(
         "--new-information", help="Texto del caller incluido como sección indivisible."
     )
@@ -405,6 +409,7 @@ def build_parser() -> argparse.ArgumentParser:
     checkpoint_commit_cmd.add_argument("--plan", required=True)
     checkpoint_commit_cmd.add_argument("--expected-current", required=True)
     checkpoint_commit_cmd.add_argument("--transaction-id", required=True)
+    checkpoint_commit_cmd.add_argument("--on-behalf-of-hook", default=None)
     resume_cmd = sub.add_parser("resume", help="Reanudar desde una revisión consistente.")
     resume_cmd.add_argument("--budget", type=int, required=True)
     resume_cmd.add_argument("--query")

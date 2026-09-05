@@ -43,6 +43,10 @@ from .inventory import MAX_LIMIT as INVENTORY_MAX_LIMIT
 from .inventory import STREAMS as INVENTORY_STREAMS
 from .inventory import inventory
 from .integration import integration_status, integration_status_v2
+from .attest import AttestError
+from .hook_runs import HookRunError, mint_hook_run
+from .identity import IdentityError
+from .host_hooks import load_declaration as _load_hook_declaration
 from .evaluation import evaluate_retrieval, evaluate_retrieval_v2
 from .export_restore import ExportError
 from .sealed import SEALED_EXTRA_ERROR_CODE, SealedExtraNotInstalledError
@@ -91,6 +95,50 @@ def _json(path: str, *, role: str | None = None) -> Any:
         return json.loads(payload)
     except json.JSONDecodeError:
         raise CliUsageError("input_json_invalid", role) from None
+
+
+def _mint_hook_run(
+    store: Any, hook_id: str | None, action: str, subject: dict[str, Any]
+) -> None:
+    """Acuña evidencia de hook (ADR-0047 §4) sin perturbar stdout.
+
+    Sólo se invoca en camino exitoso. Cualquier degradación (sin
+    `attest init`, hook no declarado, acción que no coincide, identidad
+    rota) queda como warning en stderr; el comando conserva su resultado
+    y su exit code. Una invocación sin flag no acuña nada.
+    """
+    if hook_id is None:
+        return
+    try:
+        declaration = _load_hook_declaration(store.project_root)
+        hook = next(
+            (
+                item
+                for item in declaration["hooks"]
+                if item.get("id") == hook_id
+            ),
+            None,
+        )
+        if declaration["declaration"] != "well_formed" or hook is None:
+            sys.stderr.write(
+                "an-kla warning: hook_run_mint_skipped (hook_id_not_declared)\n"
+            )
+            return
+        if hook.get("action") != action:
+            sys.stderr.write(
+                "an-kla warning: hook_run_mint_skipped (action_mismatch)\n"
+            )
+            return
+        mint_hook_run(
+            store,
+            hook_id=hook_id,
+            trigger=hook["trigger"],
+            action=action,
+            exit_code=0,
+            subject=subject,
+        )
+    except (AttestError, IdentityError, HookRunError) as exc:
+        sys.stderr.write(f"an-kla warning: hook_run_mint_skipped ({exc})\n")
 
 
 def _cli_authority(value: Any, store: Any = None) -> Any:
@@ -208,6 +256,10 @@ def _run() -> None:
         result = store.initialize_with_outcome(transaction_id=args.transaction_id)
     elif args.command == "status":
         result = store.verify()
+        _mint_hook_run(
+            store, args.on_behalf_of_hook, "status",
+            {"kind": "revision", "value": result.get("revision")},
+        )
     elif args.command == "startup-diagnostic":
         try:
             result = startup_diagnostic(store)
@@ -355,6 +407,10 @@ def _run() -> None:
                 args.expected_current,
                 transaction_id=args.transaction_id,
             )
+            _mint_hook_run(
+                store, args.on_behalf_of_hook, "checkpoint",
+                {"kind": "revision", "value": result.get("revision")},
+            )
     elif args.command == "resume":
         result = resume(store, args.budget, query=args.query, profile=args.profile)
     elif args.command == "rebuild-index":
@@ -371,6 +427,10 @@ def _run() -> None:
             now=parse_freshness_now(args.now) if args.now is not None else None,
             stale_after_days=args.stale_after_days,
         )
+        _mint_hook_run(
+            store, args.on_behalf_of_hook, "retrieve",
+            {"kind": "query", "query": args.query, "budget": args.budget},
+        )
     elif args.command == "assemble-context":
         if args.freshness_profile is None and (
             args.now is not None or args.stale_after_days is not None
@@ -384,6 +444,10 @@ def _run() -> None:
             freshness_profile=args.freshness_profile,
             now=parse_freshness_now(args.now) if args.now is not None else None,
             stale_after_days=args.stale_after_days,
+        )
+        _mint_hook_run(
+            store, args.on_behalf_of_hook, "assemble-context",
+            {"kind": "query", "query": args.query, "budget": args.budget},
         )
     elif args.command == "evaluate":
         result = evaluate_retrieval(store, args.queries, args.budget)

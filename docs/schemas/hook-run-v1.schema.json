@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:hook-run-v1",
+  "title": "AN-KLA HookRun v1",
+  "description": "Evidencia de invocación de hook del host (ADR-0047 §4): variante de attest-receipt-v1 acuñada por el motor con HMAC-SHA256 sobre canonical-json y binding de identidad firmado. NO consume tombstones. El run_hmac cubre todos los demás campos en forma canónica.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "run_id", "hook_id", "trigger", "action", "exit_code", "subject_digest", "project_uuid", "store_identity", "adapter_fingerprint", "observed_at", "run_hmac"],
+  "properties": {
+    "schema": {"const": "an-kla/hook-run-v1"},
+    "run_id": {"type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[0-9a-f-]+$"},
+    "hook_id": {"type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[A-Za-z0-9._-]+$"},
+    "trigger": {"enum": ["before_task", "material_close_or_handoff"]},
+    "action": {"enum": ["assemble-context", "retrieve", "checkpoint", "status"]},
+    "exit_code": {"type": "integer", "minimum": 0, "maximum": 255},
+    "subject_digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+    "project_uuid": {"type": "string", "minLength": 1},
+    "store_identity": {"type": "string", "minLength": 1},
+    "adapter_fingerprint": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"},
+    "observed_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"},
+    "run_hmac": {"type": "string", "pattern": "^hmac-sha256:[0-9a-f]{64}$"}
+  }
+}

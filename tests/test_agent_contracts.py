@@ -61,6 +61,7 @@ class InstalledSchemaTests(unittest.TestCase):
         "export-manifest-v1",
         "export-result-v1",
         "export-verify-result-v1",
+        "hook-run-v1",
         "host-hooks-v1",
         "identity-adoption-plan-v1",
         "identity-durability-receipt-v1",

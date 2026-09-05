@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from .context_package import context_status
+from .hook_runs import is_recent, read_verified_runs
 from .host_hooks import load_declaration
 from .startup import startup_diagnostic
 
@@ -105,29 +106,43 @@ def integration_status_v2(
     Re-expone los bloques `store`/`managed_context` de v1 verbatim y
     añade `host_hooks`. El perfil observado se calcula, jamás se
     persiste: sin declaración bien formada -> `unspecified`; con ella y
-    sin evidencia de invocación verificada -> `declared-not-invoked`
-    (F3-C añadirá la lectura de `.an-kla/hook-runs/`; hasta entonces la
-    evidencia no puede existir porque no hay escritor). `now` inyecta el
-    reloj para la recencia (HOOK_RECENCY_HOURS); nunca `datetime.now`
-    escondido.
+    sin evidencia verificada reciente -> `declared-not-invoked`; con al
+    menos un run verificado reciente -> `host-managed/v1`. `now`
+    inyecta el reloj para la recencia (HOOK_RECENCY_HOURS); nunca
+    `datetime.now` escondido.
     """
     base = integration_status(store, context_target)
-    del now  # recencia: se aplica cuando F3-C aporte la lectura de runs
     declaration = load_declaration(store.project_root)
-    if declaration["declaration"] == "well_formed":
-        observed_profile = "declared-not-invoked"
-        pending = (
-            "required"
-            if any(
-                hook.get("required") is True
-                and hook.get("trigger") == "material_close_or_handoff"
-                for hook in declaration["hooks"]
-            )
-            else "none"
-        )
-    else:
+    well_formed = declaration["declaration"] == "well_formed"
+    declared_ids = {hook["id"] for hook in declaration["hooks"]}
+    runs, degraded, unknown = read_verified_runs(
+        store, declared_ids if well_formed else None
+    )
+    recent_ids = {
+        run["hook_id"] for run in runs if is_recent(run["observed_at"], now)
+    }
+    if not well_formed:
         observed_profile = "unspecified"
         pending = "none"
+    else:
+        observed_profile = (
+            "host-managed/v1" if recent_ids else "declared-not-invoked"
+        )
+        required_hooks = [
+            hook["id"]
+            for hook in declaration["hooks"]
+            if hook.get("required") is True
+            and hook.get("trigger") == "material_close_or_handoff"
+        ]
+        pending_required = [
+            hook_id for hook_id in required_hooks if hook_id not in recent_ids
+        ]
+        if pending_required and (degraded or not recent_ids and runs):
+            pending = "indeterminate"
+        elif pending_required:
+            pending = "required"
+        else:
+            pending = "none"
     return {
         "schema": INTEGRATION_SCHEMA_V2,
         "store": base["store"],
@@ -145,10 +160,17 @@ def integration_status_v2(
             "hook_declared": [
                 hook["id"] for hook in declaration["hooks"]
             ],
-            "hook_invoked": [],
-            "unknown_hooks": [],
+            "hook_invoked": [
+                {
+                    "run_id": run["run_id"],
+                    "hook_id": run["hook_id"],
+                    "observed_at": run["observed_at"],
+                }
+                for run in runs[:50]
+            ],
+            "unknown_hooks": unknown,
             "pending_continuity": pending,
-            "degraded_codes": [],
+            "degraded_codes": degraded,
         },
     }
 
