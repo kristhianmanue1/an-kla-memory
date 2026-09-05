@@ -173,7 +173,11 @@ futuro de la línea de desarrollo, no de este ADR.)
   del script (rechaza roots con `.git/` o `docs/architecture/`; exit codes
   canónicos) y forma del ataque.
 - `scripts/redteam_consistent_rewrite.py --selftest` — camino completo:
-  guard + copia desechable + ataque + verificación post-ataque. El
+  guard + copia desechable + ataque + verificación post-ataque. Desde
+  beta.22 el selftest corre además como gate automático en
+  `scripts/ci_local.py` (paso 3/7, issue #112): una regresión futura en
+  `falsify()` que haga a `verify` aceptar la falsificación rompe la corrida
+  canónica local. El
   resultado esperado (`forgery_accepted_by_verify: true` AND
   `lie_served_to_consumer: true`) ES la frontera: el selftest exige ambas
   condiciones mecánicamente y si la frontera cambia — `verify` deja de

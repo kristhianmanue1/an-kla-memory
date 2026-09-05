@@ -9,6 +9,13 @@ Bandera --simulate-ci: exporta GITHUB_ACTIONS=true y CI=true antes de los tests
 para reproducir el entorno del runner y atrapar tests no deterministas (categoría
 del bug fixeado en PR #25).
 
+Desde beta.22 añade dos pasos locales (issue #112 e issue #111/P5):
+- el selftest G-3 de `redteam_consistent_rewrite.py` corre como gate
+  automático (camino completo: guard + copia desechable + ataque +
+  verificación post-ataque; ADR-0043 §Test de regresión);
+- la matriz de intérpretes soportados emite estado por versión y falla si
+  una versión soportada disponible no pasa la suite.
+
 Complementa, no reemplaza, el CI remoto: éste valida 3 SO x 2 Python reales,
 cosa que el CI local no hace.
 """
@@ -17,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -26,10 +34,12 @@ PYTHON = sys.executable
 CHECK_SIZES = ROOT / "scripts" / "check_sizes.py"
 CHECK_PLANS = ROOT / "scripts" / "check_plans.py"
 CHECK_ADRS = ROOT / "scripts" / "check_adr_registry.py"
+REDTEAM = ROOT / "scripts" / "redteam_consistent_rewrite.py"
+SUPPORTED_VERSIONS = ("3.9", "3.12", "3.13")
 
 
 def paso_import() -> str:
-    print("==> [1/5] importabilidad de an_kla", flush=True)
+    print("==> [1/7] importabilidad de an_kla", flush=True)
     try:
         result = subprocess.run(
             [PYTHON, "-c", "import an_kla"],
@@ -52,7 +62,7 @@ def paso_import() -> str:
 
 def paso_tests(simulate_ci: bool) -> str:
     etiqueta = " (simulate-ci)" if simulate_ci else ""
-    print(f"==> [2/5] unittest discover{etiqueta}", flush=True)
+    print(f"==> [2/7] unittest discover{etiqueta}", flush=True)
     env = dict(os.environ)
     if simulate_ci:
         env["GITHUB_ACTIONS"] = "true"
@@ -67,8 +77,68 @@ def paso_tests(simulate_ci: bool) -> str:
     return estado
 
 
+def paso_redteam_selftest() -> str:
+    print("==> [3/7] selftest G-3 (redteam_consistent_rewrite)", flush=True)
+    if not REDTEAM.exists():
+        print("    SKIP: scripts/redteam_consistent_rewrite.py no existe")
+        return "SKIP"
+    result = subprocess.run(
+        [PYTHON, str(REDTEAM), "--selftest"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        print("    OK")
+        return "OK"
+    print(f"    FAIL: exit {result.returncode} (esperado 0; 5 = frontera ADR-0043 cambiada)")
+    if result.stderr.strip():
+        print("    stderr:", result.stderr.strip())
+    return "FAIL"
+
+
+def _interprete_para(version: str) -> str | None:
+    """Resuelve un intérprete para la versión, o None si no hay."""
+    encontrado = shutil.which(f"python{version}")
+    if encontrado:
+        return encontrado
+    mayor, menor = (int(parte) for parte in version.split("."))
+    if sys.version_info[:2] == (mayor, menor):
+        return sys.executable
+    return None
+
+
+def paso_matriz() -> str:
+    print("==> [4/7] matriz de intérpretes soportados", flush=True)
+    estados: dict[str, str] = {}
+    for version in SUPPORTED_VERSIONS:
+        interprete = _interprete_para(version)
+        if interprete is None:
+            estados[version] = "SKIP (intérprete no disponible en PATH)"
+            continue
+        if Path(interprete).resolve() == Path(PYTHON).resolve():
+            estados[version] = (
+                f"OK ({Path(interprete).name}: cubierto por el paso unittest)"
+            )
+            continue
+        env = dict(os.environ)
+        env["PYTHONPATH"] = str(ROOT)
+        result = subprocess.run(
+            [interprete, "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"],
+            cwd=ROOT,
+            env=env,
+        )
+        nombre = Path(interprete).name
+        estados[version] = "OK" if result.returncode == 0 else f"FAIL ({nombre})"
+    for version, estado in estados.items():
+        print(f"    python{version}: {estado}")
+    if any(estado.startswith("FAIL") for estado in estados.values()):
+        return "FAIL"
+    return "OK"
+
+
 def paso_sizes() -> str:
-    print("==> [3/5] check_sizes", flush=True)
+    print("==> [5/7] check_sizes", flush=True)
     if not CHECK_SIZES.exists():
         print("    SKIP: scripts/check_sizes.py no existe (ver issue #21 / PR #24)")
         return "SKIP"
@@ -79,7 +149,7 @@ def paso_sizes() -> str:
 
 
 def paso_plans() -> str:
-    print("==> [4/5] check_plans", flush=True)
+    print("==> [6/7] check_plans", flush=True)
     if not CHECK_PLANS.exists():
         print("    SKIP: scripts/check_plans.py no existe")
         return "SKIP"
@@ -90,7 +160,7 @@ def paso_plans() -> str:
 
 
 def paso_adrs() -> str:
-    print("==> [5/5] check_adr_registry", flush=True)
+    print("==> [7/7] check_adr_registry", flush=True)
     result = subprocess.run([PYTHON, str(CHECK_ADRS)], cwd=ROOT)
     estado = "OK" if result.returncode == 0 else "FAIL"
     print(f"    {estado}")
@@ -109,6 +179,8 @@ def main() -> int:
     resultados = {
         "importabilidad": paso_import(),
         "unittest": paso_tests(args.simulate_ci),
+        "redteam_selftest": paso_redteam_selftest(),
+        "matriz_interpretes": paso_matriz(),
         "check_sizes": paso_sizes(),
         "check_plans": paso_plans(),
         "check_adr_registry": paso_adrs(),
