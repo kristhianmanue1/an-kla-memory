@@ -33,6 +33,7 @@ SCHEMA_FILES = {
     "export-manifest-v1": "export-manifest-v1.schema.json",
     "export-result-v1": "export-result-v1.schema.json",
     "export-verify-result-v1": "export-verify-result-v1.schema.json",
+    "host-hooks-v1": "host-hooks-v1.schema.json",
     "identity-adoption-plan-v1": "identity-adoption-plan-v1.schema.json",
     "identity-durability-receipt-v1": "identity-durability-receipt-v1.schema.json",
     "identity-intent-v1": "identity-intent-v1.schema.json",

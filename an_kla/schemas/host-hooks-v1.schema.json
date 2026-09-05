@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:host-hooks-v1",
+  "title": "AN-KLA HostHooks v1",
+  "description": "Declaración read-only de hooks gobernados del host (ADR-0047 §1). El host escribe este archivo; AN-KLA sólo lo lee. Límites congelados: máximo 16 hooks; id 1-128 de [A-Za-z0-9._-]; budget_bytes 1..1048576; fingerprint sha256; required sólo en checkpoint (verificación cruzada del módulo, no expresable en este schema).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "adapter", "declared_profile", "hooks"],
+  "properties": {
+    "schema": {"const": "an-kla/host-hooks-v1"},
+    "adapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "configuration_fingerprint"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1, "maxLength": 128},
+        "version": {"type": "string", "minLength": 1, "maxLength": 64},
+        "configuration_fingerprint": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "declared_profile": {"const": "host-managed/v1"},
+    "hooks": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "trigger", "action"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9._-]+$"
+          },
+          "trigger": {"enum": ["before_task", "material_close_or_handoff"]},
+          "action": {
+            "enum": ["assemble-context", "retrieve", "checkpoint", "status"]
+          },
+          "budget_bytes": {"type": "integer", "minimum": 1, "maximum": 1048576},
+          "required": {"type": "boolean"}
+        }
+      }
+    }
+  }
+}
