@@ -1,7 +1,9 @@
 # ADR-0047: hooks gobernados del host (`host-hooks/v1`) con perfil observado en `integration-status-v2`
 
-- **Estado:** Propuesta
-- **Implementación:** No iniciada
+- **Estado:** Aceptada (2026-09-05, orden explícita del maintainer en
+  sesión: "adelante con recomendación aceptada", sobre la recomendación de
+  aceptar sin enmendar con vigilancia F4 del perfil débil)
+- **Implementación:** Parcial (F3-A en curso; F3-B/C/D pendientes)
 - **Fecha:** 2026-09-05
 - **Decide sobre:** el contrato G2 de ADR-0031: cómo declara el host sus
   hooks de recuperación y checkpoint, cómo AN-KLA observa su ejecución con
