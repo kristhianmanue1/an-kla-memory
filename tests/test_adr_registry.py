@@ -25,9 +25,9 @@ class AdrRegistryTests(unittest.TestCase):
         # 0045 aceptada 2026-09-01 (orden explícita del dueño: adoptar
         # Skevi); 0046 aceptada en el ciclo beta.21 (S2 implementado,
         # ed64994); 0044 propuesta (tarjeta ankla-h1c-formalizacion-anclaje)
-        # y 0047 host-hooks propuesta (sesión #102, 2026-09-02) — las 3
-        # Propuestas vigentes son posteriores a 0043.
-        self.assertEqual(states["Propuesta"], 3)
+        # y 0047 host-hooks propuesta (#56/G2, F2 2026-09-05, sesión del
+        # maintainer) — las 4 Propuestas vigentes son posteriores a 0043.
+        self.assertEqual(states["Propuesta"], 4)
 
     def test_detects_gap_and_state_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
