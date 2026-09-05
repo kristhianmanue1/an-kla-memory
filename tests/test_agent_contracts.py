@@ -68,6 +68,7 @@ class InstalledSchemaTests(unittest.TestCase):
         "identity-operation-result-v1",
         "identity-status-v1",
         "integration-status-v1",
+        "integration-status-v2",
         "inventory-v1",
         "mcp-retrieve-v2",
         "project-identity-v1",

@@ -79,12 +79,15 @@ def capabilities() -> dict[str, Any]:
             "integration": {
                 "command": "integration status",
                 "schema": "an-kla/integration-status-v1",
+                "schema_v2": "an-kla/integration-status-v2",
+                "schema_version_flag": "--schema-version {v1|v2} (default v1)",
                 "read_only": True,
                 "supported_profiles": ["agent-owned/v1", "host-managed/v1"],
                 "observed_profile_v1": "unspecified",
+                "observed_profile_v2": "computed (ADR-0047 §5; nunca persistido)",
                 "agent_binding": "unverified",
                 "sharing_boundary": "filesystem-access/unverified",
-                "decision": "ADR-0039",
+                "decision": "ADR-0039 + ADR-0047",
             },
             "transactions": {
                 "attempt": "an-kla/transaction-attempt-v1",

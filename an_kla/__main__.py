@@ -42,7 +42,7 @@ from .inventory import DEFAULT_LIMIT as INVENTORY_DEFAULT_LIMIT
 from .inventory import MAX_LIMIT as INVENTORY_MAX_LIMIT
 from .inventory import STREAMS as INVENTORY_STREAMS
 from .inventory import inventory
-from .integration import integration_status
+from .integration import integration_status, integration_status_v2
 from .evaluation import evaluate_retrieval, evaluate_retrieval_v2
 from .export_restore import ExportError
 from .sealed import SEALED_EXTRA_ERROR_CODE, SealedExtraNotInstalledError
@@ -217,7 +217,13 @@ def _run() -> None:
             # absolute paths (§11.1).  Broader CLI coverage is issue #84.
             raise CliUsageError("startup_diagnostic_failed")
     elif args.command == "integration":
-        result = integration_status(store, args.target)
+        if args.schema_version == "v2":
+            result = integration_status_v2(
+                store, args.target,
+                now=parse_freshness_now(args.now) if args.now is not None else None,
+            )
+        else:
+            result = integration_status(store, args.target)
     elif args.command == "inventory":
         streams = None if args.streams is None else tuple(
             s for s in args.streams.split(",") if s

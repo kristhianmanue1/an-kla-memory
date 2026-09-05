@@ -1,15 +1,31 @@
-"""G1 (ADR-0039): observable integration status over existing axes."""
+"""G1 (ADR-0039): observable integration status over existing axes.
+
+G2 (ADR-0047 §5): `integration-status-v2` añade el bloque `host_hooks`
+y computa `observed_profile` con la declaración del host. v1 permanece
+byte-idéntico y es la emisión por defecto (los goldens legacy y los
+scripts de upgrade con wheels pinneadas siguen verificando v1); v2 es
+opt-in vía `--schema-version v2`.
+"""
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 
 from .context_package import context_status
+from .host_hooks import load_declaration
 from .startup import startup_diagnostic
 
 
 INTEGRATION_SCHEMA = "an-kla/integration-status-v1"
+INTEGRATION_SCHEMA_V2 = "an-kla/integration-status-v2"
 SUPPORTED_PROFILES = ("agent-owned/v1", "host-managed/v1")
+OBSERVED_PROFILES_V2 = (
+    "unspecified",
+    "declared-not-invoked",
+    "host-managed/v1",
+)
+HOOK_RECENCY_HOURS = 24
 _CONTEXT_SCHEMA = "an-kla/context-status/v1"
 
 
@@ -79,4 +95,70 @@ def integration_status(store: Any, context_target: str = "AGENTS.md") -> dict[st
     }
 
 
-__all__ = ["INTEGRATION_SCHEMA", "SUPPORTED_PROFILES", "integration_status"]
+def integration_status_v2(
+    store: Any,
+    context_target: str = "AGENTS.md",
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Compose `integration-status-v2` (ADR-0047 §5), read-only.
+
+    Re-expone los bloques `store`/`managed_context` de v1 verbatim y
+    añade `host_hooks`. El perfil observado se calcula, jamás se
+    persiste: sin declaración bien formada -> `unspecified`; con ella y
+    sin evidencia de invocación verificada -> `declared-not-invoked`
+    (F3-C añadirá la lectura de `.an-kla/hook-runs/`; hasta entonces la
+    evidencia no puede existir porque no hay escritor). `now` inyecta el
+    reloj para la recencia (HOOK_RECENCY_HOURS); nunca `datetime.now`
+    escondido.
+    """
+    base = integration_status(store, context_target)
+    del now  # recencia: se aplica cuando F3-C aporte la lectura de runs
+    declaration = load_declaration(store.project_root)
+    if declaration["declaration"] == "well_formed":
+        observed_profile = "declared-not-invoked"
+        pending = (
+            "required"
+            if any(
+                hook.get("required") is True
+                and hook.get("trigger") == "material_close_or_handoff"
+                for hook in declaration["hooks"]
+            )
+            else "none"
+        )
+    else:
+        observed_profile = "unspecified"
+        pending = "none"
+    return {
+        "schema": INTEGRATION_SCHEMA_V2,
+        "store": base["store"],
+        "managed_context": base["managed_context"],
+        "integration": {
+            "supported_profiles": list(SUPPORTED_PROFILES),
+            "observed_profile": observed_profile,
+            "agent_binding": "unverified",
+            "sharing_boundary": "filesystem-access/unverified",
+            "host_hooks_evaluated": True,
+        },
+        "host_hooks": {
+            "declaration": declaration["declaration"],
+            "reason_codes": declaration["reason_codes"],
+            "hook_declared": [
+                hook["id"] for hook in declaration["hooks"]
+            ],
+            "hook_invoked": [],
+            "unknown_hooks": [],
+            "pending_continuity": pending,
+            "degraded_codes": [],
+        },
+    }
+
+
+__all__ = [
+    "HOOK_RECENCY_HOURS",
+    "INTEGRATION_SCHEMA",
+    "INTEGRATION_SCHEMA_V2",
+    "OBSERVED_PROFILES_V2",
+    "SUPPORTED_PROFILES",
+    "integration_status",
+    "integration_status_v2",
+]

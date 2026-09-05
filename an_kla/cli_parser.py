@@ -75,6 +75,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Ejes observables de la integración (ADR-0039), read-only.",
     )
     integration_status_cmd.add_argument("--target", default="AGENTS.md")
+    integration_status_cmd.add_argument(
+        "--schema-version", choices=("v1", "v2"), default="v1",
+        help="v1 congelado (default, ADR-0039) o v2 con host_hooks (ADR-0047).",
+    )
+    integration_status_cmd.add_argument(
+        "--now",
+        default=None,
+        help="Instante inyectable para la recencia en v2 (ISO-8601; sin reloj escondido).",
+    )
     sub.add_parser(
         "capabilities", help="Descubrir contratos y límites sin leer memoria."
     )
