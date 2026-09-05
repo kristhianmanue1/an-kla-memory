@@ -3,9 +3,9 @@
 - **Estado:** Aceptada (2026-09-05, orden explícita del maintainer en
   sesión: "adelante con recomendación aceptada", sobre la recomendación de
   aceptar sin enmendar con vigilancia F4 del perfil débil)
-- **Implementación:** Parcial (F3-A/B/C servidas: declaración, v2 con
-  bloque host_hooks, acuñado y lectura verificada de hook-runs; F3-D y
-  ronda adversarial final pendientes)
+- **Implementación:** Implementada (F3-A/B/C/D; ronda adversarial final
+  fix-and-retry absorbida y re-verificada —
+  `docs/planning/g2-f3-final-adversarial-2026-09-05.md`)
 - **Fecha:** 2026-09-05
 - **Decide sobre:** el contrato G2 de ADR-0031: cómo declara el host sus
   hooks de recuperación y checkpoint, cómo AN-KLA observa su ejecución con

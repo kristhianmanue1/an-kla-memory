@@ -24,6 +24,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import os
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -41,6 +42,9 @@ from .identity import IdentityError, read_binding
 
 RUNS_SCHEMA = "an-kla/hook-run-v1"
 RUNS_RELATIVE = Path(".an-kla") / "hook-runs" / "runs" / "sha256"
+
+_MAX_ENTRY_BYTES = 65536
+_MAX_ENTRIES_SCANNED = 2000
 
 _HOOK_RUN_KEYS = (
     "schema", "run_id", "hook_id", "trigger", "action", "exit_code",
@@ -124,11 +128,17 @@ def read_verified_runs(
     """
     directory = Path(store.project_root) / RUNS_RELATIVE
     try:
-        paths = sorted(directory.glob("*.json"))
-    except OSError:
+        with os.scandir(directory) as scanner:
+            names = sorted(entry.name for entry in scanner)
+    except FileNotFoundError:
+        return [], [], []  # sin runs todavía: lectura limpia, sin degradación
+    except (NotADirectoryError, PermissionError, OSError):
         return [], ["hook_runs_unreadable"], []
+    paths = [directory / name for name in names if name.endswith(".json")]
+    truncated = len(paths) > _MAX_ENTRIES_SCANNED
+    paths = paths[:_MAX_ENTRIES_SCANNED]
     if not paths:
-        return [], [], []
+        return [], ([] if not truncated else ["hook_runs_truncated"]), []
     try:
         signing_key = key if key is not None else _load_key(store.project_root)
     except AttestError:
@@ -140,8 +150,13 @@ def read_verified_runs(
 
     runs: list[dict[str, Any]] = []
     degraded: list[str] = []
+    if truncated:
+        degraded.append("hook_runs_truncated")
     for path in paths:
         try:
+            if path.stat().st_size > _MAX_ENTRY_BYTES:
+                degraded.append("hook_run_invalid")
+                continue
             entry = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, UnicodeDecodeError, json.JSONDecodeError):
             degraded.append("hook_run_invalid")
@@ -150,6 +165,16 @@ def read_verified_runs(
             degraded.append("hook_run_invalid")
             continue
         if entry.get("schema") != RUNS_SCHEMA:
+            degraded.append("hook_run_invalid")
+            continue
+        if not isinstance(entry.get("exit_code"), int) or isinstance(
+            entry["exit_code"], bool
+        ) or not 0 <= entry["exit_code"] <= 255:
+            degraded.append("hook_run_invalid")
+            continue
+        try:
+            datetime.strptime(entry["observed_at"], "%Y-%m-%dT%H:%M:%SZ")
+        except (TypeError, ValueError):
             degraded.append("hook_run_invalid")
             continue
         expected_mac = SIGNATURE_PREFIX + hmac.new(

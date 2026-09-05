@@ -85,7 +85,6 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Instante inyectable para la recencia en v2 (ISO-8601; sin reloj escondido).",
     )
-    integration_status_cmd.add_argument("--on-behalf-of-hook", default=None)
     sub.add_parser(
         "capabilities", help="Descubrir contratos y límites sin leer memoria."
     )

@@ -139,6 +139,12 @@ def _mint_hook_run(
         )
     except (AttestError, IdentityError, HookRunError) as exc:
         sys.stderr.write(f"an-kla warning: hook_run_mint_skipped ({exc})\n")
+    except OSError:
+        # _write_exclusive puede fallar por OSError (mkdir/open/fsync);
+        # el comando ya tuvo éxito: warning estable sin filtrar rutas.
+        sys.stderr.write(
+            "an-kla warning: hook_run_mint_skipped (hook_run_unwritable)\n"
+        )
 
 
 def _cli_authority(value: Any, store: Any = None) -> Any:

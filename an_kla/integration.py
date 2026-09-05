@@ -119,7 +119,9 @@ def integration_status_v2(
         store, declared_ids if well_formed else None
     )
     recent_ids = {
-        run["hook_id"] for run in runs if is_recent(run["observed_at"], now)
+        run["hook_id"]
+        for run in runs
+        if run["hook_id"] in declared_ids and is_recent(run["observed_at"], now)
     }
     if not well_formed:
         observed_profile = "unspecified"
@@ -137,7 +139,9 @@ def integration_status_v2(
         pending_required = [
             hook_id for hook_id in required_hooks if hook_id not in recent_ids
         ]
-        if pending_required and (degraded or not recent_ids and runs):
+        # ADR-0047 §6: indeterminate SOLO con lectura de evidencia
+        # degradada; runs verificados pero viejos son `required`.
+        if pending_required and degraded:
             pending = "indeterminate"
         elif pending_required:
             pending = "required"

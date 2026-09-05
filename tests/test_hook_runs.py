@@ -237,6 +237,65 @@ class CliEndToEndTests(HookRunsBase):
         self.assertIn("hook_run_invalid", payload["host_hooks"]["degraded_codes"])
         self.assertEqual(payload["host_hooks"]["pending_continuity"], "indeterminate")
 
+    def test_recent_unknown_hook_does_not_inflate_profile(self) -> None:
+        # Ronda final H1: run reciente de un hook que la declaración ya
+        # no lista -> unknown_hooks, perfil declarado-sin-evidencia.
+        self.write_declaration()
+        self._cli([
+            "retrieve", "--query", "x", "--budget", "100",
+            "--on-behalf-of-hook", "before-task-retrieve",
+        ])
+        declaration = _declaration()
+        declaration["hooks"] = [
+            {"id": "material-close-checkpoint",
+             "trigger": "material_close_or_handoff", "action": "checkpoint",
+             "required": True},
+        ]
+        path = self.root / ".an-kla" / "host-hooks.json"
+        path.write_text(json.dumps(declaration), encoding="utf-8")
+        v2 = self._cli(["integration", "status", "--schema-version", "v2"])
+        payload = json.loads(v2.stdout)
+        self.assertEqual(payload["integration"]["observed_profile"], "declared-not-invoked")
+        self.assertEqual(payload["host_hooks"]["unknown_hooks"], ["before-task-retrieve"])
+        self.assertEqual(payload["host_hooks"]["pending_continuity"], "required")
+
+    def test_verified_stale_runs_with_clean_reading_pending_required(self) -> None:
+        # Ronda final H2: runs verificados pero viejos y lectura limpia
+        # -> required (indeterminate sólo con lectura degradada).
+        self.write_declaration()
+        old = (datetime.now(timezone.utc) - timedelta(hours=48)).strftime(
+            "%Y-%m-%dT%H:%M:%SZ")
+        hook_runs.mint_hook_run(
+            self.store, hook_id="material-close-checkpoint",
+            trigger="material_close_or_handoff", action="checkpoint",
+            exit_code=0, subject={"kind": "revision", "value": "x"}, now=old,
+        )
+        v2 = self._cli(["integration", "status", "--schema-version", "v2"])
+        payload = json.loads(v2.stdout)
+        self.assertEqual(payload["integration"]["observed_profile"], "declared-not-invoked")
+        self.assertEqual(len(payload["host_hooks"]["hook_invoked"]), 1)
+        self.assertEqual(payload["host_hooks"]["degraded_codes"], [])
+        self.assertEqual(payload["host_hooks"]["pending_continuity"], "required")
+
+    def test_unwritable_runs_dir_does_not_break_successful_command(self) -> None:
+        # Ronda final H3: fallo OSError al acuñar no debe romper un
+        # comando ya exitoso ni filtrar rutas (hook_run_unwritable).
+        declaration = _declaration()
+        declaration["hooks"].append(
+            {"id": "status-probe", "trigger": "before_task", "action": "status"}
+        )
+        path = self.root / ".an-kla" / "host-hooks.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(declaration), encoding="utf-8")
+        sabotage = self.root / ".an-kla" / "hook-runs"
+        sabotage.write_text("no soy directorio", encoding="utf-8")
+        completed = self._cli([
+            "status", "--on-behalf-of-hook", "status-probe",
+        ])
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("hook_run_unwritable", completed.stderr)
+        self.assertNotIn(str(self.root), completed.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
