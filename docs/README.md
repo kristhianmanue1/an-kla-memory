@@ -72,6 +72,7 @@ ADRs rechazadas ni reemplazadas en el registro actual.
 ### Documentación normativa
 
 - [`practicas-ingenieria.md`](practicas-ingenieria.md) — Prácticas de ingeniería (ronda adversarial pre-code, spike, ADR-antes-que-código, secuenciación, CI local).
+- [`uso-diario.md`](uso-diario.md) — Referencia estable del consumidor: actualizar entre betas, desinstalar, comandos cotidianos y respaldo sellado.
 - [`supervision-agente-externo.md`](supervision-agente-externo.md) — Protocolo experimental para operar y auditar un agente externo persistente, con diseño futuro de reactivación programada o por eventos.
 - [`context-package.md`](context-package.md) — Guía de integración del bloque administrado.
 - [`upgrade-agent-flow.md`](upgrade-agent-flow.md) — Flujo de actualización para agentes.

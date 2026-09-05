@@ -68,7 +68,15 @@ class ReleaseMetadataTests(unittest.TestCase):
         self.assertNotIn("license = {", payload)
 
     def test_readme_covers_reproducible_consumer_lifecycle(self) -> None:
-        payload = (ROOT / "README.md").read_text(encoding="utf-8")
+        # Desde la partición beta.22 (issue #106, T1) el ciclo de vida del
+        # consumidor vive en README.md (primera lectura) más docs/uso-diario.md
+        # (referencia estable); el corpus de fragmentos obligatorios son ambos.
+        payload = "\n".join(
+            (
+                (ROOT / "README.md").read_text(encoding="utf-8"),
+                (ROOT / "docs" / "uso-diario.md").read_text(encoding="utf-8"),
+            )
+        )
         required = (
             "python3.12 -m venv .venv",
             "git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.21",
