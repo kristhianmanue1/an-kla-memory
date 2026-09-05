@@ -1,13 +1,7 @@
 {
   "limits": {
     "AGENTS.md": 120,
-    "README.md": 500,
-    "docs/architecture/0042-sealed-export-v1.md": 700,
-    "tests/test_sealed_key_adapter.py": 1400,
-    "tests/test_write_commit.py": 1200,
-    "tests/test_sealed_matrix.py": 1200,
-    "tests/test_sealed_bundle.py": 1000,
-    "tests/test_store.py": 900
+    "docs/architecture/0042-sealed-export-v1.md": 700
   },
   "default_limit": 800,
   "root_markdown": [
