@@ -24,10 +24,10 @@ compensaciones medidas en la ronda adversarial externa del 2026-09-02
 
 ```bash
 # demo extremo a extremo en un project root efímero (no toca tu memoria)
-python3 anklawrapper_demo 2>/dev/null || python3 anklawrapper --demo
+python3 ankla_agent.py --demo
 
 # escritura verificada contra un proyecto con .an-kla ya inicializado
-python3 anklawrapper /ruta/del/proyecto "Hecho durable que quiero registrar"
+python3 ankla_agent.py /ruta/del/proyecto "Hecho durable que quiero registrar"
 ```
 
 El intérprete debe poder importar `an_kla` (ejecuta desde el checkout o

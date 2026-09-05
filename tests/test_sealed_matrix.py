@@ -101,12 +101,17 @@ _ROW_MODULES: dict[str, tuple[str, ...]] = {
     "3": ("tests.test_sealed_bundle",),
     "4": ("tests.test_sealed_bundle",),
     "5": ("tests.test_sealed_bundle",),
-    "6": ("tests.test_sealed_key_adapter",),         # F2 runner acotado
+    "6": (                                           # F2 runner acotado
+        "tests.test_sealed_key_adapter",
+        "tests.test_sealed_key_adapter_output",
+        "tests.test_sealed_key_adapter_behavior",
+        "tests.test_sealed_key_adapter_errors",
+    ),
     "7": ("tests.test_sealed_bundle",),
     "10b": ("tests.test_sealed_bundle",),
     "10c": ("tests.test_sealed_bundle", "tests.test_export_sealed_cli"),
-    "10d": ("tests.test_sealed_key_adapter",),       # F3 entorno
-    "10e": ("tests.test_sealed_key_adapter",),       # F4 adapter_id
+    "10d": ("tests.test_sealed_key_adapter_behavior",),   # F3 entorno
+    "10e": ("tests.test_sealed_key_adapter_errors",),     # F4 adapter_id
     "12b": ("tests.test_sealed_bundle", "tests.test_sealed_availability"),
     "13": ("tests.test_sealed_bundle",),
     "16": ("tests.test_sealed_bundle",),             # F7 no-fuga
@@ -291,18 +296,24 @@ class MatrixReRunTests(unittest.TestCase):
                 )
                 # Sin cryptography no habría cripto ejecutada: el run con
                 # extra NO puede ser todo-skips (las filas criptográficas
-                # deben correr de verdad allí). Se parsea el conteo real
-                # en vez de un substring "0 tests", que falsos positivos
-                # daba con conteos legítimos tipo "ran 10 tests" (fix
-                # derivado de la partición beta.22, issue #106).
-                corrida = re.search(
-                    r"ran (\d+) tests?",
-                    completed.stderr.lower().replace("\n", " "),
+                # deben correr de verdad allí). Se ancla al resumen final
+                # (línea "Ran N tests") y se descuentan los skips: un N>0
+                # con skipped=N es igualmente cero tests efectivos. El
+                # substring "0 tests" original daba falsos positivos con
+                # conteos legítimos tipo "ran 10 tests" (fix de la
+                # partición beta.22, issue #106; skips descontados por la
+                # ronda adversarial del lote, 2026-09-05).
+                salida = completed.stderr.lower()
+                corrida = re.search(r"^ran (\d+) tests?", salida, re.MULTILINE)
+                saltos = re.search(r"skipped=(\d+)", salida)
+                efectivos = int(corrida.group(1)) - (
+                    int(saltos.group(1)) if saltos else 0
                 )
-                ejecutados = int(corrida.group(1)) if corrida else 0
                 self.assertGreater(
-                    ejecutados, 0,
-                    f"{module}: cero tests ejecutados",
+                    efectivos, 0,
+                    f"{module}: cero tests efectivos "
+                    f"(ran={corrida.group(1) if corrida else 0}, "
+                    f"skipped={saltos.group(1) if saltos else 0})",
                 )
 
 

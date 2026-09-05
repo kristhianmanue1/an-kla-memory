@@ -9,7 +9,7 @@ el [README](../README.md); este documento la complementa.
 
 - [Actualizar desde otra beta](#actualizar-desde-otra-beta)
 - [Desinstalar o volver atrás](#desinstalar-o-volver-atrás)
-- [Uso diario](#uso-diario-1)
+- [Uso diario](#uso-diario)
   - [Descubrimiento para agentes](#descubrimiento-para-agentes)
   - [Diagnóstico de arranque e integración](#diagnóstico-de-arranque-e-integración)
   - [Verificación no bloqueante de versiones](#verificación-no-bloqueante-de-versiones)

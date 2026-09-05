@@ -301,7 +301,7 @@ varias máquinas. Su comportamiento difiere por plataforma:
   writer falla de inmediato con el mismo código.
 
 Contrato del agente ante un lock ocupado o un commit que no retorna: no
-fuerces, no borres `.an-kla/.write.lock` ni reinicies el store. Mantén las
+fuerces, no borres `.an-kla/memory/.write.lock` ni reinicies el store. Mantén las
 secciones críticas cortas (un commit por invocación), relee `status` y
 reintenta con re-plan — los planes viejos se descartan, nunca se reutilizan
 (`write_plan_base_changed` es la señal esperada tras esperar). Si un writer

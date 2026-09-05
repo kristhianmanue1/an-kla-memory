@@ -46,7 +46,7 @@ No instales `main` como sustituto de una versión.
 Beta.18 publicó el perfil sellado `sealed-export/v1` (ADR-0042, issue
 #46): respaldos cifrados en reposo como extra opcional `[sealed]`, con el
 camino `export/v1` en claro intacto — ver
-[Respaldo sellado](#respaldo-sellado-opcional). Beta.17 trajo la adopción
+[Respaldo sellado](docs/uso-diario.md#respaldo-sellado-opcional). Beta.17 trajo la adopción
 explícita de baseline project-owned (`adopt-baseline`, ADR-0040/0035: el
 warning permanente de drift se resuelve de forma gobernada y `context
 update` ya no absorbe en silencio) y el inventario físico por revisión

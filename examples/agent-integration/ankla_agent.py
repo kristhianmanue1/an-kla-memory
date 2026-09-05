@@ -24,8 +24,8 @@ No es un generador autorizado de propuestas (decisión documental, issue
 mismo flujo `plan-write` -> `commit-write-plan`.
 
 Uso:
-    python3 anklawrapper_demo            # demo extremo a extremo en tmp
-    python3 anklawrapper <project-root> "<texto>"   # escritura verificada
+    python3 ankla_agent.py --demo                    # demo en tmp
+    python3 ankla_agent.py <project-root> "<texto>"  # escritura verificada
 """
 
 from __future__ import annotations
@@ -36,6 +36,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -50,6 +51,7 @@ ISSUER_CONFIG = {
     "profile": "reference-wrapper/v1",
 }
 MAX_ATTEMPTS = 3
+CLI_TIMEOUT_SECONDS = 180
 
 
 class WriteVerificationError(RuntimeError):
@@ -62,10 +64,20 @@ class AnKlaAgent:
         self.python = python
 
     def run(self, args: list) -> subprocess.CompletedProcess:
-        return subprocess.run(
-            [self.python, "-m", "an_kla", "--project-root", str(self.project_root)] + args,
-            capture_output=True, text=True,
-        )
+        try:
+            return subprocess.run(
+                [self.python, "-m", "an_kla", "--project-root", str(self.project_root)] + args,
+                capture_output=True, text=True, timeout=CLI_TIMEOUT_SECONDS,
+            )
+        except subprocess.TimeoutExpired as exc:
+            # En POSIX el write lock es bloqueante sin deadline: un commit
+            # colgado no debe colgar al wrapper. Resultado ambiguo: exigir
+            # `transaction inspect` antes de decidir (camino (c)).
+            raise RuntimeError(
+                f"{args[0]} excedió {CLI_TIMEOUT_SECONDS}s sin respuesta: "
+                "resultado ambiguo; exigir `transaction inspect <uuid>` "
+                "antes de decidir (no reintentes a ciegas)"
+            ) from exc
 
     def run_json(self, args: list) -> dict:
         completed = self.run(args)
@@ -161,6 +173,13 @@ class AnKlaAgent:
                     return plan
                 commit = self._commit(paths, revision)
             if commit.returncode == 0:
+                if not commit.stdout.strip():
+                    # (c) exit 0 sin outcome (crash tras el commit): igual
+                    # de ambiguo que un fallo sin JSON.
+                    raise RuntimeError(
+                        "commit exit 0 sin outcome: exigir `transaction "
+                        "inspect <uuid>` antes de decidir"
+                    )
                 return json.loads(commit.stdout)
             err = commit.stderr
             if "current_changed:expected=" in err or "write_plan_base_changed" in err:
@@ -168,6 +187,7 @@ class AnKlaAgent:
                 continue
             if "write_lock_busy" in err:
                 step(f"intento {attempt}: lock ocupado; re-plan tras backoff")
+                time.sleep(0.5 * attempt)
                 continue
             if not commit.stdout.strip():
                 # (c) resultado ambiguo: no se repite a ciegas.
@@ -179,7 +199,17 @@ class AnKlaAgent:
         raise RuntimeError(f"sin commit tras {MAX_ATTEMPTS} intentos")
 
     def read_back(self, record_id: str, text: str) -> list:
-        read = self.run_json(["retrieve", "--query", text, "--budget", "1600"])
+        # Consulta acotada a las primeras palabras: BM25 con el texto
+        # completo diluye el score y textos largos pueden caer fuera del
+        # presupuesto (falso negativo).
+        query = " ".join(text.split()[:12])
+        read = self.run_json(["retrieve", "--query", query, "--budget", "1600"])
+        excluded = read.get("excluded_detail", {}).get("ids", {})
+        if record_id in excluded.get("budget", []):
+            raise WriteVerificationError(
+                f"{record_id} quedó excluido por presupuesto en la "
+                "lectura post-escritura; revisa --budget del read-back"
+            )
         return read.get("selected", [])
 
     def write_and_verify(self, record_id: str, text: str, step=print) -> dict:

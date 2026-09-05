@@ -12,9 +12,15 @@ del bug fixeado en PR #25).
 Desde beta.22 añade dos pasos locales (issue #112 e issue #111/P5):
 - el selftest G-3 de `redteam_consistent_rewrite.py` corre como gate
   automático (camino completo: guard + copia desechable + ataque +
-  verificación post-ataque; ADR-0043 §Test de regresión);
+  verificación post-ataque; ADR-0043 §Test de regresión). Requiere un
+  store canónico local (`.an-kla/`): en clones frescos o worktrees sin
+  store el paso declara SKIP honesto;
 - la matriz de intérpretes soportados emite estado por versión y falla si
-  una versión soportada disponible no pasa la suite.
+  una versión soportada disponible no pasa la suite. Coste: cada
+  intérprete disponible distinto del principal corre la suite completa
+  anidada (~45-90s por intérprete según skips criptográficos); un host
+  con varios intérpretes en PATH puede tardar 10-15 min. Define
+  AN_KLA_CI_LOCAL_MATRIX=0 para saltar la matriz (SKIP declarado).
 
 Complementa, no reemplaza, el CI remoto: éste valida 3 SO x 2 Python reales,
 cosa que el CI local no hace.
@@ -82,6 +88,12 @@ def paso_redteam_selftest() -> str:
     if not REDTEAM.exists():
         print("    SKIP: scripts/redteam_consistent_rewrite.py no existe")
         return "SKIP"
+    if not (ROOT / ".an-kla").exists():
+        print(
+            "    SKIP: no hay store canónico local (.an-kla/); el selftest "
+            "copia el store del checkout (clone fresco o worktree sin memoria)"
+        )
+        return "SKIP"
     result = subprocess.run(
         [PYTHON, str(REDTEAM), "--selftest"],
         cwd=ROOT,
@@ -110,6 +122,9 @@ def _interprete_para(version: str) -> str | None:
 
 def paso_matriz() -> str:
     print("==> [4/7] matriz de intérpretes soportados", flush=True)
+    if os.environ.get("AN_KLA_CI_LOCAL_MATRIX") == "0":
+        print("    SKIP (AN_KLA_CI_LOCAL_MATRIX=0)")
+        return "SKIP"
     estados: dict[str, str] = {}
     for version in SUPPORTED_VERSIONS:
         interprete = _interprete_para(version)
