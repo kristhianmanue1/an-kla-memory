@@ -286,6 +286,29 @@ status → proposal/authority → plan-write → commit-write-plan → verificar
 el planning result obsoleto, releer `status` y construir un plan nuevo. No
 edites el plan viejo ni fuerces `expected-current`.
 
+### Lock de escritura: liveness y contrato del agente
+
+El `write_lock` es local (fcntl en POSIX, msvcrt en Windows) y no coordina
+varias máquinas. Su comportamiento difiere por plataforma:
+
+- **POSIX**: la adquisición es bloqueante y **sin deadline**
+  (`fcntl.flock(LOCK_EX)`). Un writer colgado (proceso detenido, fsync
+  trabado en un medio lento) bloquea a los demás writers indefinidamente:
+  no existe `write_lock_busy` en esta plataforma.
+- **Windows**: hay deadline de 10 s con backoff; al agotarse el CLI termina
+  con `an-kla error: write_lock_busy`. En plataformas sin fcntl ni msvcrt el
+  lock es un directorio (`.write.lock-dir`) con `mkdir` atómico: el segundo
+  writer falla de inmediato con el mismo código.
+
+Contrato del agente ante un lock ocupado o un commit que no retorna: no
+fuerces, no borres `.an-kla/.write.lock` ni reinicies el store. Mantén las
+secciones críticas cortas (un commit por invocación), relee `status` y
+reintenta con re-plan — los planes viejos se descartan, nunca se reutilizan
+(`write_plan_base_changed` es la señal esperada tras esperar). Si un writer
+murió a mitad de commit, el kernel libera el lock al cerrarse el descriptor
+y `transaction inspect <uuid>` clasifica el resultado ambiguo; el
+procedimiento completo está en `docs/agent-recovery.md`.
+
 ## Frontera de autoridad del CLI
 
 Un archivo JSON no demuestra que una herramienta observó algo ni que otro
