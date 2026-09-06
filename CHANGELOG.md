@@ -14,6 +14,47 @@ en fase de pre-release `0.1.0`.
 
 Nada aún.
 
+## [v0.1.0-beta.22]
+
+Release de consolidación: G2 completo (hooks gobernados del host, ADR-0047),
+deuda de proceso pagada (#95/#106/#112) y absorción de la auditoría externa
+(#113/R1, #114/A1+A2, #115/T2). Release **code-only**: el contrato gestionado
+sigue en `0.1.0-beta.21`.
+
+**Añadido**:
+- G2 (ADR-0047, issue #56): declaración read-only `.an-kla/host-hooks.json`
+  con límites congelados; evidencia `hook-run-v1` acuñada y verificada por
+  el motor vía `--on-behalf-of-hook` (HMAC + binding, caps de lectura,
+  idempotente por `run_id`); `integration-status-v2` con bloque `host_hooks`
+  y `observed_profile` computado (`unspecified | declared-not-invoked |
+  host-managed/v1`, recencia 24h con `--now` inyectable);
+  `pending_continuity` computable sobre el vocabulario de ADR-0030; schemas
+  `host-hooks-v1`/`hook-run-v1`/`integration-status-v2` publicados; guía
+  `docs/host-hooks-guide.md`. v1 queda congelado y es la emisión por defecto.
+- CI local: selftest G-3 del redteam como gate automático (#112) y matriz
+  de intérpretes soportados (#111/P5) con `AN_KLA_CI_LOCAL_MATRIX=0` como
+  escape.
+- `examples/agent-integration/`: wrapper de referencia para agentes (#111/P6).
+- `docs/write-policy-cli.md`: liveness del write lock y contrato del agente
+  (#111/P2-doc).
+
+**Corregido**:
+- #113/R1 (P1): un `record.status`/`nu` no escalar admitido por la escritura
+  tumbaba a `retrieve`/`rebuild-index`/`evaluate-v2` con `TypeError`. La
+  escritura lo rechaza (`record.status`) y los lectores degradan fail-closed
+  (`an_kla/vigency.py`) para registros ya persistidos.
+- #114/A1: escrituras parciales de `os.write` en `_write_exclusive` dejaban
+  claves/receipts truncados; ahora el bucle garantiza el payload completo.
+- #114/A2: `verify_receipt_for_authority` recalcula el digest canónico del
+  receipt y lo compara con su dirección content-addressed.
+- #115/T2: `initialize_with_outcome` preserva el outcome de init ante fallo
+  operacional posterior de attest (`attest_init_unwritable`).
+
+**Mantenimiento**: partición de tamaños (#106: README + cinco tests);
+techos retirados de `skevi-gate.json`; #95 cerrado con evidencia; techo
+transitorio `an_kla/store.py: 820` con issue #117; `TEMPLATE_VERSION` sin
+cambio.
+
 ## [v0.1.0-beta.21]
 
 Cierre del ciclo attest (issue #102, ADR-0046): plantilla del contrato
