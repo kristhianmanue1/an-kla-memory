@@ -118,6 +118,10 @@ class CheckForUpdateTests(unittest.TestCase):
         self.assertEqual(notice.latest_release_tag, "v0.1.0")
         self.assertIsNotNone(notice.notice)
         self.assertIn("AN-KLA no se actualiza a sí mismo", notice.notice)
+        # Issue #116/G1: el aviso apunta al flujo completo de actualización
+        # de contexto, no sólo al pip install.
+        self.assertIn("context plan --operation update", notice.notice)
+        self.assertIn("uso-diario.md", notice.notice)
 
     def test_cache_is_used_when_fresh(self):
         fake_release = {
@@ -166,6 +170,7 @@ def normalized_release_tag_inv(version: str) -> str:
         "0.1.0b21": "0.1.0-beta.21",
         "0.1.0b22": "0.1.0-beta.22",
         "0.1.0b23": "0.1.0-beta.23",
+        "0.1.0b24": "0.1.0-beta.24",
     }
     if version in mapping:
         return mapping[version]

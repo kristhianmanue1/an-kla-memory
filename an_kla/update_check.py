@@ -149,10 +149,16 @@ def _build_notice(installed: str, latest_tag: str, html_url: str | None) -> str:
         f'python -m pip install --upgrade "an-kla-memory@{INSTALL_HINT}@{latest_tag}"'
     )
     see_release = f" Ver: {html_url}" if html_url else ""
+    # Issue #116/G1: el aviso apunta también al flujo completo de
+    # actualización — instalar el paquete es sólo el primer paso; el
+    # contexto gestionado se actualiza aparte (context plan/update).
     return (
         f"an-kla-memory {installed}: hay una versión más reciente ({latest_tag})."
         f" Actualiza con:\n  {install_command}{see_release}\n"
-        f"  (AN-KLA no se actualiza a sí mismo; ejecuta el comando manualmente.)"
+        f"  (AN-KLA no se actualiza a sí mismo; ejecuta el comando manualmente.)\n"
+        f"  (Proyecto con contexto gestionado: tras instalar, sigue el flujo"
+        f" `context plan --operation update` — docs/uso-diario.md"
+        f" #actualizar-desde-otra-beta.)"
     )
 
 

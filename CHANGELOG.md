@@ -14,6 +14,31 @@ en fase de pre-release `0.1.0`.
 
 Nada aún.
 
+## [v0.1.0-beta.24]
+
+**Checkpoint first-try para agentes** (issues #120.2/.3/.4, #121) y
+documentación de instalación/actualización reforzada. Release **code-only**:
+contrato gestionado y `TEMPLATE_VERSION` siguen en `0.1.0-beta.21`.
+
+**Añadido**:
+- `checkpoint plan --emit-authority-template`: emite la plantilla de
+  `checkpoint-authority-v1` con `proposal_sha256`/`base_revision`
+  calculados desde el proposal interno (read-only, determinista).
+- `--authority` opcional en `checkpoint plan` (falta →
+  `missing_checkpoint_authority`, exit 2).
+- `docs/agent-checkpoint-guide.md`: cierre de sesión gobernado end-to-end,
+  validado e2e.
+- "Ruta del agente" en `docs/README.md` (mapa de documentación).
+- Aviso de update-check apunta al flujo completo de actualización de
+  contexto (#116/G1).
+- ADR-0048 aceptada (G3 store_root externo — sin implementación aún).
+
+**Cambiado**:
+- `docs/upgrade-agent-flow.md`: ejemplos refrescados a etiquetas vigentes
+  y enlace recíproco con uso-diario (#116/G2).
+- `checkpoint plan` sin `--authority` ni `--emit-authority-template` ahora
+  falla con `missing_checkpoint_authority` en vez de un error de argparse.
+
 ## [v0.1.0-beta.23]
 
 Release de mantenimiento: el fix #119 (export con perfil host-managed) más

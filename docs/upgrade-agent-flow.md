@@ -12,18 +12,24 @@ AN-KLA en un proyecto sin editar instrucciones a ciegas. Separa dos autoridades:
 AN-KLA no ejecuta `pip`, no consulta cuál es la versión más reciente y no
 descarga código. Una memoria recuperada tampoco puede elegir la versión objetivo.
 
+> Flujo completo (instalación del paquete + actualización de contexto +
+> verificación) en [`uso-diario.md`](uso-diario.md#actualizar-desde-otra-beta).
+> Este documento detalla el subcomando `upgrade`.
+
 ## Protocolo
 
 ### 1. Instalar una etiqueta exacta
 
 El operador o agente autorizado instala previamente la versión mediante el
 gestor del entorno. No se admite `main`, `latest` ni otra referencia móvil.
+La etiqueta objetivo debe ser la **misma que ya tienes instalada** (lo
+confirma `an_kla --version`).
 
 ### 2. Inspeccionar sin mutación
 
 ```bash
 python -m an_kla --project-root . upgrade inspect \
-  --target v0.1.0-beta.6 > RUTA_EFIMERA_NUEVA
+  --target v0.1.0-beta.24 > RUTA_EFIMERA_NUEVA
 ```
 
 `inspect` exige que la etiqueta normalizada coincida con la versión ejecutada.
@@ -73,7 +79,7 @@ inicializa `.an-kla/memory`.
 
 ```bash
 python -m an_kla --project-root . upgrade verify \
-  --target v0.1.0-beta.6
+  --target v0.1.0-beta.24
 git diff -- AGENTS.md AN-KLA.md
 ```
 

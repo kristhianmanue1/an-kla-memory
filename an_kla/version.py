@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import re
 
-VERSION = "0.1.0b23"
+VERSION = "0.1.0b24"
 
 
 def normalized_release_tag(tag: str) -> str:

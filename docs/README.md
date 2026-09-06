@@ -7,6 +7,16 @@ puntuales, planificación y respuestas a revisiones externas, ver
 Para instalar o migrar un proyecto consumidor, empieza por la
 [guía de beta.11](beta11-user-guide.md).
 
+## Ruta del agente (mapa rápido)
+
+- **Instalar** un proyecto consumidor: [README §Instalación](../README.md#instalación-nueva-en-un-proyecto-consumidor).
+- **Actualizar** entre betas: [`uso-diario.md` §Actualizar](uso-diario.md#actualizar-desde-otra-beta); detalles del subcomando en [`upgrade-agent-flow.md`](upgrade-agent-flow.md).
+- **Verificar** al retomar o antes de escribir: `verify` + `startup-diagnostic` + `integration status` ([uso-diario §Uso diario](uso-diario.md#uso-diario)).
+- **Escribir** memoria gobernada: [`write-policy-cli.md`](write-policy-cli.md).
+- **Cerrar sesión** con checkpoint: [`agent-checkpoint-guide.md`](agent-checkpoint-guide.md).
+- **Recuperarse** de un fallo: [`agent-recovery.md`](agent-recovery.md).
+- **Hosts** que gestionan hooks: [`host-hooks-guide.md`](host-hooks-guide.md).
+
 ## Índice
 
 ### Decisiones de arquitectura (ADRs)
@@ -108,9 +118,9 @@ Los reportes son evidencia experimental, no decisiones de ranking.
 de publicación. Cumplen el rol de `CHANGELOG.md`.
 
 La release documentada más reciente es
-[`v0.1.0-beta.23`](releases/v0.1.0-beta.23.md), con su
-[ronda adversarial](releases/v0.1.0-beta.23-adversarial.md); la anterior
-con ronda cerrada es [`v0.1.0-beta.22`](releases/v0.1.0-beta.22.md).
+[`v0.1.0-beta.24`](releases/v0.1.0-beta.24.md), con su
+[ronda adversarial](releases/v0.1.0-beta.24-adversarial.md); la anterior
+con ronda cerrada es [`v0.1.0-beta.23`](releases/v0.1.0-beta.23.md).
 
 ### Planificación y respuestas históricas
 

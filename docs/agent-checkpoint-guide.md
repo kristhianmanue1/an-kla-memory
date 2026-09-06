@@ -49,7 +49,7 @@ base/parent tomados del store). Replicarlo a mano requiere leer código;
 el flag lo hace por ti:
 
 ```bash
-an_kla --project-root . checkpoint plan \
+python -m an_kla --project-root . checkpoint plan \
   --input working_state.json --emit-authority-template \
   > authority.json
 ```
@@ -60,35 +60,48 @@ Emite una `checkpoint-authority-v1` con `proposal_sha256` y
 configuración difiere; si usas `tool_observed` necesitas el adaptador
 attest (ADR-0046 — ver §4); `channel_confirmed` es de host.
 
-## 3. Cierre canónico de sesión
+## 3. Cierre canónico de sesión (copy-paste-safe)
 
 ```bash
 # 0. registrar el estado de Git que describes (caller_asserted):
-git rev-parse HEAD   # head completo; branch y dirty_digest con git status
+HEAD_SHA="$(git rev-parse HEAD)"
+# captured_at con microsegundos (formato obligatorio del validador):
+STAMP="$(python -c "from datetime import datetime,timezone; \
+  print(datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.%fZ'))")"
+```
 
+Arma `working_state.json` con ese `captured_at` y `supersedes_checkpoint`
+= digest devuelto por `checkpoint show` (§1). Después:
+
+```bash
 # 1. emitir autoridad (binding calculado):
-an_kla --project-root . checkpoint plan \
+python -m an_kla --project-root . checkpoint plan \
   --input working_state.json --emit-authority-template > authority.json
 
 # 2. planificar (read-only; revisa decision y reason_codes):
-an_kla --project-root . checkpoint plan \
+python -m an_kla --project-root . checkpoint plan \
   --input working_state.json --authority authority.json > planning.json
 
-# 3. confirmar (CAS + journal + receipts):
-an_kla --project-root . checkpoint commit \
+# 3. confirmar (uuid SIEMPRE en minúsculas — uuidgen puede dar
+#    mayúsculas y el validador lo rechaza):
+TXID="$(python -c 'import uuid; print(uuid.uuid4())')"
+REVISION="$(python -m an_kla --project-root . status \
+  | python -c 'import json,sys; print(json.load(sys.stdin)["revision"])')"
+python -m an_kla --project-root . checkpoint commit \
   --plan planning.json \
-  --expected-current sha256:REVISION_ACTUAL \
-  --transaction-id "$(uuidgen)"
+  --expected-current "$REVISION" \
+  --transaction-id "$TXID"
 
 # 4. verificar:
-an_kla --project-root . verify
-an_kla --project-root . checkpoint show
+python -m an_kla --project-root . verify
+python -m an_kla --project-root . checkpoint show
 ```
 
-Notas: `--expected-current` es la `revision` que viste al preparar el
-plan; si CURRENT se movió mientras tanto, el commit falla
-`checkpoint_plan_base_changed` — relee y replanifica, no fuerces. Si el
-resultado es ambiguo (timeout, crash), `transaction inspect <uuid>`
+Nota: usa `python -m an_kla` (el binario `an-kla` puede no estar en PATH
+según la instalación). Notas: `--expected-current` es la `revision` que
+viste al preparar el plan; si CURRENT se movió mientras tanto, el commit
+falla `checkpoint_plan_base_changed` — relee y replanifica, no fuerces.
+Si el resultado es ambiguo (timeout, crash), `transaction inspect <uuid>`
 antes de reintentar (`docs/agent-recovery.md`).
 
 ## 4. Clases de autoridad y attest
