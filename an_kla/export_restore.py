@@ -37,6 +37,10 @@ _PATTERNS = tuple(re.compile(value) for value in (
     rf"anchor/receipts/receipts/sha256/{_HEX}\.json",
     rf"anchor/receipts/nonces/sha256/{_HEX}\.json",
     r"anchor/attest-whitelist\.json",
+    # Issue #119 / ADR-0048 §3 (H3): la evidencia de hooks es de la
+    # bóveda y viaja con ella; la declaración del host es del proyecto
+    # y queda excluida más abajo.
+    rf"anchor/hook-runs/runs/sha256/{_HEX}\.json",
 ))
 
 
@@ -60,7 +64,9 @@ def _files(anchor: Path) -> list[tuple[str, Path]]:
             raise ExportError("export_unsafe_file")
         if _allowed(relative):
             rows.append((relative, path))
-        elif relative not in {"anchor/.identity.lock", "anchor/memory/.write.lock", "anchor/memory/.reader-gate", "anchor/attest.key"} and not relative.startswith(("anchor/context/", "anchor/memory/indexes/", "anchor/memory/leases/", "anchor/memory/quarantine/")):
+        elif relative in {"anchor/.identity.lock", "anchor/memory/.write.lock", "anchor/memory/.reader-gate", "anchor/attest.key", "anchor/host-hooks.json"} or relative.startswith(("anchor/context/", "anchor/memory/indexes/", "anchor/memory/leases/", "anchor/memory/quarantine/")):
+            continue
+        else:
             raise ExportError("export_unrecognized_durable_path")
     return sorted(rows, key=lambda item: item[0].encode("utf-8"))
 

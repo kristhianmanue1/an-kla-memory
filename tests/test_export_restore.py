@@ -41,6 +41,32 @@ class ExportRestoreTests(unittest.TestCase):
         create_export(store, bundle)
         return source, bundle, current
 
+    def test_export_with_host_managed_artifacts_issue119(self) -> None:
+        # Issue #119 / ADR-0048 §3 (H3): hook-runs viaja con la bóveda;
+        # host-hooks.json es del proyecto y queda excluido. Antes del
+        # fix, cualquier proyecto host-managed no podía exportar
+        # (export_unrecognized_durable_path).
+        with tempfile.TemporaryDirectory() as root:
+            source = Path(root) / "source"
+            store = MemoryStore(source)
+            store.initialize()
+            anchor = source / ".an-kla"
+            hook_run = anchor / "hook-runs" / "runs" / "sha256" / ("a" * 64 + ".json")
+            hook_run.parent.mkdir(parents=True, exist_ok=True)
+            hook_run.write_text('{"schema": "an-kla/hook-run-v1"}', encoding="utf-8")
+            (anchor / "host-hooks.json").write_text("{}", encoding="utf-8")
+
+            bundle = Path(root) / "bundle"
+            create_export(store, bundle)
+            verified = verify_export(bundle)
+            self.assertIs(verified["verified"], True)
+            manifest = json.loads(
+                (bundle / "manifest.json").read_text(encoding="utf-8")
+            )
+            names = {entry["path"] for entry in manifest["core"]["entries"]}
+            self.assertTrue(any("hook-runs" in name for name in names))
+            self.assertFalse(any("host-hooks" in name for name in names))
+
     def test_roundtrip_and_tamper_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             source = Path(root) / "source"

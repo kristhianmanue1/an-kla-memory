@@ -1,7 +1,9 @@
 # ADR-0048: almacenamiento externo — `store_root` separado de `project_root`
 
-- **Estado:** Propuesta
-- **Implementación:** No iniciada
+- **Estado:** Aceptada (2026-09-05, orden explícita del maintainer en
+  sesión: "adelante con paso 1 y 3" — aceptar tal cual, con la
+  re-verificación H1–H4 ya ejecutada como condición cumplida de F1)
+- **Implementación:** No iniciada (F1 lista para arrancar)
 - **Fecha:** 2026-09-05
 - **Decide sobre:** G3 de ADR-0031 — cómo separa AN-KLA la custodia física
   de la memoria (store_root) del proyecto observado (project_root), con

@@ -29,9 +29,17 @@ tests, conteo de registro 47/44/3 → 48/44/4).
 | H11 | LOW | Precedencia de resolución implícita | §1: orden explícito flag > env > puntero > default; divergencia flag/env diagnosticada |
 | H12 | LOW | Eje de doctor "raíces que debían coincidir" indefinido | §4: `custody_divergence` = puntero vs custodia resuelta vs `canonical_project_root_at_init` |
 
-## Re-verificación post-absorción
+## Re-verificación post-absorción (2026-09-05, ejecutada)
 
-Pendiente de ejecutar sobre el texto enmendado antes de abrir F1
-(condición declarada en el ADR): H1 (puntero + precedencia + divergencia
-fail-closed), H2 (staging hermano / relocate-back por subárbol), H3
-(decisión de export congelada) y H4 (regla general de re-anclaje).
+- **H1**: §1 — puntero `.an-kla/store-root.txt` con fingerprint, precedencia
+  flag > env > puntero > project-local, divergencia →
+  `store_root_divergence` fail-closed incluido `init`/`adopt`. ✓
+- **H2**: §3 — staging **hermano** del destino + publish
+  `rename_noreplace` único para relocate; relocate-back declarado por
+  subárbol bajo locks sin promesa de rename único. ✓
+- **H3**: §3 — decisión congelada: `hook-runs/**` a `_PATTERNS`,
+  `host-hooks.json` a exclusiones; defecto vivo derivado a issue #119
+  (fix servido el mismo día). ✓
+- **H4**: §2 — regla general: todo `root` de walk/create/sync de
+  identidad pasa a la raíz de custodia; test F1 de init fresco externo
+  exigido. ✓
