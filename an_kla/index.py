@@ -12,6 +12,7 @@ from typing import Any
 
 from .canonical import bare_digest
 from .record_text import record_text
+from .vigency import is_active
 from .store import MemoryStore, STREAMS
 from .reader_gate import shared_reader_gate
 
@@ -80,11 +81,7 @@ def _build_index_under_gate(store: MemoryStore, *, revision_id: str | None = Non
                     # ADR-0019 (PR-B): skip superseded records so the FTS stays
                     # consistent with snapshot()'s vigency overlay and with
                     # retrieve()'s filter (retrieval.py inactive predicate).
-                    if record.get("status", record.get("nu", "vigente")) not in {
-                        "vigente",
-                        "active",
-                        None,
-                    }:
+                    if not is_active(record):
                         continue
                     text = record_text(dict(record))
                     if not text:

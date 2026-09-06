@@ -12,6 +12,7 @@ from typing import Any, Mapping, Sequence
 from .canonical import digest_json
 from .index import INDEX_PROFILE
 from .record_text import record_text
+from .vigency import is_active
 from .retrieval import SCAN_PROFILE, TOKEN, retrieve
 from .store import MemoryStore, STREAMS
 
@@ -132,9 +133,7 @@ def _eligible(snapshot: Any, streams: Sequence[str]) -> list[tuple[str, dict[str
             if identifier in seen:
                 raise ValueError("ambiguous_evaluation_record_id")
             seen.add(identifier)
-            if record.get("status", record.get("nu", "vigente")) not in {
-                "vigente", "active", None
-            }:
+            if not is_active(record):
                 continue
             rendered = record_text(record)
             if rendered:

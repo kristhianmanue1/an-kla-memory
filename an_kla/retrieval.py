@@ -17,6 +17,7 @@ from .index import (
 )
 from .store import MemoryStore, STREAMS
 from .reader_gate import shared_reader_gate
+from .vigency import is_active
 from .temporal import (
     FRESHNESS_PROFILE,
     FRESHNESS_SEMANTICS,
@@ -159,7 +160,7 @@ def _retrieve_under_gate(
     }
     for stream in selected_streams:
         for record in snapshot.records[stream]:
-            if record.get("status", record.get("nu", "vigente")) not in {"vigente", "active", None}:
+            if not is_active(record):
                 excluded["inactive"] += 1
                 if len(excluded_detail["inactive"]) < EXCLUDED_DETAIL_CAP:
                     excluded_detail["inactive"].append(str(record.get("id", "")))

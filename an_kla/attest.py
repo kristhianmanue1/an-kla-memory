@@ -115,7 +115,11 @@ def _write_exclusive(target: Path, payload: bytes, mode: int) -> None:
     )
     try:
         view = memoryview(payload)
-        os.write(descriptor, view)
+        # Issue #114/A1: os.write puede devolver una escritura parcial;
+        # un bucle garantiza el payload completo (clave/receipt íntegros).
+        while view:
+            written = os.write(descriptor, view)
+            view = view[written:]
         os.fsync(descriptor)
     finally:
         os.close(descriptor)
@@ -434,6 +438,14 @@ def verify_receipt_for_authority(
         raise AttestError("receipt_invalid", "receipt_unreadable") from None
     if not isinstance(receipt, dict) or receipt.get("schema") != RECEIPT_SCHEMA:
         raise AttestError("receipt_invalid", "schema")
+    # Issue #114/A2: el receipt es content-addressed; el digest canónico
+    # del objeto leído debe coincidir con la dirección bajo la que se
+    # sirvió (un archivo reescrito con otro contenido no es el receipt).
+    actual_digest = "sha256:" + hashlib.sha256(
+        canonical_json(receipt)
+    ).hexdigest()
+    if actual_digest != sha:
+        raise AttestError("receipt_invalid", "receipt_digest_mismatch")
     # El id del evidence debe ser el receipt_id firmado (ronda de fase).
     if item.get("id") != receipt.get("receipt_id"):
         raise AttestError("receipt_invalid", "receipt_id_mismatch")

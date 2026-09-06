@@ -264,6 +264,15 @@ def validate_write_proposal(proposal: Mapping[str, Any]) -> None:
             parse_verified_at(record["verified_at"])
         except TemporalError as exc:
             raise WritePolicyError(code, "record.verified_at") from exc
+    for vigency_field in ("status", "nu"):
+        # Issue #113/R1: un valor no escalar (lista/dict) pasaba el schema
+        # abierto y luego tumbase a retrieve/index/evaluation con
+        # TypeError (pertenencia en set). La escritura lo rechaza aquí.
+        if vigency_field in record and not (
+            record[vigency_field] is None
+            or isinstance(record[vigency_field], str)
+        ):
+            raise WritePolicyError(code, f"record.{vigency_field}")
     if "subject_ref" in record:
         try:
             parse_subject_ref(record["subject_ref"])

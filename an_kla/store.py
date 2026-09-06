@@ -152,7 +152,19 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         if store_identity is not None:
             raise StoreError("external_store_identity_not_allowed")
         result = bootstrap_initialize(self, transaction_id)
-        result["attestation"] = attest_module.ensure_attest_files(self.project_root)
+        try:
+            result["attestation"] = attest_module.ensure_attest_files(
+                self.project_root
+            )
+        except OSError:
+            # Issue #115/T2: el init ya committeó; un fallo operacional
+            # de attest no puede ocultar el outcome (degradación visible).
+            result["attestation"] = {
+                "schema": "an-kla/attest-init-result-v1",
+                "created": [],
+                "existed": [],
+                "error": "attest_init_unwritable",
+            }
         # ADR-0020 pattern, extended to init (issue #87): a best-effort
         # context snapshot so a bare ``init`` surfaces ``installed: false``
         # instead of a clean commit that hides the missing agent entry
