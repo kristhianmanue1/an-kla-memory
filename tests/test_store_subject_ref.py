@@ -249,7 +249,7 @@ class SubjectRefBindingTests(unittest.TestCase):
             b'"project_uuid":"00000000-0000-0000-0000-000000000000",'
             b'"created_by_version":"drift"}'
         )
-        with patch("an_kla.store.mutation_preflight", return_value=drifted):
+        with patch("an_kla.write_commit.mutation_preflight", return_value=drifted):
             with self.assertRaises(IdentityError) as caught:
                 self._commit(candidate, auth, planning)
         self.assertEqual(str(caught.exception), "store_identity_changed")
@@ -309,7 +309,7 @@ class SubjectRefBindingTests(unittest.TestCase):
             captured["project_bytes"] = binding["project_bytes"]
             return check_subject_ref_binding(checked_plan, binding)
 
-        with patch("an_kla.store.check_subject_ref_binding", side_effect=spy):
+        with patch("an_kla.write_commit.check_subject_ref_binding", side_effect=spy):
             result = self._commit(candidate, auth, planning)
 
         self.assertTrue(result["committed"])

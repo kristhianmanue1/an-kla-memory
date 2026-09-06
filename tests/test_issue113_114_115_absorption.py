@@ -212,5 +212,90 @@ class InitOutcomePreservedTests(unittest.TestCase):
         )
 
 
+class ReplaySameTxidTests(unittest.TestCase):
+    """Issue #115/T1: replay de ADR-0024 §API/CLI."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory(prefix="ankla-t1-")
+        self.addCleanup(self._tmp.cleanup)
+        self.root = Path(self._tmp.name)
+        self.store = MemoryStore(self.root)
+        self.root_revision = self.store.initialize()
+
+    def _candidate(self, record_id: str, text: str) -> dict:
+        return {
+            "schema": "an-kla/write-proposal-v1",
+            "base_revision": self.store.read_current(),
+            "stream": "facts",
+            "operation": "add",
+            "requested_representation": "summary",
+            "record": {"id": record_id, "payload": {"text": text}},
+            "lineage": {"derived_from_retrieval": False, "refs": []},
+        }
+
+    def _authority(self, candidate: dict) -> dict:
+        return {
+            "schema": "an-kla/write-authority-v1",
+            "proposal_sha256": digest_json(candidate),
+            "base_revision": candidate["base_revision"],
+            "authority_class": "model_derived",
+            "issuer": {"kind": "model", "id": "t",
+                       "configuration_fingerprint": "sha256:" + "0" * 64},
+            "evidence": [],
+            "scope": {"streams": ["facts"], "representations": ["summary"],
+                      "operations": ["add"]},
+        }
+
+    def _commit(self, candidate: dict, txid: str) -> dict:
+        planning = self.store.plan_write(candidate, self._authority(candidate))
+        return self.store.commit_write_plan(
+            expected_current_hash=candidate["base_revision"],
+            proposal=candidate,
+            authority=self._authority(candidate),
+            decision=planning["decision"],
+            plan=planning["plan"],
+            transaction_id=txid,
+        )
+
+    def test_replay_same_txid_reproduces_commit(self) -> None:
+        import uuid
+
+        candidate = self._candidate("f-t1", "texto replay t1")
+        txid = str(uuid.uuid4())
+        planning = self.store.plan_write(candidate, self._authority(candidate))
+        args = dict(
+            expected_current_hash=candidate["base_revision"],
+            proposal=candidate,
+            authority=self._authority(candidate),
+            decision=planning["decision"],
+            plan=planning["plan"],
+        )
+        first = self.store.commit_write_plan(**args, transaction_id=txid)
+        self.assertIs(first["committed"], True)
+        self.assertNotIn("replayed", first)
+        # Reintento con TODOS los argumentos idénticos (respuesta perdida):
+        # el caller conserva el plan original; no replanifica.
+        second = self.store.commit_write_plan(**args, transaction_id=txid)
+        self.assertIs(second["committed"], True)
+        self.assertIs(second.get("replayed"), True)
+        self.assertEqual(second["revision"], first["revision"])
+        self.assertEqual(
+            second["outcome"]["transaction_id"], first["outcome"]["transaction_id"]
+        )
+        self.assertIs(self.store.verify()["ok"], True)
+
+    def test_same_txid_with_different_plan_conflicts(self) -> None:
+        import uuid
+
+        from an_kla.transactions import TransactionError
+
+        first = self._commit(self._candidate("f-t1b", "texto t1b"), str(uuid.uuid4()))
+        self.assertIs(first["committed"], True)
+        other = self._candidate("f-t1c", "plan distinto mismo txid")
+        with self.assertRaises(TransactionError) as ctx:
+            self._commit(other, first["outcome"]["transaction_id"])
+        self.assertEqual(str(ctx.exception), "transaction_binding_conflict")
+
+
 if __name__ == "__main__":
     unittest.main()

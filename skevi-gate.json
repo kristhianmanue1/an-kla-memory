@@ -1,7 +1,6 @@
 {
   "limits": {
     "AGENTS.md": 120,
-    "an_kla/store.py": 820,
     "docs/architecture/0042-sealed-export-v1.md": 700
   },
   "default_limit": 800,

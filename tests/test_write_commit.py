@@ -396,7 +396,7 @@ class WriteCommitTests(unittest.TestCase):
         }
         # The pure verifier normally rejects this first. Bypass it solely to
         # exercise the store's independent defense-in-depth guard from #32.
-        with patch("an_kla.store.verify_write_plan", return_value=None):
+        with patch("an_kla.write_commit.verify_write_plan", return_value=None):
             with self.assertRaises(WritePolicyError) as caught:
                 self.store.commit_write_plan(
                     expected_current_hash=self.root_revision,
@@ -428,7 +428,7 @@ class WriteCommitTests(unittest.TestCase):
                 "mutado despues de verificar"
             )
 
-        with patch("an_kla.store.verify_write_plan", side_effect=verify_then_mutate):
+        with patch("an_kla.write_commit.verify_write_plan", side_effect=verify_then_mutate):
             result = self.store.commit_write_plan(
                 expected_current_hash=self.root_revision,
                 proposal=candidate,

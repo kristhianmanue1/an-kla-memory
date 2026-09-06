@@ -135,7 +135,10 @@ presencia e integridad del store, identidad y contexto de repositorio
 (`main_checkout` / `linked_worktree`). La combinación `store_presence:
 absent` + `linked_worktree` distingue un worktree sin memoria de un
 proyecto nuevo: la regla es apuntar al checkout canónico, nunca
-inicializar memoria propia en el worktree.
+inicializar memoria propia en el worktree. Con los hooks del host
+declarados (ADR-0047), `integration status --schema-version v2` añade el
+bloque `host_hooks` y el perfil observado — ver la
+[guía de hooks](host-hooks-guide.md).
 
 `integration status` (ADR-0039) compone store, contexto gestionado y modo
 de integración en ejes separados. Declara lo que no puede verificar:

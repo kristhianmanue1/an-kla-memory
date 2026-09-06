@@ -141,7 +141,7 @@ class IdentityContractTests(unittest.TestCase):
                 path.write_bytes(canonical_json(value))
                 return original(target, before, parent)
 
-            with patch("an_kla.store.assert_unchanged", side_effect=mutate_then_check):
+            with patch("an_kla.write_commit.assert_unchanged", side_effect=mutate_then_check):
                 with self.assertRaisesRegex(IdentityError, "store_identity_changed"):
                     store.commit_write_plan(
                         expected_current_hash=root,
@@ -264,9 +264,9 @@ class IdentityContractTests(unittest.TestCase):
             authority = _authority(proposal)
             planning = store.plan_write(proposal, authority)
             transactions_before = set((store.root / "transactions").glob("*.json"))
-            from an_kla import store as store_module
+            from an_kla import write_commit as write_commit_module
 
-            original = store_module.assert_unchanged
+            original = write_commit_module.assert_unchanged
 
             def remove_receipt_then_check(target, before, parent):
                 for path in (
@@ -276,7 +276,8 @@ class IdentityContractTests(unittest.TestCase):
                 return original(target, before, parent)
 
             with patch(
-                "an_kla.store.assert_unchanged", side_effect=remove_receipt_then_check
+                "an_kla.write_commit.assert_unchanged",
+                side_effect=remove_receipt_then_check,
             ):
                 with self.assertRaisesRegex(
                     IdentityError, "legacy_store_identity_adoption_required"

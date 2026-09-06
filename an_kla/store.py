@@ -6,13 +6,11 @@ only commit authority; ref-log entries are diagnostic objects only.
 
 from __future__ import annotations
 
-from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass
 import json
 import os
 from pathlib import Path
-import time
 import uuid
 from typing import Any, Iterable, Iterator, Mapping
 
@@ -36,12 +34,18 @@ from .refute_store_mixin import RefuteStoreMixin
 from .reader_gate import shared_reader_gate
 from .record_text import record_text
 from .plan_guard import guard_plan_against_snapshot
+from .store_errors import (
+    ConcurrentUpdateError,
+    IntegrityError,
+    LockBusyError,
+    StoreError,
+)
+from .store_locks import LockResult, write_lock as _write_lock_under_root
+from .store_recovery import doctor_report, recover_report
 from .subject_binding import check_subject_ref_binding
 from .supersede import resolve_supersede_targets
-from .transactions import (
-    begin_transaction,
-    commit_locked,
-)
+from .transactions import begin_transaction, commit_locked
+from .write_commit import commit_write_plan as _commit_write_plan_flow
 from .write_policy import (
     WritePolicyError,
     build_write_plan,
@@ -55,22 +59,6 @@ ID_FIELDS = {"facts": "id", "events": "id", "episodes": "id"}
 PREFIXES = {"facts": "f", "events": "e", "episodes": "ep"}
 
 
-class StoreError(RuntimeError):
-    pass
-
-
-class ConcurrentUpdateError(StoreError):
-    pass
-
-
-class IntegrityError(StoreError):
-    pass
-
-
-class LockBusyError(StoreError):
-    pass
-
-
 @dataclass(frozen=True)
 class Snapshot:
     revision_id: str
@@ -78,11 +66,6 @@ class Snapshot:
     checkpoint: Mapping[str, Any]
     records: Mapping[str, tuple[Mapping[str, Any], ...]]
     raw_records: Mapping[str, tuple[Mapping[str, Any], ...]]
-
-
-@dataclass
-class LockResult:
-    release_error: str | None = None
 
 
 def _validate_checkpoint_v2(
@@ -341,149 +324,20 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         decision: Mapping[str, Any],
         transaction_id: str | None = None,
     ) -> dict[str, Any]:
-        """Revalidate and commit one exact write plan under the store lock."""
+        """Revalidate and commit one exact write plan under the store lock.
 
-        binding = mutation_preflight(self)
-        self._make_layout()
-        with self.write_lock() as lock_result:
-            observed = self.read_current()
-            if observed != expected_current_hash:
-                raise WritePolicyError("write_plan_base_changed")
-            store_identity = assert_unchanged(self, binding, observed)
-
-            # Callers retain their dictionaries and may share them with other
-            # threads.  Snapshot every object while holding the store lock and
-            # use only those detached values after verification; otherwise a
-            # mutation between verify_write_plan() and pending construction
-            # could change the bytes that reach the segment.
-            checked_plan = deepcopy(plan)
-            checked_proposal = deepcopy(proposal)
-            checked_authority = deepcopy(authority)
-            checked_decision = deepcopy(decision)
-
-            # All policy validation intentionally occurs again inside the same
-            # critical section that can move CURRENT.  The pure module remains
-            # the only implementation of the policy.
-            verify_write_plan(
-                checked_plan,
-                checked_proposal,
-                checked_authority,
-                checked_decision,
-            )
-            if (
-                checked_proposal["base_revision"] != observed
-                or checked_authority["base_revision"] != observed
-                or checked_plan["core"]["base_revision"] != observed
-            ):
-                raise WritePolicyError("write_plan_base_changed")
-
-            # ADR-0046: engine-level defense-in-depth bajo lock (detalle
-            # en an_kla/attest.enforce_for_commit).
-            if (
-                checked_decision["decision"] != "skip"
-                and checked_authority["authority_class"] == "tool_observed"
-            ):
-                attest_module.enforce_for_commit(self, checked_authority)
-
-            if checked_decision["decision"] == "skip":
-                return {
-                    "schema": "an-kla/write-commit-result-v1",
-                    "committed": False,
-                    "revision": observed,
-                    "decision": "skip",
-                    "reason_codes": deepcopy(checked_decision["reason_codes"]),
-                    "plan_fingerprint": checked_plan["plan_fingerprint"],
-                    "context_diagnostics": self._context_diagnostics(),
-                }
-
-            # ADR-0019 (PR-B): resolve supersede targets against the authoritative
-            # snapshot under the lock, before any object/journal is written. A
-            # failure here raises invalid_supersede_target (terminal) with no
-            # side effects (no orphan objects, no prepared journal).
-            pending_supersedes = resolve_supersede_targets(self, checked_plan, observed)
-
-            # ADR-0033 §Decisión 5 (issue #59 Fase B): validate subject_ref
-            # namespaces against the bound project identity, still under the
-            # write lock and before any object/journal is written. ``binding``
-            # is the snapshot captured by mutation_preflight and revalidated by
-            # assert_unchanged; the guard never re-reads project identity.
-            check_subject_ref_binding(checked_plan, binding)
-
-            pending: dict[str, list[dict[str, Any]]] = {
-                "facts": [],
-                "events": [],
-                "episodes": [],
-            }
-            for item in checked_plan["records"]:
-                # The policy core (write_policy.py) is the only implementation of
-                # the policy; refute/decay never reach here (they skip). add and
-                # supersede both append the new record to its stream; supersede
-                # additionally records the target's vigency flip above.
-                op = item["operation"]
-                if op == "add":
-                    pending[item["stream"]].append(deepcopy(item["record"]))
-                elif op == "supersede":
-                    pending[item["stream"]].append(deepcopy(item["record"]))
-                else:
-                    raise WritePolicyError(
-                        "invalid_write_plan",
-                        "records[]:operation:not_committable",
-                    )
-
-            policy_metadata = {
-                "schema": "an-kla/write-policy-transaction-v1",
-                "plan_fingerprint": checked_plan["plan_fingerprint"],
-                "proposal_sha256": checked_decision["proposal_sha256"],
-                "authority_sha256": checked_decision["authority_sha256"],
-                "policy_fingerprint": checked_decision["policy_fingerprint"],
-                "decision": checked_decision["decision"],
-                "reason_codes": deepcopy(checked_decision["reason_codes"]),
-            }
-            attempt = begin_transaction(
-                "write",
-                transaction_id=transaction_id,
-                base_revision=observed,
-                plan_fingerprint=checked_plan["plan_fingerprint"],
-            )
-            revision, outcome = self._commit_locked(
-                observed=observed,
-                checkpoint_patch={},
-                pending=pending,
-                attempt=attempt,
-                policy_metadata=policy_metadata,
-                supersedes=pending_supersedes or None,
-                store_identity=store_identity,
-            )
-        if lock_result.release_error is not None:
-            outcome = deepcopy(outcome)
-            outcome["audit_state"] = "incomplete"
-            outcome["warnings"] = sorted(
-                set([*outcome["warnings"], lock_result.release_error])
-            )
-            if outcome["committed"] is True:
-                outcome["state"] = "committed_audit_incomplete"
-                outcome["operation_error_code"] = "lock_release_incomplete"
-        if outcome["committed"] is True and revision != observed:
-            self._maybe_reindex(observed, revision)
-        if outcome["committed"] is True and not record_text(
-            checked_proposal["record"]
-        ):
-            # Issue #104 (H2): warning visible en el outcome (el reason ya
-            # viaja en la decisión; ADR-0018/issue #15).
-            outcome = deepcopy(outcome)
-            outcome["warnings"] = sorted(
-                set([*outcome["warnings"], "record_without_indexable_text"])
-            )
-        return {
-            "schema": "an-kla/write-commit-result-v1",
-            "committed": outcome["committed"] is True,
-            "revision": revision,
-            "decision": checked_decision["decision"],
-            "reason_codes": deepcopy(checked_decision["reason_codes"]),
-            "plan_fingerprint": checked_plan["plan_fingerprint"],
-            "context_diagnostics": self._context_diagnostics(),
-            "outcome": outcome,
-        }
+        Delegates to :mod:`an_kla.write_commit` (partición #117), que
+        incluye el replay de ADR-0024 §API/CLI (issue #115/T1).
+        """
+        return _commit_write_plan_flow(
+            self,
+            expected_current_hash=expected_current_hash,
+            plan=plan,
+            proposal=proposal,
+            authority=authority,
+            decision=decision,
+            transaction_id=transaction_id,
+        )
 
     def _context_diagnostics(self) -> dict[str, Any]:
         """Best-effort contract-health snapshot (ADR-0020).
@@ -562,109 +416,16 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
     def recover(self) -> dict[str, Any]:
         """Diagnose interrupted work without guessing a replacement CURRENT."""
         with shared_reader_gate(self):
-            return self._recover_under_gate()
-
-    def _recover_under_gate(self) -> dict[str, Any]:
-        current = self.read_current()
-        # A valid CURRENT is authoritative even if its operational transaction
-        # record is stale.  Prepared journals are retained for inspection.
-        prepared = []
-        for path in sorted((self.root / "transactions").glob("*.json")):
-            try:
-                entry = json.loads(path.read_text(encoding="utf-8"))
-            except json.JSONDecodeError:
-                prepared.append({"path": path.name, "status": "invalid_journal"})
-                continue
-            if entry.get("stage") != "committed":
-                prepared.append({"path": path.name, "status": str(entry.get("stage", "unknown"))})
-        return {
-            "schema": "an-kla/recovery-report-v1",
-            "current": current,
-            "action": "none_current_authoritative",
-            "pending_transactions": prepared,
-        }
+            return recover_report(self)
 
     def doctor(self) -> dict[str, Any]:
         with shared_reader_gate(self):
-            return self._doctor_under_gate()
+            return doctor_report(self)
 
-    def _doctor_under_gate(self) -> dict[str, Any]:
-        try:
-            status = self.verify()
-            current_error = None
-        except IntegrityError as exc:
-            status = None
-            current_error = str(exc)
-        quarantine = self.root / "quarantine"
-        objects = [path for path in quarantine.rglob("*") if path.is_file()] if quarantine.exists() else []
-        return {
-            "schema": "an-kla/doctor-v1",
-            "current_ok": current_error is None,
-            "current_error": current_error,
-            "status": status,
-            "quarantine_objects": len(objects),
-            "quarantine_bytes": sum(path.stat().st_size for path in objects),
-            "durability_profile": self.durability_profile,
-            "index_orphan_temporaries": sum(1 for path in (self.root / "indexes").rglob(".build-*.sqlite") if path.is_file()) if (self.root / "indexes").exists() else 0,
-        }
-
-    @contextmanager
     def write_lock(self) -> Iterator[LockResult]:
+        """Adquiere el lock de escritura (deadline 10s; issue #111/P2)."""
         self._make_layout()
-        result = LockResult()
-        try:
-            import fcntl  # type: ignore
-        except ImportError:
-            try:
-                import msvcrt  # type: ignore
-            except ImportError:
-                lock_dir = self.root / ".write.lock-dir"
-                try:
-                    lock_dir.mkdir()
-                except FileExistsError as exc:
-                    raise LockBusyError("write_lock_busy") from exc
-                try:
-                    yield result
-                finally:
-                    try:
-                        lock_dir.rmdir()
-                    except OSError:
-                        result.release_error = "lock_release_incomplete"
-                return
-            lock_path = self.root / ".write.lock"
-            with lock_path.open("a+b") as handle:
-                if handle.seek(0, os.SEEK_END) == 0:
-                    handle.write(b"0")
-                    handle.flush()
-                handle.seek(0)
-                deadline = time.monotonic() + 10.0
-                while True:
-                    try:
-                        msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
-                        break
-                    except OSError as exc:
-                        if time.monotonic() >= deadline:
-                            raise LockBusyError("write_lock_busy") from exc
-                        time.sleep(0.05)
-                try:
-                    yield result
-                finally:
-                    try:
-                        handle.seek(0)
-                        msvcrt.locking(handle.fileno(), msvcrt.LK_UNLCK, 1)
-                    except OSError:
-                        result.release_error = "lock_release_incomplete"
-            return
-        lock_path = self.root / ".write.lock"
-        with lock_path.open("a+b") as handle:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
-            try:
-                yield result
-            finally:
-                try:
-                    fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
-                except OSError:
-                    result.release_error = "lock_release_incomplete"
+        return _write_lock_under_root(self.root)
 
     def _make_layout(self) -> None:
         for relative in (

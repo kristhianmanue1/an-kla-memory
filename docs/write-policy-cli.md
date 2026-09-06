@@ -289,19 +289,20 @@ edites el plan viejo ni fuerces `expected-current`.
 ### Lock de escritura: liveness y contrato del agente
 
 El `write_lock` es local (fcntl en POSIX, msvcrt en Windows) y no coordina
-varias máquinas. Su comportamiento difiere por plataforma:
+varias máquinas. Desde beta.22 la disciplina es idéntica en todas las
+plataformas (issue #111/P2):
 
-- **POSIX**: la adquisición es bloqueante y **sin deadline**
-  (`fcntl.flock(LOCK_EX)`). Un writer colgado (proceso detenido, fsync
-  trabado en un medio lento) bloquea a los demás writers indefinidamente:
-  no existe `write_lock_busy` en esta plataforma.
-- **Windows**: hay deadline de 10 s con backoff; al agotarse el CLI termina
-  con `an-kla error: write_lock_busy`. En plataformas sin fcntl ni msvcrt el
-  lock es un directorio (`.write.lock-dir`) con `mkdir` atómico: el segundo
-  writer falla de inmediato con el mismo código.
+- **Adquisición no bloqueante con backoff y deadline de 10 s**
+  (`WRITE_LOCK_DEADLINE_SECONDS`, constante congelada). Al agotarse, el
+  CLI termina con `an-kla error: write_lock_busy` en cualquier
+  plataforma. En plataformas sin `fcntl` ni `msvcrt`, el lock es un
+  directorio (`.write.lock-dir`) con `mkdir` atómico: el segundo writer
+  falla de inmediato con el mismo código.
+- El archivo del lock vive en `.an-kla/memory/.write.lock`.
 
 Contrato del agente ante un lock ocupado o un commit que no retorna: no
-fuerces, no borres `.an-kla/memory/.write.lock` ni reinicies el store. Mantén las
+fuerces, no borres `.an-kla/memory/.write.lock` ni reinicies el store.
+Mantén las
 secciones críticas cortas (un commit por invocación), relee `status` y
 reintenta con re-plan — los planes viejos se descartan, nunca se reutilizan
 (`write_plan_base_changed` es la señal esperada tras esperar). Si un writer

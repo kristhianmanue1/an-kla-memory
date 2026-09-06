@@ -42,6 +42,7 @@ from __future__ import annotations
 
 import argparse
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -78,6 +79,16 @@ def compute_refs_digest(refs_root: Path) -> str:
             file=sys.stderr,
         )
         sys.exit(3)
+    # Issue #116/C1: un refs/ existente pero SIN archivos produce el
+    # digest del input vacío (hash válido) y permitiría un anchor_match
+    # falso; fail-closed explícito.
+    file_count = sum(1 for path in refs_root.rglob("*") if path.is_file())
+    if file_count == 0:
+        print(
+            f"verificar_anclaje: refs/ sin archivos: {refs_root}",
+            file=sys.stderr,
+        )
+        sys.exit(3)
     # El pipeline canónico corre desde la raíz del repo con la ruta
     # RELATIVA `.an-kla/memory/refs`: las rutas forman parte de la entrada
     # del agregado, así que una ruta absoluta produce otro digest
@@ -90,13 +101,16 @@ def compute_refs_digest(refs_root: Path) -> str:
     else:
         cwd = resolved.parent
         relative = resolved.name
+    # Issue #116/C1: ruta interpolada con quoting (layouts con espacios)
+    # y `set -o pipefail` vía bash para que un fallo de `find` no quede
+    # enmascarado por la última etapa del pipeline. El quoting no altera
+    # el argv de find ni el digest resultante.
     command = (
-        f"find {relative} -type f -exec shasum -a 256 {{}} + "
+        f"find {shlex.quote(relative)} -type f -exec shasum -a 256 {{}} + "
         f"| LC_ALL=C sort -k2 | shasum -a 256"
     )
     result = subprocess.run(
-        command,
-        shell=True,
+        ["bash", "-o", "pipefail", "-c", command],
         capture_output=True,
         text=True,
         check=False,

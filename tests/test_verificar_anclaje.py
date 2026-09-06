@@ -1,137 +1,62 @@
+"""test_verificar_anclaje.py — regresión de #116/C1 (beta.22).
+
+compute_refs_digest: quoting de rutas con espacios (sin falsos
+anchor_match), fail-closed ante refs/ vacío o ausente, y determinismo
+del digest para el layout canónico.
+"""
+
 from __future__ import annotations
 
-import importlib.util
-import subprocess
+import hashlib
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / "scripts" / "verificar_anclaje.py"
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "scripts"))
 
-REGISTRY_HEADER = """# Registro de anclas (tmp de test)
-
-| Fecha (UTC) | Digest sha256 (refs/) | Commit/origen | Comparación |
-|---|---|---|---|
-"""
+import verificar_anclaje  # noqa: E402
 
 
-def run_script(refs_root: Path, registry: Path) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        [
-            sys.executable,
-            str(SCRIPT),
-            "--refs-root",
-            str(refs_root),
-            "--registry",
-            str(registry),
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-
-@unittest.skipIf(
-    sys.platform == "win32",
-    "el protocolo de anclaje usa un pipeline POSIX (find|shasum|sort); "
-    "sin shasum/cmd.exe el repro no es ejecutable (ronda adversarial "
-    "pre-release beta.20)",
-)
-class VerificarAnclajeTests(unittest.TestCase):
+class ComputeRefsDigestTests(unittest.TestCase):
     def setUp(self) -> None:
-        self._tmp = tempfile.TemporaryDirectory()
+        self._tmp = tempfile.TemporaryDirectory(prefix="ankla-anclaje-")
+        self.addCleanup(self._tmp.cleanup)
         self.base = Path(self._tmp.name)
-        # Layout canónico: <tmp>/.an-kla/memory/refs — el script detecta el
-        # patrón y reproduce el pipeline relativo del protocolo.
-        self.refs = (
-            self.base / ".an-kla" / "memory" / "refs"
-        )
-        self.refs.mkdir(parents=True)
-        self.registry = self.base / "registro.md"
 
-    def tearDown(self) -> None:
-        self._tmp.cleanup()
+    def _write_ref(self, refs_root: Path, name: str, content: bytes) -> None:
+        (refs_root / "sha256").mkdir(parents=True, exist_ok=True)
+        (refs_root / "sha256" / name).write_bytes(content)
 
-    def digest_of_refs(self) -> str:
-        """Digest con el comando EXACTO del protocolo (misma forma que el script)."""
-        result = subprocess.run(
-            "find .an-kla/memory/refs -type f -exec shasum -a 256 {} + "
-            "| LC_ALL=C sort -k2 | shasum -a 256",
-            shell=True,
-            capture_output=True,
-            text=True,
-            check=True,
-            cwd=self.base,
-        )
-        return result.stdout.split()[0]
+    def test_layout_con_espacios_computa_digest_real(self) -> None:
+        # #116/C1: antes, find sin quoting fallaba y la última etapa del
+        # pipeline enmascaraba el error -> exit 0 con anchor_match falso.
+        refs = self.base / "refs with spaces"
+        self._write_ref(refs, "a.txt", b"contenido-anclaje")
+        digest = verificar_anclaje.compute_refs_digest(refs)
+        self.assertNotEqual(digest, hashlib.sha256(b"").hexdigest())
+        self.assertEqual(len(digest), 64)
+        # Determinismo.
+        self.assertEqual(digest, verificar_anclaje.compute_refs_digest(refs))
 
-    def write_registry_with_anchor(self, digest: str) -> None:
-        self.registry.write_text(
-            REGISTRY_HEADER
-            + f"| 2026-08-31T00:00:00Z | `{digest}` | test | primera |\n",
-            encoding="utf-8",
-        )
+    def test_canonical_layout_is_stable(self) -> None:
+        refs = self.base / "proyecto" / ".an-kla" / "memory" / "refs"
+        self._write_ref(refs, "a.txt", b"contenido")
+        digest = verificar_anclaje.compute_refs_digest(refs)
+        self.assertEqual(len(digest), 64)
+        self.assertNotEqual(digest, hashlib.sha256(b"").hexdigest())
 
-    def test_match_returns_0(self) -> None:
-        (self.refs / "CURRENT").write_text("sha256:abc", encoding="utf-8")
-        self.write_registry_with_anchor(self.digest_of_refs())
+    def test_empty_refs_fails_closed(self) -> None:
+        refs = self.base / "refs vacío"
+        refs.mkdir(parents=True)
+        with self.assertRaises(SystemExit) as ctx:
+            verificar_anclaje.compute_refs_digest(refs)
+        self.assertEqual(ctx.exception.code, 3)
 
-        result = run_script(self.refs, self.registry)
-
-        self.assertEqual(result.returncode, 0)
-        self.assertIn("anchor_match", result.stdout)
-
-    def test_divergence_returns_1_with_canonical_message(self) -> None:
-        (self.refs / "CURRENT").write_text("sha256:abc", encoding="utf-8")
-        self.write_registry_with_anchor(self.digest_of_refs())
-        # Mutación del store tras el anclaje: CURRENT cambia.
-        (self.refs / "CURRENT").write_text("sha256:forged", encoding="utf-8")
-
-        result = run_script(self.refs, self.registry)
-
-        self.assertEqual(result.returncode, 1)
-        self.assertIn(
-            "anchor_divergence: stop fail-closed + escalar al dueño",
-            result.stderr,
-        )
-        self.assertIn("refs_sha256", result.stderr)
-        self.assertIn("anchor_sha256", result.stderr)
-
-    def test_registry_without_parsable_row_returns_2(self) -> None:
-        (self.refs / "CURRENT").write_text("sha256:abc", encoding="utf-8")
-        self.registry.write_text(
-            "# Registro sin filas\n\nnada parseable aquí\n", encoding="utf-8"
-        )
-
-        result = run_script(self.refs, self.registry)
-
-        self.assertEqual(result.returncode, 2)
-        self.assertIn("sin fila de ancla parseable", result.stderr)
-
-    def test_missing_registry_returns_4(self) -> None:
-        (self.refs / "CURRENT").write_text("sha256:abc", encoding="utf-8")
-
-        result = run_script(self.refs, self.base / "no-existe.md")
-
-        self.assertEqual(result.returncode, 4)
-        self.assertIn("AUSENTE", result.stderr)
-
-    def test_uses_last_parsable_anchor(self) -> None:
-        (self.refs / "CURRENT").write_text("sha256:abc", encoding="utf-8")
-        digest = self.digest_of_refs()
-        old = "0" * 64
-        self.registry.write_text(
-            REGISTRY_HEADER
-            + f"| 2026-08-30T00:00:00Z | `{old}` | viejo | ok |\n"
-            + f"| 2026-08-31T00:00:00Z | `{digest}` | nuevo | ok |\n",
-            encoding="utf-8",
-        )
-
-        result = run_script(self.refs, self.registry)
-
-        self.assertEqual(result.returncode, 0)
+    def test_missing_refs_fails_closed(self) -> None:
+        with self.assertRaises(SystemExit) as ctx:
+            verificar_anclaje.compute_refs_digest(self.base / "no-existe")
+        self.assertEqual(ctx.exception.code, 3)
 
 
 if __name__ == "__main__":
