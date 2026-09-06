@@ -8,6 +8,7 @@ from typing import Any, Mapping
 from .canonical import digest_json
 from .checkpoint_policy import (
     CheckpointPolicyError,
+    FIELDS,
     build_plan,
     evaluate,
     validate_working_state,
@@ -15,6 +16,51 @@ from .checkpoint_policy import (
 )
 from .identity import assert_unchanged, mutation_preflight
 from .transactions import begin_transaction
+
+
+_DEFAULT_ISSUER_CONFIG = {
+    "kind": "model",
+    "id": "agent-local",
+    "profile": "manual-cli/v1",
+}
+
+
+def emit_authority_template(
+    store: Any, working_state: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Plantilla de authority sin leer código interno (issue #120).
+
+    Read-only: valida el working_state, arma el proposal interno
+    exactamente como ``plan_checkpoint`` y devuelve la authority con
+    ``proposal_sha256``/``base_revision`` ya calculados. El caller edita
+    ``issuer`` si su clase/config difiere del default documentado
+    (``model_derived`` con config saneada ``manual-cli/v1``).
+    """
+    validate_working_state(working_state)
+    observed = store.read_current()
+    snapshot = store.snapshot(observed)
+    proposal = {
+        "schema": "an-kla/checkpoint-proposal-v1",
+        "base_revision": observed,
+        "parent_checkpoint": snapshot.manifest["checkpoint"],
+        "working_state": deepcopy(dict(working_state)),
+    }
+    return {
+        "schema": "an-kla/checkpoint-authority-v1",
+        "proposal_sha256": digest_json(proposal),
+        "base_revision": observed,
+        "authority_class": "model_derived",
+        "issuer": {
+            "kind": "model",
+            "id": "agent-local",
+            "configuration_fingerprint": digest_json(_DEFAULT_ISSUER_CONFIG),
+        },
+        "evidence": [],
+        "scope": {
+            "operation": "checkpoint",
+            "fields": sorted(FIELDS, key=lambda item: item.encode("utf-8")),
+        },
+    }
 
 
 def show_checkpoint(store: Any) -> dict[str, Any]:

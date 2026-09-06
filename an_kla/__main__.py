@@ -17,7 +17,12 @@ from .benchmark_fixture import run_reference_benchmark
 from .canonical import canonical_json
 from .checkpoint_policy import CheckpointPolicyError
 from .compaction import CompactionError, commit_compaction, plan_compaction
-from .checkpoints import commit_checkpoint, plan_checkpoint, show_checkpoint
+from .checkpoints import (
+    commit_checkpoint,
+    emit_authority_template,
+    plan_checkpoint,
+    show_checkpoint,
+)
 from .context import assemble_context
 from an_kla.baseline_adoption import (
     apply_baseline_adoption,
@@ -405,7 +410,14 @@ def _run() -> None:
         if args.checkpoint_command == "show":
             result = show_checkpoint(store)
         elif args.checkpoint_command == "plan":
-            result = plan_checkpoint(store, _json(args.input), _json(args.authority))
+            if args.emit_authority_template:
+                result = emit_authority_template(store, _json(args.input))
+            else:
+                if not args.authority:
+                    raise CliUsageError("missing_checkpoint_authority")
+                result = plan_checkpoint(
+                    store, _json(args.input), _json(args.authority)
+                )
         else:
             result = commit_checkpoint(
                 store,

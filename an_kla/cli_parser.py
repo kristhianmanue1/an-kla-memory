@@ -402,8 +402,25 @@ def build_parser() -> argparse.ArgumentParser:
     checkpoint_sub = checkpoint_cmd.add_subparsers(dest="checkpoint_command", required=True)
     checkpoint_sub.add_parser("show")
     checkpoint_plan_cmd = checkpoint_sub.add_parser("plan")
-    checkpoint_plan_cmd.add_argument("--input", required=True)
-    checkpoint_plan_cmd.add_argument("--authority", required=True)
+    checkpoint_plan_cmd.add_argument(
+        "--input", required=True,
+        help="working_state-v2 JSON DIRECTO (el CLI arma el proposal interno "
+             "con base_revision/parent del store; checkpoint-proposal-v1 "
+             "describe ese objeto interno, no el archivo de entrada).",
+    )
+    checkpoint_plan_cmd.add_argument(
+        "--authority",
+        help="checkpoint-authority-v1; proposal_sha256 debe ser el "
+             "digest_json del proposal interno (usa --emit-authority-template "
+             "para generarlo sin leer código). Requerido salvo con "
+             "--emit-authority-template.",
+    )
+    checkpoint_plan_cmd.add_argument(
+        "--emit-authority-template", action="store_true",
+        help="No planifica: emite a stdout la plantilla de authority con "
+             "proposal_sha256/base_revision ya calculados desde --input "
+             "(edite issuer si su clase/config difiere del default).",
+    )
     checkpoint_commit_cmd = checkpoint_sub.add_parser("commit")
     checkpoint_commit_cmd.add_argument("--plan", required=True)
     checkpoint_commit_cmd.add_argument("--expected-current", required=True)
