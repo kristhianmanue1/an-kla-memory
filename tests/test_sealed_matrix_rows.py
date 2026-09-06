@@ -465,6 +465,12 @@ class Row15SuiteBothProfilesTests(unittest.TestCase):
                         # vuelve a cargar esta matriz; su fila 15 anidada
                         # se salta.
                         _ROW15_ENV: "1",
+                        # La pierna anidada de la matriz (issue #111/P5)
+                        # re-correría la suite completa por cada
+                        # intérprete disponible: se escapa aquí porque el
+                        # paso queda cubierto por pruebas unitarias
+                        # (tests/test_ci_local_matriz.py).
+                        "AN_KLA_CI_LOCAL_MATRIX": "0",
                     },
                 )
                 self.assertEqual(

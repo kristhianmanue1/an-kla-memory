@@ -7,6 +7,7 @@ security fixes.
 
 | Version | Supported |
 |---|---|
+| `v0.1.0-beta.23` | ✅ |
 | `v0.1.0-beta.22` | ✅ |
 | `v0.1.0-beta.21` | ✅ |
 | `< v0.1.0-beta.21` | ❌ |

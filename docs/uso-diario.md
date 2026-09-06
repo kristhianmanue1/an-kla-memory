@@ -37,7 +37,7 @@ por separado el contrato de contexto:
 
 ```bash
 .venv/bin/python -m pip install --upgrade \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.22"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.23"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . context status
 .venv/bin/python -m an_kla --project-root . context plan --operation update

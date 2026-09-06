@@ -14,6 +14,42 @@ en fase de pre-release `0.1.0`.
 
 Nada aún.
 
+## [v0.1.0-beta.23]
+
+Release de mantenimiento: el fix #119 (export con perfil host-managed) más
+todo el pase de deuda pre-G3 ya mergeado a `main` tras beta.22. Release
+**code-only**: contrato gestionado y `TEMPLATE_VERSION` siguen en
+`0.1.0-beta.21`.
+
+**Corregido**:
+- #119 (P1-beta.23): `export create` fallaba con
+  `export_unrecognized_durable_path` en cualquier proyecto con perfil
+  host-managed. `hook-runs/**` viaja ahora con la bóveda (`_PATTERNS`) y
+  `host-hooks.json` queda excluido (es del proyecto) — ADR-0048 §3.
+- #115/T1: replay de ADR-0024 §API/CLI — mismo txid + mismo plan binding
+  reproduce el resultado (`replayed: true`) en vez de chocar con el CAS;
+  binding distinto → `transaction_binding_conflict`.
+- #118/R2: `assemble_context` sostiene un único lease de reader gate
+  (patrón `resume`); una compactación intercalada ya no rompe la
+  operación compuesta.
+- #111/P2: `write_lock` POSIX con `LOCK_NB` + backoff + deadline de 10s →
+  `write_lock_busy` (paridad con Windows); `docs/write-policy-cli.md`
+  actualizada.
+- #116/C1: `verificar_anclaje` cita la ruta, corre el pipeline con
+  `pipefail` y falla cerrado ante `refs/` vacío (adiós al anchor_match
+  falso con layouts con espacios).
+
+**Añadido**:
+- ADR-0048 aceptada (G3, store_root externo): registro en 48 ADRs
+  (45 aceptadas, 3 propuestas). Sin implementación aún.
+- #119/#115/#117/#111: issues cerrados con evidencia.
+
+**Mantenimiento**:
+- #117: `store.py` 812 → 573 líneas; partición en `write_commit.py`,
+  `store_locks.py`, `store_recovery.py`, `store_errors.py`; techo
+  transitorio retirado.
+- Fix #119 vía test de regresión `test_export_with_host_managed_artifacts_issue119`.
+
 ## [v0.1.0-beta.22]
 
 Release de consolidación: G2 completo (hooks gobernados del host, ADR-0047),

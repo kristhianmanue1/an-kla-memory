@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
+
 import subprocess
 import sys
 import tempfile
 import zipfile
+
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[1]))
+from an_kla.version import VERSION  # noqa: E402
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -54,7 +57,8 @@ def main() -> int:
         cli = scripts / ("an-kla.exe" if os.name == "nt" else "an-kla")
         _run([str(python), "-m", "pip", "install", "--no-deps", str(wheels[0])])
         version = _run([str(cli), "--version"])
-        if version.stdout.decode().strip() != "an-kla-memory 0.1.0b21":
+        expected = f"an-kla-memory {VERSION}"
+        if version.stdout.decode().strip() != expected:
             raise SystemExit("clean_wheel_wrong_version")
         help_result = _run([str(cli), "--no-update-check", "--help"])
         help_text = help_result.stdout.decode()
