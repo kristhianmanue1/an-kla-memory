@@ -79,7 +79,7 @@ class ReleaseMetadataTests(unittest.TestCase):
         )
         required = (
             "python3.12 -m venv .venv",
-            "git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.21",
+            "git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.22",
             "-m an_kla --version",
             "context plan --operation install",
             "context plan --operation update",
