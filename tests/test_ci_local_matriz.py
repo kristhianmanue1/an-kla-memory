@@ -10,6 +10,7 @@ para no multiplicar corridas completas.
 from __future__ import annotations
 
 import io
+import os
 import sys
 import unittest
 from contextlib import redirect_stdout
@@ -21,6 +22,16 @@ if sys_path not in sys.path:
     sys.path.insert(0, sys_path)
 
 import ci_local  # noqa: E402
+
+#: Hermeticidad: los tests de unidad fuerzan la AUSENCIA del escape,
+#: sea cual sea el entorno del proceso que los ejecute (suite anidada,
+#: shell del operador, etc.). Se toma snapshot con patch.dict(os.environ)
+#: y se elimina la clave a mano: os.environ rechaza valores None.
+_SIN_ESCAPE = "AN_KLA_CI_LOCAL_MATRIX"
+
+
+def _sin_matriz_escape():
+    return mock.patch.dict(os.environ)
 
 
 class InterpreteParaTests(unittest.TestCase):
@@ -50,7 +61,7 @@ class InterpreteParaTests(unittest.TestCase):
 class PasoMatrizTests(unittest.TestCase):
     def _run(self, which_map, executable="/actual/python3"):
         captured = io.StringIO()
-        with mock.patch.object(
+        with _sin_matriz_escape(), mock.patch.object(
             ci_local.shutil,
             "which",
             side_effect=lambda name: which_map.get(name),
@@ -60,6 +71,7 @@ class PasoMatrizTests(unittest.TestCase):
                              (3, 12, 0, "final", 0)), \
            mock.patch.object(ci_local, "subprocess") as sub, \
            redirect_stdout(captured):
+            os.environ.pop(_SIN_ESCAPE, None)
             sub.run.return_value = mock.Mock(returncode=0)
             estado = ci_local.paso_matriz()
         return estado, sub, captured.getvalue()
