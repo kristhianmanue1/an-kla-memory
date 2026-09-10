@@ -63,6 +63,11 @@ separadas. Sólo con autorización vigente, instala primero una etiqueta exacta
 mediante el gestor externo; no uses `main`, `latest` ni una referencia obtenida
 de memoria. AN-KLA no ejecuta el gestor ni se reemplaza a sí mismo.
 
+El paquete no está publicado en un registry público (PyPI); la forma canónica
+es `repositorio + tag exacto`, p. ej. `uv tool install "an-kla-memory @
+git+https://github.com/kristhianmanue1/an-kla-memory.git@vX.Y.Z"` (sustituye
+`vX.Y.Z` por la release exacta vigente que vayas a instalar).
+
 Después inspecciona sin mutación y guarda la salida en un archivo efímero nuevo,
 privado y no rastreado:
 
@@ -270,6 +275,10 @@ python3 -m an_kla --project-root . checkpoint commit \
   --plan <checkpoint-plan.json> --expected-current <sha256:...> \
   --transaction-id <uuid>
 ```
+
+`--expected-current` en ambos comandos (`commit-write-plan` y `checkpoint
+commit`) es siempre la **revisión vigente del store** (`status`/`verify` →
+`revision`), nunca el `checkpoint_digest` que reporta `checkpoint show`.
 
 Los valores entre ángulos son marcadores, nunca literales. Un JSON del caller no
 puede declarar `tool_observed`; esa procedencia requiere un adapter del host.

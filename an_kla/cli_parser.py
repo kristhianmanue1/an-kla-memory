@@ -448,7 +448,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     checkpoint_commit_cmd = checkpoint_sub.add_parser("commit")
     checkpoint_commit_cmd.add_argument("--plan", required=True)
-    checkpoint_commit_cmd.add_argument("--expected-current", required=True)
+    checkpoint_commit_cmd.add_argument(
+        "--expected-current", required=True,
+        help="Revisión vigente del store (digest reportado por `status`), "
+             "NO el `checkpoint_digest` de `checkpoint show`.",
+    )
     checkpoint_commit_cmd.add_argument("--transaction-id", required=True)
     checkpoint_commit_cmd.add_argument("--on-behalf-of-hook", default=None)
     resume_cmd = sub.add_parser("resume", help="Reanudar desde una revisión consistente.")
