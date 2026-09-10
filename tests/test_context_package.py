@@ -45,6 +45,28 @@ class PureContextBlockTests(unittest.TestCase):
             ROOT / "AN-KLA.md",  # sanity placeholder
         )
 
+    def test_current_template_version_is_not_a_frozen_historical_entry(self) -> None:
+        """Regression for #124: TEMPLATE_VERSION debe bumpearse junto con el
+        contenido. `_KNOWN_CONTEXT_TEMPLATES` congela el hash de versiones
+        YA superadas; si TEMPLATE_VERSION coincide con una entrada
+        congelada cuyo contenido difiere del actual (DETAILED_CONTRACT/
+        COMPACT_PAYLOAD editados sin bump), `context_status` deja de poder
+        distinguir un store desactualizado de uno vigente: ambos declaran
+        la misma etiqueta de versión y el store desactualizado, al tener
+        el hash antiguo correcto para esa etiqueta, se toma por
+        `known_outdated` en vez de por `context_template_outdated`. Ver
+        PR #126 (bug introducido) y su fix en el mismo diff que este test.
+        """
+        from an_kla.context_text import TEMPLATE_VERSION, _KNOWN_CONTEXT_TEMPLATES
+
+        self.assertNotIn(
+            TEMPLATE_VERSION, _KNOWN_CONTEXT_TEMPLATES,
+            "TEMPLATE_VERSION debe bumpearse a una etiqueta nueva cuando "
+            "cambia DETAILED_CONTRACT/COMPACT_PAYLOAD; la etiqueta vigente "
+            "nunca debe coincidir con una entrada ya congelada como "
+            "histórica.",
+        )
+
     def test_detailed_contract_has_no_duplicated_code_blocks(self) -> None:
         """Regression for the beta.5 -> beta.6 contract duplication defect.
 

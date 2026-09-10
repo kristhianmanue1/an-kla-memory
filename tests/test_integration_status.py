@@ -61,13 +61,14 @@ class IntegrationStatusTests(unittest.TestCase):
                 apply_context_plan,
                 plan_context_change,
             )
+            from an_kla.context_text import TEMPLATE_VERSION
 
             plan = plan_context_change(directory, "install", "AGENTS.md")
             apply_context_plan(directory, plan)
             result = integration_status(store)
         self.assertEqual(result["managed_context"]["presence"], "present")
         self.assertEqual(
-            result["managed_context"]["template_version"], "0.1.0-beta.21"
+            result["managed_context"]["template_version"], TEMPLATE_VERSION
         )
         self.assertTrue(result["managed_context"]["ok"])
         _validator().validate(result)
