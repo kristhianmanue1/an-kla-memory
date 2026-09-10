@@ -265,6 +265,13 @@ No escribas después de cada respuesta. Propón memoria sólo para información
 durable, no trivial, con procedencia, útil para decisiones futuras, saneada y no
 duplicada por una memoria vigente equivalente.
 
+Las formas JSON exactas (proposal, authority, working-state, y el resto de
+objetos gobernados) son normativas vía `schema show <nombre>` y `schema list`,
+que viajan con el paquete instalado; no dependas de documentación que sólo
+existe en el repo fuente. `plan-write --emit-authority-template` y
+`checkpoint plan --emit-authority-template` calculan `proposal_sha256` sin
+que reconstruyas la canonicalización a mano.
+
 ### 1. Preparar y clasificar
 
 Separa contenido, evidencia, stream, representación, operación, linaje y
@@ -346,6 +353,15 @@ Los valores entre ángulos son marcadores, nunca literales. Un JSON del caller n
 puede declarar `tool_observed`; esa procedencia requiere un adapter del host.
 No mezcles `working_state` con facts ni dependas de búsqueda lexical para
 reanudar.
+
+`init` ya crea un checkpoint base/genésico (revisión 0); ningún store carece
+de checkpoint previo. `supersedes_checkpoint` es siempre un digest —nunca
+`null`, aunque sea tu primer checkpoint operativo— y debe ser el
+`checkpoint_digest` que reporta `checkpoint show` para el checkpoint
+vigente en ese momento. Un `supersedes_checkpoint` ausente o mal formado
+produce `invalid_working_state (supersedes_checkpoint)`; uno bien formado
+pero desactualizado produce `checkpoint_parent_mismatch` en `checkpoint
+plan` (relee `checkpoint show` y reintenta).
 
 ## Outcomes y reparación
 

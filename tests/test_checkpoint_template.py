@@ -121,6 +121,45 @@ class EmitAuthorityTemplateTests(unittest.TestCase):
         self.assertEqual(completed.returncode, 2)
         self.assertIn("missing_checkpoint_authority", completed.stderr)
 
+    def test_null_supersedes_checkpoint_on_fresh_store_gives_actionable_error(
+        self,
+    ) -> None:
+        # #125/GAP-3: un store recién inicializado ya tiene checkpoint
+        # (init lo crea); supersedes_checkpoint:null no es válido y el
+        # CLI debe nombrar el campo, no solo el código genérico.
+        self._cli(["init"])
+        working_state = _working_state(None)
+        working_state["supersedes_checkpoint"] = None
+        path = self.root / "ws-null.json"
+        path.write_text(json.dumps(working_state), encoding="utf-8")
+        completed = self._cli([
+            "checkpoint", "plan", "--input", str(path),
+            "--emit-authority-template",
+        ])
+        self.assertEqual(completed.returncode, 1)
+        self.assertIn("invalid_working_state", completed.stderr)
+        self.assertIn("supersedes_checkpoint", completed.stderr)
+
+    def test_genesis_digest_from_checkpoint_show_completes_first_try(self) -> None:
+        # La superficie pública para descubrir supersedes_checkpoint en el
+        # primer checkpoint operativo es `checkpoint show`.
+        ws_path, _ = self._working_state_file()
+        template = self._cli([
+            "checkpoint", "plan", "--input", str(ws_path),
+            "--emit-authority-template",
+        ])
+        self.assertEqual(template.returncode, 0, template.stderr)
+        authority_path = self.root / "authority-genesis.json"
+        authority_path.write_text(template.stdout, encoding="utf-8")
+        planned = self._cli([
+            "checkpoint", "plan", "--input", str(ws_path),
+            "--authority", str(authority_path),
+        ])
+        self.assertEqual(planned.returncode, 0, planned.stderr)
+        self.assertEqual(
+            json.loads(planned.stdout)["decision"]["decision"], "write"
+        )
+
 
 
 

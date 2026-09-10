@@ -223,6 +223,44 @@ def _validate_reference(value: Any, code: str, detail: str) -> None:
         raise WritePolicyError(code, detail)
 
 
+_DEFAULT_ISSUER_CONFIG = {
+    "kind": "model",
+    "id": "agent-local",
+    "profile": "manual-cli/v1",
+}
+
+
+def emit_write_authority_template(proposal: Mapping[str, Any]) -> dict[str, Any]:
+    """Plantilla de write-authority sin leer código interno (issue #125).
+
+    Read-only y determinista: valida el proposal (write-proposal-v1) y
+    devuelve la authority con ``proposal_sha256``/``base_revision`` ya
+    calculados vía la canonicalización oficial (``canonical-json/v1``,
+    ``digest_json``). No muta memoria ni otorga autoridad: emite
+    ``authority_class=model_derived`` (techo ``summary`` por policy); el
+    caller edita ``authority_class``/``issuer``/``evidence`` si su
+    procedencia difiere del default documentado.
+    """
+    validate_write_proposal(proposal)
+    return {
+        "schema": "an-kla/write-authority-v1",
+        "proposal_sha256": digest_json(proposal),
+        "base_revision": proposal["base_revision"],
+        "authority_class": "model_derived",
+        "issuer": {
+            "kind": "model",
+            "id": "agent-local",
+            "configuration_fingerprint": digest_json(_DEFAULT_ISSUER_CONFIG),
+        },
+        "evidence": [],
+        "scope": {
+            "streams": [proposal["stream"]],
+            "representations": [proposal["requested_representation"]],
+            "operations": [proposal["operation"]],
+        },
+    }
+
+
 def validate_write_proposal(proposal: Mapping[str, Any]) -> None:
     code = "invalid_write_proposal"
     if not isinstance(proposal, dict):

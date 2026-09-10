@@ -191,7 +191,10 @@ def build_parser() -> argparse.ArgumentParser:
         ),
         epilog=(
             "Obtén base_revision con `status`; guarda stdout en un archivo "
-            "efímero nuevo y privado. Consulta docs/write-policy-cli.md."
+            "efímero nuevo y privado. Formas exactas: `schema show "
+            "write-proposal-v1` / `write-authority-v1` (fuente normativa "
+            "distribuida). docs/write-policy-cli.md vive en el repo fuente, "
+            "no en el paquete instalado."
         ),
         formatter_class=argparse.RawTextHelpFormatter,
     )
@@ -202,8 +205,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     plan_write_cmd.add_argument(
         "--authority",
-        required=True,
-        help="Archivo JSON con schema an-kla/write-authority-v1.",
+        help="Archivo JSON con schema an-kla/write-authority-v1. Requerido "
+             "salvo con --emit-authority-template.",
+    )
+    plan_write_cmd.add_argument(
+        "--emit-authority-template", action="store_true",
+        help="No planifica: emite a stdout la plantilla de authority con "
+             "proposal_sha256/base_revision ya calculados desde --proposal "
+             "(edite issuer/authority_class si su procedencia difiere del "
+             "default model_derived).",
     )
     attest_cmd = sub.add_parser(
         "attest",
@@ -253,7 +263,10 @@ def build_parser() -> argparse.ArgumentParser:
         ),
         epilog=(
             "Cada commit mueve CURRENT: para otra escritura relee `status` y "
-            "vuelve a planificar. Consulta docs/write-policy-cli.md."
+            "vuelve a planificar. Formas exactas: `schema show "
+            "write-proposal-v1` / `write-authority-v1`. "
+            "docs/write-policy-cli.md vive en el repo fuente, no en el "
+            "paquete instalado."
         ),
         formatter_class=argparse.RawTextHelpFormatter,
     )
@@ -401,12 +414,24 @@ def build_parser() -> argparse.ArgumentParser:
     checkpoint_cmd = sub.add_parser("checkpoint", help="Checkpoint operacional gobernado.")
     checkpoint_sub = checkpoint_cmd.add_subparsers(dest="checkpoint_command", required=True)
     checkpoint_sub.add_parser("show")
-    checkpoint_plan_cmd = checkpoint_sub.add_parser("plan")
+    checkpoint_plan_cmd = checkpoint_sub.add_parser(
+        "plan",
+        epilog=(
+            "`init` ya crea un checkpoint base/genésico; ningún store "
+            "carece de checkpoint previo. `supersedes_checkpoint` es "
+            "siempre un digest (nunca null, incluso en tu primer "
+            "checkpoint operativo): usa el `checkpoint_digest` que "
+            "reporta `checkpoint show` para el checkpoint vigente."
+        ),
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
     checkpoint_plan_cmd.add_argument(
         "--input", required=True,
         help="working_state-v2 JSON DIRECTO (el CLI arma el proposal interno "
              "con base_revision/parent del store; checkpoint-proposal-v1 "
-             "describe ese objeto interno, no el archivo de entrada).",
+             "describe ese objeto interno, no el archivo de entrada). "
+             "`supersedes_checkpoint` debe ser el `checkpoint_digest` de "
+             "`checkpoint show` (siempre existe; `init` crea uno genésico).",
     )
     checkpoint_plan_cmd.add_argument(
         "--authority",
