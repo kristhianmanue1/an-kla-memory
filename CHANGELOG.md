@@ -14,6 +14,48 @@ en fase de pre-release `0.1.0`.
 
 Nada aún.
 
+## [v0.1.0-beta.25]
+
+**Estabilización, DX para agentes y coherencia contractual** (issues #125,
+#124, #123, #122). Release de saneamiento: no expande la superficie de
+AN-KLA. `TEMPLATE_VERSION` queda en `0.1.0-beta.26` — eje separado de la
+versión del paquete; no es code-only, el contrato sí cambió.
+
+**Añadido**:
+- `plan-write --emit-authority-template` (#125/GAP-2): calcula
+  `proposal_sha256`/`base_revision` sin que el agente reconstruya la
+  canonicalización a mano. Mismo patrón que
+  `checkpoint plan --emit-authority-template`.
+- Documentación explícita del checkpoint genésico (#125/GAP-3): `init` ya
+  crea uno; `supersedes_checkpoint` siempre es un digest, obtenido de
+  `checkpoint show`. `CheckpointPolicyError` ahora porta `detail` de campo
+  (`invalid_working_state (supersedes_checkpoint)`), mismo patrón que
+  `WritePolicyError`.
+- `--expected-current` documentado inequívocamente como la revisión del
+  store, nunca el `checkpoint_digest` (#123).
+- Forma canónica de instalación (`repositorio + tag exacto`) documentada en
+  `AN-KLA.md` (#123).
+
+**Corregido**:
+- Falso negativo de contract version skew (#124): un PR previo cambió el
+  contrato sin bumpear `TEMPLATE_VERSION`, causando que `context status`
+  reportara `ok:true` para un contrato desactualizado. Corregido y con test
+  de regresión.
+- `docs/write-policy-cli.md` ya no se referencia como disponible tras
+  instalar (nunca se empaqueta en el wheel): `--help`/`AN-KLA.md` apuntan a
+  `schema show`/`schema list` (#125/GAP-1).
+- Endpoint de update-check documentado correctamente
+  (`/releases?per_page=1`, no `/releases/latest`).
+- `test_adapter_id_grammar_edges_accepted` ya no depende de
+  `PYTHONHASHSEED` (#122): destino determinista por índice, no `hash()`.
+- `scripts/check_clean_wheel.py`: `NameError` (import de `Path` perdido en
+  la preparación de beta.23) y hardcode de `template_version` obsoleto.
+
+**Evidencia**: H-DX-1A/H-DX-1B = PASS (tres agentes frescos independientes,
+una corrida contra wheel distribuido, sin lectura de código fuente en las
+pruebas black-box); ronda adversarial acotada sin BLOCKER/HIGH en cada PR.
+Detalle completo en `docs/releases/v0.1.0-beta.25.md` y su ronda adversarial.
+
 ## [v0.1.0-beta.24]
 
 **Checkpoint first-try para agentes** (issues #120.2/.3/.4, #121) y

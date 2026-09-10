@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import json
 import os
-
+from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import zipfile
 
-sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from an_kla.context_text import TEMPLATE_VERSION  # noqa: E402
 from an_kla.version import VERSION  # noqa: E402
 
 
@@ -116,7 +117,7 @@ def main() -> int:
         )
         if context_status.get("ok") is not True or context_status.get(
             "template_version"
-        ) != "0.1.0-beta.21":
+        ) != TEMPLATE_VERSION:
             raise SystemExit("clean_wheel_context_not_current")
         identity_status = json.loads(
             _run([*consumer_command, "identity", "status"]).stdout
