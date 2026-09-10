@@ -4,8 +4,10 @@ Esta carpeta contiene la documentación evergreen del proyecto. Para hallazgos
 puntuales, planificación y respuestas a revisiones externas, ver
 [`planning/`](planning/).
 
-Para instalar o migrar un proyecto consumidor, empieza por la
-[guía de beta.11](beta11-user-guide.md).
+Para instalar o actualizar un proyecto consumidor, empieza por el
+[README §Instalación](../README.md#instalación-nueva-en-un-proyecto-consumidor);
+la [guía de beta.11](beta11-user-guide.md) queda como referencia histórica
+para migrar stores legacy (beta.8).
 
 ## Ruta del agente (mapa rápido)
 

@@ -45,19 +45,23 @@ PyPI; el wheel de la release se publica como asset de la etiqueta y la
 instalación canónica sigue siendo `pip install` fijado a la etiqueta exacta.
 No instales `main` como sustituto de una versión.
 
-Beta.22 consolida los hooks gobernados del host (`host-hooks/v1`, ADR-0047:
-declaración read-only, evidencia firmada en `.an-kla/hook-runs/` y
-`integration status --schema-version v2` con el perfil observado; guía en
-[docs/host-hooks-guide.md](docs/host-hooks-guide.md)), amplía la CI local
-(selftest G-3 como gate y matriz de intérpretes), paga la deuda de tamaños
-(#106: README y cinco tests partidos) y absorbe la auditoría externa
-(#113/R1 — un `status` no escalar admitido por la escritura tumbaba a
-retrieve/index; #114/A1+A2 y #115/T2). Beta.18 publicó el perfil sellado
-`sealed-export/v1` (ADR-0042, issue
-#46): respaldos cifrados en reposo como extra opcional `[sealed]`, con el
-camino `export/v1` en claro intacto — ver
-[Respaldo sellado](docs/uso-diario.md#respaldo-sellado-opcional). Ninguna incluye generadores de
-`proposal`/`authority`; esa decisión sigue abierta en el issue
+Beta.26 cierra el diagnóstico de sesión para agentes: cada error de
+checkpoint nombra el campo ofensor (#120) y la documentación activa quedó
+reconciliada con las capacidades vigentes (#116). Beta.25 saneó la DX del
+flujo gobernado y el contrato contextual (#125/#124/#123/#122, con
+`plan-write --emit-authority-template` y guía de checkpoint); beta.24
+resolvió el cierre de sesión first-try (#121) y beta.23 el export con
+artefactos host-managed (#119) y el anclaje del contrato (#116/C1).
+Beta.22 consolidó los hooks gobernados del host (`host-hooks/v1`,
+ADR-0047: declaración read-only, evidencia firmada en `.an-kla/hook-runs/`
+y `integration status --schema-version v2`; guía en
+[docs/host-hooks-guide.md](docs/host-hooks-guide.md)). Beta.18 publicó el
+perfil sellado `sealed-export/v1` (ADR-0042, issue #46): respaldos cifrados
+en reposo como extra opcional `[sealed]`, con el camino `export/v1` en
+claro intacto — ver
+[Respaldo sellado](docs/uso-diario.md#respaldo-sellado-opcional). Ninguna
+incluye generadores de `proposal`/`authority`; esa decisión sigue abierta
+en el issue
 [#71](https://github.com/kristhianmanue1/an-kla-memory/issues/71).
 
 El código está en beta local y la memoria continúa siendo no autoritativa: sus

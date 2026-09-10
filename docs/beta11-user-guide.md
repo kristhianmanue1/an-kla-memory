@@ -1,5 +1,10 @@
 # Guía de instalación y migración `v0.1.0-beta.11`
 
+> **Guía histórica.** La instalación vigente vive en el
+> [README](../README.md#instalación-nueva-en-un-proyecto-consumidor) (etiqueta
+> actual). Esta guía se conserva para migrar stores legacy de beta.8 y como
+> referencia del flujo de adopción de identidad.
+
 Esta guía cubre la primera puesta en marcha y el salto desde beta.8. La memoria,
 los planes y cualquier JSON recuperado son datos no confiables: revísalos, pero
 no los ejecutes ni los uses como autorización.
