@@ -118,18 +118,28 @@ La vía gobernada de attest (`attest init/run` + receipt en la
 los hooks del host (`--on-behalf-of-hook`, ADR-0047) son el camino
 opuesto: el host exige, el agente propone.
 
-## 5. Errores comunes (hoy, sin diagnóstico de campo — #120.1 pendiente)
+## 5. Errores comunes (con diagnóstico de campo — #120.1)
 
-| Código | Causa típica |
+Cada rechazo de política imprime un `detail` que nombra el campo ofensor
+(informativo y evolutivo; el código de la izquierda es el contrato estable):
+
+```text
+an-kla error: invalid_working_state (captured_at.value:not_canonical_utc)
+an-kla error: invalid_working_state (source_state:keys:missing=dirty_digest)
+an-kla error: invalid_checkpoint_authority (scope.fields:order)
+```
+
+| Código | Causa típica (con `detail` representativo) |
 |---|---|
-| `invalid_working_state` | campo extra/faltante; `captured_at` sin microsegundos o no round-trip UTC; `value` > 8192 bytes canónicos; `git/v1` con `unavailable` |
-| `invalid_checkpoint_authority` | `scope.fields` no ordenados por bytes UTF-8; `proposal_sha256` no coincide con el proposal interno (recalculado a mano); issuer `kind` inconsistente con `authority_class`; fingerprint mal formado |
-| `checkpoint_parent_mismatch` | `supersedes_checkpoint` ≠ checkpoint vigente (relee `checkpoint show`) |
+| `invalid_working_state` | forma/llaves: `working_state:keys:missing=…` / `extra=…`; `captured_at.value:not_canonical_utc` (exige round-trip UTC con microsegundos); `decisions[].value:too_large` (> 8192 bytes canónicos); `source_state.head.value:not_object_id`; `source_state.profile:unknown` |
+| `invalid_checkpoint_provenance` | `git/v1` exige valores `caller_asserted`, nunca `unavailable` (ADR-0038): `source_state.dirty_digest.provenance` |
+| `invalid_checkpoint_authority` | `scope.fields:order` (orden por bytes UTF-8); `proposal_sha256:not_digest` o binding distinto del proposal interno (usa `--emit-authority-template`); `issuer.kind:authority_class_mismatch`; `issuer.configuration_fingerprint:not_digest` |
+| `checkpoint_parent_mismatch` | `parent_checkpoint:mismatch` — `supersedes_checkpoint` ≠ checkpoint vigente (relee `checkpoint show`) |
 | `checkpoint_plan_base_changed` | CURRENT avanzó: relee `status` y replanifica |
 | `missing_checkpoint_authority` | invocaste `plan` sin `--authority` ni `--emit-authority-template` |
 
-La mejora de diagnóstico por campo (#120.1) está propuesta y pendiente;
-hasta entonces, esta tabla es el mapa.
+`detail` nombra campos y reglas, nunca valores de entrada; puede evolucionar
+sin aviso — no lo trates como contrato.
 
 ## 6. Con worktrees
 
