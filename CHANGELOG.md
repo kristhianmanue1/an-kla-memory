@@ -14,6 +14,50 @@ en fase de pre-release `0.1.0`.
 
 Nada aún.
 
+## [v0.1.0-beta.26]
+
+**DX: diagnóstico por campo en checkpoint y coherencia documental** (issues
+#120 y #116). Release code-only respecto del contrato gestionado:
+`TEMPLATE_VERSION` sigue en `0.1.0-beta.26`. No expande la superficie de
+AN-KLA ni incorpora trabajo de G3/#57.
+
+**Añadido**:
+- Diagnóstico por campo en todos los errores de checkpoint (#120, punto 1):
+  cada `CheckpointPolicyError` porta `detail` estilo `ruta:razón`
+  (convención del merge #125 en `write_policy.py`) — los 52 sitios de
+  `checkpoint_policy.py` y los 10 restantes en `resume.py`/
+  `checkpoints.py`. `str(error)` sigue siendo el código estable
+  (retrocompatible). Los dos repros del issue ahora reportan el campo
+  ofensor: `invalid_working_state (source_state:keys:missing=dirty_digest)`
+  y `invalid_working_state (captured_at.value:not_canonical_utc)`.
+- Checks compuestos divididos para diagnóstico preciso: `scope.fields` →
+  `:not_string`/`:empty`/`:order`/`:duplicate`/`:unknown`; `build_plan` →
+  `decision:mismatch` vs `revision`; `checkpoint_parent_mismatch` nombra el
+  campo editable por el agente (`supersedes_checkpoint:not_current`).
+- Nombres de llaves extra sanitizados y acotados en `detail`:
+  `[unnamed]` fuera del vocabulario de claves, truncado global a 256
+  caracteres — el `detail` nunca incorpora contenido de entrada sin acotar.
+- Guía de checkpoint §5 actualizada: el mapa de errores ya no está
+  «pendiente de #120.1» y documenta `detail` como informativo/evolutivo.
+
+**Corregido**:
+- Desalineación documental activa (#116/C2): `AGENTS.md` ya no niega
+  `source_state` `git/v1` (ADR-0038: valores exclusivamente
+  `caller_asserted`, sin verificación Git implícita);
+  `docs/mathematical-foundations.md` reconcilia prosa y tabla (envelope del
+  ensamblador vs host framing sin medir) y separa compactación física
+  (implementada) de fusión semántica bajo ε-compatibilidad (pendiente).
+- Alcance temporal del anclaje documentado (#116/C3): nueva sección
+  «Alcance temporal provisional» en ADR-0044 — `anchor_match` acredita el
+  estado de `refs/` sólo en el instante de la verificación; la revalidación
+  por consumo queda como pendiente registrado, sin atribuirle enforcement
+  al código vigente.
+
+**Tests**: +21 casos de detalle y absorción adversarial
+(`CheckpointErrorDetailTests` + casos de store/resume), incluidos los dos
+repros de #120, claves hostiles sanitizadas y `scope.fields` no-string;
+suite completa verde.
+
 ## [v0.1.0-beta.25]
 
 **Estabilización, DX para agentes y coherencia contractual** (issues #125,

@@ -57,16 +57,35 @@ def policy_fingerprint() -> str:
     return digest_json(_CONFIG)
 
 
+_DETAIL_KEY_NAME = re.compile(r"^[A-Za-z0-9_.-]{1,64}$")
+_DETAIL_TOTAL_CAP = 256
+
+
+def _key_names(values: Any) -> list[str]:
+    if not isinstance(values, set):
+        return ["[unnamed]"]
+    names = {
+        value if isinstance(value, str) and _DETAIL_KEY_NAME.fullmatch(value)
+        else "[unnamed]"
+        for value in values
+    }
+    return sorted(names)
+
+
+def _cap(detail: str) -> str:
+    return detail if len(detail) <= _DETAIL_TOTAL_CAP else detail[:_DETAIL_TOTAL_CAP]
+
+
 def _key_detail(path: str, value: Any, keys: set[str]) -> str:
     present = set(value) if isinstance(value, dict) else set()
     missing = sorted(keys - present)
-    extra = sorted(present - keys)
+    extra = _key_names(present - keys)
     parts = []
     if missing:
         parts.append(f"missing={','.join(missing)}")
     if extra:
         parts.append(f"extra={','.join(extra)}")
-    return f"{path}:keys:{';'.join(parts)}"
+    return _cap(f"{path}:keys:{';'.join(parts)}")
 
 
 def _exact(value: Any, keys: set[str], code: str, path: str) -> Mapping[str, Any]:
@@ -244,7 +263,7 @@ def validate_proposal(proposal: Mapping[str, Any]) -> None:
     validate_working_state(value["working_state"])
     if value["working_state"]["supersedes_checkpoint"] != value["parent_checkpoint"]:
         raise CheckpointPolicyError(
-            "checkpoint_parent_mismatch", "parent_checkpoint:mismatch")
+            "checkpoint_parent_mismatch", "supersedes_checkpoint:not_current")
 
 
 def _validate_evidence(value: Any) -> None:
@@ -256,13 +275,13 @@ def _validate_evidence(value: Any) -> None:
     if missing:
         raise CheckpointPolicyError(
             "invalid_checkpoint_authority",
-            f"{path}:keys:missing={','.join(sorted(missing))}",
+            _cap(f"{path}:keys:missing={','.join(sorted(missing))}"),
         )
-    extra = set(value) - {"kind", "id", "resolution", "sha256"}
+    extra = _key_names(set(value) - {"kind", "id", "resolution", "sha256"})
     if extra:
         raise CheckpointPolicyError(
             "invalid_checkpoint_authority",
-            f"{path}:keys:extra={','.join(sorted(extra))}",
+            _cap(f"{path}:keys:extra={','.join(extra)}"),
         )
     if value["kind"] not in {"artifact", "event", "revision", "external"}:
         raise CheckpointPolicyError("invalid_checkpoint_authority", f"{path}.kind")
@@ -334,6 +353,9 @@ def validate_authority(authority: Mapping[str, Any]) -> None:
     if not isinstance(scope["fields"], list):
         raise CheckpointPolicyError(
             "invalid_checkpoint_authority", "scope.fields:not_list")
+    if not all(isinstance(item, str) for item in scope["fields"]):
+        raise CheckpointPolicyError(
+            "invalid_checkpoint_authority", "scope.fields:not_string")
     if not scope["fields"]:
         raise CheckpointPolicyError("invalid_checkpoint_authority", "scope.fields:empty")
     if scope["fields"] != sorted(scope["fields"], key=lambda item: item.encode("utf-8")):

@@ -134,12 +134,14 @@ an-kla error: invalid_checkpoint_authority (scope.fields:order)
 | `invalid_working_state` | forma/llaves: `working_state:keys:missing=…` / `extra=…`; `captured_at.value:not_canonical_utc` (exige round-trip UTC con microsegundos); `decisions[].value:too_large` (> 8192 bytes canónicos); `source_state.head.value:not_object_id`; `source_state.profile:unknown` |
 | `invalid_checkpoint_provenance` | `git/v1` exige valores `caller_asserted`, nunca `unavailable` (ADR-0038): `source_state.dirty_digest.provenance` |
 | `invalid_checkpoint_authority` | `scope.fields:order` (orden por bytes UTF-8); `proposal_sha256:not_digest` o binding distinto del proposal interno (usa `--emit-authority-template`); `issuer.kind:authority_class_mismatch`; `issuer.configuration_fingerprint:not_digest` |
-| `checkpoint_parent_mismatch` | `parent_checkpoint:mismatch` — `supersedes_checkpoint` ≠ checkpoint vigente (relee `checkpoint show`) |
+| `checkpoint_parent_mismatch` | `supersedes_checkpoint:not_current` — tu `supersedes_checkpoint` ≠ checkpoint vigente (relee `checkpoint show`) |
 | `checkpoint_plan_base_changed` | CURRENT avanzó: relee `status` y replanifica |
 | `missing_checkpoint_authority` | invocaste `plan` sin `--authority` ni `--emit-authority-template` |
 
 `detail` nombra campos y reglas, nunca valores de entrada; puede evolucionar
-sin aviso — no lo trates como contrato.
+sin aviso — no lo trates como contrato. Los nombres de llaves extra se
+sanitizan (`[unnamed]` si no encajan en el vocabulario de claves) y el
+`detail` completo se trunca a 256 caracteres.
 
 ## 6. Con worktrees
 

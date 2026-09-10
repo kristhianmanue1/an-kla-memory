@@ -117,10 +117,13 @@ def _planning(value: Mapping[str, Any], expected: str) -> tuple[dict[str, Any], 
         or set(value) != {
             "schema", "current_revision", "proposal", "authority", "decision", "plan"
         }
-        or value.get("schema") != "an-kla/checkpoint-planning-result-v1"
-        or value.get("current_revision") != expected
     ):
-        raise CheckpointPolicyError("invalid_checkpoint_plan")
+        raise CheckpointPolicyError("invalid_checkpoint_plan", "planning:keys")
+    if value.get("schema") != "an-kla/checkpoint-planning-result-v1":
+        raise CheckpointPolicyError("invalid_checkpoint_plan", "planning.schema")
+    if value.get("current_revision") != expected:
+        raise CheckpointPolicyError(
+            "invalid_checkpoint_plan", "planning.current_revision")
     return tuple(
         deepcopy(dict(value[name]))
         for name in ("proposal", "authority", "decision", "plan")
@@ -138,16 +141,22 @@ def commit_checkpoint(
         planning_result, expected_current
     )
     if decision.get("decision") == "write" and transaction_id is None:
-        raise CheckpointPolicyError("checkpoint_transaction_id_required")
+        raise CheckpointPolicyError(
+            "checkpoint_transaction_id_required", "transaction_id")
     binding = mutation_preflight(store)
     snapshot = store.snapshot(expected_current)
+    if proposal.get("base_revision") != expected_current:
+        raise CheckpointPolicyError(
+            "checkpoint_parent_mismatch", "base_revision:not_current")
+    if proposal.get("parent_checkpoint") != snapshot.manifest["checkpoint"]:
+        raise CheckpointPolicyError(
+            "checkpoint_parent_mismatch", "parent_checkpoint:not_current")
     if (
-        proposal.get("base_revision") != expected_current
-        or proposal.get("parent_checkpoint") != snapshot.manifest["checkpoint"]
-        or proposal.get("working_state", {}).get("supersedes_checkpoint")
+        proposal.get("working_state", {}).get("supersedes_checkpoint")
         != snapshot.manifest["checkpoint"]
     ):
-        raise CheckpointPolicyError("checkpoint_parent_mismatch")
+        raise CheckpointPolicyError(
+            "checkpoint_parent_mismatch", "supersedes_checkpoint:not_current")
     verify_plan(
         plan,
         proposal,
@@ -159,7 +168,8 @@ def commit_checkpoint(
         snapshot.checkpoint.get("schema") == "an-kla/checkpoint-v2"
         and snapshot.checkpoint.get("working_state") == proposal["working_state"]
     ):
-        raise CheckpointPolicyError("invalid_checkpoint_plan")
+        raise CheckpointPolicyError(
+            "invalid_checkpoint_plan", "decision:checkpoint_unchanged")
     attempt = (
         begin_transaction(
             "checkpoint",
@@ -175,10 +185,13 @@ def commit_checkpoint(
         identity_digest = assert_unchanged(store, binding, expected_current)
         if observed != expected_current:
             if attempt is None or transaction_id is None:
-                raise CheckpointPolicyError("checkpoint_plan_base_changed")
+                raise CheckpointPolicyError(
+                    "checkpoint_plan_base_changed", "current:advanced")
             inspected = store.inspect_transaction(transaction_id)
             if inspected.get("committed") is not True:
-                raise CheckpointPolicyError("checkpoint_plan_base_changed")
+                raise CheckpointPolicyError(
+                    "checkpoint_plan_base_changed",
+                    "current:advanced_uncommitted_transaction")
             revision, outcome = store._commit_locked(
                 observed=expected_current,
                 checkpoint_patch=plan["checkpoint"],

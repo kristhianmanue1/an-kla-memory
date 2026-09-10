@@ -31,13 +31,15 @@ def _snapshot(snapshot: Any) -> tuple[dict[str, Any], list[str]]:
     digest = snapshot.manifest["checkpoint"]
     if checkpoint.get("schema") == "an-kla/checkpoint-v2":
         if set(checkpoint) != {"schema", "revision", "working_state"}:
-            raise CheckpointPolicyError("invalid_working_state")
+            raise CheckpointPolicyError("invalid_working_state", "checkpoint:keys")
         if not isinstance(checkpoint["revision"], int) or isinstance(
             checkpoint["revision"], bool
         ):
-            raise CheckpointPolicyError("invalid_working_state")
+            raise CheckpointPolicyError(
+                "invalid_working_state", "checkpoint.revision")
         if not 1 <= checkpoint["revision"] <= snapshot.manifest["revision"]:
-            raise CheckpointPolicyError("invalid_working_state")
+            raise CheckpointPolicyError(
+                "invalid_working_state", "checkpoint.revision:out_of_range")
         validate_working_state(checkpoint["working_state"])
         return {
             "schema": "an-kla/resume-snapshot-v1",
@@ -46,7 +48,7 @@ def _snapshot(snapshot: Any) -> tuple[dict[str, Any], list[str]]:
             "checkpoint": deepcopy(dict(checkpoint)),
         }, []
     if checkpoint.get("schema") != "an-kla/checkpoint-v1":
-        raise CheckpointPolicyError("invalid_working_state")
+        raise CheckpointPolicyError("invalid_working_state", "checkpoint.schema")
     return {
         "schema": "an-kla/resume-snapshot-v1",
         "checkpoint_digest": digest,
