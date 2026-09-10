@@ -23,6 +23,7 @@ from .checkpoints import (
     plan_checkpoint,
     show_checkpoint,
 )
+from .write_policy import emit_write_authority_template
 from .context import assemble_context
 from an_kla.baseline_adoption import (
     apply_baseline_adoption,
@@ -480,10 +481,17 @@ def _run() -> None:
     elif args.command == "benchmark-reference":
         result = run_reference_benchmark(measure_latency=args.measure_latency)
     elif args.command == "plan-write":
-        result = store.plan_write(
-            _json(args.proposal, role="proposal"),
-            _cli_authority(_json(args.authority, role="authority"), store),
-        )
+        if args.emit_authority_template:
+            result = emit_write_authority_template(
+                _json(args.proposal, role="proposal")
+            )
+        else:
+            if not args.authority:
+                raise CliUsageError("missing_write_authority")
+            result = store.plan_write(
+                _json(args.proposal, role="proposal"),
+                _cli_authority(_json(args.authority, role="authority"), store),
+            )
     elif args.command == "attest":
         from . import attest as attest_module
 

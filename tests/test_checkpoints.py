@@ -142,6 +142,43 @@ class CheckpointContractTests(unittest.TestCase):
         ):
             plan_checkpoint(self.store, state, mismatched)
 
+    def test_fresh_store_has_genesis_checkpoint(self) -> None:
+        # #125/GAP-3: init ya crea un checkpoint base/genésico; ningún
+        # store recién inicializado carece de checkpoint previo.
+        self.assertTrue(self.parent_checkpoint.startswith("sha256:"))
+        shown = show_checkpoint(self.store)
+        self.assertEqual(shown["checkpoint_digest"], self.parent_checkpoint)
+
+    def test_null_supersedes_checkpoint_gives_actionable_detail(self) -> None:
+        state = _state(self.parent_checkpoint)
+        state["supersedes_checkpoint"] = None
+        try:
+            plan_checkpoint(self.store, state, _authority(self.store, state))
+            self.fail("expected CheckpointPolicyError")
+        except CheckpointPolicyError as exc:
+            self.assertEqual(str(exc), "invalid_working_state")
+            self.assertEqual(exc.detail, "supersedes_checkpoint")
+
+    def test_genesis_digest_as_supersedes_checkpoint_plans_successfully(self) -> None:
+        # El primer checkpoint operativo debe superseder el genésico de
+        # `init`, obtenido vía `checkpoint show` (superficie pública).
+        state = _state(self.parent_checkpoint)
+        planning = plan_checkpoint(self.store, state, _authority(self.store, state))
+        self.assertEqual(planning["decision"]["decision"], "write")
+
+    def test_stale_supersedes_checkpoint_fails_with_parent_mismatch(self) -> None:
+        state = _state(self.parent_checkpoint)
+        planning = plan_checkpoint(self.store, state, _authority(self.store, state))
+        commit_checkpoint(
+            self.store, planning, self.root,
+            transaction_id=str(uuid.uuid4()),
+        )
+        stale = _state(self.parent_checkpoint, marker="second")
+        with self.assertRaisesRegex(
+            CheckpointPolicyError, "checkpoint_parent_mismatch"
+        ):
+            plan_checkpoint(self.store, stale, _authority(self.store, stale))
+
     def test_commit_transitions_v1_to_v2_and_links_parent(self) -> None:
         planning = self._planning()
         result = commit_checkpoint(

@@ -38,7 +38,19 @@ _CONFIG = {
 
 
 class CheckpointPolicyError(ValueError):
-    pass
+    """A stable terminal error raised before any storage operation.
+
+    ``code`` is the stable, machine-readable contract (frozen per code). The
+    optional ``detail`` is informative and evolutive: it names the offending
+    field to aid operators (mismo patrón que ``WritePolicyError``, issue
+    #125/GAP-3); it is NOT a stability contract. ``str(error)`` keeps
+    equaling ``code`` so existing consumers and tests are unaffected.
+    """
+
+    def __init__(self, code: str, detail: str | None = None) -> None:
+        super().__init__(code)
+        self.code = code
+        self.detail = detail
 
 
 def policy_fingerprint() -> str:
@@ -51,13 +63,13 @@ def _exact(value: Any, keys: set[str], code: str) -> Mapping[str, Any]:
     return value
 
 
-def _digest(value: Any, code: str) -> str:
+def _digest(value: Any, code: str, detail: str | None = None) -> str:
     if not isinstance(value, str):
-        raise CheckpointPolicyError(code)
+        raise CheckpointPolicyError(code, detail)
     try:
         bare_digest(value)
     except ValueError as exc:
-        raise CheckpointPolicyError(code) from exc
+        raise CheckpointPolicyError(code, detail) from exc
     return value
 
 
@@ -156,7 +168,10 @@ def validate_working_state(value: Mapping[str, Any]) -> None:
     else:
         raise CheckpointPolicyError("invalid_working_state")
     _field(state["captured_at"], timestamp=True)
-    _digest(state["supersedes_checkpoint"], "invalid_working_state")
+    _digest(
+        state["supersedes_checkpoint"], "invalid_working_state",
+        detail="supersedes_checkpoint",
+    )
     try:
         if len(canonical_json(state)) > 65536:
             raise CheckpointPolicyError("invalid_working_state")
