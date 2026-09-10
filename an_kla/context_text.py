@@ -13,7 +13,7 @@ from __future__ import annotations
 CONTEXT_SCHEMA = "an-kla/context-block/v1"
 INSTALLATION_SCHEMA = "an-kla/context-installation/v1"
 PLAN_SCHEMA = "an-kla/context-plan/v1"
-TEMPLATE_VERSION = "0.1.0-beta.21"
+TEMPLATE_VERSION = "0.1.0-beta.25"
 BLOCK_ID = "agent-context"
 CONTRACT_RELATIVE = "AN-KLA.md"
 MANIFEST_RELATIVE = ".an-kla/context/manifest.json"
@@ -117,9 +117,10 @@ No repares, reinstales ni sobrescribas automáticamente instrucciones modificada
 
 ## Verificación no bloqueante de versiones
 
-Al iniciar, el CLI consulta (só lectura, sin aplicar) la release más reciente
-publicada en `api.github.com/repos/kristhianmanue1/an-kla-memory/releases/latest`,
-cachea el resultado por 24 h en `~/.cache/an-kla/update-check.json` (respeta
+Al iniciar, el CLI consulta (sólo lectura, sin aplicar) la release más reciente
+publicada en `api.github.com/repos/kristhianmanue1/an-kla-memory/releases?per_page=1`
+(no `/releases/latest`: GitHub filtra prereleases ahí y las betas quedarían
+invisibles), cachea el resultado por 24 h en `~/.cache/an-kla/update-check.json` (respeta
 `XDG_CACHE_HOME` y `LOCALAPPDATA`) y, si existe una versión más reciente, imprime
 el aviso a **stderr** con el comando `pip` sugerido. El aviso nunca va a stdout
 para no contaminar la salida programática.

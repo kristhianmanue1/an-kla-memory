@@ -38,9 +38,10 @@ No repares, reinstales ni sobrescribas automáticamente instrucciones modificada
 
 ## Verificación no bloqueante de versiones
 
-Al iniciar, el CLI consulta (só lectura, sin aplicar) la release más reciente
-publicada en `api.github.com/repos/kristhianmanue1/an-kla-memory/releases/latest`,
-cachea el resultado por 24 h en `~/.cache/an-kla/update-check.json` (respeta
+Al iniciar, el CLI consulta (sólo lectura, sin aplicar) la release más reciente
+publicada en `api.github.com/repos/kristhianmanue1/an-kla-memory/releases?per_page=1`
+(no `/releases/latest`: GitHub filtra prereleases ahí y las betas quedarían
+invisibles), cachea el resultado por 24 h en `~/.cache/an-kla/update-check.json` (respeta
 `XDG_CACHE_HOME` y `LOCALAPPDATA`) y, si existe una versión más reciente, imprime
 el aviso a **stderr** con el comando `pip` sugerido. El aviso nunca va a stdout
 para no contaminar la salida programática.
