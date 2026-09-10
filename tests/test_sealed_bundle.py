@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -41,6 +42,9 @@ import tempfile
 import types
 import unittest
 from unittest.mock import patch
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 from an_kla.canonical import canonical_json, digest_json
 from an_kla.export_io import ExportIOError
@@ -701,17 +705,55 @@ class SealedBundleCryptoTests(unittest.TestCase):
                 self.assertFalse((self.root / "bad-id").exists())
 
     def test_adapter_id_grammar_edges_accepted(self):
-        """Bordes VÁLIDOS de la gramática: 1 char, 64 chars, separadores."""
-        for good in ("a", "a" * 64, "A.b_C-d0", "1"):
+        """Bordes VÁLIDOS de la gramática: 1 char, 64 chars, separadores.
+
+        #122: el destino usaba `hash(good) % N` para variar entre
+        iteraciones; `hash()` de str está salado por `PYTHONHASHSEED` y
+        dos valores de `good` distintos podían colisionar en el mismo
+        destino, produciendo un `export_destination_exists` espurio (no
+        relacionado con la gramática de `adapter_id` que el test
+        ejercita). El índice del loop es determinista y único por
+        iteración sin depender del hash de Python.
+        """
+        for index, good in enumerate(("a", "a" * 64, "A.b_C-d0", "1")):
             with self.subTest(adapter_id=good):
                 store, _current = _make_store(
-                    self.root / f"source-ok-{abs(hash(good)) % 100000}"
+                    self.root / f"source-ok-{index}"
                 )
                 created = sb.create_sealed_bundle(
-                    store, self.root / f"ok-{abs(hash(good)) % 1000}",
+                    store, self.root / f"ok-{index}",
                     FixedIdAdapter(good),
                 )
                 self.assertTrue(created["created"])
+
+    def test_adapter_id_grammar_edges_accepted_is_hash_seed_independent(self) -> None:
+        """Regresión #122: el resultado no depende de PYTHONHASHSEED.
+
+        Antes del fix, PYTHONHASHSEED=73 producía una colisión espuria de
+        destino (~0.6% de los seeds); PYTHONHASHSEED=0 pasaba. Corre el
+        test afectado en un subproceso limpio con el seed que reproducía
+        la colisión, 0, y varios valores adicionales: todos deben pasar.
+        """
+
+        for seed in ("73", "0", "1", "42", "12345", "999999999"):
+            with self.subTest(seed=seed):
+                result = subprocess.run(
+                    [
+                        sys.executable, "-m", "unittest",
+                        "tests.test_sealed_bundle.SealedBundleCryptoTests."
+                        "test_adapter_id_grammar_edges_accepted",
+                    ],
+                    cwd=ROOT,
+                    env={
+                        **os.environ,
+                        "AN_KLA_NO_UPDATE_CHECK": "1",
+                        "PYTHONHASHSEED": seed,
+                    },
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
 
     # -- staging/destino: F6 ------------------------------------------------------
 
