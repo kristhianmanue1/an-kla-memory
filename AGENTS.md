@@ -65,8 +65,9 @@ python3 -m an_kla --project-root /Users/krisnova/www/an-kla-memory status
 Si `.an-kla/` falta donde la esperabas, eso es una señal a reportar, no un
 problema a resolver inicializando o copiando estado: copiar `.an-kla/` a mano
 rompe identidad y separación de stores. Al capturar un checkpoint, registra el
-SHA en `evidence`; `source_state` no puede ligarse a Git todavía (el schema
-`working-state-v2` sólo admite `profile: none/v1`).
+SHA en `evidence`; `source_state` admite `profile: git/v1` con valores
+exclusivamente `caller_asserted` (ADR-0038) — declarar el SHA no implica que
+AN-KLA lo verifique contra Git.
 
 Las prácticas de ingeniería (ronda adversarial pre-code, spike
 pre-implementación, ADR-antes-que-código, secuenciación de releases, CI local,

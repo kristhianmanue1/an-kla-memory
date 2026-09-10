@@ -122,6 +122,16 @@ distinto y producir divergencia fail-closed espuria en verificación
 cruzada de máquinas. El cambio de protocolo se re-ancló en el registro de
 anclajes.
 
+### Alcance temporal provisional (issue #116/C3)
+
+`anchor_match` acredita el estado de `refs/` **sólo en el instante de la
+verificación**. No otorga permiso indefinido ni garantía de sesión: toda
+lectura posterior a la comprobación exige revalidar antes de atribuir
+integridad a lo leído, o asumir explícitamente el intervalo sin cobertura.
+El código vigente no obliga esa revalidación por consumo — atribuirle esa
+enforcement sería falso; su decisión queda registrada como pendiente en
+§Límites y atada al ciclo de aceptación de este ADR (hoy: Propuesta).
+
 ...compara el resultado contra el último ancla parseable del registro
 (`docs/gobernanza/anclajes/2026-08-31-anclaje-inicial.md`, digest sha256 sin
 backticks), y sale fail-closed: exit 0 match; exit 1 divergencia (mensaje

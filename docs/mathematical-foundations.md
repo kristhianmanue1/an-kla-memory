@@ -48,7 +48,7 @@ donde \(R\) recupera candidatos, \(N_t\) contiene información nueva y \(A\) ens
 |C_t|\leq B.
 \]
 
-Limitar sólo la salida de \(R\) no demuestra que el contexto completo respete \(B\). La versión actual de AN-KLA aplica un presupuesto exacto en bytes UTF-8 al resultado de recuperación; todavía no ofrece una garantía global sobre \(G_t\), \(W_t\), la recuperación y \(N_t\) ensamblados conjuntamente.
+Limitar sólo la salida de \(R\) no demuestra que el contexto completo respete \(B\). El ensamblador `context-assembly/v1` aplica un presupuesto exacto en bytes UTF-8 sobre su envelope propio (\(W_t\), la información del caller y \(R(q_t,M_t)\) ensamblados conjuntamente); el framing del host queda fuera de esa medición (`host_framing_unmeasured=true`), de modo que la garantía no cubre el contexto total del agente. Los bytes no equivalen a tokens (§6).
 
 ## 3. Objetivo: reducir distorsión decisional
 
@@ -138,10 +138,10 @@ Esto no equivale a una cota exacta de tokens para un tokenizador específico. Un
 | Revisiones inmutables y puntero `CURRENT` | Implementada |
 | Escritura serializada y recuperación diagnosticable | Implementada |
 | Presupuesto exacto UTF-8 en recuperación | Implementada |
-| Presupuesto global del contexto ensamblado en bytes UTF-8 | Implementado en `context-assembly/v1` |
+| Presupuesto global del contexto ensamblado en bytes UTF-8 | Implementado en `context-assembly/v1` sobre el envelope del ensamblador; el framing del host queda sin medir |
 | Presupuesto global exacto en tokens | Contrato `cost-model/v1`; implementación pendiente |
 | Medición emparejada de distorsión decisional | Pendiente |
 | Selector modular con aproximación \(1/2\) | Teorema condicional; no implementado |
-| Compactación respetando compatibilidad operacional | Invariante de diseño; compactación no implementada |
+| Compactación respetando compatibilidad operacional | Invariante de diseño (§4); compactación física implementada (archivado y tombstones); fusión semántica que preserve \(\varepsilon\)-optimalidad: pendiente y sin criterio demostrado |
 
 Las decisiones de adopción y alcance están registradas en [ADR-0005](architecture/0005-mathematical-alignment.md).
