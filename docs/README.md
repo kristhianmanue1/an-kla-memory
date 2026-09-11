@@ -79,7 +79,7 @@ prospectiva esté implementada; la última columna conserva esa distinción.
 | 0046 | [attest-local-signed-observation-v1](architecture/0046-attest-local-signed-observation-v1.md) | Atestación de observación local firmada (`attest`): receipts HMAC-SHA256 acuñados por el motor con whitelist fail-closed, nonce-addressing y binding vigente; convierte receipts verificados en autoridad `tool_observed` vía `write-authority-v2` | Aceptada | F0 adoptadas por orden del maintainer (2026-09-01); spike S0 proceed; ronda adversarial pre-code fix-and-retry absorbida (`planning/adr-0046-attest-precode-adversarial-2026-09-01.md`); S2 implementada (ed64994) y contrato bumped en beta.21 |
 | 0047 | [host-hooks-governed-v1](architecture/0047-host-hooks-governed-v1.md) | G2: hooks gobernados del host (`host-hooks/v1`): declaración read-only `.an-kla/host-hooks.json`, registro de invocaciones acuñado y verificado por el motor (`.an-kla/hook-runs/`), perfil observado en `integration-status-v2` con v1 congelado (#56) | Aceptada | F0 firmada por el maintainer (2026-09-05); spike S1-S3 (`planning/plan-issue-56-g2-spike-s1-2026-09-05.md`, proceed/refine/refine); ronda adversarial pre-code fix-and-retry absorbida (`planning/plan-issue-56-g2-adr0047-adversarial-2026-09-05.md`); ronda adversarial del lote beta.22 (`planning/lote-beta22-adversarial-2026-09-05.md`); aceptada por orden del maintainer (2026-09-05) con vigilancia F4 del perfil débil; implementada (F3-A/B/C/D) con ronda adversarial final fix-and-retry absorbida (`planning/g2-f3-final-adversarial-2026-09-05.md`) |
 | 0048 | [store-root-externo-v1](architecture/0048-store-root-externo-v1.md) | G3: `store_root` externo y reversible separado de `project_root`: puntero de custodia fail-closed, `relocate` plan→commit (staging hermano + rename atómico + journal), identidad por bytes con relocation receipt, carve-out de contexto gestionado y host-hooks (#57) | Aceptada | F0 firmada por el maintainer (2026-09-05: Windows diferido; comprobantes viajan con la bóveda; un proyecto una bóveda); spike (`planning/g3-spike-store-root-2026-09-05.md`, refine/proceed/proceed/refine); ronda adversarial pre-code fix-and-retry absorbida (`planning/g3-adr0048-adversarial-2026-09-05.md`); aceptada por orden del maintainer (2026-09-05); F1 pendiente |
-| 0049 | [empty-selection-signal-v1](architecture/0049-empty-selection-signal-v1.md) | Señal de primera clase para selección vacía por solapamiento léxico cero: paridad `zero_score` scan↔índice (#118/R3) y `empty_reason` en `retrieval-result-v3`/`mcp-retrieve-v3` dispersos (#133); detectores de freshness robustos y checklist de distribución | Aceptada (implementación en curso) | Orden del maintainer (2026-09-11: ciclo zero_score + beta.27); ronda adversarial pre-code fix-and-retry absorbida (2 atacantes de contexto fresco, F-PC1-1..7 y F-PC2-1..9) |
+| 0049 | [empty-selection-signal-v1](architecture/0049-empty-selection-signal-v1.md) | Señal de primera clase para selección vacía por solapamiento léxico cero: paridad `zero_score` scan↔índice (#118/R3) y `empty_reason` en `retrieval-result-v3`/`mcp-retrieve-v3` dispersos (#133); detectores de freshness robustos y checklist de distribución | Aceptada (implementada) | Orden del maintainer (2026-09-11: ciclo zero_score + beta.27); ronda adversarial pre-code fix-and-retry absorbida (2 atacantes de contexto fresco, F-PC1-1..7 y F-PC2-1..9); ronda de código fix-and-retry absorbida (F-C1-1..8, `172aafe`) |
 
 Resumen: **49 ADRs**, sin huecos; **46 aceptadas** y **3 propuestas**. No hay
 ADRs rechazadas ni reemplazadas en el registro actual.
@@ -121,9 +121,9 @@ Los reportes son evidencia experimental, no decisiones de ranking.
 de publicación. Cumplen el rol de `CHANGELOG.md`.
 
 La release documentada más reciente es
-[`v0.1.0-beta.26`](releases/v0.1.0-beta.26.md), con su
-[ronda adversarial](releases/v0.1.0-beta.26-adversarial.md); la anterior
-con ronda cerrada es [`v0.1.0-beta.25`](releases/v0.1.0-beta.25.md).
+[`v0.1.0-beta.27`](releases/v0.1.0-beta.27.md), con su
+[ronda adversarial](releases/v0.1.0-beta.27-adversarial.md); la anterior
+con ronda cerrada es [`v0.1.0-beta.26`](releases/v0.1.0-beta.26.md).
 
 ### Planificación y respuestas históricas
 

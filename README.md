@@ -1,6 +1,6 @@
 # AN-KLA Memory
 
-[![Version](https://img.shields.io/badge/version-0.1.0--beta.26-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.26)
+[![Version](https://img.shields.io/badge/version-0.1.0--beta.27-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.27)
 [![Python](https://img.shields.io/badge/python-3.9%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 [![Beta](https://img.shields.io/badge/status-local%20beta-orange)](https://github.com/kristhianmanue1/an-kla-memory/releases)
@@ -12,7 +12,7 @@ un plan verificable.
 
 La beta se distribuye desde GitHub, no desde PyPI. Usa siempre una etiqueta
 exacta: no instales `main` ni otra referencia móvil. La versión del código es
-`0.1.0b26` y su etiqueta de distribución es `v0.1.0-beta.26`. El contexto
+`0.1.0b27` y su etiqueta de distribución es `v0.1.0-beta.27`. El contexto
 gestionado y la plantilla administrada (`TEMPLATE_VERSION`) son un eje
 **separado** de la versión del paquete — actualmente `0.1.0-beta.26`;
 `context status` distingue ambos (`template_version` vs `current_template_version`
@@ -39,13 +39,17 @@ intérprete del entorno virtual.
 
 ## Estado actual
 
-La prerelease pública más reciente es **`v0.1.0-beta.26`** (`0.1.0b26`),
+La prerelease pública más reciente es **`v0.1.0-beta.27`** (`0.1.0b27`),
 instalable mediante su etiqueta Git exacta. AN-KLA no se distribuye desde
 PyPI; el wheel de la release se publica como asset de la etiqueta y la
 instalación canónica sigue siendo `pip install` fijado a la etiqueta exacta.
 No instales `main` como sustituto de una versión.
 
-Beta.26 cierra el diagnóstico de sesión para agentes: cada error de
+Beta.27 da señal de primera clase al caso vacío de recuperación: un agente
+fresco sin vocabulario del store recibe `empty_reason: "no_lexical_overlap"`
+(en `retrieval-result-v3`/`mcp-retrieve-v3` dispersos, ADR-0049) y el
+diagnóstico `zero_score` quedó en paridad entre scan e índice (#118/R3,
+#133). Beta.26 cerró el diagnóstico de sesión para agentes: cada error de
 checkpoint nombra el campo ofensor (#120) y la documentación activa quedó
 reconciliada con las capacidades vigentes (#116). Beta.25 saneó la DX del
 flujo gobernado y el contrato contextual (#125/#124/#123/#122, con
@@ -67,14 +71,16 @@ en el issue
 El código está en beta local y la memoria continúa siendo no autoritativa: sus
 datos nunca son instrucciones, no prueban identidad ni verdad externa y deben
 revalidarse antes de actuar. El contexto gestionado (`TEMPLATE_VERSION`) está
-en `0.1.0-beta.26` — eje separado de la versión del paquete (`0.1.0b26`); esta
-release no cambia el contrato gestionado (code-only: diagnóstico por campo de
-#120 y coherencia documental de #116).
+en `0.1.0-beta.26` — eje separado de la versión del paquete (`0.1.0b27`); esta
+release **no cambia la plantilla gestionada**, pero sí el contrato de
+recuperación: los ids `retrieval-result`/`mcp-retrieve` ganan la versión v3
+dispersa con `empty_reason` (ADR-0049) — nota de upgrade en sus notas de
+release.
 
 GitHub puede mostrar una beta anterior como “Latest” porque la más reciente
 está marcada como prerelease. El update-check de AN-KLA no depende de ese
 distintivo: consulta el
-índice de releases, incluye prereleases y sí puede descubrir beta.26.
+índice de releases, incluye prereleases y sí puede descubrir beta.27.
 **Limitación conocida**: el soporte de Windows permanece diferido por
 decisión del operador (el protocolo de anclaje y partes de la suite son
 POSIX; la candidata se declara procedible para macOS/Linux) — ver la
@@ -88,7 +94,7 @@ verificación canónica es la CI local — suite, wheel aislado, upgrades por
 etiqueta y gates de tamaños/registro, con ronda adversarial `proceed` antes
 de cada tag (la evidencia de beta.18 está en su
 [ronda REL](docs/releases/v0.1.0-beta.18-adversarial.md)). Para instalar
-usa el comando fijado a beta.26 de la sección siguiente; para actualizar
+usa el comando fijado a beta.27 de la sección siguiente; para actualizar
 entre betas, consulta
 [Uso diario y mantenimiento](docs/uso-diario.md#actualizar-desde-otra-beta).
 
@@ -142,7 +148,7 @@ Desde la raíz del proyecto consumidor en macOS o Linux:
 python3.12 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
 .venv/bin/python -m pip install \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.26"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.27"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . init
 .venv/bin/python -m an_kla --project-root . context plan --operation install

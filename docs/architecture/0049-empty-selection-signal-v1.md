@@ -1,10 +1,11 @@
 # ADR-0049: señal de primera clase para selección vacía por solapamiento léxico cero — `retrieval-result-v3` / `mcp-retrieve-v3` dispersos
 
-- **Estado:** Aceptada (implementación en curso — orden del maintainer,
-  2026-09-11: "adelante con recomendaciones").
+- **Estado:** Aceptada (implementada — merge `aac8f27`, PR #135; orden del
+  maintainer, 2026-09-11: "adelante con recomendaciones").
   Ronda adversarial pre-code ejecutada (2 atacantes de contexto fresco,
   2026-09-11; veredicto `fix-and-retry`, hallazgos F-PC1-1..7 y F-PC2-1..9
-  absorbidos en este documento).
+  absorbidos en este documento) y ronda de código (2 atacantes frescos:
+  diff F-C1-1..8 absorbidos en `172aafe`; black-box 7/7 PASS).
 - **Fecha:** 2026-09-11
 - **Decide sobre:** cómo expone AN-KLA el caso "recuperación sin resultados
   por cero solapamiento léxico" (#133) y la paridad del diagnóstico

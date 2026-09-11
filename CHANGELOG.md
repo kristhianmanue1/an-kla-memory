@@ -14,6 +14,44 @@ en fase de pre-release `0.1.0`.
 
 Nada aún.
 
+## [v0.1.0-beta.27]
+
+**Ciclo zero_score: paridad de diagnóstico y señal de selección vacía**
+(issues #118 y #133; ADR-0049). No cambia la plantilla gestionada
+(`TEMPLATE_VERSION` sigue en `0.1.0-beta.26`), pero **sí el contrato de
+recuperación**: nuevos ids `retrieval-result-v3`/`mcp-retrieve-v3`.
+
+**Añadido**:
+- `empty_reason: "no_lexical_overlap"` de primera clase (#133,
+  propuesta 1; ADR-0049): cuando la selección queda vacía por cero
+  solapamiento léxico —típico de un agente fresco sin vocabulario del
+  store—, el resultado porta la señal con schema `retrieval-result-v3`
+  (CLI) o `mcp-retrieve-v3` (MCP). Versiones **dispersas**: v1/v2 siguen
+  emitiéndose byte-idénticos en todos los demás casos.
+- Tabla de verdad del predicado (ADR-0049 §3): no emiten los vacíos por
+  presupuesto (base o corte de envelope MCP), all-inactive, no_text-only
+  ni store vacío — la causa real es otra.
+- Detectores de freshness migrados a detección estructural
+  (`mcp.py`/`context.py`): nunca igualdad de string de id (F-PC2-1/2).
+- Hueco del harness de evaluación cerrado (F-PC1-7): `_compare` ahora
+  verifica `excluded_summary_equal`; `retrieval-eval-report-v2` editado
+  in place (precedente ADR-0037) con paridad byte docs/paquete.
+
+**Corregido**:
+- #118/R3: paridad del diagnóstico `zero_score` entre scan e índice fts5 —
+  la contabilidad es única, post-sort y previa al narrowing; el índice ya
+  no hace desaparecer los zero-score sin contarlos. Test de paridad
+  validado: falla contra el código viejo.
+- Ronda adversarial de código (F-C1-1..8): test MCP del corte de envelope
+  reanclado a la ventana real; tests de detector para MCP/contexto con
+  v3+freshness; `allOf` freshness⇔freshness_profile en los schemas v3;
+  conteo de ADRs desactualizado en `docs/README.md`.
+
+**Nota de upgrade**: consumidores que parseen el campo `schema` de
+respuestas de recuperación verán `an-kla/retrieval-result-v3` /
+`an-kla/mcp-retrieve-v3` en el caso de selección vacía por solape cero;
+los campos existentes no cambian. `schema show` publica ambos v3.
+
 ## [v0.1.0-beta.26]
 
 **DX: diagnóstico por campo en checkpoint y coherencia documental** (issues
