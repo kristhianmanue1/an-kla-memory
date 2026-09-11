@@ -185,14 +185,23 @@ class CompactionTests(unittest.TestCase):
             ):
                 refute_store.verify()
 
-    def test_f5_gate_wait_does_not_hold_write_or_identity_locks(self) -> None:
-        """#111/F5: la espera del gate exclusivo ocurre SIN retener locks.
+    def test_f5_writer_progresses_while_compaction_drains_readers(self) -> None:
+        """#111/F5: durante el drenado de lectores, un escritor toma el lock.
 
-        Al momento de adquirir el gate exclusivo, write e identity locks
-        deben estar libres: un escritor puede proseguir mientras la
-        compactación drena lectores (orden gate → locks, sin ciclos:
-        identity nunca toma el gate; los escritores nunca lo toman).
+        Un lector sostiene el gate compartido; la compactación sondea el
+        gate EX sin bloquear (timeout=0) liberando los locks entre
+        intentos — el write lock debe ser adquirible por un escritor
+        mientras el drenado continúa. Con el orden viejo (gate bloqueante
+        dentro de los locks) el escritor recibiría write_lock_busy durante
+        toda la espera. Sin deadlocks: el gate EX (timeout=0) nunca se
+        sostiene mientras se espera un lock (F-C3-1: export toma
+        identity->gate SH).
         """
+
+        import threading
+        import time as time_module
+
+        from an_kla.reader_gate import shared_reader_gate
 
         with tempfile.TemporaryDirectory() as root:
             project = Path(root) / "project"
@@ -218,32 +227,35 @@ class CompactionTests(unittest.TestCase):
             }
             planning = plan_compaction(store, proposal, bundle)
 
-            real_gate = compaction_module.exclusive_reader_gate
-            probe = {"write": None}
+            outcome = {}
 
-            @contextmanager
-            def probing_gate(store, *, timeout=10.0):
-                # write_lock es no-bloqueante con deadline (P2): si el
-                # código viejo retuviera el lock aquí, fallaría con
-                # write_lock_busy en <=10 s. (identity_lock POSIX es
-                # bloqueante: se sondaría por hilo, fuera de alcance.)
+            def run() -> None:
                 try:
-                    with store.write_lock():
-                        probe["write"] = "free"
-                except LockBusyError:
-                    probe["write"] = "busy"
-                with real_gate(store, timeout=timeout):
-                    yield
+                    outcome["result"] = commit_compaction(
+                        store, planning, source, bundle
+                    )
+                except Exception as exc:  # pragma: no cover - diagnóstico
+                    outcome["error"] = exc
 
-            with patch.object(
-                compaction_module, "exclusive_reader_gate", probing_gate
-            ):
-                result = commit_compaction(store, planning, source, bundle)
-            self.assertEqual(result["state"], "committed")
-            self.assertEqual(
-                probe, {"write": "free"},
-                "el write lock no debe estar retenido durante la espera del gate",
-            )
+            writer_progressed = False
+            with shared_reader_gate(store):
+                thread = threading.Thread(target=run)
+                thread.start()
+                deadline = time_module.monotonic() + 8
+                while time_module.monotonic() < deadline and thread.is_alive():
+                    try:
+                        with store.write_lock():
+                            writer_progressed = True
+                    except LockBusyError:
+                        pass
+                    time_module.sleep(0.05)
+                self.assertTrue(
+                    writer_progressed,
+                    "escritor congelado mientras la compactación drena lectores",
+                )
+            thread.join(timeout=30)
+            self.assertFalse(thread.is_alive())
+            self.assertEqual(outcome.get("result", {}).get("state"), "committed")
 
     def test_cleanup_retry_uses_same_candidate_without_bundle(self) -> None:
         with tempfile.TemporaryDirectory() as root:
