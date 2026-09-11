@@ -522,10 +522,14 @@ def commit_compaction(
         "compact", transaction_id=txid, base_revision=expected_current,
         plan_fingerprint=planning["plan"]["fingerprint"],
     )
-    with identity_lock(store):
-        binding = read_binding(store)
-        with store.write_lock() as lock_result:
-            with exclusive_reader_gate(store):
+    # #111/F5: el gate exclusivo se adquiere ANTES de los locks — la espera
+    # por lectores (<=10 s) ya no congela escritores ni identidad. Orden
+    # sin ciclos: identity nunca toma el gate; los escritores nunca lo
+    # toman; compaction es el único usuario EX.
+    with exclusive_reader_gate(store):
+        with identity_lock(store):
+            binding = read_binding(store)
+            with store.write_lock() as lock_result:
                 validate_no_links(store)
                 current = store.read_current()
                 relation = candidate_relation(store, candidate, current)

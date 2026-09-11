@@ -99,6 +99,7 @@ class InstalledSchemaTests(unittest.TestCase):
         "revision-v2",
         "revision-v3",
         "startup-diagnostic-v1",
+        "startup-diagnostic-v2",
         "store-identity-v1",
         "subject-namespace-result-v1",
         "transaction-archived-v1",

@@ -71,6 +71,7 @@ SCHEMA_FILES = {
     "restore-result-v1": "restore-result-v1.schema.json",
     "project-identity-v1": "project-identity-v1.schema.json",
     "startup-diagnostic-v1": "startup-diagnostic-v1.schema.json",
+    "startup-diagnostic-v2": "startup-diagnostic-v2.schema.json",
     "store-identity-v1": "store-identity-v1.schema.json",
     "subject-namespace-result-v1": "subject-namespace-result-v1.schema.json",
     "transaction-attempt-v1": "transaction-attempt-v1.schema.json",

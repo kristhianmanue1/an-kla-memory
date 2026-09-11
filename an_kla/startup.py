@@ -13,12 +13,18 @@ from pathlib import Path
 from typing import Any
 
 from .identity import IdentityError, identity_status
+from .index import record_text
 from .reader_gate import ReaderGateError
+from .retrieval import TOKEN
 from .store import StoreError
+from .vigency import is_active
 
 
 SCHEMA = "an-kla/startup-diagnostic-v1"
+SCHEMA_V2 = "an-kla/startup-diagnostic-v2"
 GIT_TIMEOUT_SECONDS = 5
+VOCABULARY_TERMS_CAP = 32
+VOCABULARY_IDS_CAP = 50
 
 
 def _code(exc: Exception) -> str:
@@ -121,6 +127,40 @@ def _repo_context(project_root: Path) -> str:
     return "main_checkout" if resolved[0] == resolved[1] else "linked_worktree"
 
 
+def _vocabulary(store: Any) -> dict[str, Any] | None:
+    """#133 propuesta 2: vocabulario observable del stream ``facts``.
+
+    Términos más frecuentes (capped) e ids de los facts activos: lo mínimo
+    para que un agente de contexto fresco formule una query con solape
+    léxico. Total: ante cualquier fallo de lectura devuelve ``None``
+    (ausencia = "no evaluado", convención v1), nunca inventa vocabulario.
+    """
+
+    try:
+        snapshot = store.snapshot()
+        counts: dict[str, int] = {}
+        ids: list[str] = []
+        total = 0
+        for record in snapshot.records["facts"]:
+            if not record.get("id"):
+                continue
+            if not is_active(record):
+                continue
+            total += 1
+            if len(ids) < VOCABULARY_IDS_CAP:
+                ids.append(str(record["id"]))
+            text = record_text(dict(record))
+            for term in {t.casefold() for t in TOKEN.findall(text)}:
+                counts[term] = counts.get(term, 0) + 1
+        terms = [
+            term
+            for term, _count in sorted(counts.items(), key=lambda item: (-item[1], item[0]))
+        ][:VOCABULARY_TERMS_CAP]
+        return {"record_count": total, "ids": ids, "terms": terms}
+    except (StoreError, ReaderGateError, OSError, ValueError, AttributeError):
+        return None
+
+
 def startup_diagnostic(store: Any) -> dict[str, Any]:
     """Classify the memory available under this project root.
 
@@ -130,7 +170,7 @@ def startup_diagnostic(store: Any) -> dict[str, Any]:
     """
     presence, presence_detail = _presence(store)
     integrity, integrity_detail = _integrity(store, presence)
-    return {
+    result = {
         "schema": SCHEMA,
         "untrusted_memory_data": True,
         "store_presence": presence,
@@ -142,3 +182,12 @@ def startup_diagnostic(store: Any) -> dict[str, Any]:
         # "there is none".  Declaring a store_root belongs to issue #57.
         "external_memory_evaluated": False,
     }
+    # ADR-0049 convention, issue #133 propuesta 2: v2 disperso — el id sube
+    # a v2 sólo cuando el eje vocabulario pudo evaluarse (store presente);
+    # v1 queda byte-idéntica para ausente/ilegible.
+    if presence == "present":
+        vocabulary = _vocabulary(store)
+        if vocabulary is not None:
+            result["vocabulary"] = vocabulary
+            result["schema"] = SCHEMA_V2
+    return result

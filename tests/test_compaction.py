@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 import json
 import os
@@ -10,6 +11,7 @@ import unittest
 import uuid
 from unittest.mock import patch
 
+import an_kla.compaction as compaction_module
 from an_kla.compaction import (
     CompactionError, commit_compaction, plan_compaction, verify_revision,
 )
@@ -17,6 +19,7 @@ from an_kla.canonical import digest_json
 from an_kla.checkpoints import commit_checkpoint, plan_checkpoint
 from an_kla.export_restore import create_export
 from an_kla.store import MemoryStore
+from an_kla.store_errors import LockBusyError
 from an_kla.schemas import schema_document
 from tests.test_checkpoints import _authority, _state
 from tests.test_refute import Resolver, proposal_and_claim
@@ -181,6 +184,66 @@ class CompactionTests(unittest.TestCase):
                 Exception, "(?:compaction_catalog|compaction_epoch)"
             ):
                 refute_store.verify()
+
+    def test_f5_gate_wait_does_not_hold_write_or_identity_locks(self) -> None:
+        """#111/F5: la espera del gate exclusivo ocurre SIN retener locks.
+
+        Al momento de adquirir el gate exclusivo, write e identity locks
+        deben estar libres: un escritor puede proseguir mientras la
+        compactación drena lectores (orden gate → locks, sin ciclos:
+        identity nunca toma el gate; los escritores nunca lo toman).
+        """
+
+        with tempfile.TemporaryDirectory() as root:
+            project = Path(root) / "project"
+            project.mkdir()
+            store = MemoryStore(project)
+            initial = store.initialize()
+            source = store.commit(
+                expected_current_hash=initial,
+                checkpoint_patch={},
+                facts=[
+                    {"id": "f-active", "text": "keep", "status": "active"},
+                    {"id": "f-inactive", "text": "drop", "status": "inactive"},
+                ],
+            )
+            bundle = Path(root) / "bundle"
+            exported = create_export(store, bundle)
+            proposal = {
+                "schema": "an-kla/compaction-proposal-v1",
+                "base_revision": source,
+                "epoch_id": str(uuid.uuid4()),
+                "transaction_id": str(uuid.uuid4()),
+                "export_manifest_sha256": exported["manifest_sha256"],
+            }
+            planning = plan_compaction(store, proposal, bundle)
+
+            real_gate = compaction_module.exclusive_reader_gate
+            probe = {"write": None}
+
+            @contextmanager
+            def probing_gate(store, *, timeout=10.0):
+                # write_lock es no-bloqueante con deadline (P2): si el
+                # código viejo retuviera el lock aquí, fallaría con
+                # write_lock_busy en <=10 s. (identity_lock POSIX es
+                # bloqueante: se sondaría por hilo, fuera de alcance.)
+                try:
+                    with store.write_lock():
+                        probe["write"] = "free"
+                except LockBusyError:
+                    probe["write"] = "busy"
+                with real_gate(store, timeout=timeout):
+                    yield
+
+            with patch.object(
+                compaction_module, "exclusive_reader_gate", probing_gate
+            ):
+                result = commit_compaction(store, planning, source, bundle)
+            self.assertEqual(result["state"], "committed")
+            self.assertEqual(
+                probe, {"write": "free"},
+                "el write lock no debe estar retenido durante la espera del gate",
+            )
 
     def test_cleanup_retry_uses_same_candidate_without_bundle(self) -> None:
         with tempfile.TemporaryDirectory() as root:

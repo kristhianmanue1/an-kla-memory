@@ -60,7 +60,8 @@ class StartupDiagnosticTest(unittest.TestCase):
     def assertValid(self, result: dict) -> None:
         if Draft202012Validator is None:
             self.skipTest("jsonschema unavailable")
-        Draft202012Validator(schema_document("startup-diagnostic-v1")).validate(result)
+        name = result["schema"].split("/")[-1]
+        Draft202012Validator(schema_document(name)).validate(result)
 
     def test_absent_memory_is_a_result_not_an_error(self) -> None:
         result = startup_diagnostic(MemoryStore(self.root))
@@ -221,6 +222,55 @@ class StartupDiagnosticTest(unittest.TestCase):
         self.assertEqual(payload["schema"], "an-kla/startup-diagnostic-v1")
         self.assertTrue(payload["untrusted_memory_data"])
         self.assertFalse(payload["external_memory_evaluated"])
+
+    def test_v2_with_vocabulary_on_present_store(self) -> None:
+        # #133 propuesta 2: el agente fresco descubre el vocabulario del
+        # store sin leer memoria directamente (ADR-0049 convención dispersa).
+        store = initialized(self.root)
+        store.commit(
+            expected_current_hash=store.read_current(),
+            checkpoint_patch={},
+            facts=[
+                {"id": "f-a", "payload": {"text": "deployment parser"}},
+                {"id": "f-b", "payload": {"text": "deployment otra vez"}},
+            ],
+        )
+        result = startup_diagnostic(store)
+        self.assertEqual(result["schema"], "an-kla/startup-diagnostic-v2")
+        vocabulary = result["vocabulary"]
+        self.assertEqual(vocabulary["record_count"], 2)
+        self.assertEqual(vocabulary["ids"], ["f-a", "f-b"])
+        self.assertEqual(vocabulary["terms"][0], "deployment")
+        self.assertIn("parser", vocabulary["terms"])
+        self.assertValid(result)
+
+    def test_vocabulary_terms_are_deterministic_and_capped(self) -> None:
+        from an_kla.startup import VOCABULARY_TERMS_CAP
+
+        store = initialized(self.root)
+        store.commit(
+            expected_current_hash=store.read_current(),
+            checkpoint_patch={},
+            facts=[
+                {"id": f"f-{i:03d}", "payload": {"text": f"termino-{i:03d} comun común"}}
+                for i in range(40)
+            ],
+        )
+        result = startup_diagnostic(store)
+        vocabulary = result["vocabulary"]
+        self.assertEqual(vocabulary["record_count"], 40)
+        self.assertLessEqual(len(vocabulary["terms"]), VOCABULARY_TERMS_CAP)
+        self.assertEqual(vocabulary["terms"][:3], ["comun", "común", "termino"])
+        again = startup_diagnostic(store)
+        self.assertEqual(vocabulary, again["vocabulary"])
+        self.assertValid(result)
+
+    def test_empty_present_store_emits_v2_with_zero_counts(self) -> None:
+        result = startup_diagnostic(initialized(self.root))
+        self.assertEqual(result["schema"], "an-kla/startup-diagnostic-v2")
+        self.assertEqual(result["vocabulary"]["record_count"], 0)
+        self.assertEqual(result["vocabulary"]["terms"], [])
+        self.assertValid(result)
 
 
 if __name__ == "__main__":

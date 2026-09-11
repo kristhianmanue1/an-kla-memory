@@ -41,6 +41,7 @@ python -m an_kla schema show write-plan-v1
 | `retrieval-eval-report-v2.schema.json` | Métricas separadas de ranking, budget y paridad (incluye `excluded_summary_equal`). |
 | `retrieval-result-v3.schema.json` | Resultado de recuperación; v3 disperso: sólo en selección vacía por cero solapamiento (`empty_reason`, ADR-0049). |
 | `mcp-retrieve-v3.schema.json` | Envelope MCP de recuperación; v3 disperso análogo con `empty_reason`. |
+| `startup-diagnostic-v2.schema.json` | Diagnóstico de arranque; v2 disperso: añade `vocabulary` (términos/ids de facts) cuando el store pudo evaluarse (#133). |
 | `retrieval-strategy-report-v1.schema.json` | Rankers experimentales no productivos. |
 | `reference-benchmark-v1.schema.json` | Bundle del benchmark de referencia. |
 | `provenance-manifest-v1.schema.json` | Saneamiento y gates de privacidad del corpus. |
