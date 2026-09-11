@@ -65,8 +65,9 @@ def empty_reason_for(
     Tabla de verdad: emite ``no_lexical_overlap`` sólo cuando la selección
     está vacía, hubo al menos un registro activo con score 0 y no hubo
     exclusión por presupuesto (ni de base ni de transporte). Los estados
-    all-inactive/no_text/invalid_record, store vacío y corte de envelope
-    MCP no emiten — la causa real es otra.
+    *puros* all-inactive/no_text/invalid_record y el store vacío no emiten
+    — la causa real es otra; una **mezcla** con ``zero_score >= 1`` sí
+    emite (hubo solapamiento cero en registros sanos).
     """
 
     if result.get("selected"):

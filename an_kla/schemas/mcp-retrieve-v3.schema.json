@@ -58,7 +58,28 @@
   },
   "allOf": [
     {
-      "$ref": "#/$defs/stale_requires_threshold"
+      "if": {
+        "required": [
+          "freshness_profile"
+        ]
+      },
+      "then": {
+        "required": [
+          "freshness"
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "freshness"
+        ]
+      },
+      "then": {
+        "required": [
+          "freshness_profile"
+        ]
+      }
     }
   ],
   "$defs": {

@@ -319,6 +319,63 @@ class EmptyReasonTests(unittest.TestCase):
         self.assertEqual(out["retrieved_evidence"], [])
         self.assertNotIn("empty_reason", out)
 
+    def test_resume_stamps_truthful_v1_on_nonempty_evidence(self):
+        # F-C1-3: la red de seguridad debe poder fallar — con selección
+        # no vacía (ruta v1, sin freshness), cada evidence estampa
+        # source="retrieval-result-v1" y es verdad verificable.
+        from an_kla.resume import resume
+
+        self._seed([
+            {"id": "f-a", "schema": "an-kla/fact-v1", "payload": {"text": "deployment parser"}},
+        ])
+        direct = retrieve(self.store, "deployment", 10_000)
+        self.assertEqual(direct["schema"], "an-kla/retrieval-result-v1")
+        out = resume(self.store, 4096, query="deployment")
+        self.assertGreaterEqual(len(out["retrieved_evidence"]), 1)
+        for item in out["retrieved_evidence"]:
+            self.assertEqual(item["source"], "retrieval-result-v1")
+
+    def test_all_inactive_no_text_mixture_boundary(self):
+        # (iii) F-C1-6: no_text-only no emite; mezcla zero_score+no_text
+        # emite (la condición base sólo exige zero_score>=1 sin budget).
+        self._seed([
+            {"id": "f-empty", "schema": "an-kla/fact-v1", "payload": {}},
+        ])
+        out = retrieve(self.store, "quetzal pendiente", 10_000)
+        self.assertEqual(out["schema"], "an-kla/retrieval-result-v1")
+        self.assertNotIn("empty_reason", out)
+        self.store.commit(
+            expected_current_hash=self.store.read_current(),
+            checkpoint_patch={},
+            facts=[
+                {"id": "f-b", "schema": "an-kla/fact-v1", "payload": {"text": "deployment parser"}},
+                {"id": "f-empty2", "schema": "an-kla/fact-v1", "payload": {}},
+            ],
+        )
+        out = retrieve(self.store, "quetzal pendiente", 10_000)
+        self.assertEqual(out["schema"], "an-kla/retrieval-result-v3")
+        self.assertEqual(out["empty_reason"], "no_lexical_overlap")
+
+    def test_assembly_with_zero_overlap_and_freshness_stays_v2(self):
+        # F-C1-2 (contexto): detector estructural — ensamblado con fuente
+        # v3+freshness produce context-assembly-v2 sin error.
+        from an_kla.context import assemble_context
+
+        self._seed([
+            {"id": "f-a", "schema": "an-kla/fact-v1", "verified_at": "2026-08-01T00:00:00Z",
+             "payload": {"text": "deployment parser"}},
+        ])
+        from datetime import datetime, timezone
+
+        out = assemble_context(
+            self.store, "quetzal pendiente", 2400,
+            new_information="solicitud actual",
+            freshness_profile="computed-age/v1",
+            now=datetime(2026, 9, 11, tzinfo=timezone.utc),
+            stale_after_days=30,
+        )
+        self.assertEqual(out["schema"], "an-kla/context-assembly-v2")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -81,7 +81,7 @@ prospectiva esté implementada; la última columna conserva esa distinción.
 | 0048 | [store-root-externo-v1](architecture/0048-store-root-externo-v1.md) | G3: `store_root` externo y reversible separado de `project_root`: puntero de custodia fail-closed, `relocate` plan→commit (staging hermano + rename atómico + journal), identidad por bytes con relocation receipt, carve-out de contexto gestionado y host-hooks (#57) | Aceptada | F0 firmada por el maintainer (2026-09-05: Windows diferido; comprobantes viajan con la bóveda; un proyecto una bóveda); spike (`planning/g3-spike-store-root-2026-09-05.md`, refine/proceed/proceed/refine); ronda adversarial pre-code fix-and-retry absorbida (`planning/g3-adr0048-adversarial-2026-09-05.md`); aceptada por orden del maintainer (2026-09-05); F1 pendiente |
 | 0049 | [empty-selection-signal-v1](architecture/0049-empty-selection-signal-v1.md) | Señal de primera clase para selección vacía por solapamiento léxico cero: paridad `zero_score` scan↔índice (#118/R3) y `empty_reason` en `retrieval-result-v3`/`mcp-retrieve-v3` dispersos (#133); detectores de freshness robustos y checklist de distribución | Aceptada (implementación en curso) | Orden del maintainer (2026-09-11: ciclo zero_score + beta.27); ronda adversarial pre-code fix-and-retry absorbida (2 atacantes de contexto fresco, F-PC1-1..7 y F-PC2-1..9) |
 
-Resumen: **48 ADRs**, sin huecos; **45 aceptadas** y **3 propuestas**. No hay
+Resumen: **49 ADRs**, sin huecos; **46 aceptadas** y **3 propuestas**. No hay
 ADRs rechazadas ni reemplazadas en el registro actual.
 
 ### Documentación normativa

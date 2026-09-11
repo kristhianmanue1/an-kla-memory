@@ -181,27 +181,26 @@
   "allOf": [
     {
       "if": {
-        "properties": {
-          "selected": {
-            "contains": {
-              "required": [
-                "stale"
-              ]
-            }
-          }
-        }
+        "required": [
+          "freshness_profile"
+        ]
       },
       "then": {
-        "properties": {
-          "freshness": {
-            "properties": {
-              "stale_after_days": {
-                "type": "integer",
-                "minimum": 0
-              }
-            }
-          }
-        }
+        "required": [
+          "freshness"
+        ]
+      }
+    },
+    {
+      "if": {
+        "required": [
+          "freshness"
+        ]
+      },
+      "then": {
+        "required": [
+          "freshness_profile"
+        ]
       }
     }
   ],

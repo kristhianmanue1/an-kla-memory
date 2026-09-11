@@ -450,11 +450,28 @@ class McpEmptyReasonTests(unittest.TestCase):
     def test_envelope_budget_cut_does_not_lie_about_reason(self):
         # (vii) records==[] por corte de envelope con base no vacía: la
         # causa es presupuesto, no solapamiento — sin empty_reason.
-        payload = self._retrieve({"query": "memoria", "budget_bytes": 400})
-        if payload["records"] == []:
-            self.assertIn("budget", payload["excluded_summary"])
-            self.assertNotIn("empty_reason", payload)
-            self.assertNotEqual(payload["schema"], "an-kla/mcp-retrieve-v3")
+        # Ventana real del corte para este store: [261, 305] (F-C1-1).
+        payload = self._retrieve({"query": "memoria", "budget_bytes": 280})
+        self.assertEqual(payload["records"], [])
+        self.assertIn("budget", payload["excluded_summary"])
+        self.assertNotIn("empty_reason", payload)
+        self.assertNotEqual(payload["schema"], "an-kla/mcp-retrieve-v3")
+
+    def test_zero_overlap_with_freshness_returns_v3_with_freshness_block(self):
+        # F-C1-2: detector estructural — v3+freshness debe emitir
+        # mcp-retrieve-v3 CON bloque freshness (no degradar a v1).
+        payload = self._retrieve({
+            "query": "quetzal pendiente", "budget_bytes": 10_000,
+            "freshness_profile": FRESHNESS_PROFILE,
+            "now": "2026-09-11T00:00:00Z", "stale_after_days": 30,
+        })
+        self.assertEqual(payload["schema"], "an-kla/mcp-retrieve-v3")
+        self.assertEqual(payload["empty_reason"], "no_lexical_overlap")
+        self.assertIn("freshness", payload)
+        self.assertIn("freshness_profile", payload)
+        validator = Draft202012Validator(
+            json.loads(schema_bytes("mcp-retrieve-v3")))
+        validator.validate(payload)
 
     def test_matching_query_stays_on_v1(self):
         payload = self._retrieve({"query": "memoria", "budget_bytes": 10_000})
