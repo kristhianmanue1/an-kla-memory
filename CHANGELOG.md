@@ -14,6 +14,34 @@ en fase de pre-release `0.1.0`.
 
 Nada aún.
 
+## [v0.1.0-beta.28]
+
+**Cierre del backlog táctico** (#111 y #133 completos). No cambia la
+plantilla gestionada (`TEMPLATE_VERSION` sigue en `0.1.0-beta.26`) ni el
+contrato de recuperación de beta.27.
+
+**Añadido**:
+- `startup-diagnostic-v2` disperso (#133 propuesta 2): cuando el store
+  pudo evaluarse, el diagnóstico añade `vocabulary` — términos más
+  frecuentes del stream `facts` (cap 32), ids (cap 50) y `record_count` —
+  para que un agente fresco formule queries con solape léxico sin leer
+  memoria directamente. v1 queda byte-idéntica en ausente/ilegible.
+
+**Corregido**:
+- #111/F5 — liveness de compactación: el gate exclusivo se sondea sin
+  bloquear (`timeout=0`) dentro de identity+write locks, con reintentos
+  cada 50 ms y **locks liberados entre intentos** (presupuesto total
+  10 s): la espera por lectores ya no congela escritores ni identidad.
+  La ronda adversarial cazó y eliminó un **deadlock real** del primer
+  intento de fix (F-C3-1: la ruta export/sealed toma identity→gate SH;
+  repro empírico; verificador independiente confirmó no-deadlock en 3
+  escenarios). `LockBusyError` es reintentable dentro del presupuesto.
+- F3/F4 quedan documentadas como diferidas con Windows (decisión F0);
+  F6 registrada como teórica.
+
+**Tests**: +4 (vocabulario ×3, writer-progress F5 validado contra el
+código viejo); suite completa 1052 tests OK.
+
 ## [v0.1.0-beta.27]
 
 **Ciclo zero_score: paridad de diagnóstico y señal de selección vacía**
