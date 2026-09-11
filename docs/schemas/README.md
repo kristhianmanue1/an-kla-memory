@@ -38,7 +38,9 @@ python -m an_kla schema show write-plan-v1
 | `resume-evidence-v1.schema.json` | Evidencia recuperada exacta dentro de resume. |
 | `resume-v1.schema.json` | Handoff consistente y limitado por bytes. |
 | `retrieval-eval-query-v2.schema.json` | Query cerrada para evaluación ordenada. |
-| `retrieval-eval-report-v2.schema.json` | Métricas separadas de ranking, budget y paridad. |
+| `retrieval-eval-report-v2.schema.json` | Métricas separadas de ranking, budget y paridad (incluye `excluded_summary_equal`). |
+| `retrieval-result-v3.schema.json` | Resultado de recuperación; v3 disperso: sólo en selección vacía por cero solapamiento (`empty_reason`, ADR-0049). |
+| `mcp-retrieve-v3.schema.json` | Envelope MCP de recuperación; v3 disperso análogo con `empty_reason`. |
 | `retrieval-strategy-report-v1.schema.json` | Rankers experimentales no productivos. |
 | `reference-benchmark-v1.schema.json` | Bundle del benchmark de referencia. |
 | `provenance-manifest-v1.schema.json` | Saneamiento y gates de privacidad del corpus. |

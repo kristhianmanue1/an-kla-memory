@@ -171,8 +171,10 @@ def capabilities() -> dict[str, Any]:
                 },
                 "result_schemas": [
                     "an-kla/retrieval-result-v2",
+                    "an-kla/retrieval-result-v3",
                     "an-kla/context-assembly-v2",
                     "an-kla/mcp-retrieve-v2",
+                    "an-kla/mcp-retrieve-v3",
                 ],
             },
             "evaluation": {

@@ -222,6 +222,7 @@ def _profile_run(
         "ranking_budget": ceiling,
         "ranked_ids": ranked,
         "ranked_scores": _scores(baseline["selected"]),
+        "excluded_summary": deepcopy(baseline["excluded_summary"]),
         **metrics,
     }
     budget_rows = []
@@ -256,18 +257,25 @@ def _compare(
     left_ids: list[str], left_scores: list[dict[str, Any]],
     right_ids: list[str], right_scores: list[dict[str, Any]],
     budget: int | None, actual_profile: str, degradation: str,
+    *,
+    left_excluded: Mapping[str, Any] | None = None,
+    right_excluded: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     common = set(left_ids) & set(right_ids)
     left_common = [item for item in left_ids if item in common]
     right_common = [item for item in right_ids if item in common]
     left_map = {item["id"]: item["score"] for item in left_scores if item["id"] in common}
     right_map = {item["id"]: item["score"] for item in right_scores if item["id"] in common}
+    if left_excluded is None or right_excluded is None:
+        raise ValueError("evaluation_comparison_requires_excluded_summary")
+    excluded_equal = dict(left_excluded) == dict(right_excluded)
     return {
         "budget_bytes": budget,
         "exact_selected_equal": left_ids == right_ids,
         "selected_id_set_equal": set(left_ids) == set(right_ids),
         "common_order_equal": left_common == right_common,
         "common_scores_equal": left_map == right_map,
+        "excluded_summary_equal": excluded_equal,
         "comparable_as_index": actual_profile == INDEX_PROFILE and degradation == "none",
     }
 
@@ -277,6 +285,8 @@ def _attach_parity(scan: Mapping[str, Any], candidate: dict[str, Any]) -> None:
         scan["ranking"]["ranked_ids"], scan["ranking"]["ranked_scores"],
         candidate["ranking"]["ranked_ids"], candidate["ranking"]["ranked_scores"],
         None, candidate["actual_profile"], candidate["degradation"],
+        left_excluded=scan["ranking"]["excluded_summary"],
+        right_excluded=candidate["ranking"]["excluded_summary"],
     )
     budgets = []
     for left, right in zip(scan["budgets"], candidate["budgets"]):
@@ -284,6 +294,8 @@ def _attach_parity(scan: Mapping[str, Any], candidate: dict[str, Any]) -> None:
             left["selected_ids"], left["selected_scores"],
             right["selected_ids"], right["selected_scores"],
             right["budget_bytes"], right["actual_profile"], right["degradation"],
+            left_excluded=left["excluded_summary"],
+            right_excluded=right["excluded_summary"],
         ))
     candidate["parity"] = {"ranking": ranking, "budgets": budgets}
 
@@ -336,6 +348,7 @@ def _counts(comparisons: Sequence[Mapping[str, Any]]) -> dict[str, int]:
     matches = sum(all(item[key] for key in (
         "exact_selected_equal", "selected_id_set_equal",
         "common_order_equal", "common_scores_equal",
+        "excluded_summary_equal",
     )) for item in comparisons)
     return {
         "total": len(comparisons),

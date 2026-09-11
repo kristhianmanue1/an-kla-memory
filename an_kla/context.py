@@ -57,7 +57,9 @@ def assemble_context(
         )
     snapshot = store.snapshot(source["revision"])
     candidates = source["selected"]
-    freshness_enabled = source["schema"] == "an-kla/retrieval-result-v2"
+    # ADR-0049: detección estructural — nunca igualdad de string de id
+    # (v3 disperso también porta freshness).
+    freshness_enabled = "freshness" in source
     records: list[dict[str, Any]] = []
     # Reserve the largest possible diagnostic before selecting.  Decreasing
     # this count as records enter keeps every intermediate payload feasible and

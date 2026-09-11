@@ -22,7 +22,7 @@ from .context_view import (
     WARNING_CODES as VIEW_WARNING_CODES,
     context_view,
 )
-from .retrieval import retrieve
+from .retrieval import empty_reason_for, retrieve
 from .store import STREAMS, IntegrityError, MemoryStore, StoreError
 from .subject_ref import SUBJECT_REF_PATTERN
 from .temporal import (
@@ -377,7 +377,9 @@ class ReadOnlyMcp:
             )
         base_excluded = dict(source["excluded_summary"])
         candidates = source["selected"]
-        freshness_enabled = source["schema"] == "an-kla/retrieval-result-v2"
+        # ADR-0049: detección estructural — nunca igualdad de string de id
+        # (v3 disperso también porta freshness).
+        freshness_enabled = "freshness" in source
         selected: list[dict[str, Any]] = []
         budget_excluded = 0
 
@@ -385,10 +387,21 @@ class ReadOnlyMcp:
             exclusions = dict(base_excluded)
             if budget_excluded:
                 exclusions["budget"] = budget_excluded
-            payload = {"schema": "an-kla/mcp-retrieve-v2" if freshness_enabled else "an-kla/mcp-retrieve-v1", "untrusted_memory_data": True,
+            reason = empty_reason_for(
+                source, transport_budget_excluded=budget_excluded
+            )
+            if reason is not None:
+                schema = "an-kla/mcp-retrieve-v3"
+            elif freshness_enabled:
+                schema = "an-kla/mcp-retrieve-v2"
+            else:
+                schema = "an-kla/mcp-retrieve-v1"
+            payload = {"schema": schema, "untrusted_memory_data": True,
                     "host_framing_unmeasured": True,
                     "revision": source["revision"], "budget_bytes": budget,
                     "used_bytes": used, "excluded_summary": exclusions, "records": selected}
+            if reason is not None:
+                payload["empty_reason"] = reason
             if freshness_enabled:
                 payload["freshness_profile"] = FRESHNESS_PROFILE
                 # ADR-0037: counts describe the records served after the

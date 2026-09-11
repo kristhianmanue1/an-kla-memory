@@ -181,6 +181,8 @@ class RetrieveDenominatorTests(unittest.TestCase):
     def test_minimum_v2_envelope_boundary_is_pinned(self) -> None:
         # The four count integers enlarge the freshness block; pin the
         # minimum envelope so silent growth fails loudly (ADR-0037 limit).
+        # ADR-0049: la ruta de selección vacía ahora emite v3 con
+        # empty_reason — crecimiento deliberado y documentado del mínimo.
         result = retrieve(
             StubStore(),  # type: ignore[arg-type]
             "no-matching-term",
@@ -189,7 +191,7 @@ class RetrieveDenominatorTests(unittest.TestCase):
             now=NOW,
         )
         _payload, measured = exact_sized_payload(lambda used=0: result)
-        self.assertLessEqual(measured, 800)
+        self.assertLessEqual(measured, 840)
         self.assertGreaterEqual(measured, 720)
 
 

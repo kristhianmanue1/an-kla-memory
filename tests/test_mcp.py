@@ -7,11 +7,14 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+from jsonschema import Draft202012Validator
+
 from an_kla import VERSION
 from an_kla.canonical import canonical_json, exact_sized_payload
 from an_kla.context import ASSEMBLY_PROFILE
 from an_kla.mcp import PROTOCOL_VERSION, ReadOnlyMcp, _safe_error
 from an_kla.retrieval import retrieve
+from an_kla.schemas import schema_bytes
 from an_kla.store import MemoryStore, StoreError
 from an_kla.temporal import FRESHNESS_PROFILE, FRESHNESS_PROJECTION_KEYS
 
@@ -404,6 +407,59 @@ class McpProtocolTests(unittest.TestCase):
             })
             self.assertFalse(response["result"]["isError"], name)
         self.assertEqual(files(), before)
+
+
+class McpEmptyReasonTests(unittest.TestCase):
+    """#133 / ADR-0049 §3: ``empty_reason`` en el envelope MCP (v3 disperso)."""
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        store = MemoryStore(self.temp.name)
+        root = store.initialize()
+        store.commit(expected_current_hash=root, checkpoint_patch={}, facts=[
+            {"id": "f-001", "payload": {"text": "memoria ágil"}},
+        ])
+        self.server = ReadOnlyMcp(self.temp.name)
+        self._initialize(self.server)
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def _initialize(self, server: ReadOnlyMcp) -> None:
+        server.handle({"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": PROTOCOL_VERSION}})
+        server.handle({"jsonrpc": "2.0", "method": "notifications/initialized"})
+
+    def _retrieve(self, arguments: dict) -> dict:
+        response = self.server.handle({
+            "jsonrpc": "2.0", "id": "r",
+            "method": "tools/call",
+            "params": {"name": "an_kla_retrieve", "arguments": arguments},
+        })
+        return json.loads(response["result"]["content"][0]["text"])
+
+    def test_zero_overlap_returns_v3_with_reason(self):
+        payload = self._retrieve({"query": "quetzal pendiente", "budget_bytes": 10_000})
+        self.assertEqual(payload["schema"], "an-kla/mcp-retrieve-v3")
+        self.assertEqual(payload["empty_reason"], "no_lexical_overlap")
+        self.assertEqual(payload["records"], [])
+        self.assertTrue(payload["untrusted_memory_data"])
+        validator = Draft202012Validator(
+            json.loads(schema_bytes("mcp-retrieve-v3")))
+        validator.validate(payload)
+
+    def test_envelope_budget_cut_does_not_lie_about_reason(self):
+        # (vii) records==[] por corte de envelope con base no vacía: la
+        # causa es presupuesto, no solapamiento — sin empty_reason.
+        payload = self._retrieve({"query": "memoria", "budget_bytes": 400})
+        if payload["records"] == []:
+            self.assertIn("budget", payload["excluded_summary"])
+            self.assertNotIn("empty_reason", payload)
+            self.assertNotEqual(payload["schema"], "an-kla/mcp-retrieve-v3")
+
+    def test_matching_query_stays_on_v1(self):
+        payload = self._retrieve({"query": "memoria", "budget_bytes": 10_000})
+        self.assertEqual(payload["schema"], "an-kla/mcp-retrieve-v1")
+        self.assertNotIn("empty_reason", payload)
 
 
 if __name__ == "__main__":
