@@ -54,6 +54,34 @@ def _match_clause(query: str) -> str | None:
     return " OR ".join(f'"{token}"' for token in tokens) if tokens else None
 
 
+EMPTY_REASON_NO_LEXICAL_OVERLAP = "no_lexical_overlap"
+
+
+def empty_reason_for(
+    result: Mapping[str, Any], *, transport_budget_excluded: int = 0
+) -> str | None:
+    """ADR-0049 §3: señal única de selección vacía por cero solapamiento.
+
+    Tabla de verdad: emite ``no_lexical_overlap`` sólo cuando la selección
+    está vacía, hubo al menos un registro activo con score 0 y no hubo
+    exclusión por presupuesto (ni de base ni de transporte). Los estados
+    *puros* all-inactive/no_text/invalid_record y el store vacío no emiten
+    — la causa real es otra; una **mezcla** con ``zero_score >= 1`` sí
+    emite (hubo solapamiento cero en registros sanos).
+    """
+
+    if result.get("selected"):
+        return None
+    if transport_budget_excluded:
+        return None
+    summary = result.get("excluded_summary") or {}
+    if "budget" in summary:
+        return None
+    if summary.get("zero_score", 0) < 1:
+        return None
+    return EMPTY_REASON_NO_LEXICAL_OVERLAP
+
+
 def _narrow_with_index(
     index_path: Any, revision_id: str, clause: str, streams: tuple[str, ...]
 ) -> set[str] | None:
@@ -178,6 +206,18 @@ def _retrieve_under_gate(
             identifier = str(record["id"])
             ranked.append((score, identifier, record, rendered, stream))
     ranked.sort(key=lambda item: (-item[0], item[1]))
+    # #118/R3: única contabilidad de zero-score, post-sort y previa al
+    # narrowing del índice — scan e índice cuentan el mismo conjunto y el
+    # detalle conserva el orden determinista (-score, id) de ADR-0015.
+    scored: list[tuple[int, str, Mapping[str, Any], str, str]] = []
+    for score, identifier, record, rendered, stream in ranked:
+        if score == 0:
+            excluded["zero_score"] += 1
+            if len(excluded_detail["zero_score"]) < EXCLUDED_DETAIL_CAP:
+                excluded_detail["zero_score"].append(identifier)
+            continue
+        scored.append((score, identifier, record, rendered, stream))
+    ranked = scored
     actual_profile = SCAN_PROFILE
     degradation = "none"
     clause = _match_clause(query)
@@ -210,11 +250,6 @@ def _retrieve_under_gate(
     used = fixed_overhead_bytes
     for score, identifier, _record, rendered, stream in ranked:
         cost = len(rendered.encode("utf-8")) + per_record_overhead_bytes
-        if score == 0:
-            excluded["zero_score"] += 1
-            if len(excluded_detail["zero_score"]) < EXCLUDED_DETAIL_CAP:
-                excluded_detail["zero_score"].append(identifier)
-            continue
         if used + cost > budget:
             excluded["budget"] += 1
             if len(excluded_detail["budget"]) < EXCLUDED_DETAIL_CAP:
@@ -267,7 +302,6 @@ def _retrieve_under_gate(
         "selected": selected,
     }
     if freshness_now is not None:
-        result["schema"] = "an-kla/retrieval-result-v2"
         result["freshness_profile"] = FRESHNESS_PROFILE
         result["freshness"] = {
             "semantics": FRESHNESS_SEMANTICS,
@@ -276,6 +310,14 @@ def _retrieve_under_gate(
             "stale_after_days": freshness_threshold,
             **summarize_freshness(selected),
         }
+    # ADR-0049: v3 disperso — el id sube a v3 sólo por la ruta empty_reason;
+    # v1/v2 permanecen byte-idénticos en todos los demás casos.
+    reason = empty_reason_for(result)
+    if reason is not None:
+        result["empty_reason"] = reason
+        result["schema"] = "an-kla/retrieval-result-v3"
+    elif freshness_now is not None:
+        result["schema"] = "an-kla/retrieval-result-v2"
     return result
 
 

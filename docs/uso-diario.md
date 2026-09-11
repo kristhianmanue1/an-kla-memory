@@ -207,7 +207,13 @@ contenido de `context-package/v1`. Consulta la
 `retrieve` admite el flag `--streams` (CSV; por defecto `facts` para respetar la
 beta). El resultado incluye `excluded_detail.ids` (truncado a 50 IDs por razón)
 cuando los registros se excluyen por `budget`, `zero_score`, `inactive`,
-`no_text` o `invalid_record`.
+`no_text` o `invalid_record`. Si la selección queda vacía por **cero
+solapamiento léxico** (típico de un agente fresco que aún no conoce el
+vocabulario del store), el resultado porta `empty_reason:
+"no_lexical_overlap"` (schema `retrieval-result-v3` / `mcp-retrieve-v3`;
+ADR-0049): la acción sugerida es descubrir el vocabulario con `inventory` o
+reformular la query con términos del dominio. Los vacíos por presupuesto o
+por vigencia NO emiten esa señal — la causa real es otra.
 
 El perfil opcional `computed-age/v1` proyecta la edad de `verified_at` después
 de seleccionar: no cambia score, orden, autoridad ni exclusiones de retrieval.
