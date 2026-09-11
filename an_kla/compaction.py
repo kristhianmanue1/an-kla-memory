@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import re
 import tempfile
+import time
 from typing import Any, Mapping
 
 from .canonical import bare_digest, digest_bytes, digest_json
@@ -21,7 +22,8 @@ from .compaction_inventory import (
 from .compaction_projection import project_snapshot
 from .export_restore import _validated, restore_export
 from .identity import assert_unchanged, identity_lock, read_binding
-from .reader_gate import exclusive_reader_gate, shared_reader_gate
+from .reader_gate import ReaderGateError, exclusive_reader_gate, shared_reader_gate
+from .store_errors import LockBusyError
 from .receipt_validation import validate_receipt_evidence
 from .revision_validation import validate_manifest
 from .transaction_attempts import begin_transaction
@@ -522,157 +524,191 @@ def commit_compaction(
         "compact", transaction_id=txid, base_revision=expected_current,
         plan_fingerprint=planning["plan"]["fingerprint"],
     )
-    with identity_lock(store):
-        binding = read_binding(store)
-        with store.write_lock() as lock_result:
-            with exclusive_reader_gate(store):
-                validate_no_links(store)
-                current = store.read_current()
-                relation = candidate_relation(store, candidate, current)
-                if relation not in {"current", "ancestor"}:
-                    if current != expected_current:
-                        raise CompactionError("compaction_base_changed")
-                    if (
-                        planning["plan"]["core"]["policy_fingerprint"]
-                        != policy_fingerprint()
-                    ):
-                        raise CompactionError(
-                            "compaction_policy_fingerprint_mismatch"
-                        )
-                    assert_unchanged(store, binding, current)
-                    if bundle is None:
-                        raise CompactionError("compaction_bundle_required")
-                    proof, manifest = _restore_proof(Path(bundle))
-                    if manifest["manifest_sha256"] != proposal["export_manifest_sha256"]:
-                        raise CompactionError("compaction_bundle_binding_mismatch")
-                    rebuilt = _build_under_gate(store, proposal, proof)
-                    if rebuilt != planning:
-                        raise CompactionError("compaction_plan_drift")
-                    journal_path = store.root / "transactions" / f"{txid}.json"
-                    if journal_path.exists():
-                        try:
-                            prior = json.loads(journal_path.read_bytes())
-                        except Exception as exc:
-                            raise CompactionError("transaction_evidence_missing_or_invalid") from exc
-                        if prior.get("attempt") != attempt:
-                            raise CompactionError("transaction_binding_conflict")
+    # #111/F5: el gate exclusivo se sondea sin bloquear (timeout=0) con
+    # los locks liberados entre intentos: los escritores y la identidad
+    # avanzan mientras drenan los lectores, y el gate EX nunca se sostiene
+    # mientras se espera un lock (sin deadlocks: export toma identity->gate
+    # SH — F-C3-1). Presupuesto total: 10 s (constante P2).
+    gate_deadline = time.monotonic() + 10.0
+    while True:
+        completed = False
+        retry = False
+        try:
+            with identity_lock(store):
+                binding = read_binding(store)
+                with store.write_lock() as lock_result:
+                    gate_cm = exclusive_reader_gate(store, timeout=0.0)
                     try:
-                        projection = project_snapshot(store._snapshot_under_gate(current))
-                        for stream, rows in projection["active"].items():
-                            if rows:
-                                identifier = store._write_segment(stream, list(rows))
-                                if [identifier] != planning["candidate_manifest"][f"{stream}_segments"]:
-                                    raise CompactionError("compaction_projection_changed")
-                        proof_id = store._write_json_object("compaction/restore-proofs", planning["restore_proof"])
-                        catalog_id = store._write_json_object("compaction/catalogs", planning["catalog"])
-                        epoch_id = store._write_json_object("compaction/epochs", planning["epoch_manifest"])
+                        gate_cm.__enter__()
+                    except ReaderGateError as exc:
+                        close = getattr(gate_cm, "close", None)
+                        if close is not None:
+                            close()
                         if (
-                            proof_id != planning["plan"]["core"]["restore_proof_sha256"]
-                            or catalog_id != planning["plan"]["core"]["catalog_sha256"]
-                            or epoch_id != planning["plan"]["core"]["epoch_manifest_sha256"]
+                            str(exc) != "compaction_readers_active"
+                            or time.monotonic() >= gate_deadline
                         ):
-                            raise CompactionError("compaction_content_hash_mismatch")
-                        written_candidate = store._write_json_object("revisions", planning["candidate_manifest"])
-                        if written_candidate != candidate:
-                            raise CompactionError("compaction_content_hash_mismatch")
-                        intent_id = store._write_ref_log({
-                            "schema": "an-kla/ref-log-v1", "kind": "intent",
-                            "transaction_id": txid, "parent": expected_current,
-                            "candidate": candidate,
-                        })
-                        stage = {
-                            "schema": "an-kla/transaction-stage-v1",
-                            "stage": "candidate_prepared",
-                            "parent": expected_current,
-                            "candidate": candidate,
-                            "attempt": attempt,
-                            "compaction_policy": policy_config(),
-                        }
-                        stage_id = store._write_json_object(f"transactions/{txid}/stages", stage)
-                        journal = {
-                            **stage, "stage_object": stage_id,
-                            "candidate_receipt": None, "current_receipt": None,
-                            "cleanup_receipt": None, "intent_id": intent_id,
-                        }
-                        store._write_transaction(txid, journal)
-                        candidate_receipt = write_receipt(
-                            store, attempt=attempt, kind="candidate-data-durable",
-                            candidate_revision=candidate,
-                            protected=_candidate_protected(planning, stage_id, intent_id),
-                        )
-                        journal["candidate_receipt"] = candidate_receipt
-                        store._write_transaction(txid, journal)
-                        if store.read_current() != expected_current:
-                            raise CompactionError("compaction_base_changed")
-                        store._replace_current(candidate)
-                        current_receipt = write_receipt(
-                            store, attempt=attempt, kind="current-durable",
-                            candidate_revision=candidate,
-                            predecessor_receipt=candidate_receipt,
-                            protected=[
-                                protected_file("refs/CURRENT", digest_bytes((candidate + "\n").encode("ascii"))),
-                                protected_directory("refs"),
-                            ],
-                        )
-                        journal.update({"stage": "committed", "current_receipt": current_receipt})
-                        store._write_transaction(txid, journal)
-                        observed_id = store._write_ref_log({
-                            "schema": "an-kla/ref-log-v1", "kind": "observed_commit",
-                            "transaction_id": txid, "parent": expected_current,
-                            "candidate": candidate, "intent": intent_id,
-                        })
-                        journal["observed_log"] = observed_id
-                        store._write_transaction(txid, journal)
-                    except OSError as exc:
-                        after = None
+                            raise
+                        retry = True
+                    else:
                         try:
-                            after = store.read_current()
-                        except Exception:
-                            pass
-                        outcome = inspect_transaction(store, txid)
-                        committed = outcome.get("committed")
-                        exterior_state = (
-                            "committed_cleanup_incomplete"
-                            if committed is True
-                            else "not_committed"
-                            if committed is False
-                            else "outcome_unknown"
-                        )
-                        return _result(
-                            planning,
-                            exterior_state,
-                            committed,
-                            outcome.get("current_observed", after),
-                            _remaining(store, planning["delete_set"]),
-                            outcome,
-                            [f"compaction_error:{getattr(exc, 'code', type(exc).__name__)}"],
-                        )
-                    current = candidate
-                try:
-                    # Replay may omit the external bundle only after authority
-                    # moved.  Revalidate the authoritative epoch/catalog and
-                    # every live dependency before deleting any historical byte.
-                    store._snapshot_under_gate(current)
-                    validate_no_links(store)
-                    journal = _reconcile_committed_journal(
-                        store, planning, attempt, current
-                    )
-                    _validate_cleanup_evidence(
-                        store, planning, attempt, journal, current
-                    )
-                    remaining, warnings = _cleanup(store, planning, journal)
-                    outcome = inspect_transaction(store, txid)
-                    result = _result(planning, "committed", True, current, remaining, outcome, warnings)
-                except Exception as exc:
-                    outcome = inspect_transaction(store, txid)
-                    result = _result(
-                        planning, "committed_cleanup_incomplete", True, current,
-                        _remaining(store, planning["delete_set"]), outcome,
-                        [f"cleanup_error:{type(exc).__name__}:{exc}"],
-                    )
-        if lock_result.release_error is not None:
-            result["warnings"] = sorted(set([*result["warnings"], lock_result.release_error]))
-        return result
+                            validate_no_links(store)
+                            current = store.read_current()
+                            relation = candidate_relation(store, candidate, current)
+                            if relation not in {"current", "ancestor"}:
+                                if current != expected_current:
+                                    raise CompactionError("compaction_base_changed")
+                                if (
+                                    planning["plan"]["core"]["policy_fingerprint"]
+                                    != policy_fingerprint()
+                                ):
+                                    raise CompactionError(
+                                        "compaction_policy_fingerprint_mismatch"
+                                    )
+                                assert_unchanged(store, binding, current)
+                                if bundle is None:
+                                    raise CompactionError("compaction_bundle_required")
+                                proof, manifest = _restore_proof(Path(bundle))
+                                if manifest["manifest_sha256"] != proposal["export_manifest_sha256"]:
+                                    raise CompactionError("compaction_bundle_binding_mismatch")
+                                rebuilt = _build_under_gate(store, proposal, proof)
+                                if rebuilt != planning:
+                                    raise CompactionError("compaction_plan_drift")
+                                journal_path = store.root / "transactions" / f"{txid}.json"
+                                if journal_path.exists():
+                                    try:
+                                        prior = json.loads(journal_path.read_bytes())
+                                    except Exception as exc:
+                                        raise CompactionError("transaction_evidence_missing_or_invalid") from exc
+                                    if prior.get("attempt") != attempt:
+                                        raise CompactionError("transaction_binding_conflict")
+                                try:
+                                    projection = project_snapshot(store._snapshot_under_gate(current))
+                                    for stream, rows in projection["active"].items():
+                                        if rows:
+                                            identifier = store._write_segment(stream, list(rows))
+                                            if [identifier] != planning["candidate_manifest"][f"{stream}_segments"]:
+                                                raise CompactionError("compaction_projection_changed")
+                                    proof_id = store._write_json_object("compaction/restore-proofs", planning["restore_proof"])
+                                    catalog_id = store._write_json_object("compaction/catalogs", planning["catalog"])
+                                    epoch_id = store._write_json_object("compaction/epochs", planning["epoch_manifest"])
+                                    if (
+                                        proof_id != planning["plan"]["core"]["restore_proof_sha256"]
+                                        or catalog_id != planning["plan"]["core"]["catalog_sha256"]
+                                        or epoch_id != planning["plan"]["core"]["epoch_manifest_sha256"]
+                                    ):
+                                        raise CompactionError("compaction_content_hash_mismatch")
+                                    written_candidate = store._write_json_object("revisions", planning["candidate_manifest"])
+                                    if written_candidate != candidate:
+                                        raise CompactionError("compaction_content_hash_mismatch")
+                                    intent_id = store._write_ref_log({
+                                        "schema": "an-kla/ref-log-v1", "kind": "intent",
+                                        "transaction_id": txid, "parent": expected_current,
+                                        "candidate": candidate,
+                                    })
+                                    stage = {
+                                        "schema": "an-kla/transaction-stage-v1",
+                                        "stage": "candidate_prepared",
+                                        "parent": expected_current,
+                                        "candidate": candidate,
+                                        "attempt": attempt,
+                                        "compaction_policy": policy_config(),
+                                    }
+                                    stage_id = store._write_json_object(f"transactions/{txid}/stages", stage)
+                                    journal = {
+                                        **stage, "stage_object": stage_id,
+                                        "candidate_receipt": None, "current_receipt": None,
+                                        "cleanup_receipt": None, "intent_id": intent_id,
+                                    }
+                                    store._write_transaction(txid, journal)
+                                    candidate_receipt = write_receipt(
+                                        store, attempt=attempt, kind="candidate-data-durable",
+                                        candidate_revision=candidate,
+                                        protected=_candidate_protected(planning, stage_id, intent_id),
+                                    )
+                                    journal["candidate_receipt"] = candidate_receipt
+                                    store._write_transaction(txid, journal)
+                                    if store.read_current() != expected_current:
+                                        raise CompactionError("compaction_base_changed")
+                                    store._replace_current(candidate)
+                                    current_receipt = write_receipt(
+                                        store, attempt=attempt, kind="current-durable",
+                                        candidate_revision=candidate,
+                                        predecessor_receipt=candidate_receipt,
+                                        protected=[
+                                            protected_file("refs/CURRENT", digest_bytes((candidate + "\n").encode("ascii"))),
+                                            protected_directory("refs"),
+                                        ],
+                                    )
+                                    journal.update({"stage": "committed", "current_receipt": current_receipt})
+                                    store._write_transaction(txid, journal)
+                                    observed_id = store._write_ref_log({
+                                        "schema": "an-kla/ref-log-v1", "kind": "observed_commit",
+                                        "transaction_id": txid, "parent": expected_current,
+                                        "candidate": candidate, "intent": intent_id,
+                                    })
+                                    journal["observed_log"] = observed_id
+                                    store._write_transaction(txid, journal)
+                                except OSError as exc:
+                                    after = None
+                                    try:
+                                        after = store.read_current()
+                                    except Exception:
+                                        pass
+                                    outcome = inspect_transaction(store, txid)
+                                    committed = outcome.get("committed")
+                                    exterior_state = (
+                                        "committed_cleanup_incomplete"
+                                        if committed is True
+                                        else "not_committed"
+                                        if committed is False
+                                        else "outcome_unknown"
+                                    )
+                                    return _result(
+                                        planning,
+                                        exterior_state,
+                                        committed,
+                                        outcome.get("current_observed", after),
+                                        _remaining(store, planning["delete_set"]),
+                                        outcome,
+                                        [f"compaction_error:{getattr(exc, 'code', type(exc).__name__)}"],
+                                    )
+                                current = candidate
+                            try:
+                                # Replay may omit the external bundle only after authority
+                                # moved.  Revalidate the authoritative epoch/catalog and
+                                # every live dependency before deleting any historical byte.
+                                store._snapshot_under_gate(current)
+                                validate_no_links(store)
+                                journal = _reconcile_committed_journal(
+                                    store, planning, attempt, current
+                                )
+                                _validate_cleanup_evidence(
+                                    store, planning, attempt, journal, current
+                                )
+                                remaining, warnings = _cleanup(store, planning, journal)
+                                outcome = inspect_transaction(store, txid)
+                                result = _result(planning, "committed", True, current, remaining, outcome, warnings)
+                            except Exception as exc:
+                                outcome = inspect_transaction(store, txid)
+                                result = _result(
+                                    planning, "committed_cleanup_incomplete", True, current,
+                                    _remaining(store, planning["delete_set"]), outcome,
+                                    [f"cleanup_error:{type(exc).__name__}:{exc}"],
+                                )
+                        finally:
+                            gate_cm.__exit__(None, None, None)
+                        completed = True
+        except LockBusyError:
+            if time.monotonic() >= gate_deadline:
+                raise
+            retry = True
+        if completed:
+            break
+        time.sleep(0.05)
+    if lock_result.release_error is not None:
+        result["warnings"] = sorted(set([*result["warnings"], lock_result.release_error]))
+    return result
 
 
 def verify_revision(store: Any, revision: str) -> dict[str, Any]:

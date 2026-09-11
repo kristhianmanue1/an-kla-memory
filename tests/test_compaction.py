@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
 import json
 import os
@@ -10,6 +11,7 @@ import unittest
 import uuid
 from unittest.mock import patch
 
+import an_kla.compaction as compaction_module
 from an_kla.compaction import (
     CompactionError, commit_compaction, plan_compaction, verify_revision,
 )
@@ -17,6 +19,7 @@ from an_kla.canonical import digest_json
 from an_kla.checkpoints import commit_checkpoint, plan_checkpoint
 from an_kla.export_restore import create_export
 from an_kla.store import MemoryStore
+from an_kla.store_errors import LockBusyError
 from an_kla.schemas import schema_document
 from tests.test_checkpoints import _authority, _state
 from tests.test_refute import Resolver, proposal_and_claim
@@ -181,6 +184,78 @@ class CompactionTests(unittest.TestCase):
                 Exception, "(?:compaction_catalog|compaction_epoch)"
             ):
                 refute_store.verify()
+
+    def test_f5_writer_progresses_while_compaction_drains_readers(self) -> None:
+        """#111/F5: durante el drenado de lectores, un escritor toma el lock.
+
+        Un lector sostiene el gate compartido; la compactación sondea el
+        gate EX sin bloquear (timeout=0) liberando los locks entre
+        intentos — el write lock debe ser adquirible por un escritor
+        mientras el drenado continúa. Con el orden viejo (gate bloqueante
+        dentro de los locks) el escritor recibiría write_lock_busy durante
+        toda la espera. Sin deadlocks: el gate EX (timeout=0) nunca se
+        sostiene mientras se espera un lock (F-C3-1: export toma
+        identity->gate SH).
+        """
+
+        import threading
+        import time as time_module
+
+        from an_kla.reader_gate import shared_reader_gate
+
+        with tempfile.TemporaryDirectory() as root:
+            project = Path(root) / "project"
+            project.mkdir()
+            store = MemoryStore(project)
+            initial = store.initialize()
+            source = store.commit(
+                expected_current_hash=initial,
+                checkpoint_patch={},
+                facts=[
+                    {"id": "f-active", "text": "keep", "status": "active"},
+                    {"id": "f-inactive", "text": "drop", "status": "inactive"},
+                ],
+            )
+            bundle = Path(root) / "bundle"
+            exported = create_export(store, bundle)
+            proposal = {
+                "schema": "an-kla/compaction-proposal-v1",
+                "base_revision": source,
+                "epoch_id": str(uuid.uuid4()),
+                "transaction_id": str(uuid.uuid4()),
+                "export_manifest_sha256": exported["manifest_sha256"],
+            }
+            planning = plan_compaction(store, proposal, bundle)
+
+            outcome = {}
+
+            def run() -> None:
+                try:
+                    outcome["result"] = commit_compaction(
+                        store, planning, source, bundle
+                    )
+                except Exception as exc:  # pragma: no cover - diagnóstico
+                    outcome["error"] = exc
+
+            writer_progressed = False
+            with shared_reader_gate(store):
+                thread = threading.Thread(target=run)
+                thread.start()
+                deadline = time_module.monotonic() + 8
+                while time_module.monotonic() < deadline and thread.is_alive():
+                    try:
+                        with store.write_lock():
+                            writer_progressed = True
+                    except LockBusyError:
+                        pass
+                    time_module.sleep(0.05)
+                self.assertTrue(
+                    writer_progressed,
+                    "escritor congelado mientras la compactación drena lectores",
+                )
+            thread.join(timeout=30)
+            self.assertFalse(thread.is_alive())
+            self.assertEqual(outcome.get("result", {}).get("state"), "committed")
 
     def test_cleanup_retry_uses_same_candidate_without_bundle(self) -> None:
         with tempfile.TemporaryDirectory() as root:
