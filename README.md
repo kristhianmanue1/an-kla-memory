@@ -39,7 +39,7 @@ intérprete del entorno virtual.
 
 ## Estado actual
 
-Este árbol prepara **`v0.1.0-beta.29`** (`0.1.0b29`). Una vez publicada, será
+La prerelease pública más reciente es **`v0.1.0-beta.29`** (`0.1.0b29`),
 instalable mediante su etiqueta Git exacta. AN-KLA no se distribuye desde
 PyPI; el wheel de la release se publica como asset de la etiqueta y la
 instalación canónica sigue siendo `pip install` fijado a la etiqueta exacta.
