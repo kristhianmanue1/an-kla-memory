@@ -105,6 +105,35 @@ class CheckpointContractTests(unittest.TestCase):
         ):
             plan_checkpoint(self.store, spoofed, _authority(self.store, spoofed))
 
+    def test_channel_confirmed_requires_host_adapter_before_plan(self) -> None:
+        state = _state(self.parent_checkpoint)
+        authority = _authority(self.store, state)
+        authority["authority_class"] = "channel_confirmed"
+        authority["issuer"]["kind"] = "channel"
+        with self.assertRaisesRegex(
+            CheckpointPolicyError, "channel_confirmed_requires_adapter"
+        ):
+            plan_checkpoint(self.store, state, authority)
+        self.assertEqual(self.store.read_current(), self.root)
+
+    def test_previously_forged_channel_plan_fails_commit(self) -> None:
+        state = _state(self.parent_checkpoint)
+        authority = _authority(self.store, state)
+        authority["authority_class"] = "channel_confirmed"
+        authority["issuer"]["kind"] = "channel"
+        # Model a plan produced by the former shape-only validator.
+        with patch("an_kla.checkpoint_policy.validate_authority"):
+            planning = plan_checkpoint(self.store, state, authority)
+        before = set((self.store.root / "transactions").glob("*.json"))
+        with self.assertRaisesRegex(
+            CheckpointPolicyError, "channel_confirmed_requires_adapter"
+        ):
+            commit_checkpoint(
+                self.store, planning, self.root, transaction_id=str(uuid.uuid4())
+            )
+        self.assertEqual(self.store.read_current(), self.root)
+        self.assertEqual(set((self.store.root / "transactions").glob("*.json")), before)
+
     def test_planner_rejects_boolean_revision(self) -> None:
         planning = self._planning()
         with self.assertRaisesRegex(CheckpointPolicyError, "invalid_checkpoint_plan"):

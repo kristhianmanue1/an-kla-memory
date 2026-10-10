@@ -136,7 +136,11 @@ La decisión es `skip|write`; reasons es un array ordenado/único del enum
 autorizar sólo campos caller_asserted/unavailable y nunca elevar
 tool_observed. Sin observer activo, cualquier provenance o authority class
 `tool_observed` es error terminal `tool_observed_requires_adapter` antes de
-evaluar decisión; no aparece simultáneamente como reason de skip.
+evaluar decisión; no aparece simultáneamente como reason de skip. Mientras no
+exista un resolver de host para checkpoint, `channel_confirmed` declarado en
+JSON también falla cerrado con `channel_confirmed_requires_adapter`, tanto al
+planificar como al confirmar un plan previo. Un issuer `channel` en el JSON no
+demuestra resolución del host.
 
 El core del plan liga `base_revision`, `parent_checkpoint`,
 `proposal_sha256`, `authority_sha256`, `policy_fingerprint`, `decision_sha256`
@@ -262,7 +266,8 @@ digest. Working_state jamás entra a segmentos/FTS.
 
 Códigos: `invalid_working_state`, `invalid_checkpoint_authority`,
 `invalid_checkpoint_plan`, `invalid_checkpoint_provenance`,
-`tool_observed_requires_adapter`, `checkpoint_plan_base_changed`,
+`tool_observed_requires_adapter`, `channel_confirmed_requires_adapter`,
+`checkpoint_plan_base_changed`,
 `checkpoint_parent_mismatch`, `budget_too_small_for_resume_snapshot`.
 
 Pruebas: shape/provenance exacta, unavailable/null, límites de bytes/items,

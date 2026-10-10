@@ -16,6 +16,10 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 from pathlib import Path
+from unittest.mock import patch
+
+from an_kla.checkpoints import plan_checkpoint
+from an_kla.store import MemoryStore
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -99,6 +103,52 @@ class EmitAuthorityTemplateTests(unittest.TestCase):
         ])
         self.assertEqual(committed.returncode, 0, committed.stderr)
         self.assertIs(json.loads(committed.stdout)["committed"], True)
+
+    def test_cli_rejects_self_declared_channel_authority(self) -> None:
+        ws_path, _ = self._working_state_file()
+        template = self._cli([
+            "checkpoint", "plan", "--input", str(ws_path),
+            "--emit-authority-template",
+        ])
+        self.assertEqual(template.returncode, 0, template.stderr)
+        authority = json.loads(template.stdout)
+        authority["authority_class"] = "channel_confirmed"
+        authority["issuer"]["kind"] = "channel"
+        authority_path = self.root / "untrusted-authority.json"
+        authority_path.write_text(json.dumps(authority), encoding="utf-8")
+        base = json.loads(self._cli(["status"]).stdout)["revision"]
+        planned = self._cli([
+            "checkpoint", "plan", "--input", str(ws_path),
+            "--authority", str(authority_path),
+        ])
+        self.assertNotEqual(planned.returncode, 0)
+        self.assertIn("channel_confirmed_requires_adapter", planned.stderr)
+        self.assertEqual(json.loads(self._cli(["status"]).stdout)["revision"], base)
+
+    def test_cli_commit_rejects_previously_forged_channel_plan(self) -> None:
+        ws_path, state = self._working_state_file()
+        template = self._cli([
+            "checkpoint", "plan", "--input", str(ws_path),
+            "--emit-authority-template",
+        ])
+        self.assertEqual(template.returncode, 0, template.stderr)
+        authority = json.loads(template.stdout)
+        authority["authority_class"] = "channel_confirmed"
+        authority["issuer"]["kind"] = "channel"
+        store = MemoryStore(self.root)
+        base = store.read_current()
+        with patch("an_kla.checkpoint_policy.validate_authority"):
+            planning = plan_checkpoint(store, state, authority)
+        plan_path = self.root / "old-channel-plan.json"
+        plan_path.write_text(json.dumps(planning), encoding="utf-8")
+        committed = self._cli([
+            "checkpoint", "commit", "--plan", str(plan_path),
+            "--expected-current", base,
+            "--transaction-id", "00000000-0000-4000-8000-000000000002",
+        ])
+        self.assertNotEqual(committed.returncode, 0)
+        self.assertIn("channel_confirmed_requires_adapter", committed.stderr)
+        self.assertEqual(store.read_current(), base)
 
     def test_template_is_read_only_and_deterministic(self) -> None:
         ws_path, _ = self._working_state_file()

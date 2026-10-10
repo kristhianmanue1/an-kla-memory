@@ -109,7 +109,7 @@ antes de reintentar (`docs/agent-recovery.md`).
 | Clase | Standalone por CLI | Uso típico |
 |---|---|---|
 | `model_derived` | ✅ (el default del template) | working_state saneado, modelo | 
-| `channel_confirmed` | requiere issuer `channel` resuelto por el host | el host confirma el canal |
+| `channel_confirmed` | ❌ rechazado sin adaptador de host; un JSON con issuer `channel` no lo acredita | el host confirma el canal |
 | `tool_observed` | ❌ el CLI lo rechaza; requiere adaptador attest (ADR-0046) | evidencia de comando ejecutado |
 
 La vía gobernada de attest (`attest init/run` + receipt en la
@@ -134,6 +134,7 @@ an-kla error: invalid_checkpoint_authority (scope.fields:order)
 | `invalid_working_state` | forma/llaves: `working_state:keys:missing=…` / `extra=…`; `captured_at.value:not_canonical_utc` (exige round-trip UTC con microsegundos); `decisions[].value:too_large` (> 8192 bytes canónicos); `source_state.head.value:not_object_id`; `source_state.profile:unknown` |
 | `invalid_checkpoint_provenance` | `git/v1` exige valores `caller_asserted`, nunca `unavailable` (ADR-0038): `source_state.dirty_digest.provenance` |
 | `invalid_checkpoint_authority` | `scope.fields:order` (orden por bytes UTF-8); `proposal_sha256:not_digest` o binding distinto del proposal interno (usa `--emit-authority-template`); `issuer.kind:authority_class_mismatch`; `issuer.configuration_fingerprint:not_digest` |
+| `channel_confirmed_requires_adapter` | una autoridad JSON declaró `channel_confirmed`; el checkpoint no dispone aún de un resolver confiable del host, incluso para un plan creado antes de esta corrección |
 | `checkpoint_parent_mismatch` | `supersedes_checkpoint:not_current` — tu `supersedes_checkpoint` ≠ checkpoint vigente (relee `checkpoint show`) |
 | `checkpoint_plan_base_changed` | CURRENT avanzó: relee `status` y replanifica |
 | `missing_checkpoint_authority` | invocaste `plan` sin `--authority` ni `--emit-authority-template` |
