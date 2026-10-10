@@ -57,8 +57,9 @@ python -m an_kla --project-root . checkpoint plan \
 Emite una `checkpoint-authority-v1` con `proposal_sha256` y
 `base_revision` reales, clase `model_derived` e issuer genérico
 (`agent-local`, config `manual-cli/v1`). Edita `issuer` sólo si tu
-configuración difiere; si usas `tool_observed` necesitas el adaptador
-attest (ADR-0046 — ver §4); `channel_confirmed` es de host.
+configuración difiere. Para checkpoint, `tool_observed` y
+`channel_confirmed` requieren adaptadores propios que esta beta no entrega;
+no los declares cambiando el JSON.
 
 ## 3. Cierre canónico de sesión (copy-paste-safe)
 
@@ -110,10 +111,11 @@ antes de reintentar (`docs/agent-recovery.md`).
 |---|---|---|
 | `model_derived` | ✅ (el default del template) | working_state saneado, modelo | 
 | `channel_confirmed` | ❌ rechazado sin adaptador de host; un JSON con issuer `channel` no lo acredita | el host confirma el canal |
-| `tool_observed` | ❌ el CLI lo rechaza; requiere adaptador attest (ADR-0046) | evidencia de comando ejecutado |
+| `tool_observed` | ❌ rechazado para checkpoint; no existe adaptador de observación de checkpoint | evidencia de comando ejecutado |
 
-La vía gobernada de attest (`attest init/run` + receipt en la
-`evidence` de la authority) está en la
+La vía gobernada de attest (`attest init/run` + receipt) se aplica a
+`plan-write`/`commit-write-plan`, no a checkpoint-authority (ADR-0046).
+Está descrita en la
 [guía de attest](../docs/architecture/0046-attest-local-signed-observation-v1.md);
 los hooks del host (`--on-behalf-of-hook`, ADR-0047) son el camino
 opuesto: el host exige, el agente propone.
