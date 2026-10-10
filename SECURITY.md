@@ -5,8 +5,12 @@
 AN-KLA Memory is in local beta. Only the latest tagged beta release receives
 security fixes.
 
+La fila de una candidata preparada aplica sólo cuando se publique su etiqueta;
+un commit en `main` o un PR no constituyen una versión soportada.
+
 | Version | Supported |
 |---|---|
+| `v0.1.0-beta.29` | ✅ |
 | `v0.1.0-beta.28` | ✅ |
 | `v0.1.0-beta.27` | ✅ |
 | `v0.1.0-beta.26` | ✅ |

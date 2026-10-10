@@ -14,6 +14,23 @@ en fase de pre-release `0.1.0`.
 
 Nada aún.
 
+## [v0.1.0-beta.29]
+
+**Corrección de autoridad en checkpoint** (PR #137). No cambia la plantilla
+gestionada (`TEMPLATE_VERSION` sigue en `0.1.0-beta.26`), el formato físico ni
+la recuperación.
+
+**Corregido**:
+- `checkpoint plan` y `checkpoint commit` rechazan `channel_confirmed`
+  autodeclarado en JSON mientras no exista un resolver de host. El rechazo
+  también cubre la API de checkpoint y los planes creados antes del cambio.
+- El fingerprint de la política refleja que el adaptador de canal no está
+  disponible. Los planes pendientes anteriores deben replanificarse.
+- El flujo `model_derived` de plantilla → plan → commit sigue disponible.
+
+**Pruebas**: regresiones negativas por API y CLI, más control positivo del
+flujo `model_derived`. Ver acta de release para resultados y límites.
+
 ## [v0.1.0-beta.28]
 
 **Cierre del backlog táctico** (#111 y #133 completos). No cambia la
