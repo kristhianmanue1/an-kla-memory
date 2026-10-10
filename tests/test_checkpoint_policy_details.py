@@ -333,9 +333,9 @@ class CheckpointErrorDetailTests(unittest.TestCase):
             "schema": "an-kla/checkpoint-authority-v1",
             "proposal_sha256": "sha256:" + "c" * 64,
             "base_revision": "sha256:" + "a" * 64,
-            "authority_class": "channel_confirmed",
+            "authority_class": "model_derived",
             "issuer": {
-                "kind": "channel",
+                "kind": "model",
                 "id": "hook",
                 "configuration_fingerprint": "sha256:" + "1" * 64,
             },

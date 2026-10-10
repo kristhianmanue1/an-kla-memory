@@ -34,6 +34,7 @@ _CONFIG = {
     "maximum_item_bytes": 8192,
     "maximum_working_state_bytes": 65536,
     "tool_observed_adapter": False,
+    "channel_confirmed_adapter": False,
 }
 
 
@@ -323,6 +324,9 @@ def validate_authority(authority: Mapping[str, Any]) -> None:
     if value["authority_class"] == "tool_observed":
         raise CheckpointPolicyError(
             "tool_observed_requires_adapter", "authority_class")
+    if value["authority_class"] == "channel_confirmed":
+        raise CheckpointPolicyError(
+            "channel_confirmed_requires_adapter", "authority_class")
     if value["authority_class"] not in classes:
         raise CheckpointPolicyError(
             "invalid_checkpoint_authority", "authority_class:unknown")
