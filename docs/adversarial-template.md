@@ -6,6 +6,13 @@ contrato gestionado (`AGENTS.md`/`AN-KLA.md`). Estructura extraída de las
 rondas ya hechas en `v0.1.0-beta.1` y `v0.1.0-beta.7` — no inventa proceso
 nuevo, lo estandariza.
 
+Intérprete: la ronda y su suite corren con Python 3.12 o posterior nombrado
+explícitamente (en el Mac del maintainer, `/opt/homebrew/bin/python3.12`),
+nunca con `python3` a secas ni con el Python 3.9 del sistema. La ronda
+registra `python3 --version` en sus límites. Decisión del maintainer del
+2026-10-13; el mínimo del paquete no cambia (ver
+`docs/releases/v0.1.0-beta.30-adversarial.md` §Intérprete de Python).
+
 ---
 
 # Ronda adversarial de `<feature/issue>` (`<versión>`)

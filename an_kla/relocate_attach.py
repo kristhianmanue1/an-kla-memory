@@ -13,11 +13,14 @@ operator's declaration, not proof that both roots are "the same project".
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, Mapping
 
+from .canonical import digest_bytes
 from .custody import (
-    CustodyError, clear_bind_intent, custody_fingerprint, project_local_vault_present,
-    read_bind_intent, read_pointer, relocate_pointer_locator, write_pointer,
+    CustodyError, clear_bind_intent, custody_fingerprint, default_store_root,
+    project_local_vault_present, read_bind_intent, read_pointer, relocate_pointer_locator,
+    vault_present, write_pointer,
 )
 from .identity import IdentityError, identity_lock, mutation_preflight
 from .relocation_receipts import (
@@ -54,6 +57,32 @@ def _result(
     }
 
 
+def _require_no_live_twin(store: Any, binding: Mapping[str, Any], previous: str) -> None:
+    """Refuse when the previously bound checkout still holds another copy.
+
+    A copied vault is indistinguishable by bytes from a moved one, so the
+    old root is the only witness: a pointer there with this fingerprint whose
+    locator still holds a vault at another path, or a project-local vault
+    with this identity, means attaching would fork custody into two live
+    vaults (beta.30 release round 2, N-01).  The same vault shared by two
+    checkouts stays the declared limit of Enmienda 5 §5.
+    """
+
+    pointer = read_pointer(previous)
+    if pointer is not None and pointer["custody_fingerprint"] == custody_fingerprint(binding):
+        located = Path(pointer["store_root"]).resolve()
+        if located != store.store_root and vault_present(located):
+            raise AttachError("relocate_attach_source_live")
+    local = default_store_root(previous)
+    if local != store.store_root and vault_present(local):
+        try:
+            identity = digest_bytes((local / "memory" / "identity.json").read_bytes())
+        except OSError:
+            identity = None
+        if identity in (None, binding["store_identity"]):
+            raise AttachError("relocate_attach_source_live")
+
+
 def attach_store(store: Any, expected_current: str) -> dict[str, Any]:
     """Write the receipt (when the root changed), then the pointer.
 
@@ -69,37 +98,33 @@ def attach_store(store: Any, expected_current: str) -> dict[str, Any]:
     if pending is not None and pending != str(store.store_root):
         # An unfinished ``init`` toward another vault (#147, m1).
         raise CustodyError("store_root_bind_pending")
+    target = str(store.project_root)
     try:
         existing = read_pointer(store.project_root)
         binding = mutation_preflight(store)
-    except IdentityError as exc:
+        bound = bound_project_root(store, binding)
+    except (IdentityError, RelocationReceiptError) as exc:
         raise AttachError(str(exc)) from exc
-    if existing is not None:
-        # mutation_preflight already proved the fingerprint matches and that
-        # the pointer's locator holds no other live copy.  The replay still
-        # requires the exact CURRENT (beta.30 release round, H-02).
-        with identity_lock(store):
-            with store.write_lock():
-                if store.read_current() != expected_current:
-                    raise AttachError("relocate_attach_base_changed")
-                binding = mutation_preflight(store)
-                # A vault moved away from the pointer's locator: point at it.
-                relocate_pointer_locator(store, binding)
-                clear_bind_intent(store.project_root, store.store_root)
-        return _result(binding, expected_current, None, replayed=True)
-    checked = store.verify()
-    if checked["revision"] != expected_current:
-        raise AttachError("relocate_attach_base_changed")
+    replay = existing is not None and bound == target
+    if not replay:
+        checked = store.verify()
+        if checked["revision"] != expected_current:
+            raise AttachError("relocate_attach_base_changed")
     receipt: str | None = None
     with identity_lock(store):
         with store.write_lock():
+            # The replay also requires the exact CURRENT (round 1, H-02).
             if store.read_current() != expected_current:
                 raise AttachError("relocate_attach_base_changed")
             binding = mutation_preflight(store)
-            target = str(store.project_root)
             try:
                 previous = bound_project_root(store, binding)
+                if replay and previous != target:
+                    raise AttachError("relocate_attach_base_changed")
                 if previous != target:
+                    # A pointer copied into this checkout is no replay: the
+                    # binding to this root still needs its receipt (N-02).
+                    _require_no_live_twin(store, binding, previous)
                     receipt = write_relocation_receipt(
                         store,
                         kind="project_root",
@@ -110,9 +135,13 @@ def attach_store(store: Any, expected_current: str) -> dict[str, Any]:
                     )
             except RelocationReceiptError as exc:
                 raise AttachError(str(exc)) from exc
-            write_pointer(store, binding)
+            if existing is not None:
+                # A vault moved away from the pointer's locator: point at it.
+                relocate_pointer_locator(store, binding)
+            else:
+                write_pointer(store, binding)
             clear_bind_intent(store.project_root, store.store_root)
-    return _result(binding, expected_current, receipt, replayed=False)
+    return _result(binding, expected_current, receipt, replayed=replay)
 
 
 __all__ = ["AttachError", "RESULT_SCHEMA", "attach_store", "bound_project_root"]

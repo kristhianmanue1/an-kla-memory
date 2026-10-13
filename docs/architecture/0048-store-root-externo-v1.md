@@ -3,7 +3,7 @@
 - **Estado:** Aceptada (2026-09-05, orden explícita del maintainer en
   sesión: "adelante con paso 1 y 3" — aceptar tal cual, con la
   re-verificación H1–H4 ya ejecutada como condición cumplida de F1)
-- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3); R3 (Enmienda 4); attach (Enmienda 5); residuales m1/m4 (Enmienda 6); ronda de release beta.30 (Enmienda 7);
+- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3); R3 (Enmienda 4); attach (Enmienda 5); residuales m1/m4 (Enmienda 6); ronda de release beta.30 (Enmiendas 7 y 8);
   R1a en adelante según `docs/plans/2026-10-10-g3-discovery-agent-roadmap.md`
 - **Fecha:** 2026-09-05
 - **Decide sobre:** G3 de ADR-0031 — cómo separa AN-KLA la custodia física
@@ -481,3 +481,32 @@ Ronda adversarial con Muse CLI (otra familia de modelo), veredicto
 4. **`stores scan` (H-04)** no lee a través de ningún componente symlink
    dentro de la bóveda candidata; la clasifica `unreadable` con código
    `symlink_in_vault`.
+
+## Enmienda 8 (2026-10-13) — ronda 2 de release beta.30
+
+Segunda ronda con Muse CLI sobre la Enmienda 7, veredicto `FIX-AND-RETRY`:
+`docs/releases/v0.1.0-beta.30-adversarial.md` §Ronda 2.
+
+1. **`attach` de una copia con el checkout anterior vivo (N-01).** Antes de
+   escribir el receipt, `attach` mira la raíz ligada anterior. Si allí hay
+   un puntero con el mismo fingerprint cuyo localizador contiene una bóveda
+   en otra ruta, o una bóveda project-local con la misma identidad (o
+   ilegible), falla con `relocate_attach_source_live`. Por bytes una copia
+   no se distingue de una bóveda movida: el checkout anterior es el único
+   testigo. Si ya no existe, `attach` procede como antes.
+2. **Un puntero copiado no es replay (N-02).** `attach` sólo responde
+   `replayed: true` cuando la raíz ligada (cabeza de la cadena o init) ya es
+   la raíz actual. Si no, verifica, aplica §1 y escribe el receipt
+   `project_root` aunque el puntero ya exista.
+3. **Localizador no canónico (N-03).** `check_custody`,
+   `relocate_pointer_locator` y el descriptor de custodia comparan el
+   localizador resuelto (`..`, symlinks), así que la misma bóveda escrita
+   con otra ortografía no se bloquea ni avisa `pointer_stale_locator`.
+4. **Límites declarados:**
+   - Sigue la Enmienda 5 §5: dos checkouts vivos que comparten la *misma*
+     bóveda (incluido un puntero copiado a mano) escriben en ella; tras
+     `attach`, la raíz ligada pasa al último checkout.
+   - **N-04 (LOW):** si el operador borra el puntero a mano, `init` en ese
+     checkout crea una bóveda project-local nueva y la externa queda
+     huérfana. Sin el puntero ni el marcador de intención no hay testigo
+     local; `stores scan` la muestra como `orphan_uncertain`.

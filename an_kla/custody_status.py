@@ -8,6 +8,7 @@ closed codes only.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from .custody import CustodyError, custody_fingerprint, read_pointer
@@ -55,7 +56,7 @@ def custody_descriptor(store: Any) -> dict[str, Any]:
         divergence = "custody_identity_unreadable"
     elif fingerprint != pointer["custody_fingerprint"]:
         divergence = "pointer_fingerprint_mismatch"
-    elif pointer["store_root"] != str(store.store_root):
+    elif Path(pointer["store_root"]).resolve() != Path(store.store_root):
         divergence = "pointer_stale_locator"
     else:
         divergence = "none"

@@ -133,7 +133,7 @@ def check_custody(store: Any, *, binding: Mapping[str, Any] | None) -> None:
         raise CustodyError("store_root_divergence")
     if custody_fingerprint(binding) != pointer["custody_fingerprint"]:
         raise CustodyError("store_root_divergence")
-    located = Path(pointer["store_root"])
+    located = Path(pointer["store_root"]).resolve()
     if located != store.store_root and vault_present(located):
         # Same bytes at two live locations (a copied vault opened by flag or
         # env): the pointer's locator still holds a vault, so writing here
@@ -163,7 +163,8 @@ def relocate_pointer_locator(store: Any, binding: Mapping[str, Any]) -> dict[str
     existing = read_pointer(store.project_root)
     if existing is None or existing["custody_fingerprint"] != custody_fingerprint(binding):
         raise CustodyError("store_root_divergence")
-    if existing["store_root"] == str(store.store_root):
+    if Path(existing["store_root"]).resolve() == store.store_root:
+        # Same vault, possibly spelled with ``..`` or a symlink (round 2, N-03).
         return existing
     if vault_present(existing["store_root"]):
         raise CustodyError("store_root_divergence")

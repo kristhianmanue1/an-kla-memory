@@ -1,5 +1,6 @@
-"""Regressions from the beta.30 release adversarial round (reviewer: Muse
-CLI, a different model family).  H-01..H-04 reproduce its findings."""
+"""Regressions from the beta.30 release adversarial rounds (reviewer: Muse
+CLI, a different model family).  H-01..H-04 (round 1) and N-01..N-03
+(round 2) reproduce its findings."""
 
 from __future__ import annotations
 
@@ -11,10 +12,11 @@ import unittest
 from pathlib import Path
 
 from an_kla import relocate
+from an_kla.canonical import canonical_json
 from an_kla.custody import CustodyError, read_pointer
-from an_kla.identity import IdentityError
+from an_kla.identity import IdentityError, read_binding
 from an_kla.relocate import SimulatedCrash, commit_relocation, plan_relocation
-from an_kla.relocate_attach import AttachError, attach_store
+from an_kla.relocate_attach import AttachError, attach_store, bound_project_root
 from an_kla.store import MemoryStore
 from an_kla.store_resolution import open_resolved_store
 from an_kla.stores_scan import scan
@@ -66,6 +68,66 @@ class CopiedVaultTests(unittest.TestCase):
             attach_store(MemoryStore(self.project, store_root=self.vault_b), self.revision)
         self.assertEqual(str(caught.exception), "store_root_divergence")
         self.assertEqual(read_pointer(self.project), before)
+
+
+class AttachRoundTwoTests(unittest.TestCase):
+    """Round 2 (N-01..N-03): attach and the locator check, with controls."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.base = Path(self._tmp.name).resolve()
+        self.p1 = self.base / "p1"
+        self.p2 = self.base / "p2"
+        self.p1.mkdir()
+        self.p2.mkdir()
+        self.vault_a = self.base / "vaults" / "a"
+        self.vault_b = self.base / "vaults" / "b"
+        created = MemoryStore(self.p1, store_root=self.vault_a)
+        created.initialize()
+        self.revision = _commit_fact(created, "f-a")
+
+    def test_n01_attach_copy_refused_while_old_checkout_holds_original(self) -> None:
+        shutil.copytree(self.vault_a, self.vault_b)
+        with self.assertRaises(AttachError) as caught:
+            attach_store(MemoryStore(self.p2, store_root=self.vault_b), self.revision)
+        self.assertEqual(str(caught.exception), "relocate_attach_source_live")
+        self.assertIsNone(read_pointer(self.p2))
+        self.assertFalse((self.vault_b / "relocation-receipts").exists())
+
+    def test_n01_positive_control_old_checkout_gone(self) -> None:
+        # The legitimate re-clone: the old checkout (and its pointer) is gone.
+        shutil.copytree(self.vault_a, self.vault_b)
+        shutil.rmtree(self.p1)
+        result = attach_store(MemoryStore(self.p2, store_root=self.vault_b), self.revision)
+        self.assertFalse(result["replayed"])
+        self.assertIsNotNone(result["relocation_receipt"])
+        self.assertEqual(read_pointer(self.p2)["store_root"], str(self.vault_b))
+
+    def test_n02_copied_pointer_is_not_a_replay(self) -> None:
+        (self.p2 / ".an-kla").mkdir()
+        shutil.copy(self.p1 / ".an-kla" / "store-root.txt", self.p2 / ".an-kla" / "store-root.txt")
+        store = MemoryStore(self.p2, store_root=self.vault_a)
+        result = attach_store(store, self.revision)
+        self.assertFalse(result["replayed"])
+        self.assertIsNotNone(result["relocation_receipt"])
+        self.assertEqual(bound_project_root(store, read_binding(store)), str(self.p2))
+        again = attach_store(MemoryStore(self.p2, store_root=self.vault_a), self.revision)
+        self.assertTrue(again["replayed"])
+        self.assertIsNone(again["relocation_receipt"])
+
+    def test_n03_locator_spelled_with_dotdot_is_the_same_vault(self) -> None:
+        pointer = read_pointer(self.p1)
+        alias = str(self.vault_a / ".." / "a")
+        (self.p1 / ".an-kla" / "store-root.txt").write_bytes(canonical_json({**pointer, "store_root": alias}))
+        self.assertEqual(_commit_fact(MemoryStore(self.p1, store_root=self.vault_a), "f-a2")[:7], "sha256:")
+        warnings = io.StringIO()
+        open_resolved_store(self.p1, warnings=warnings, environ={})
+        self.assertNotIn("pointer_stale_locator", warnings.getvalue())
+        # Control: a real copy at another path is still refused (H-01).
+        shutil.copytree(self.vault_a, self.vault_b)
+        with self.assertRaises((CustodyError, IdentityError)):
+            _commit_fact(MemoryStore(self.p1, store_root=self.vault_b), "f-b")
 
 
 class LongLivedSnapshotTests(unittest.TestCase):
