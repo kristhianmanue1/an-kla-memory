@@ -75,8 +75,8 @@ una se registra con su alternativa descartada:
   R1a hacía fallar `export create` con `export_unrecognized_durable_path`.
   Ahora `relocation-receipts/` viaja en el export (evidencia de la bóveda) y
   `store-root.txt` queda excluido (es del proyecto); regresión en
-  `test_relocation_receipt_travels_in_export`. La suite se repitió sobre
-  este diff final (resultado en la PR).
+  `test_relocation_receipt_travels_in_export`. Suite repetida sobre
+  este diff final (`0760481`): `Ran 1100 tests in 542.067s` · `OK (skipped=12)`.
 - Gates: `check_sizes` OK (478 archivos), `check_plans` OK,
   `check_adr_registry` OK.
 
