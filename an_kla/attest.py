@@ -30,6 +30,7 @@ from pathlib import Path
 from typing import Any
 
 from .canonical import canonical_json, digest_json
+from .custody import CustodyError, read_pointer, require_project_local
 from .write_policy import WritePolicyError, policy_fingerprint
 
 KEY_RELATIVE = Path(".an-kla") / "attest.key"
@@ -126,6 +127,13 @@ def _write_exclusive(target: Path, payload: bytes, mode: int) -> None:
     _fsync_dir(target.parent)
 
 
+def _require_no_external_pointer(root: Path) -> None:
+    # R1a (ADR-0048 F0-B): with external custody the keys and receipts
+    # belong to the vault; until R1c adapts attest, never mint project-local.
+    if read_pointer(root) is not None:
+        raise CustodyError("store_root_external_unsupported")
+
+
 def ensure_attest_files(
     project_root: Path | str,
     *,
@@ -134,6 +142,7 @@ def ensure_attest_files(
     """Create the key and the whitelist if absent (idempotent, ADR-0046 §1)."""
 
     root = Path(project_root)
+    _require_no_external_pointer(root)
     created: list[str] = []
     existed: list[str] = []
     key = key_path(root)
@@ -264,6 +273,7 @@ def attest_run(
     if not command or any(not isinstance(item, str) or not item for item in command):
         raise AttestError("attest_command_not_allowed")
     root = Path(project_root)
+    _require_no_external_pointer(root)
     key = _load_key(root)
     document = load_whitelist(root)
     if not command_allowed(document, command):
@@ -416,6 +426,7 @@ def verify_receipt_for_authority(
     re-verifies under the lock before consuming the tombstone.
     """
 
+    require_project_local(store)
     root = Path(store.project_root)
     item = find_receipt_evidence(authority)
     if item is None:
@@ -502,6 +513,7 @@ def consume_tombstone(store: Any, receipt: dict[str, Any]) -> None:
     is intentionally not used here.
     """
 
+    require_project_local(store)
     nonce = str(receipt["nonce"])
     target = tombstone_path(Path(store.project_root), nonce)
     tombstone = {

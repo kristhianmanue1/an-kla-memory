@@ -18,7 +18,25 @@ class IdentityEvidenceError(ValueError):
 
 
 def _receipts(store: Any) -> Path:
-    return store.project_root / ".an-kla" / "identity-receipts" / "sha256"
+    return store.store_root / "identity-receipts" / "sha256"
+
+
+def _custody_target(store: Any, relative: str) -> Path:
+    """Map a receipt path to disk: ``.an-kla/`` denotes the custody root.
+
+    ADR-0048 §2 (H9) and Enmienda 1 §4: receipts keep their bytes when the
+    vault moves, so the prefix is logical, not a directory under the project.
+    """
+
+    parts = relative.split("/")
+    if parts[0] != ".an-kla":
+        raise IdentityEvidenceError("identity_receipt_invalid")
+    return store.store_root.joinpath(*parts[1:])
+
+
+def _custody_relative(item: Mapping[str, Any]) -> dict[str, Any]:
+    tail = str(item["path"]).split("/", 1)
+    return {**item, "path": tail[1] if len(tail) == 2 else "."}
 
 
 def _reject_symlink(path: Path, root: Path) -> None:
@@ -123,7 +141,7 @@ def valid_identity_receipt(
     matches: list[str] = []
     for path in sorted(_receipts(store).glob("*.json")):
         try:
-            _reject_symlink(path, store.project_root)
+            _reject_symlink(path, store.custody_walk_root)
             value, payload = _read_canonical(path)
             identifier = "sha256:" + path.stem
             if digest_bytes(payload) != identifier or set(value) != {
@@ -169,8 +187,8 @@ def valid_identity_receipt(
                     or any(part in {"", ".", ".."} for part in relative.split("/"))
                 ):
                     raise IdentityEvidenceError("identity_receipt_invalid")
-                target = store.project_root.joinpath(*relative.split("/"))
-                _reject_symlink(target, store.project_root)
+                target = _custody_target(store, relative)
+                _reject_symlink(target, store.custody_walk_root)
                 if item["operation"] == "file_fsync":
                     if relative == ".an-kla/memory/refs/CURRENT":
                         expected = digest_bytes((receipt_current + "\n").encode("ascii"))
@@ -215,10 +233,8 @@ def write_identity_receipt(
         protected.append({"path": directory, "operation": "directory_fsync", "content_sha256": None})
     protected.sort(key=lambda item: (item["path"], item["operation"]))
     for item in protected:
-        _reject_symlink(
-            store.project_root.joinpath(*item["path"].split("/")), store.project_root
-        )
-    sync_protected(store.project_root, protected)
+        _reject_symlink(_custody_target(store, item["path"]), store.custody_walk_root)
+    sync_protected(store.store_root, [_custody_relative(item) for item in protected])
     receipt = {
         "schema": RECEIPT_SCHEMA,
         "operation": operation,
@@ -230,7 +246,7 @@ def write_identity_receipt(
     payload = canonical_json(receipt)
     identifier = digest_bytes(payload)
     target = _receipts(store) / (identifier.removeprefix("sha256:") + ".json")
-    _write_create(target, payload, store.project_root)
+    _write_create(target, payload, store.custody_walk_root)
     return identifier
 
 
