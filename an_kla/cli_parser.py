@@ -415,7 +415,12 @@ def build_parser() -> argparse.ArgumentParser:
     )
     relocate_sub = relocate_cmd.add_subparsers(dest="relocate_command", required=True)
     relocate_plan_cmd = relocate_sub.add_parser("plan")
-    relocate_plan_cmd.add_argument("--to", required=True, help="store_root externo absoluto y ausente.")
+    relocate_target = relocate_plan_cmd.add_mutually_exclusive_group(required=True)
+    relocate_target.add_argument("--to", help="store_root externo absoluto y ausente.")
+    relocate_target.add_argument(
+        "--back", action="store_true",
+        help="Regresar la custodia externa al proyecto, por subárbol (R2b).",
+    )
     relocate_commit_cmd = relocate_sub.add_parser("commit")
     relocate_commit_cmd.add_argument("--plan", required=True)
     relocate_commit_cmd.add_argument("--expected-current", required=True)

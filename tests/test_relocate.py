@@ -308,6 +308,14 @@ class RelocateTests(unittest.TestCase):
         inspected = cli("relocate", "inspect", "--transaction-id", plan["core"]["transaction_id"])
         self.assertEqual(inspected["observed"]["pointer"], "matches")
         self.assertTrue(pointer_path(self.project).exists())
+        back = cli("relocate", "plan", "--back")
+        plan_file.write_text(json.dumps(back), encoding="utf-8")
+        self.assertEqual(
+            cli("relocate", "commit", "--plan", str(plan_file), "--expected-current", self.revision)["stage"],
+            "cleaned",
+        )
+        self.assertFalse(pointer_path(self.project).exists())
+        self.assertEqual(cli("status")["revision"], self.revision)
 
 
 if __name__ == "__main__":
