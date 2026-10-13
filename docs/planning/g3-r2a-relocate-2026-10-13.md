@@ -49,7 +49,7 @@ Decisiones de mecanismo: ADR-0048 Enmienda 2.
 - Prueba manual en temp: tras relocate, `retrieve` y `doctor` funcionan por
   el puntero sin `rebuild-index` manual; el anchor del proyecto conserva sólo
   `store-root.txt`, `relocations/` y archivos de lock.
-- Suite completa y gates: ver la PR de R2a.
+- Suite completa sobre `3c03476` (Python 3.13.16, Linux): `Ran 1109 tests in 542.806s` · `OK (skipped=12)`. Gates `check_sizes`, `check_plans`, `check_adr_registry` OK.
 
 ## Límites y riesgos residuales
 
