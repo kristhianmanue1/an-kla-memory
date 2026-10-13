@@ -325,8 +325,11 @@ Registro completo: `docs/planning/g3-r0-contrato-baseline-2026-10-13.md`.
    superconjunto que conserva `vocabulary`; v1 y v2 quedan congelados.
    `integration-status-v3` no cambia. Toda mención de
    `startup-diagnostic-v2` en §4 y §Consecuencias referida a custodia se lee
-   como v3. *Decisión normativa: propuesta por R0, pendiente de confirmación
-   explícita del maintainer; bloquea R1b, no R1a.*
+   como v3. *Decisión normativa: adoptada el 2026-10-13 por el agente
+   ejecutor bajo delegación explícita del maintainer («si hay decisiones
+   analiza de forma crítica… y toma la mejor»). Alternativas descartadas:
+   reabrir ADR-0048 (frena G3 sin beneficio contractual) y extender v2
+   (rompe la regla de schemas congelados y a lectores de beta.28).*
 2. **#119.** La frase de §3 sobre export host-managed es histórica: el fix
    está en `export_restore.py:43,67` con regresión en
    `tests/test_export_restore.py:44`.

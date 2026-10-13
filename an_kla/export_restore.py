@@ -13,6 +13,7 @@ from typing import Any
 
 from .canonical import bare_digest, canonical_json, digest_bytes, digest_json
 from .identity import identity_lock
+from .custody import require_project_local
 from .export_io import (
     ExportIOError, normalize_and_sync_tree, rename_noreplace, safe_read,
     validate_tree,
@@ -51,6 +52,13 @@ def _allowed(path: str) -> bool:
     return any(pattern.fullmatch(path) for pattern in _PATTERNS)
 
 
+def _export_anchor(store: Any) -> Path:
+    # R1a: export reads project-local anchors; R3 adapts it to the resolved
+    # custody root.  Until then external custody fails closed (ADR-0048).
+    require_project_local(store)
+    return store.project_root / ".an-kla"
+
+
 def _files(anchor: Path) -> list[tuple[str, Path]]:
     rows: list[tuple[str, Path]] = []
     for path in sorted(anchor.rglob("*")):
@@ -85,9 +93,9 @@ def _manifest(entries: list[dict[str, Any]], current: str, project_id: str, stor
 
 def create_export(store: Any, bundle: str | Path) -> dict[str, Any]:
     target = Path(bundle).resolve()
+    anchor = _export_anchor(store)
     if target.exists():
         raise ExportError("export_destination_exists")
-    anchor = store.project_root / ".an-kla"
     if target == anchor or anchor in target.parents:
         raise ExportError("export_destination_inside_source")
     target.mkdir(mode=0o700, parents=False)

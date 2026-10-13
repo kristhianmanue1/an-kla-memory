@@ -19,6 +19,8 @@ from .canonical import bare_digest, canonical_json, digest_bytes, digest_json
 from .checkpoint_policy import CheckpointPolicyError, validate_working_state
 from .compaction_store_mixin import CompactionStoreMixin
 from .context_package import context_status
+from .custody import POINTER_NAME, CustodyError
+from .custody import write_pointer as write_custody_pointer
 from .identity import (
     assert_unchanged,
     bootstrap_initialize,
@@ -91,13 +93,41 @@ def _validate_checkpoint_v2(
 
 
 class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
-    """Owns `.an-kla/memory` below a project root."""
+    """Owns ``<store_root>/memory``; ``store_root`` defaults to ``.an-kla``.
+
+    ``store_root`` is the custody root (ADR-0048 §1).  Callers resolve it
+    (flag > env > pointer > project-local) with ``custody.resolve_store_root``;
+    the constructor never reads the environment or the pointer.
+    """
 
     def __init__(
-        self, project_root: str | Path, *, refute_authority_resolver: Any | None = None
+        self,
+        project_root: str | Path,
+        *,
+        store_root: str | Path | None = None,
+        refute_authority_resolver: Any | None = None,
     ) -> None:
         self.project_root = Path(project_root).resolve()
-        self.root = self.project_root / ".an-kla" / "memory"
+        default_root = self.project_root / ".an-kla"
+        self.store_root = (
+            default_root if store_root is None else Path(store_root).resolve()
+        )
+        self.store_external = self.store_root != default_root
+        if self.store_external and (
+            self.store_root == self.project_root
+            or self.store_root in self.project_root.parents
+            or default_root in self.store_root.parents
+        ):
+            raise StoreError("store_root_invalid")
+        # Identity symlink walks stop here: project_root by default (ADR-0048
+        # Enmienda 1 §4), so the legacy layout keeps its exact checks.
+        self.custody_walk_root = self.store_root.parent
+        self.root = self.store_root / "memory"
+        # A pointer means custody is external: reading the project-local
+        # root would serve a twin (ADR-0048 §1, R1a fail-closed reads).
+        self.custody_pointer_present = not self.store_external and os.path.lexists(
+            default_root / POINTER_NAME
+        )
         self.refute_authority_resolver = refute_authority_resolver
         self._refute_resolver_descriptor: Mapping[str, Any] | None = None
         if refute_authority_resolver is not None:
@@ -135,6 +165,21 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         if store_identity is not None:
             raise StoreError("external_store_identity_not_allowed")
         result = bootstrap_initialize(self, transaction_id)
+        if self.store_external:
+            if result["identity"]["identity_state"] == "complete":
+                # ADR-0048 Enmienda 1 §4: an external vault leaves its
+                # pointer so a later bare invocation cannot fork it (H1).
+                write_custody_pointer(self, read_binding(self))
+            # R1a: attest keys belong to the vault (F0-B); the adapter that
+            # mints them under store_root lands in R1c.  Visible degradation.
+            result["attestation"] = {
+                "schema": "an-kla/attest-init-result-v1",
+                "created": [],
+                "existed": [],
+                "error": "attest_external_custody_pending",
+            }
+            result["context_diagnostics"] = self._context_diagnostics()
+            return result
         try:
             result["attestation"] = attest_module.ensure_attest_files(
                 self.project_root
@@ -157,6 +202,8 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
 
     def read_current(self) -> str:
         """Read and close CURRENT before doing any other I/O."""
+        if self.custody_pointer_present:
+            raise CustodyError("store_root_divergence")
         try:
             with self.current_path.open("rb") as handle:
                 raw = handle.read()

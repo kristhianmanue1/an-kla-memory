@@ -37,6 +37,7 @@ from .attest import (
     _write_exclusive,
 )
 from .canonical import canonical_json, digest_bytes, digest_json
+from .custody import require_project_local
 from .host_hooks import ID_PATTERN, ACTIONS, TRIGGERS
 from .identity import IdentityError, read_binding
 
@@ -82,6 +83,7 @@ def mint_hook_run(
         raise HookRunError("hook_run_invalid_input")
     if not isinstance(exit_code, int) or isinstance(exit_code, bool):
         raise HookRunError("hook_run_invalid_input")
+    require_project_local(store)
     key = _load_key(store.project_root)
     binding = read_binding(store)
     entry = {
@@ -126,6 +128,7 @@ def read_verified_runs(
     llave del motor, la verificación es imposible -> código
     `attest_not_initialized` y lista vacía.
     """
+    require_project_local(store)
     directory = Path(store.project_root) / RUNS_RELATIVE
     try:
         with os.scandir(directory) as scanner:

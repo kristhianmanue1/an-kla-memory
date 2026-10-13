@@ -128,5 +128,5 @@ decisión. Si el maintainer las objeta, se revisan antes de R1c.
 
 - Pasos 1–3 y 5: documentados aquí y en ADR-0048 Enmienda 1.
 - Paso 4 (baseline): ejecutado, §1.
-- Pendiente fuera del agente: confirmación normativa del maintainer del
-  nombre `startup-diagnostic-v3` (bloquea R1b, no R1a).
+- Nombre `startup-diagnostic-v3`: adoptado por el agente bajo delegación
+  explícita del maintainer (2026-10-13); justificación en ADR-0048 Enmienda 1.

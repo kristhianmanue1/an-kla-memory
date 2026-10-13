@@ -44,7 +44,7 @@ from an_kla.export_io import (
 )
 # Política de enumeración/rutas de v1 reutilizada (fuente única; el camino
 # sellado NO redefine qué exporta el store ni modifica nada del camino v1).
-from an_kla.export_restore import _allowed, _files
+from an_kla.export_restore import _allowed, _export_anchor, _files
 from an_kla.identity import identity_lock
 from an_kla.sealed.cek import generate_cek
 from an_kla.sealed.kdf import BUNDLE_ID_RAW_LENGTH, derive_subkeys
@@ -546,9 +546,9 @@ def create_sealed_bundle(store: Any, bundle: str | Path, runner: Any) -> dict:
     if not callable(getattr(runner, "wrap_cek", None)):
         raise ValueError("runner must provide wrap_cek(cek)")
     target = Path(bundle).resolve()
+    anchor = _export_anchor(store)
     if target.exists():
         raise ExportIOError("export_destination_exists")
-    anchor = store.project_root / ".an-kla"
     if target == anchor or anchor in target.parents:
         raise ExportIOError("export_destination_inside_source")
 

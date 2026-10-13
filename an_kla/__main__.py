@@ -43,7 +43,11 @@ from .context_view import (
     context_view,
 )
 from .index import INDEX_PROFILE, build_index, detect_fts5, verify_index_deep
-from .identity import IdentityError, adopt, identity_status, plan_adoption, repair
+from .identity import (
+    IdentityError, adopt, identity_status, plan_adoption,
+    repair,
+)
+from .identity_relocation import record_project_relocation
 from .inventory import DEFAULT_LIMIT as INVENTORY_DEFAULT_LIMIT
 from .inventory import MAX_LIMIT as INVENTORY_MAX_LIMIT
 from .inventory import STREAMS as INVENTORY_STREAMS
@@ -377,8 +381,15 @@ def _run() -> None:
             result = plan_adoption(store)
         elif args.identity_command == "repair":
             result = repair(store, _json(args.plan))
+        elif args.identity_command == "record-relocation":
+            result = record_project_relocation(
+                store, _json(args.plan), args.expected_current
+            )
         else:
-            result = adopt(store, _json(args.plan), args.expected_current)
+            result = adopt(
+                store, _json(args.plan), args.expected_current,
+                args.relocation_receipt,
+            )
     elif args.command == "subject":
         result = resolve_namespace(store)
     elif args.command == "view":

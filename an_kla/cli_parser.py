@@ -409,6 +409,16 @@ def build_parser() -> argparse.ArgumentParser:
     identity_adopt_cmd = identity_sub.add_parser("adopt")
     identity_adopt_cmd.add_argument("--plan", required=True)
     identity_adopt_cmd.add_argument("--expected-current", required=True)
+    identity_adopt_cmd.add_argument(
+        "--relocation-receipt",
+        help="Digest de un relocation receipt cuando el proyecto se movió tras el plan (ADR-0048 §2).",
+    )
+    identity_relocation_cmd = identity_sub.add_parser(
+        "record-relocation",
+        help="Registrar que el proyecto se movió después de plan-adoption.",
+    )
+    identity_relocation_cmd.add_argument("--plan", required=True)
+    identity_relocation_cmd.add_argument("--expected-current", required=True)
     identity_repair_cmd = identity_sub.add_parser("repair")
     identity_repair_cmd.add_argument("--plan", required=True)
     checkpoint_cmd = sub.add_parser("checkpoint", help="Checkpoint operacional gobernado.")

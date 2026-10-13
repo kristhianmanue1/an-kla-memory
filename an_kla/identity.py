@@ -18,6 +18,12 @@ from .identity_evidence import (
     validate_bound_descendants,
     write_identity_receipt,
 )
+from .custody import CustodyError, check_custody
+from .relocation_receipts import (
+    RelocationReceiptError,
+    project_relocation_expectation,
+    require_matching_receipt,
+)
 from .storage_primitives import atomic_write, fsync_directory, write_immutable
 from .version import VERSION
 
@@ -57,8 +63,17 @@ def _transaction_uuid(value: str) -> str:
     return value
 
 
+def _custody_guard(store: Any, binding: Mapping[str, Any] | None) -> None:
+    """ADR-0048 §1: a divergent custody pointer blocks every mutation."""
+
+    try:
+        check_custody(store, binding=binding)
+    except CustodyError as exc:
+        raise IdentityError(str(exc)) from exc
+
+
 def _paths(store: Any) -> dict[str, Path]:
-    anchor = store.project_root / ".an-kla"
+    anchor = store.store_root
     return {
         "anchor": anchor,
         "project": anchor / "project-identity.json",
@@ -140,8 +155,8 @@ def read_binding(store: Any) -> dict[str, Any]:
     """Read and bind the two live identity files without mutating."""
 
     paths = _paths(store)
-    _reject_symlink_path(paths["project"], store.project_root)
-    _reject_symlink_path(paths["store"], store.project_root)
+    _reject_symlink_path(paths["project"], store.custody_walk_root)
+    _reject_symlink_path(paths["store"], store.custody_walk_root)
     project, project_bytes = _read_canonical(
         paths["project"], "project_identity_missing", "project_identity_invalid"
     )
@@ -156,7 +171,7 @@ def read_binding(store: Any) -> dict[str, Any]:
         raise IdentityError("project_identity_mismatch")
     identity_digest = digest_bytes(store_bytes)
     _reject_symlink_path(
-        store._path_for("identities", identity_digest), store.project_root
+        store._path_for("identities", identity_digest), store.custody_walk_root
     )
     immutable = store._read_json_object("identities", identity_digest)
     if dict(immutable) != identity:
@@ -219,7 +234,7 @@ def verify_manifest_link(store: Any, manifest: Mapping[str, Any]) -> None:
 @contextmanager
 def identity_lock(store: Any) -> Iterator[None]:
     paths = _paths(store)
-    _reject_symlink_path(paths["lock"], store.project_root)
+    _reject_symlink_path(paths["lock"], store.custody_walk_root)
     paths["anchor"].mkdir(parents=True, exist_ok=True)
     with paths["lock"].open("a+b") as handle:
         try:
@@ -308,7 +323,7 @@ def _read_intent(store: Any) -> dict[str, Any] | None:
     path = _paths(store)["intent"]
     if not path.exists():
         return None
-    _reject_symlink_path(path, store.project_root)
+    _reject_symlink_path(path, store.custody_walk_root)
     value, _payload = _read_canonical(path, "identity_intent_missing", "identity_bootstrap_conflict")
     if set(value) != {"schema", "operation", "project_identity", "store_identity", "current_observed", "transaction_id", "intent_sha256", "stage"}:
         raise IdentityError("identity_bootstrap_conflict")
@@ -344,8 +359,8 @@ def _publish_intent(store: Any, core: Mapping[str, Any], stage: str) -> dict[str
     if paths["intent"].exists():
         atomic_write(paths["intent"], canonical_json(value), fsync_directory=fsync_directory)
     else:
-        _write_create_or_match(paths["intent"], canonical_json(value), store.project_root)
-    _write_create_or_match(immutable, canonical_json(core), store.project_root)
+        _write_create_or_match(paths["intent"], canonical_json(value), store.custody_walk_root)
+    _write_create_or_match(immutable, canonical_json(core), store.custody_walk_root)
     return value
 
 
@@ -358,9 +373,9 @@ def _write_identities(store: Any, intent: Mapping[str, Any]) -> str:
     project_bytes = canonical_json(intent["project_identity"])
     store_bytes = canonical_json(intent["store_identity"])
     identity_digest = digest_bytes(store_bytes)
-    _write_create_or_match(store._path_for("identities", identity_digest), store_bytes, store.project_root)
-    _write_create_or_match(paths["store"], store_bytes, store.project_root)
-    _write_create_or_match(paths["project"], project_bytes, store.project_root)
+    _write_create_or_match(store._path_for("identities", identity_digest), store_bytes, store.custody_walk_root)
+    _write_create_or_match(paths["store"], store_bytes, store.custody_walk_root)
+    _write_create_or_match(paths["project"], project_bytes, store.custody_walk_root)
     binding = read_binding(store)
     if binding["store_identity"] != identity_digest:
         raise IdentityError("identity_bootstrap_conflict")
@@ -388,6 +403,9 @@ def bootstrap_initialize(store: Any, transaction_id: str | None = None) -> dict[
     if transaction_id is not None:
         _transaction_uuid(transaction_id)
     status = identity_status(store)
+    _custody_guard(
+        store, read_binding(store) if status["identity_status"] == "complete" else None
+    )
     if status["identity_status"] == "legacy_unadopted":
         raise IdentityError("legacy_store_identity_adoption_required")
     if status["identity_status"] == "complete":
@@ -471,19 +489,42 @@ def _validate_plan(plan: Mapping[str, Any]) -> dict[str, Any]:
     return deepcopy(dict(plan))
 
 
-def adopt(store: Any, plan: Mapping[str, Any], expected_current: str) -> dict[str, Any]:
+def adopt(
+    store: Any,
+    plan: Mapping[str, Any],
+    expected_current: str,
+    relocation_receipt: str | None = None,
+) -> dict[str, Any]:
     checked = _validate_plan(plan)
+    observed = checked["canonical_project_root_observed"]
     if (
         checked["expected_current"] != expected_current
-        or checked["canonical_project_root_observed"] != str(store.project_root)
-        or checked["store_identity"]["canonical_project_root_at_init"]
-        != str(store.project_root)
+        or checked["store_identity"]["canonical_project_root_at_init"] != observed
     ):
         raise IdentityError("identity_adoption_base_changed")
+    relocated = observed != str(store.project_root)
+    if relocated and relocation_receipt is None:
+        # ADR-0048 §2: a moved project needs a registered relocation fact,
+        # never path equality alone and never silent acceptance.
+        raise IdentityError("identity_adoption_base_changed")
+    if not relocated and relocation_receipt is not None:
+        raise IdentityError("relocation_receipt_not_required")
     with identity_lock(store):
         with store.write_lock():
             if store.read_current() != expected_current:
                 raise IdentityError("identity_adoption_base_changed")
+            _custody_guard(store, None)
+            if relocated:
+                try:
+                    require_matching_receipt(
+                        store,
+                        str(relocation_receipt),
+                        project_relocation_expectation(
+                            str(store.project_root), checked, expected_current
+                        ),
+                    )
+                except RelocationReceiptError as exc:
+                    raise IdentityError(str(exc)) from exc
             status = identity_status(store)["identity_status"]
             intent = _read_intent(store)
             if intent is None:
@@ -509,6 +550,12 @@ def repair(store: Any, supplied_intent: Mapping[str, Any]) -> dict[str, Any]:
 
     checked = deepcopy(dict(supplied_intent)) if isinstance(supplied_intent, dict) else {}
     with identity_lock(store):
+        _custody_guard(
+            store,
+            read_binding(store)
+            if identity_status(store)["identity_status"] == "complete"
+            else None,
+        )
         intent = _read_intent(store)
         if intent is None or checked != intent:
             raise IdentityError("identity_bootstrap_conflict")
@@ -616,7 +663,9 @@ def mutation_preflight(store: Any) -> dict[str, Any]:
         raise IdentityError("legacy_store_identity_adoption_required")
     if status != "complete":
         raise IdentityError("store_identity_invalid")
-    return read_binding(store)
+    binding = read_binding(store)
+    _custody_guard(store, binding)
+    return binding
 
 
 def identity_status(store: Any, include_ids: bool = False) -> dict[str, Any]:
