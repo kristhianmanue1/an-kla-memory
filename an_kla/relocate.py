@@ -45,7 +45,7 @@ STAGES = ("staging", "published", "pointer_written", "pointer_removed", "cleaned
 _LOCK_FREE = ("anchor/receipts/", "anchor/hook-runs/")
 # Project-side or derivable paths that remain in the origin anchor.
 _KEPT = frozenset({
-    ".identity.lock", "store-root.txt", "host-hooks.json",
+    ".identity.lock", "store-root.txt", "store-root.intent", "host-hooks.json",
     "memory/.write.lock", "memory/.reader-gate",
 })
 _KEPT_PREFIXES = ("context/", "relocations/")

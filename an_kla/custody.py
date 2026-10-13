@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from .canonical import canonical_json, digest_json
-from .storage_primitives import fsync_directory, write_immutable
+from .storage_primitives import atomic_write, fsync_directory, write_immutable
 from .store_errors import StoreError
 
 
@@ -24,6 +24,8 @@ ENV_VAR = "AN_KLA_STORE_ROOT"
 POINTER_SCHEMA = "an-kla/store-root-pointer-v1"
 BINDING_SCHEMA = "an-kla/custody-binding-v1"
 POINTER_NAME = "store-root.txt"
+BIND_INTENT_SCHEMA = "an-kla/store-root-bind-intent-v1"
+BIND_INTENT_NAME = "store-root.intent"
 
 
 class CustodyError(StoreError):
@@ -141,6 +143,48 @@ def project_local_vault_present(project_root: str | Path) -> bool:
     )
 
 
+def bind_intent_path(project_root: str | Path) -> Path:
+    return default_store_root(project_root) / BIND_INTENT_NAME
+
+
+def read_bind_intent(project_root: str | Path) -> str | None:
+    """Return the external root an unfinished ``init`` was binding, if any.
+
+    Any unreadable marker still counts as pending: fail closed (#147, m1).
+    """
+
+    path = bind_intent_path(project_root)
+    if not os.path.lexists(path):
+        return None
+    try:
+        value = json.loads(path.read_bytes())
+        if value.get("schema") == BIND_INTENT_SCHEMA and isinstance(value["store_root"], str):
+            return value["store_root"]
+    except (OSError, ValueError, TypeError, KeyError, AttributeError):
+        pass
+    return ""
+
+
+def write_bind_intent(project_root: str | Path, store_root: Path) -> None:
+    """Record, before bootstrap, which external root this checkout binds."""
+
+    pending = read_bind_intent(project_root)
+    if pending is not None and pending != str(store_root):
+        raise CustodyError("store_root_bind_pending")
+    if pending is None:
+        payload = canonical_json({"schema": BIND_INTENT_SCHEMA, "store_root": str(store_root)})
+        atomic_write(bind_intent_path(project_root), payload, fsync_directory=fsync_directory)
+
+
+def clear_bind_intent(project_root: str | Path, store_root: Path) -> None:
+    """Remove the marker once the pointer for ``store_root`` exists."""
+
+    if read_bind_intent(project_root) == str(store_root):
+        path = bind_intent_path(project_root)
+        path.unlink()
+        fsync_directory(path.parent)
+
+
 def write_pointer(store: Any, binding: Mapping[str, Any]) -> dict[str, Any]:
     """Create the pointer for an external custody, or match the existing one."""
 
@@ -174,12 +218,16 @@ __all__ = [
     "ENV_VAR",
     "POINTER_SCHEMA",
     "Resolution",
+    "bind_intent_path",
     "check_custody",
+    "clear_bind_intent",
     "custody_fingerprint",
     "default_store_root",
     "pointer_path",
     "project_local_vault_present",
+    "read_bind_intent",
     "read_pointer",
     "resolve_store_root",
+    "write_bind_intent",
     "write_pointer",
 ]

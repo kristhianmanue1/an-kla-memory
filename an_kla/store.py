@@ -19,7 +19,10 @@ from .canonical import bare_digest, canonical_json, digest_bytes, digest_json
 from .checkpoint_policy import CheckpointPolicyError, validate_working_state
 from .compaction_store_mixin import CompactionStoreMixin
 from .context_package import context_status
-from .custody import POINTER_NAME, CustodyError, project_local_vault_present, read_pointer
+from .custody import (
+    POINTER_NAME, CustodyError, clear_bind_intent, project_local_vault_present,
+    read_bind_intent, read_pointer, write_bind_intent,
+)
 from .custody import write_pointer as write_custody_pointer
 from .identity import (
     assert_unchanged,
@@ -123,11 +126,6 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         # Enmienda 1 §4), so the legacy layout keeps its exact checks.
         self.custody_walk_root = self.store_root.parent
         self.root = self.store_root / "memory"
-        # A pointer means custody is external: reading the project-local
-        # root would serve a twin (ADR-0048 §1, R1a fail-closed reads).
-        self.custody_pointer_present = not self.store_external and os.path.lexists(
-            default_root / POINTER_NAME
-        )
         self.refute_authority_resolver = refute_authority_resolver
         self._refute_resolver_descriptor: Mapping[str, Any] | None = None
         if refute_authority_resolver is not None:
@@ -140,6 +138,19 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
             self._refute_resolver_descriptor = validate_descriptor(
                 deepcopy(getattr(refute_authority_resolver, "descriptor", None))
             )
+
+    @property
+    def custody_pointer_present(self) -> bool:
+        """A pointer means custody is external: reading the project-local
+        root would serve a twin (ADR-0048 §1, R1a fail-closed reads).
+
+        Re-checked on every access (one ``lstat``) so a long-lived process
+        opened before a ``relocate`` stops serving the origin (#147, m4).
+        """
+
+        return not self.store_external and os.path.lexists(
+            self.project_root / ".an-kla" / POINTER_NAME
+        )
 
     @property
     def current_path(self) -> Path:
@@ -168,13 +179,20 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
             # A project-local vault already exists: an external ``init``
             # would fork it (ADR-0048 §1).  Move it with ``relocate``.
             raise CustodyError("store_root_divergence")
+        pending = read_bind_intent(self.project_root)
         if self.store_external and read_pointer(self.project_root) is None:
             self._require_same_project_for_binding()
+            # #147 (m1): mark the binding before bootstrapping the vault, so a
+            # crash before the pointer cannot let a bare ``init`` fork it.
+            write_bind_intent(self.project_root, self.store_root)
+        elif not self.store_external and pending is not None:
+            raise CustodyError("store_root_bind_pending")
         result = bootstrap_initialize(self, transaction_id)
         if self.store_external and result["identity"]["identity_state"] == "complete":
             # ADR-0048 Enmienda 1 §4: an external vault leaves its pointer
             # so a later bare invocation cannot fork it (H1).
             write_custody_pointer(self, read_binding(self))
+            clear_bind_intent(self.project_root, self.store_root)
         try:
             # F0-B: attest material lives under the custody root.
             result["attestation"] = attest_module.ensure_attest_files(

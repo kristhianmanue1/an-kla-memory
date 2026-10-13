@@ -3,7 +3,7 @@
 - **Estado:** Aceptada (2026-09-05, orden explícita del maintainer en
   sesión: "adelante con paso 1 y 3" — aceptar tal cual, con la
   re-verificación H1–H4 ya ejecutada como condición cumplida de F1)
-- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3); R3 (Enmienda 4); attach (Enmienda 5);
+- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3); R3 (Enmienda 4); attach (Enmienda 5); residuales m1/m4 (Enmienda 6);
   R1a en adelante según `docs/plans/2026-10-10-g3-discovery-agent-roadmap.md`
 - **Fecha:** 2026-09-05
 - **Decide sobre:** G3 de ADR-0031 — cómo separa AN-KLA la custodia física
@@ -438,3 +438,25 @@ Resuelve el REQUIRES_DECISION de la Enmienda 4 §3. Decisión del maintainer
    bytes no prueba que ambas raíces sean el mismo proyecto. Si el checkout
    anterior sigue vivo con su puntero, los dos comparten la bóveda, igual que
    dos worktrees (F0 §3). `attach` no invalida punteros ajenos.
+
+## Enmienda 6 (2026-10-13) — residuales m1 y m4 (#147)
+
+Decisión del maintainer (2026-10-13): corregir #147 antes de beta.30.
+
+1. **Marcador de intención (m1).** Antes del bootstrap de una bóveda
+   externa sin puntero, `init` escribe `.an-kla/store-root.intent`
+   (`an-kla/store-root-bind-intent-v1`, con la ruta de la bóveda) y lo borra
+   tras escribir el puntero. Mientras exista:
+   - `init` project-local falla con `store_root_bind_pending`, sin crear
+     identidad local;
+   - `init` o `attach` hacia otra bóveda fallan con el mismo código;
+   - repetir `--store-root <bóveda> init`, o `relocate attach` sobre esa
+     bóveda, termina el binding y borra el marcador.
+
+   Un marcador ilegible cuenta como pendiente (fail closed). Abandonar un
+   binding a medias exige borrar el marcador a mano: es una decisión humana.
+2. **Vista del puntero (m4).** `custody_pointer_present` deja de calcularse
+   al construir el store y se relee en cada acceso (un `lstat`). Un proceso
+   longevo abierto antes de un `relocate` deja de servir el origen aunque el
+   cleanup haya quedado pendiente.
+3. Siguen declarados la Enmienda 4 §4 y la Enmienda 5 §5.

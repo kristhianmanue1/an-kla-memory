@@ -139,13 +139,15 @@ Registros: `docs/planning/g3-*-2026-10-13.md` y `docs/planning/g4-a0-threat-mode
 | R3 | hecho, con ronda adversarial `fix-and-retry` → `proceed` tras correcciones | PR #145; acta `g3-r3-ronda-adversarial-2026-10-13.md` |
 | D0 | hecho: ADR-0050 aceptado por el maintainer, censo de sólo lectura en `~/www`, `stores scan` implementado | `g3-d0-descubrimiento-2026-10-13.md`, `g3-d0-censo-2026-10-13.md` |
 | Enmienda 4 §3 | resuelta: `relocate attach` (ADR-0048 Enmienda 5, opción 2b del maintainer) | `an_kla/relocate_attach.py` |
-| D1 | no iniciado: condicionado a ADR-0050 aceptado y autorización | — |
+| Residuales m1/m4 | corregidos antes de beta.30 (ADR-0048 Enmienda 6, decisión del maintainer) | #147 |
+| D1 | descartado por el maintainer (2026-10-13): `stores scan` basta | #134 |
 | A0 | hecho (lectura) | `g4-a0-threat-model-2026-10-13.md` |
 | M0 | cerrado como «no transferir» | `g3-m0-metodo-muse-2026-10-13.md` |
 
-Pendiente del maintainer: autorización de D1 (si se quiere), tag y release
-(previa ronda adversarial de release) y borrar `~/www/.ro-probe` (incidente
-del censo). #57 se cierra con issue de seguimiento para los residuales m1 y m4.
+Pendiente del maintainer: bump, tag y release de beta.30, después de la
+ronda adversarial de release preparada en
+`docs/releases/v0.1.0-beta.30-adversarial.md`. El archivo del incidente del
+censo (`~/www/.ro-probe`) ya fue borrado por el maintainer.
 
 ## Condiciones de parada y cierre
 
