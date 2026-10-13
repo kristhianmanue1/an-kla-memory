@@ -54,13 +54,24 @@ gestionado.
 recibe. Un worktree con su propia `.an-kla/` es un store distinto, con otro
 `project_uuid`, no una vista del canónico (ADR-0022, ADR-0031).
 
-Mientras #57 no separe `store_root` de `project_root`, la regla es: **los
-worktrees no inicializan memoria propia**. Toda invocación desde un worktree
-apunta al checkout canónico:
+La regla sigue siendo: **los worktrees no inicializan memoria propia**.
+Desde G3 (#57, ADR-0048) un worktree comparte la bóveda del proyecto de una de
+dos formas, según dónde viva su custodia:
 
 ```bash
+# Custodia project-local (por defecto): apunta al checkout canónico.
 python3 -m an_kla --project-root /Users/krisnova/www/an-kla-memory status
+
+# Custodia externa (tras `relocate` o `init --store-root`): resuelve la
+# bóveda por flag o variable; el puntero vive sólo en el checkout canónico.
+AN_KLA_STORE_ROOT=/ruta/a/la/boveda python3 -m an_kla --project-root . status
 ```
+
+Ambas formas abren la misma identidad y revisión; `root_relocated: true` en
+un worktree es observacional y no aísla autoridad. Sin flag, variable ni
+puntero, un worktree diagnostica `store_presence: absent` y no crea nada. Para
+mover la bóveda usa `relocate plan` → `relocate commit` (y `--back` para
+regresar), nunca copias a mano.
 
 Si `.an-kla/` falta donde la esperabas, eso es una señal a reportar, no un
 problema a resolver inicializando o copiando estado: copiar `.an-kla/` a mano

@@ -44,7 +44,7 @@ from an_kla.export_io import (
 )
 # Política de enumeración/rutas de v1 reutilizada (fuente única; el camino
 # sellado NO redefine qué exporta el store ni modifica nada del camino v1).
-from an_kla.export_restore import _allowed, _export_anchor, _files
+from an_kla.export_restore import _allowed, _export_anchor, _files, _read_anchor
 from an_kla.identity import identity_lock
 from an_kla.sealed.cek import generate_cek
 from an_kla.sealed.kdf import BUNDLE_ID_RAW_LENGTH, derive_subkeys
@@ -566,8 +566,7 @@ def create_sealed_bundle(store: Any, bundle: str | Path, runner: Any) -> dict:
             for index, (relative, source) in enumerate(rows):
                 if len(entries) >= MAX_FILES:
                     raise ExportIOError("export_limits_exceeded")
-                rel_src = source.relative_to(store.project_root).as_posix()
-                payload = safe_read(store.project_root, rel_src)
+                payload = _read_anchor(store, source)
                 if len(payload) > MAX_ENTRY_BYTES:
                     # Fail-closed ANTES de cifrar (§6): sin chunking.
                     raise SealedEntryTooLargeError(

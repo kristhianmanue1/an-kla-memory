@@ -155,13 +155,6 @@ def write_pointer(store: Any, binding: Mapping[str, Any]) -> dict[str, Any]:
     return value
 
 
-def require_project_local(store: Any) -> None:
-    """Guard for entries not yet adapted to external custody (R1c pending)."""
-
-    if getattr(store, "store_external", False):
-        raise CustodyError("store_root_external_unsupported")
-
-
 __all__ = [
     "BINDING_SCHEMA",
     "CustodyError",
@@ -173,7 +166,6 @@ __all__ = [
     "default_store_root",
     "pointer_path",
     "read_pointer",
-    "require_project_local",
     "resolve_store_root",
     "write_pointer",
 ]

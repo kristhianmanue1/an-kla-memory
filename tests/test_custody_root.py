@@ -273,9 +273,9 @@ class ExternalCustodyTests(unittest.TestCase):
 
     def test_custody_entries_use_vault_and_export_fails_closed(self) -> None:
         store = self._init_external()
-        with self.assertRaisesRegex(CustodyError, "store_root_external_unsupported"):
-            create_export(store, self.vault.parent / "bundle")
-        self.assertFalse((self.vault.parent / "bundle").exists())
+        # R3: export reads the resolved custody root (tests/test_custody_export.py).
+        exported = create_export(store, self.vault.parent / "bundle")
+        self.assertEqual(exported["current_revision"], store.read_current())
         minted = mint_hook_run(
             store,
             hook_id="pre-commit",
