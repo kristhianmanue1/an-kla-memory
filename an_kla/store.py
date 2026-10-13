@@ -201,14 +201,16 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
 
         ``init`` without a pointer writes one: binding another project's
         vault that way would let two projects share it silently (G3 R3
-        adversarial round, M3).  A vault created elsewhere needs a separate
-        decision (ADR-0048 Enmienda 4 §3).
+        adversarial round, M3).  A vault created elsewhere is bound with
+        ``relocate attach``, whose receipt moves the bound root here
+        (ADR-0048 Enmienda 5).
         """
+
+        from .relocate_attach import bound_project_root
 
         if identity_status(self)["identity_status"] != "complete":
             return
-        identity = read_binding(self)["store"]
-        if identity.get("canonical_project_root_at_init") != str(self.project_root):
+        if bound_project_root(self, read_binding(self)) != str(self.project_root):
             raise CustodyError("store_root_project_mismatch")
 
     def read_current(self) -> str:

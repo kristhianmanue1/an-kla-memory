@@ -137,14 +137,15 @@ Registros: `docs/planning/g3-*-2026-10-13.md` y `docs/planning/g4-a0-threat-mode
 | R0–R1c | hecho | PRs #141 y #142 |
 | R2a, R2b | hecho | PRs #143 y #144 |
 | R3 | hecho, con ronda adversarial `fix-and-retry` → `proceed` tras correcciones | PR #145; acta `g3-r3-ronda-adversarial-2026-10-13.md` |
-| D0 | parcial: ADR-0050 propuesto; censo no ejecutado (requiere autorización y raíces del maintainer) | `g3-d0-descubrimiento-2026-10-13.md` |
+| D0 | hecho: ADR-0050 aceptado por el maintainer, censo de sólo lectura en `~/www`, `stores scan` implementado | `g3-d0-descubrimiento-2026-10-13.md`, `g3-d0-censo-2026-10-13.md` |
+| Enmienda 4 §3 | resuelta: `relocate attach` (ADR-0048 Enmienda 5, opción 2b del maintainer) | `an_kla/relocate_attach.py` |
 | D1 | no iniciado: condicionado a ADR-0050 aceptado y autorización | — |
 | A0 | hecho (lectura) | `g4-a0-threat-model-2026-10-13.md` |
 | M0 | cerrado como «no transferir» | `g3-m0-metodo-muse-2026-10-13.md` |
 
-Pendiente del maintainer: decisión sobre ADR-0050 y el censo; decisión de
-ADR-0048 Enmienda 4 §3 (ligar una bóveda creada en otra raíz); cierre de #57
-y cualquier release.
+Pendiente del maintainer: autorización de D1 (si se quiere), tag y release
+(previa ronda adversarial de release) y borrar `~/www/.ro-probe` (incidente
+del censo). #57 se cierra con issue de seguimiento para los residuales m1 y m4.
 
 ## Condiciones de parada y cierre
 

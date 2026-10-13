@@ -3,7 +3,7 @@
 - **Estado:** Aceptada (2026-09-05, orden explícita del maintainer en
   sesión: "adelante con paso 1 y 3" — aceptar tal cual, con la
   re-verificación H1–H4 ya ejecutada como condición cumplida de F1)
-- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3); R3 (Enmienda 4);
+- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3); R3 (Enmienda 4); attach (Enmienda 5);
   R1a en adelante según `docs/plans/2026-10-10-g3-discovery-agent-roadmap.md`
 - **Fecha:** 2026-09-05
 - **Decide sobre:** G3 de ADR-0031 — cómo separa AN-KLA la custodia física
@@ -414,3 +414,27 @@ Actas: `docs/planning/g3-r3-consumidores-2026-10-13.md` y
    siguen sólo avisando (`store_root_env_unbound_project`): por bytes no se
    distingue un worktree legítimo de otro proyecto. Riesgo residual
    declarado.
+
+## Enmienda 5 (2026-10-13) — ligar una bóveda creada en otra raíz
+
+Resuelve el REQUIRES_DECISION de la Enmienda 4 §3. Decisión del maintainer
+(2026-10-13, hilo «Ejecución del roadmap G3», opción 2b confirmada).
+
+1. **`relocate attach --store-root <bóveda> --expected-current <rev>`** es la
+   única vía para ligar a un checkout una bóveda externa creada en otra raíz
+   de proyecto. Exige: bóveda externa, sin bóveda project-local, sin puntero
+   divergente, identidad completa y CURRENT exacto.
+2. Bajo el lock de identidad y el de escritura, escribe en la bóveda un
+   relocation receipt `project_root` (raíz ligada anterior → raíz actual) y
+   después el puntero. La raíz ligada anterior es el `to_root_observed` de la
+   cabeza de la cadena `project_root` o, sin cadena,
+   `canonical_project_root_at_init`.
+3. **Idempotente:** si la cabeza ya está en esta raíz (crash entre receipt y
+   puntero, o repetición) sólo escribe el puntero; con puntero coincidente no
+   escribe nada (`replayed: true`).
+4. `init` sin puntero acepta la bóveda cuando su raíz ligada (cadena o init)
+   es la raíz actual; si no, sigue fallando con `store_root_project_mismatch`.
+5. **Límite declarado:** el receipt registra la declaración del operador; por
+   bytes no prueba que ambas raíces sean el mismo proyecto. Si el checkout
+   anterior sigue vivo con su puntero, los dos comparten la bóveda, igual que
+   dos worktrees (F0 §3). `attach` no invalida punteros ajenos.
