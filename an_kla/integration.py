@@ -15,11 +15,13 @@ from typing import Any
 from .context_package import context_status
 from .hook_runs import is_recent, read_verified_runs
 from .host_hooks import load_declaration
+from .custody_status import custody_descriptor
 from .startup import startup_diagnostic
 
 
 INTEGRATION_SCHEMA = "an-kla/integration-status-v1"
 INTEGRATION_SCHEMA_V2 = "an-kla/integration-status-v2"
+INTEGRATION_SCHEMA_V3 = "an-kla/integration-status-v3"
 SUPPORTED_PROFILES = ("agent-owned/v1", "host-managed/v1")
 OBSERVED_PROFILES_V2 = (
     "unspecified",
@@ -83,7 +85,8 @@ def integration_status(store: Any, context_target: str = "AGENTS.md") -> dict[st
             "integrity_detail": diagnostic["integrity_detail"],
             "identity": diagnostic["identity"],
             "repo_context": diagnostic["repo_context"],
-            "external_memory_evaluated": diagnostic["external_memory_evaluated"],
+            # v1/v2 are frozen at "not evaluated"; custody lives in v3.
+            "external_memory_evaluated": False,
         },
         "managed_context": managed,
         "integration": {
@@ -179,12 +182,45 @@ def integration_status_v2(
     }
 
 
+def integration_status_v3(
+    store: Any,
+    context_target: str = "AGENTS.md",
+    now: datetime | None = None,
+) -> dict[str, Any]:
+    """Compose `integration-status-v3` (ADR-0048 §4), read-only.
+
+    v2 verbatim plus the custody descriptor in `store` and the explicit
+    custody split of host hooks: the declaration stays project-local,
+    hook-runs travel with the vault.
+    """
+    base = integration_status_v2(store, context_target, now=now)
+    descriptor = custody_descriptor(store)
+    return {
+        **base,
+        "schema": INTEGRATION_SCHEMA_V3,
+        "store": {
+            **base["store"],
+            "external_memory_evaluated": True,
+            "custody": descriptor,
+        },
+        "host_hooks": {
+            **base["host_hooks"],
+            "declaration_custody": "project_local",
+            "runs_custody": (
+                "store_external" if descriptor["store_external"] else "project_local"
+            ),
+        },
+    }
+
+
 __all__ = [
     "HOOK_RECENCY_HOURS",
     "INTEGRATION_SCHEMA",
     "INTEGRATION_SCHEMA_V2",
+    "INTEGRATION_SCHEMA_V3",
     "OBSERVED_PROFILES_V2",
     "SUPPORTED_PROFILES",
     "integration_status",
     "integration_status_v2",
+    "integration_status_v3",
 ]

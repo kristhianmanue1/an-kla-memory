@@ -42,6 +42,8 @@ _PATTERNS = tuple(re.compile(value) for value in (
     # bóveda y viaja con ella; la declaración del host es del proyecto
     # y queda excluida más abajo.
     rf"anchor/hook-runs/runs/sha256/{_HEX}\.json",
+    # ADR-0048 §2: relocation receipts are vault evidence and travel with it.
+    rf"anchor/relocation-receipts/sha256/{_HEX}\.json",
 ))
 
 
@@ -72,7 +74,7 @@ def _files(anchor: Path) -> list[tuple[str, Path]]:
             raise ExportError("export_unsafe_file")
         if _allowed(relative):
             rows.append((relative, path))
-        elif relative in {"anchor/.identity.lock", "anchor/memory/.write.lock", "anchor/memory/.reader-gate", "anchor/attest.key", "anchor/host-hooks.json"} or relative.startswith(("anchor/context/", "anchor/memory/indexes/", "anchor/memory/leases/", "anchor/memory/quarantine/")):
+        elif relative in {"anchor/.identity.lock", "anchor/memory/.write.lock", "anchor/memory/.reader-gate", "anchor/attest.key", "anchor/host-hooks.json", "anchor/store-root.txt"} or relative.startswith(("anchor/context/", "anchor/memory/indexes/", "anchor/memory/leases/", "anchor/memory/quarantine/")):
             continue
         else:
             raise ExportError("export_unrecognized_durable_path")

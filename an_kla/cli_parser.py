@@ -22,6 +22,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--version", action="version", version=f"an-kla-memory {VERSION}")
     parser.add_argument("--project-root", default=".")
     parser.add_argument(
+        "--store-root",
+        default=None,
+        help="Raíz de custodia externa (ADR-0048); precedencia: flag > AN_KLA_STORE_ROOT > puntero > project-local.",
+    )
+    parser.add_argument(
         "--no-update-check",
         action="store_true",
         help="Omitir la verificación no bloqueante de nuevas versiones.",
@@ -41,9 +46,13 @@ def build_parser() -> argparse.ArgumentParser:
     verify_cmd.add_argument(
         "--revision", help="Digest sha256 exacto de una revisión específica (histórica)."
     )
-    sub.add_parser(
+    startup_cmd = sub.add_parser(
         "startup-diagnostic",
         help="Clasificar la memoria disponible antes de trabajo material.",
+    )
+    startup_cmd.add_argument(
+        "--schema-version", choices=("auto", "v3"), default="auto",
+        help="auto: v1/v2 y v3 sólo con custodia no por defecto; v3: siempre con custodia (ADR-0048).",
     )
     inventory_cmd = sub.add_parser(
         "inventory",
@@ -77,8 +86,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     integration_status_cmd.add_argument("--target", default="AGENTS.md")
     integration_status_cmd.add_argument(
-        "--schema-version", choices=("v1", "v2"), default="v1",
-        help="v1 congelado (default, ADR-0039) o v2 con host_hooks (ADR-0047).",
+        "--schema-version", choices=("v1", "v2", "v3"), default="v1",
+        help="v1 congelado (default, ADR-0039), v2 con host_hooks (ADR-0047) o v3 con custodia (ADR-0048).",
     )
     integration_status_cmd.add_argument(
         "--now",

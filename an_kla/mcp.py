@@ -24,6 +24,7 @@ from .context_view import (
 )
 from .retrieval import empty_reason_for, retrieve
 from .store import STREAMS, IntegrityError, MemoryStore, StoreError
+from .store_resolution import open_resolved_store
 from .subject_ref import SUBJECT_REF_PATTERN
 from .temporal import (
     FRESHNESS_PROFILE,
@@ -341,9 +342,13 @@ def _optional_timestamp(value: Any) -> bool:
 
 
 class ReadOnlyMcp:
-    def __init__(self, project_root: str | Path) -> None:
+    def __init__(
+        self, project_root: str | Path, store_root: str | Path | None = None
+    ) -> None:
         self.root = Path(project_root).resolve()
-        self.store = MemoryStore(self.root)
+        # ADR-0048 §1: same custody resolution as the CLI (flag > env >
+        # pointer > project-local); MCP stays a read surface.
+        self.store = open_resolved_store(self.root, store_root, sys.stderr)
         if not self.store.current_path.exists():
             raise ValueError("memory_not_initialized")
         self._initialize_responded = False
@@ -610,7 +615,9 @@ class ReadOnlyMcp:
 
 def main() -> None:
     parser = argparse.ArgumentParser(); parser.add_argument("--project-root", required=True)
-    server = ReadOnlyMcp(parser.parse_args().project_root)
+    parser.add_argument("--store-root", default=None)
+    arguments = parser.parse_args()
+    server = ReadOnlyMcp(arguments.project_root, arguments.store_root)
     for line in sys.stdin:
         try:
             response = server.handle(json.loads(line))

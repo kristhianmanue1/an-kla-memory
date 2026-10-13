@@ -17,7 +17,7 @@ from .context_package import (
     context_status,
     plan_context_change,
 )
-from .store import MemoryStore
+from .store_resolution import open_resolved_store
 from .version import VERSION, normalized_release_tag
 
 
@@ -204,11 +204,17 @@ def verify_upgrade(
     project_root: str | Path,
     target_release: str,
     context_target: str = "AGENTS.md",
+    *,
+    store_root: str | Path | None = None,
 ) -> dict[str, Any]:
-    """Verify the installed release, managed context, and memory when present."""
+    """Verify the installed release, managed context, and memory when present.
+
+    Memory is verified at the resolved custody root (ADR-0048 §1); the
+    managed context stays project-local.
+    """
     _require_installed_target(target_release)
     context = context_status(project_root, context_target)
-    store = MemoryStore(project_root)
+    store = open_resolved_store(project_root, store_root)
     if store.current_path.exists():
         memory: dict[str, Any] = {"status": "verified", "verification": store.verify()}
     else:
@@ -230,6 +236,7 @@ def apply_upgrade(
     expected_fingerprint: str,
     *,
     confirm_target_drift: bool = False,
+    store_root: str | Path | None = None,
 ) -> dict[str, Any]:
     """Revalidate and apply the exact context plan under its existing lock.
 
@@ -255,6 +262,7 @@ def apply_upgrade(
         project_root,
         checked["core"]["target_release"],
         checked["core"]["context_target"],
+        store_root=store_root,
     )
     response: dict[str, Any] = {
         "schema": UPGRADE_RESULT_SCHEMA,

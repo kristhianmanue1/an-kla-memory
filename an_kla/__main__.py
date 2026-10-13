@@ -52,7 +52,9 @@ from .inventory import DEFAULT_LIMIT as INVENTORY_DEFAULT_LIMIT
 from .inventory import MAX_LIMIT as INVENTORY_MAX_LIMIT
 from .inventory import STREAMS as INVENTORY_STREAMS
 from .inventory import inventory
-from .integration import integration_status, integration_status_v2
+from .integration import (
+    integration_status, integration_status_v2, integration_status_v3,
+)
 from .attest import AttestError
 from .hook_runs import HookRunError, mint_hook_run
 from .identity import IdentityError
@@ -79,6 +81,7 @@ from .retrieval import SCAN_PROFILE, retrieve
 from .resume import resume
 from .schemas import schema_bytes, schema_catalog
 from .startup import startup_diagnostic
+from .store_resolution import open_resolved_store
 from .store import ConcurrentUpdateError, MemoryStore, StoreError
 from .subject import resolve_namespace
 from .temporal import FRESHNESS_PROFILE, parse_freshness_now
@@ -216,7 +219,7 @@ def _run() -> None:
         if notice.notice:
             sys.stderr.write(notice.notice)
 
-    store = MemoryStore(args.project_root)
+    store = open_resolved_store(args.project_root, args.store_root, sys.stderr)
     if args.command == "capabilities":
         result: Any = capabilities()
     elif args.command == "schema":
@@ -263,10 +266,12 @@ def _run() -> None:
                 _json(args.plan),
                 args.expected_fingerprint,
                 confirm_target_drift=args.confirm_target_drift,
+                store_root=args.store_root,
             )
         else:
             result = verify_upgrade(
-                args.project_root, args.target, args.context_target
+                args.project_root, args.target, args.context_target,
+                store_root=args.store_root,
             )
     elif args.command == "init":
         result = store.initialize_with_outcome(transaction_id=args.transaction_id)
@@ -278,14 +283,21 @@ def _run() -> None:
         )
     elif args.command == "startup-diagnostic":
         try:
-            result = startup_diagnostic(store)
+            result = startup_diagnostic(
+                store, custody=args.schema_version == "v3"
+            )
         except Exception:
             # A diagnostic must never answer with a traceback: the caller is an
             # agent deciding whether it has memory, and a stack trace carries
             # absolute paths (§11.1).  Broader CLI coverage is issue #84.
             raise CliUsageError("startup_diagnostic_failed")
     elif args.command == "integration":
-        if args.schema_version == "v2":
+        if args.schema_version == "v3":
+            result = integration_status_v3(
+                store, args.target,
+                now=parse_freshness_now(args.now) if args.now is not None else None,
+            )
+        elif args.schema_version == "v2":
             result = integration_status_v2(
                 store, args.target,
                 now=parse_freshness_now(args.now) if args.now is not None else None,
@@ -507,7 +519,7 @@ def _run() -> None:
         from . import attest as attest_module
 
         if args.attest_command == "init":
-            result = attest_module.ensure_attest_files(args.project_root)
+            result = attest_module.ensure_attest_files(args.project_root, store=store)
         else:
             command = list(getattr(args, "attest_argv", []))
             if command and command[0] == "--":
@@ -515,6 +527,7 @@ def _run() -> None:
             result = attest_module.attest_run(
                 args.project_root,
                 command,
+                store_root=store.store_root if store.store_external else None,
                 expected_current=args.expected_current,
                 timeout_seconds=args.timeout,
             )
