@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:startup-diagnostic:v3",
+  "title": "AN-KLA StartupDiagnostic v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "untrusted_memory_data",
+    "store_presence",
+    "store_integrity",
+    "integrity_detail",
+    "identity",
+    "repo_context",
+    "external_memory_evaluated",
+    "custody"
+  ],
+  "properties": {
+    "schema": {
+      "const": "an-kla/startup-diagnostic-v3"
+    },
+    "untrusted_memory_data": {
+      "const": true
+    },
+    "store_presence": {
+      "enum": [
+        "present",
+        "absent",
+        "unreadable"
+      ]
+    },
+    "store_integrity": {
+      "enum": [
+        "verified",
+        "failed",
+        "not_evaluated"
+      ]
+    },
+    "integrity_detail": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evaluated",
+        "identity_status",
+        "root_relocated",
+        "error_code"
+      ],
+      "properties": {
+        "evaluated": {
+          "type": "boolean"
+        },
+        "identity_status": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "absent",
+            "intent_only",
+            "store_only",
+            "project_only",
+            "partial_consistent",
+            "identities_ready_root_pending",
+            "complete",
+            "legacy_unadopted",
+            "conflict",
+            null
+          ]
+        },
+        "root_relocated": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "error_code": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "repo_context": {
+      "enum": [
+        "main_checkout",
+        "linked_worktree",
+        "not_a_repo",
+        "git_unavailable"
+      ]
+    },
+    "external_memory_evaluated": {
+      "const": true
+    },
+    "vocabulary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_count",
+        "ids",
+        "terms"
+      ],
+      "properties": {
+        "record_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 50
+        },
+        "terms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 32
+        }
+      },
+      "description": "ADR-0049 convencion dispersa / #133 propuesta 2: presente solo cuando el store pudo evaluarse; terminos mas frecuentes e ids de facts activos."
+    },
+    "custody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "store_external",
+        "custody_fingerprint",
+        "pointer",
+        "divergence"
+      ],
+      "properties": {
+        "store_external": {
+          "type": "boolean"
+        },
+        "custody_fingerprint": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "pointer": {
+          "enum": [
+            "absent",
+            "present",
+            "invalid"
+          ]
+        },
+        "divergence": {
+          "enum": [
+            "none",
+            "external_without_pointer",
+            "pointer_stale_locator",
+            "pointer_fingerprint_mismatch",
+            "pointer_invalid",
+            "project_local_with_pointer",
+            "custody_identity_unreadable"
+          ]
+        }
+      },
+      "description": "ADR-0048 §4 / Enmienda 1: descriptor de custodia sin rutas; divergence replica el codigo de doctor.custody_divergence."
+    }
+  }
+}

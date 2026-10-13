@@ -9,6 +9,9 @@
 # Escape documentado: git commit --no-verify (degradación declarada).
 
 export AN_KLA_NO_UPDATE_CHECK="1"
+# ADR-0048 §5 (H8): el hook resuelve la custodia por el puntero del proyecto,
+# nunca por una variable heredada del shell que podría apuntar a otra bóveda.
+unset AN_KLA_STORE_ROOT
 AN_KLA="${AN_KLA_PYTHON:-.venv/bin/python}"
 
 # 1) Exención: reparar AGENTS.md/AN-KLA.md vive en un commit; bloquearlo

@@ -1,0 +1,333 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:integration-status-v3",
+  "title": "AN-KLA IntegrationStatus v3",
+  "description": "Superficie observable G3 (ADR-0048 §4, Enmienda 1). v1 y v2 permanecen congelados; v3 es opt-in (--schema-version v3) y anade store.custody (descriptor sin rutas) y la custodia explicita de host-hooks (declaracion project-local) frente a hook-runs (viajan con la boveda).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "store",
+    "managed_context",
+    "integration",
+    "host_hooks"
+  ],
+  "properties": {
+    "schema": {
+      "const": "an-kla/integration-status-v3"
+    },
+    "store": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "store_presence",
+        "store_integrity",
+        "integrity_detail",
+        "identity",
+        "repo_context",
+        "external_memory_evaluated",
+        "custody"
+      ],
+      "properties": {
+        "store_presence": {
+          "enum": [
+            "present",
+            "absent",
+            "unreadable"
+          ]
+        },
+        "store_integrity": {
+          "enum": [
+            "verified",
+            "failed",
+            "not_evaluated"
+          ]
+        },
+        "integrity_detail": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "identity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "evaluated",
+            "identity_status",
+            "root_relocated"
+          ],
+          "properties": {
+            "evaluated": {
+              "type": "boolean"
+            },
+            "identity_status": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "root_relocated": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "error_code": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "repo_context": {
+          "enum": [
+            "main_checkout",
+            "linked_worktree",
+            "not_a_repo",
+            "git_unavailable"
+          ]
+        },
+        "external_memory_evaluated": {
+          "const": true
+        },
+        "custody": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "store_external",
+            "custody_fingerprint",
+            "pointer",
+            "divergence"
+          ],
+          "properties": {
+            "store_external": {
+              "type": "boolean"
+            },
+            "custody_fingerprint": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "pointer": {
+              "enum": [
+                "absent",
+                "present",
+                "invalid"
+              ]
+            },
+            "divergence": {
+              "enum": [
+                "none",
+                "external_without_pointer",
+                "pointer_stale_locator",
+                "pointer_fingerprint_mismatch",
+                "pointer_invalid",
+                "project_local_with_pointer",
+                "custody_identity_unreadable"
+              ]
+            }
+          },
+          "description": "ADR-0048 §4 / Enmienda 1: descriptor de custodia sin rutas; divergence replica el codigo de doctor.custody_divergence."
+        }
+      }
+    },
+    "managed_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target",
+        "presence",
+        "template_version",
+        "context_schema",
+        "ok",
+        "diagnostics",
+        "warnings"
+      ],
+      "properties": {
+        "target": {
+          "type": "string",
+          "minLength": 1
+        },
+        "presence": {
+          "enum": [
+            "present",
+            "absent",
+            "unreadable"
+          ]
+        },
+        "template_version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "context_schema": {
+          "type": "string"
+        },
+        "ok": {
+          "type": "boolean"
+        },
+        "diagnostics": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "warnings": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "observation_error": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "integration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "supported_profiles",
+        "observed_profile",
+        "agent_binding",
+        "sharing_boundary",
+        "host_hooks_evaluated"
+      ],
+      "properties": {
+        "supported_profiles": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "agent-owned/v1",
+              "host-managed/v1"
+            ]
+          }
+        },
+        "observed_profile": {
+          "enum": [
+            "unspecified",
+            "declared-not-invoked",
+            "host-managed/v1"
+          ]
+        },
+        "agent_binding": {
+          "const": "unverified"
+        },
+        "sharing_boundary": {
+          "const": "filesystem-access/unverified"
+        },
+        "host_hooks_evaluated": {
+          "const": true
+        }
+      }
+    },
+    "host_hooks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "declaration",
+        "reason_codes",
+        "hook_declared",
+        "hook_invoked",
+        "unknown_hooks",
+        "pending_continuity",
+        "degraded_codes",
+        "declaration_custody",
+        "runs_custody"
+      ],
+      "properties": {
+        "declaration": {
+          "enum": [
+            "absent",
+            "invalid",
+            "well_formed"
+          ]
+        },
+        "reason_codes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "hook_declared": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "hook_invoked": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "run_id",
+              "hook_id",
+              "observed_at"
+            ],
+            "properties": {
+              "run_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "hook_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "observed_at": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "unknown_hooks": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "pending_continuity": {
+          "enum": [
+            "none",
+            "required",
+            "indeterminate"
+          ]
+        },
+        "degraded_codes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "declaration_custody": {
+          "const": "project_local",
+          "description": "ADR-0048 §3: host-hooks.json es del proyecto (carve-out)."
+        },
+        "runs_custody": {
+          "enum": [
+            "project_local",
+            "store_external"
+          ],
+          "description": "ADR-0048 F0-B: hook-runs viajan con la boveda."
+        }
+      }
+    }
+  }
+}

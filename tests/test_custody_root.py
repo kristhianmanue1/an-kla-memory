@@ -125,13 +125,11 @@ class ExternalCustodyTests(unittest.TestCase):
         self.assertEqual(moved.read_current(), revision)
         self.assertTrue(moved.verify()["ok"])
 
-    def test_external_init_degrades_attest_visibly(self) -> None:
+    def test_external_init_creates_attest_material_in_vault(self) -> None:
         store = MemoryStore(self.project, store_root=self.vault)
         result = store.initialize_with_outcome()
-        self.assertEqual(
-            result["attestation"]["error"], "attest_external_custody_pending"
-        )
-        self.assertFalse((self.vault / "attest.key").exists())
+        self.assertEqual(result["attestation"]["created"], ["attest.key", "attest-whitelist.json"])
+        self.assertTrue((self.vault / "attest.key").exists())
         self.assertFalse((self.project / ".an-kla" / "attest.key").exists())
 
     def test_reinit_is_idempotent_and_keeps_pointer(self) -> None:
@@ -273,27 +271,49 @@ class ExternalCustodyTests(unittest.TestCase):
         os.symlink(outside, receipts)
         self.assertNotEqual(identity_status(store)["identity_status"], "complete")
 
-    def test_unadapted_entries_fail_closed_with_external_custody(self) -> None:
+    def test_custody_entries_use_vault_and_export_fails_closed(self) -> None:
         store = self._init_external()
         with self.assertRaisesRegex(CustodyError, "store_root_external_unsupported"):
             create_export(store, self.vault.parent / "bundle")
         self.assertFalse((self.vault.parent / "bundle").exists())
-        with self.assertRaisesRegex(CustodyError, "store_root_external_unsupported"):
-            mint_hook_run(
-                store,
-                hook_id="pre-commit",
-                trigger="before_task",
-                action="status",
-                exit_code=0,
-                subject={"k": "v"},
-                adapter_fingerprint="sha256:" + "2" * 64,
-            )
-        with self.assertRaisesRegex(CustodyError, "store_root_external_unsupported"):
-            ensure_attest_files(self.project)
-        with self.assertRaisesRegex(CustodyError, "store_root_external_unsupported"):
-            attest_run(self.project, ["true"])
+        minted = mint_hook_run(
+            store,
+            hook_id="pre-commit",
+            trigger="before_task",
+            action="status",
+            exit_code=0,
+            subject={"k": "v"},
+        )
+        self.assertTrue(
+            (self.vault / "hook-runs" / "runs" / "sha256"
+             / (minted["digest"].removeprefix("sha256:") + ".json")).exists()
+        )
+        receipt = attest_run(self.project, ["git", "diff"], store_root=self.vault)
+        self.assertTrue(receipt["receipt_path"].startswith(".an-kla/receipts/"))
+        self.assertTrue(
+            (self.vault / receipt["receipt_path"].removeprefix(".an-kla/")).exists()
+        )
         self.assertEqual(_tree(self.project / ".an-kla"), ["store-root.txt"])
-        self.assertFalse((self.vault / "hook-runs").exists())
+
+    def test_custody_entries_refuse_a_disowned_vault(self) -> None:
+        self._init_external()
+        other_project = self.vault.parent / "other-project"
+        other_project.mkdir()
+        foreign = self.vault.parent / "foreign"
+        MemoryStore(other_project, store_root=foreign).initialize()
+        wrong = MemoryStore(self.project, store_root=foreign)
+        with self.assertRaisesRegex(CustodyError, "store_root_divergence"):
+            mint_hook_run(
+                wrong, hook_id="pre-commit", trigger="before_task",
+                action="status", exit_code=0, subject={},
+            )
+        with self.assertRaisesRegex(CustodyError, "store_root_divergence"):
+            attest_run(self.project, ["true"], store_root=foreign)
+        with self.assertRaisesRegex(CustodyError, "store_root_divergence"):
+            ensure_attest_files(self.project)
+        self.assertFalse((foreign / "hook-runs").exists())
+        self.assertFalse((foreign / "receipts").exists())
+        self.assertEqual(_tree(self.project / ".an-kla"), ["store-root.txt"])
 
 
 class RelocationReceiptAdoptionTests(unittest.TestCase):
@@ -370,6 +390,21 @@ class RelocationReceiptAdoptionTests(unittest.TestCase):
         path.write_bytes(canonical_json(value))
         with self.assertRaisesRegex(IdentityError, "relocation_receipt_invalid"):
             adopt(self.store, self.plan, self.root, receipt)
+
+    def test_relocation_receipt_travels_in_export(self) -> None:
+        receipt = record_project_relocation(self.store, self.plan, self.root)[
+            "relocation_receipt"
+        ]
+        adopt(self.store, self.plan, self.root, receipt)
+        bundle = self.moved.parent / "bundle"
+        create_export(self.store, bundle)
+        manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
+        names = {entry["path"] for entry in manifest["core"]["entries"]}
+        self.assertIn(
+            "anchor/relocation-receipts/sha256/"
+            + receipt.removeprefix("sha256:") + ".json",
+            names,
+        )
 
     def test_symlinked_receipt_directory_is_rejected(self) -> None:
         receipt = record_project_relocation(self.store, self.plan, self.root)[

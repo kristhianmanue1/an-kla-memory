@@ -12,6 +12,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
+from .custody_status import custody_descriptor, custody_is_default
 from .identity import IdentityError, identity_status
 from .index import record_text
 from .reader_gate import ReaderGateError
@@ -22,6 +23,7 @@ from .vigency import is_active
 
 SCHEMA = "an-kla/startup-diagnostic-v1"
 SCHEMA_V2 = "an-kla/startup-diagnostic-v2"
+SCHEMA_V3 = "an-kla/startup-diagnostic-v3"
 GIT_TIMEOUT_SECONDS = 5
 VOCABULARY_TERMS_CAP = 32
 VOCABULARY_IDS_CAP = 50
@@ -161,12 +163,18 @@ def _vocabulary(store: Any) -> dict[str, Any] | None:
         return None
 
 
-def startup_diagnostic(store: Any) -> dict[str, Any]:
+def startup_diagnostic(store: Any, *, custody: bool = False) -> dict[str, Any]:
     """Classify the memory available under this project root.
 
     Read-only with respect to memory content.  The integrity axis takes the
     shared reader gate, which materialises ``.reader-gate``; no other write
     occurs, and a tree that rejects it yields ``not_evaluated``.
+
+    ``startup-diagnostic-v3`` (ADR-0048 §4, Enmienda 1) adds the custody
+    descriptor.  Following the sparse ADR-0049 convention it is emitted
+    when custody differs from the project-local default (external root or
+    a pointer), or when the caller asks with ``custody=True``; the default
+    layout keeps v1/v2 byte-identical.
     """
     presence, presence_detail = _presence(store)
     integrity, integrity_detail = _integrity(store, presence)
@@ -190,4 +198,9 @@ def startup_diagnostic(store: Any) -> dict[str, Any]:
         if vocabulary is not None:
             result["vocabulary"] = vocabulary
             result["schema"] = SCHEMA_V2
+    descriptor = custody_descriptor(store)
+    if custody or not custody_is_default(descriptor):
+        result["schema"] = SCHEMA_V3
+        result["external_memory_evaluated"] = True
+        result["custody"] = descriptor
     return result

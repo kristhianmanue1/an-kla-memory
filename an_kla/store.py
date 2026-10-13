@@ -165,24 +165,14 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         if store_identity is not None:
             raise StoreError("external_store_identity_not_allowed")
         result = bootstrap_initialize(self, transaction_id)
-        if self.store_external:
-            if result["identity"]["identity_state"] == "complete":
-                # ADR-0048 Enmienda 1 §4: an external vault leaves its
-                # pointer so a later bare invocation cannot fork it (H1).
-                write_custody_pointer(self, read_binding(self))
-            # R1a: attest keys belong to the vault (F0-B); the adapter that
-            # mints them under store_root lands in R1c.  Visible degradation.
-            result["attestation"] = {
-                "schema": "an-kla/attest-init-result-v1",
-                "created": [],
-                "existed": [],
-                "error": "attest_external_custody_pending",
-            }
-            result["context_diagnostics"] = self._context_diagnostics()
-            return result
+        if self.store_external and result["identity"]["identity_state"] == "complete":
+            # ADR-0048 Enmienda 1 §4: an external vault leaves its pointer
+            # so a later bare invocation cannot fork it (H1).
+            write_custody_pointer(self, read_binding(self))
         try:
+            # F0-B: attest material lives under the custody root.
             result["attestation"] = attest_module.ensure_attest_files(
-                self.project_root
+                self.project_root, store=self
             )
         except OSError:
             # Issue #115/T2: el init ya committeó; un fallo operacional

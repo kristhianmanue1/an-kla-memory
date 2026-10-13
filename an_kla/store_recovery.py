@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from typing import Any
 
+from .custody import CustodyError
+from .custody_status import custody_divergence_axis
 from .store_errors import IntegrityError
 
 
@@ -36,7 +38,7 @@ def doctor_report(store: Any) -> dict[str, Any]:
     try:
         status = store.verify()
         current_error = None
-    except IntegrityError as exc:
+    except (IntegrityError, CustodyError) as exc:
         status = None
         current_error = str(exc)
     quarantine = store.root / "quarantine"
@@ -53,6 +55,8 @@ def doctor_report(store: Any) -> dict[str, Any]:
         "quarantine_objects": len(objects),
         "quarantine_bytes": sum(path.stat().st_size for path in objects),
         "durability_profile": store.durability_profile,
+        # ADR-0048 §4 (H12): pointer vs resolved custody vs canonical root.
+        "custody_divergence": custody_divergence_axis(store),
         "index_orphan_temporaries": (
             sum(
                 1

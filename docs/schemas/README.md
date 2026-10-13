@@ -42,6 +42,8 @@ python -m an_kla schema show write-plan-v1
 | `retrieval-result-v3.schema.json` | Resultado de recuperación; v3 disperso: sólo en selección vacía por cero solapamiento (`empty_reason`, ADR-0049). |
 | `mcp-retrieve-v3.schema.json` | Envelope MCP de recuperación; v3 disperso análogo con `empty_reason`. |
 | `startup-diagnostic-v2.schema.json` | Diagnóstico de arranque; v2 disperso: añade `vocabulary` (términos/ids de facts) cuando el store pudo evaluarse (#133). |
+| `startup-diagnostic-v3.schema.json` | Diagnóstico de arranque con descriptor de custodia (`custody`, sin rutas); se emite cuando la custodia no es la project-local por defecto o con `--schema-version v3` (ADR-0048 §4). |
+| `integration-status-v3.schema.json` | Integración con `store.custody` y custodia explícita de host-hooks frente a hook-runs; opt-in `--schema-version v3` (ADR-0048 §4). |
 | `retrieval-strategy-report-v1.schema.json` | Rankers experimentales no productivos. |
 | `reference-benchmark-v1.schema.json` | Bundle del benchmark de referencia. |
 | `provenance-manifest-v1.schema.json` | Saneamiento y gates de privacidad del corpus. |

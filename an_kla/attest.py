@@ -30,7 +30,7 @@ from pathlib import Path
 from typing import Any
 
 from .canonical import canonical_json, digest_json
-from .custody import CustodyError, read_pointer, require_project_local
+from .custody import check_custody, read_pointer
 from .write_policy import WritePolicyError, policy_fingerprint
 
 KEY_RELATIVE = Path(".an-kla") / "attest.key"
@@ -79,22 +79,44 @@ class AttestError(WritePolicyError):
     """Stable attestation error; ``str(exc) == code`` (see WritePolicyError)."""
 
 
-def key_path(project_root: Path | str) -> Path:
-    return Path(project_root) / KEY_RELATIVE
+def custody_anchor(target: Any) -> Path:
+    """Custody root for attest files (ADR-0048 F0-B: they travel with the vault).
+
+    ``target`` is a store (its ``store_root``) or a project root, which keeps
+    the beta.29 layout ``<project>/.an-kla``.  Paths published relative to
+    the anchor keep the logical ``.an-kla/`` prefix (Enmienda 1 §4).
+    """
+
+    store_root = getattr(target, "store_root", None)
+    if store_root is not None:
+        return Path(store_root)
+    return Path(target) / ".an-kla"
 
 
-def whitelist_path(project_root: Path | str) -> Path:
-    return Path(project_root) / WHITELIST_RELATIVE
+def key_path(target: Any) -> Path:
+    return custody_anchor(target) / KEY_RELATIVE.relative_to(".an-kla")
 
 
-def receipt_path(project_root: Path | str, receipt_digest: str) -> Path:
+def whitelist_path(target: Any) -> Path:
+    return custody_anchor(target) / WHITELIST_RELATIVE.relative_to(".an-kla")
+
+
+def receipt_path(target: Any, receipt_digest: str) -> Path:
     hexpart = receipt_digest.split(":", 1)[1]
-    return Path(project_root) / RECEIPTS_RELATIVE / f"{hexpart}.json"
+    return (
+        custody_anchor(target)
+        / RECEIPTS_RELATIVE.relative_to(".an-kla")
+        / f"{hexpart}.json"
+    )
 
 
-def tombstone_path(project_root: Path | str, nonce: str) -> Path:
+def tombstone_path(target: Any, nonce: str) -> Path:
     nonce_digest = hashlib.sha256(nonce.encode("utf-8")).hexdigest()
-    return Path(project_root) / NONCES_RELATIVE / f"{nonce_digest}.json"
+    return (
+        custody_anchor(target)
+        / NONCES_RELATIVE.relative_to(".an-kla")
+        / f"{nonce_digest}.json"
+    )
 
 
 def _fsync_dir(directory: Path) -> None:
@@ -127,22 +149,37 @@ def _write_exclusive(target: Path, payload: bytes, mode: int) -> None:
     _fsync_dir(target.parent)
 
 
-def _require_no_external_pointer(root: Path) -> None:
-    # R1a (ADR-0048 F0-B): with external custody the keys and receipts
-    # belong to the vault; until R1c adapts attest, never mint project-local.
-    if read_pointer(root) is not None:
-        raise CustodyError("store_root_external_unsupported")
+def _require_custody(store: Any) -> None:
+    """ADR-0048 §1: never mint attest material outside the pointed vault."""
+
+    from .identity import read_binding
+
+    if read_pointer(store.project_root) is None:
+        return
+    try:
+        binding: Any = read_binding(store)
+    except Exception:
+        binding = None
+    check_custody(store, binding=binding)
 
 
 def ensure_attest_files(
     project_root: Path | str,
     *,
     entries: dict[str, Any] | None = None,
+    store: Any | None = None,
 ) -> dict[str, Any]:
-    """Create the key and the whitelist if absent (idempotent, ADR-0046 §1)."""
+    """Create the key and the whitelist if absent (idempotent, ADR-0046 §1).
 
-    root = Path(project_root)
-    _require_no_external_pointer(root)
+    With ``store`` the files live under its custody root (ADR-0048 F0-B).
+    """
+
+    if store is None:
+        from .store import MemoryStore
+
+        store = MemoryStore(project_root)
+    _require_custody(store)
+    root = store
     created: list[str] = []
     existed: list[str] = []
     key = key_path(root)
@@ -171,8 +208,8 @@ def ensure_attest_files(
     }
 
 
-def _load_key(project_root: Path | str) -> bytes:
-    path = key_path(project_root)
+def _load_key(target: Any) -> bytes:
+    path = key_path(target)
     try:
         key = path.read_bytes()
     except OSError:
@@ -182,9 +219,9 @@ def _load_key(project_root: Path | str) -> bytes:
     return key
 
 
-def load_whitelist(project_root: Path | str) -> dict[str, Any]:
+def load_whitelist(target: Any) -> dict[str, Any]:
     try:
-        document = json.loads(whitelist_path(project_root).read_text("utf-8"))
+        document = json.loads(whitelist_path(target).read_text("utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError):
         raise AttestError("attest_whitelist_invalid") from None
     if (
@@ -259,6 +296,7 @@ def attest_run(
     now: str | None = None,
     nonce: str | None = None,
     env: dict[str, str] | None = None,
+    store_root: Path | str | None = None,
 ) -> dict[str, Any]:
     """Execute one whitelisted command and mint a signed receipt.
 
@@ -273,13 +311,13 @@ def attest_run(
     if not command or any(not isinstance(item, str) or not item for item in command):
         raise AttestError("attest_command_not_allowed")
     root = Path(project_root)
-    _require_no_external_pointer(root)
-    key = _load_key(root)
-    document = load_whitelist(root)
+    store = MemoryStore(root, store_root=store_root)
+    _require_custody(store)
+    key = _load_key(store)
+    document = load_whitelist(store)
     if not command_allowed(document, command):
         raise AttestError("attest_command_not_allowed")
 
-    store = MemoryStore(root)
     observed = store.read_current()
     if expected_current is not None and expected_current != observed:
         raise WritePolicyError("write_plan_base_changed")
@@ -379,7 +417,7 @@ def attest_run(
     receipt_digest = "sha256:" + hashlib.sha256(
         canonical_json(receipt)
     ).hexdigest()
-    target = receipt_path(root, receipt_digest)
+    target = receipt_path(store, receipt_digest)
     try:
         _write_exclusive(target, encoded, 0o644)
     except FileExistsError:
@@ -389,7 +427,8 @@ def attest_run(
         "ok": True,
         "receipt": receipt,
         "receipt_digest": receipt_digest,
-        "receipt_path": target.relative_to(root).as_posix(),
+        "receipt_path": ".an-kla/"
+        + target.relative_to(custody_anchor(store)).as_posix(),
         "observed_base_revision": observed,
     }
 
@@ -426,8 +465,7 @@ def verify_receipt_for_authority(
     re-verifies under the lock before consuming the tombstone.
     """
 
-    require_project_local(store)
-    root = Path(store.project_root)
+    root = store
     item = find_receipt_evidence(authority)
     if item is None:
         raise AttestError("receipt_invalid", "evidence_item_missing")
@@ -513,9 +551,8 @@ def consume_tombstone(store: Any, receipt: dict[str, Any]) -> None:
     is intentionally not used here.
     """
 
-    require_project_local(store)
     nonce = str(receipt["nonce"])
-    target = tombstone_path(Path(store.project_root), nonce)
+    target = tombstone_path(store, nonce)
     tombstone = {
         "schema": TOMBSTONE_SCHEMA,
         "nonce": nonce,
@@ -533,6 +570,7 @@ __all__ = [
     "AttestError",
     "DEFAULT_WHITELIST",
     "attest_run",
+    "custody_anchor",
     "consume_tombstone",
     "command_allowed",
     "ensure_attest_files",

@@ -34,15 +34,21 @@ from .attest import (
     AttestError,
     SIGNATURE_PREFIX,
     _load_key,
+    custody_anchor,
     _write_exclusive,
 )
 from .canonical import canonical_json, digest_bytes, digest_json
-from .custody import require_project_local
+from .custody import check_custody
 from .host_hooks import ID_PATTERN, ACTIONS, TRIGGERS
 from .identity import IdentityError, read_binding
 
 RUNS_SCHEMA = "an-kla/hook-run-v1"
 RUNS_RELATIVE = Path(".an-kla") / "hook-runs" / "runs" / "sha256"
+
+
+def _runs_dir(store: Any) -> Path:
+    # ADR-0048 F0-B: hook-runs travel with the vault (custody root).
+    return custody_anchor(store) / RUNS_RELATIVE.relative_to(".an-kla")
 
 _MAX_ENTRY_BYTES = 65536
 _MAX_ENTRIES_SCANNED = 2000
@@ -83,9 +89,10 @@ def mint_hook_run(
         raise HookRunError("hook_run_invalid_input")
     if not isinstance(exit_code, int) or isinstance(exit_code, bool):
         raise HookRunError("hook_run_invalid_input")
-    require_project_local(store)
-    key = _load_key(store.project_root)
+    key = _load_key(store)
     binding = read_binding(store)
+    # ADR-0048 §1: never mint evidence into a vault the pointer disowns.
+    check_custody(store, binding=binding)
     entry = {
         "schema": RUNS_SCHEMA,
         "run_id": run_id or uuid.uuid4().hex,
@@ -104,7 +111,7 @@ def mint_hook_run(
     ).hexdigest()
     payload = canonical_json(entry) + b"\n"
     identifier = digest_bytes(payload)
-    target = Path(store.project_root) / RUNS_RELATIVE / (
+    target = _runs_dir(store) / (
         identifier[len("sha256:"):] + ".json"
     )
     try:
@@ -128,8 +135,7 @@ def read_verified_runs(
     llave del motor, la verificación es imposible -> código
     `attest_not_initialized` y lista vacía.
     """
-    require_project_local(store)
-    directory = Path(store.project_root) / RUNS_RELATIVE
+    directory = _runs_dir(store)
     try:
         with os.scandir(directory) as scanner:
             names = sorted(entry.name for entry in scanner)
@@ -143,7 +149,7 @@ def read_verified_runs(
     if not paths:
         return [], ([] if not truncated else ["hook_runs_truncated"]), []
     try:
-        signing_key = key if key is not None else _load_key(store.project_root)
+        signing_key = key if key is not None else _load_key(store)
     except AttestError:
         return [], ["attest_not_initialized"], []
     try:
