@@ -26,7 +26,7 @@ Decisiones de mecanismo: ADR-0048 Enmienda 3.
 ## Evidencia
 
 - `python3 -m unittest tests.test_relocate_back tests.test_relocate` → 15 tests OK.
-- Suite completa y gates: ver la PR de R2b.
+- Suite completa sobre `57d50a2` (Python 3.13.16, Linux): `Ran 1115 tests in 552.420s` · `OK (skipped=12)`. Gates OK.
 
 ## Límites y riesgos residuales
 
