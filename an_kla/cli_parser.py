@@ -410,6 +410,23 @@ def build_parser() -> argparse.ArgumentParser:
     compact_commit.add_argument("--planning-result", required=True)
     compact_commit.add_argument("--expected-current", required=True)
     compact_commit.add_argument("--bundle")
+    relocate_cmd = sub.add_parser(
+        "relocate", help="Mover la custodia project-local a un store_root externo (ADR-0048 §3)."
+    )
+    relocate_sub = relocate_cmd.add_subparsers(dest="relocate_command", required=True)
+    relocate_plan_cmd = relocate_sub.add_parser("plan")
+    relocate_plan_cmd.add_argument("--to", required=True, help="store_root externo absoluto y ausente.")
+    relocate_commit_cmd = relocate_sub.add_parser("commit")
+    relocate_commit_cmd.add_argument("--plan", required=True)
+    relocate_commit_cmd.add_argument("--expected-current", required=True)
+    for name in ("inspect", "reconcile"):
+        relocate_tx_cmd = relocate_sub.add_parser(name)
+        relocate_tx_cmd.add_argument("--transaction-id", required=True)
+        if name == "reconcile":
+            relocate_tx_cmd.add_argument(
+                "--abort", action="store_true",
+                help="Antes del puntero: borrar la copia publicada y conservar el origen.",
+            )
     identity_cmd = sub.add_parser("identity", help="Inspeccionar o adoptar identidad local.")
     identity_sub = identity_cmd.add_subparsers(dest="identity_command", required=True)
     identity_status_cmd = identity_sub.add_parser("status")

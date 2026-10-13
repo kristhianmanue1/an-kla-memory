@@ -74,7 +74,7 @@ def _files(anchor: Path) -> list[tuple[str, Path]]:
             raise ExportError("export_unsafe_file")
         if _allowed(relative):
             rows.append((relative, path))
-        elif relative in {"anchor/.identity.lock", "anchor/memory/.write.lock", "anchor/memory/.reader-gate", "anchor/attest.key", "anchor/host-hooks.json", "anchor/store-root.txt"} or relative.startswith(("anchor/context/", "anchor/memory/indexes/", "anchor/memory/leases/", "anchor/memory/quarantine/")):
+        elif relative in {"anchor/.identity.lock", "anchor/memory/.write.lock", "anchor/memory/.reader-gate", "anchor/attest.key", "anchor/host-hooks.json", "anchor/store-root.txt"} or relative.startswith(("anchor/context/", "anchor/relocations/", "anchor/memory/indexes/", "anchor/memory/leases/", "anchor/memory/quarantine/")):
             continue
         else:
             raise ExportError("export_unrecognized_durable_path")
