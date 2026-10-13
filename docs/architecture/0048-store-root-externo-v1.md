@@ -3,7 +3,8 @@
 - **Estado:** Aceptada (2026-09-05, orden explícita del maintainer en
   sesión: "adelante con paso 1 y 3" — aceptar tal cual, con la
   re-verificación H1–H4 ya ejecutada como condición cumplida de F1)
-- **Implementación:** No iniciada (F1 lista para arrancar)
+- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13);
+  R1a en adelante según `docs/plans/2026-10-10-g3-discovery-agent-roadmap.md`
 - **Fecha:** 2026-09-05
 - **Decide sobre:** G3 de ADR-0031 — cómo separa AN-KLA la custodia física
   de la memoria (store_root) del proyecto observado (project_root), con
@@ -165,7 +166,8 @@ reconstruye con `rebuild-index`), `leases/`, `quarantine/`,
 ella) y `host-hooks.json` entra en las **exclusiones** (es del
 proyecto). Hoy un proyecto con perfil host-managed **no puede exportar**
 (`export_unrecognized_durable_path`) — la reparación se prioriza en la
-deuda beta.23, antes de F6.
+deuda beta.23, antes de F6. *(Histórico: resuelto en beta.23, #119
+cerrado el 2026-09-06; ver Enmienda 1.)*
 
 ### 4. Observabilidad versionada
 
@@ -312,3 +314,27 @@ obligatoria antes de cerrar #57.
 - **ADR-0036/0039** — observabilidad congelada que obliga v2/v3.
 - F0 firmada por el maintainer el 2026-09-05 (sesión): Windows diferido;
   comprobantes viajan con la bóveda; un proyecto, una bóveda.
+
+## Enmienda 1 (2026-10-13) — reconciliación R0 de G3
+
+Registro completo: `docs/planning/g3-r0-contrato-baseline-2026-10-13.md`.
+
+1. **Nombre del diagnóstico de custodia.** `startup-diagnostic-v2` quedó
+   publicado en beta.28 con el bloque `vocabulary` (ADR-0049). El
+   descriptor de custodia de §4 se publica como **`startup-diagnostic-v3`**,
+   superconjunto que conserva `vocabulary`; v1 y v2 quedan congelados.
+   `integration-status-v3` no cambia. Toda mención de
+   `startup-diagnostic-v2` en §4 y §Consecuencias referida a custodia se lee
+   como v3. *Decisión normativa: propuesta por R0, pendiente de confirmación
+   explícita del maintainer; bloquea R1b, no R1a.*
+2. **#119.** La frase de §3 sobre export host-managed es histórica: el fix
+   está en `export_restore.py:43,67` con regresión en
+   `tests/test_export_restore.py:44`.
+3. **`restore`.** Sigue publicando sólo project-local; un destino de restore
+   externo es una decisión separada, fuera de G3.
+4. **Convenciones de mecanismo** (no cambian la decisión): walk de symlinks
+   anclado en `store_root.parent`; el prefijo `.an-kla/` de las rutas de
+   receipts denota la raíz de custodia (H9); `custody_fingerprint` sin
+   rutas; formato del puntero; `init` con store externo también deja el
+   puntero (cierra H1 para bóvedas frescas); relocation receipts bajo
+   `store_root/relocation-receipts/`. Detalle en el registro R0 §5.
