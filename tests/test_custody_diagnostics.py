@@ -158,6 +158,7 @@ class CustodyDiagnosticsTests(unittest.TestCase):
                 "pointer": "absent",
                 "project_root_relocated_since_init": False,
                 "project_local_residue": None,
+                "relocations_unfinished": 0,
             },
         )
         shutil.rmtree(self.project / ".an-kla")

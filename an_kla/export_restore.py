@@ -13,7 +13,7 @@ from typing import Any
 
 from .canonical import bare_digest, canonical_json, digest_bytes, digest_json
 from .identity import identity_lock
-from .custody import require_project_local
+from .custody import CustodyError, check_custody
 from .export_io import (
     ExportIOError, normalize_and_sync_tree, rename_noreplace, safe_read,
     validate_tree,
@@ -55,10 +55,28 @@ def _allowed(path: str) -> bool:
 
 
 def _export_anchor(store: Any) -> Path:
-    # R1a: export reads project-local anchors; R3 adapts it to the resolved
-    # custody root.  Until then external custody fails closed (ADR-0048).
-    require_project_local(store)
-    return store.project_root / ".an-kla"
+    """The resolved custody root (ADR-0048 §3, G3 R3).
+
+    A pointer that disagrees with the opened custody fails closed before
+    anything is read.  ``restore`` still publishes only project-local.
+    """
+    from .identity import read_binding
+
+    try:
+        binding = read_binding(store)
+    except Exception:
+        binding = None
+    check_custody(store, binding=binding)
+    if store.custody_pointer_present:
+        raise CustodyError("store_root_divergence")
+    return store.store_root
+
+
+def _read_anchor(store: Any, source: Path) -> bytes:
+    # Walk from the anchor's parent so a symlinked anchor is rejected too:
+    # for project-local custody this is exactly the beta.29 walk.
+    anchor = store.store_root
+    return safe_read(anchor.parent, source.relative_to(anchor.parent).as_posix())
 
 
 def _files(anchor: Path) -> list[tuple[str, Path]]:
@@ -113,8 +131,7 @@ def create_export(store: Any, bundle: str | Path) -> dict[str, Any]:
                 rows = _files(anchor)
                 entries = []
                 for relative, source in rows:
-                    relative_source = source.relative_to(store.project_root).as_posix()
-                    payload = safe_read(store.project_root, relative_source)
+                    payload = _read_anchor(store, source)
                     destination = entries_dir / relative
                     destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
                     destination.write_bytes(payload)

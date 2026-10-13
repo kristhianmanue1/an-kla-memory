@@ -196,6 +196,36 @@ class RelocateBackTests(unittest.TestCase):
         self.assertFalse((twin_root / "project-identity.json").exists())
         self.assertFalse(pointer_path(project).exists())
 
+    def test_after_commit_point_the_external_copy_is_inert_and_local_may_advance(self) -> None:
+        # Adversarial round M1/M2: crash after the pointer is removed.
+        plan = self._back()
+        relocate._fault = _crash_at("after_pointer")
+        with self.assertRaises(SimulatedCrash):
+            commit_relocation(self.external, plan, self.revision)
+        relocate._fault = None
+        stale = MemoryStore(self.project, store_root=self.vault)
+        with self.assertRaises((CustodyError, IdentityError)) as caught:
+            _commit_fact(stale, "f-stale-external")
+        self.assertEqual(str(caught.exception), "store_root_divergence")
+        local = MemoryStore(self.project)
+        self.assertEqual(local.doctor()["custody_divergence"]["relocations_unfinished"], 1)
+        self.revision = _commit_fact(local, "f-local-after-commit")
+        result = reconcile_relocation(self.project, plan["core"]["transaction_id"])
+        self.assertEqual(result["stage"], "cleaned")
+        self.assertEqual(result["cleanup"]["changed_kept"], [])
+        self.assertEqual(MemoryStore(self.project).verify()["revision"], self.revision)
+        self.assertFalse((self.vault / "memory" / "refs" / "CURRENT").exists())
+
+    def test_init_never_binds_another_projects_vault(self) -> None:
+        # Adversarial round M3: --store-root init over a foreign vault.
+        other = self.base / "other"
+        other.mkdir()
+        with self.assertRaises(CustodyError) as caught:
+            MemoryStore(other, store_root=self.vault).initialize()
+        self.assertEqual(str(caught.exception), "store_root_project_mismatch")
+        self.assertFalse(pointer_path(other).exists())
+        self.assertEqual(self.external.verify()["revision"], self.revision)
+
 
 if __name__ == "__main__":
     unittest.main()

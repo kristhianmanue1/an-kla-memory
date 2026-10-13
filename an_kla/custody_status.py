@@ -80,6 +80,7 @@ def custody_divergence_axis(store: Any) -> dict[str, Any]:
     """``doctor`` axis: pointer vs resolved custody vs canonical root at init."""
 
     from .identity import read_binding
+    from .relocate import unfinished_relocations
 
     descriptor = custody_descriptor(store)
     try:
@@ -104,6 +105,7 @@ def custody_divergence_axis(store: Any) -> dict[str, Any]:
         "pointer": descriptor["pointer"],
         "project_root_relocated_since_init": relocated,
         "project_local_residue": residue,
+        "relocations_unfinished": unfinished_relocations(store.project_root),
     }
 
 

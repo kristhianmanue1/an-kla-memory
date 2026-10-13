@@ -415,6 +415,8 @@ def _stage_and_verify(
 
 
 def _publish(staging: Path, target: Path) -> None:
+    """Rename only: a failure here means nothing was published."""
+
     try:
         rename_noreplace(staging, target)
     except ExportIOError as exc:
@@ -424,7 +426,6 @@ def _publish(staging: Path, target: Path) -> None:
             else "relocate_publish_failed"
         )
         raise RelocateError(code) from exc
-    fsync_directory(target.parent)
 
 
 def commit_relocation(store: Any, plan: Any, expected_current: str) -> dict[str, Any]:
@@ -492,6 +493,8 @@ def commit_relocation(store: Any, plan: Any, expected_current: str) -> dict[str,
                 _discard_staging(staging)
                 _write_journal(project_root, journal, "aborted")
                 raise
+            # Past the rename a failure is reconciled, never "aborted".
+            fsync_directory(target.parent)
             _point("after_rename")
             _write_journal(project_root, journal, "published")
             _point("after_publish")
@@ -545,6 +548,46 @@ def _destination_receipt(core: Mapping[str, Any]) -> str | None:
     if found != set(expected) or len(own) != 1:
         return None
     return own[0]
+
+
+# Created at the destination by ``verify``/locking, never by a writer.
+_INERT = frozenset({".identity.lock", "memory/.write.lock", "memory/.reader-gate"})
+
+
+def _only_planned_files(target: Path, core: Mapping[str, Any], receipt: str) -> bool:
+    """Every file under ``target`` is a planned copy, our receipt or inert.
+
+    ``_destination_receipt`` checks the export allow-list only; abort
+    deletes the whole tree, so anything else (indexes, leases, quarantine)
+    written by another process must stop it.
+    """
+
+    planned = {entry["path"].removeprefix("anchor/") for entry in core["entries"]}
+    planned.add("relocation-receipts/sha256/" + receipt.removeprefix("sha256:") + ".json")
+    for path in target.rglob("*"):
+        if path.is_dir() and not path.is_symlink():
+            continue
+        relative = path.relative_to(target).as_posix()
+        if path.is_symlink() or relative not in planned | _INERT:
+            return False
+    return True
+
+
+def unfinished_relocations(project_root: str | Path) -> int:
+    """Journals not yet ``cleaned`` or ``aborted`` (doctor, R3 m2)."""
+
+    directory = default_store_root(project_root) / "relocations"
+    if not directory.is_dir() or directory.is_symlink():
+        return 0
+    count = 0
+    for path in directory.glob("*.json"):
+        try:
+            stage = json.loads(path.read_bytes()).get("stage")
+        except (OSError, ValueError, AttributeError):
+            stage = None
+        if stage not in {"cleaned", "aborted"}:
+            count += 1
+    return count
 
 
 def inspect_relocation(project_root: str | Path, transaction_id: str) -> dict[str, Any]:
@@ -620,6 +663,8 @@ def reconcile_relocation(
                 if receipt is None or receipt != journal["relocation_receipt"]:
                     raise RelocateError("relocate_destination_unrecognized")
                 if abort:
+                    if not _only_planned_files(target, core, receipt):
+                        raise RelocateError("relocate_destination_unrecognized")
                     shutil.rmtree(target)
                     fsync_directory(target.parent)
                     _write_journal(root, journal, "aborted")

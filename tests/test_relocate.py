@@ -287,6 +287,29 @@ class RelocateTests(unittest.TestCase):
         self.assertEqual(destination.verify()["revision"], self.revision)
         self.assertFalse((self.project / ".an-kla" / "memory" / "refs" / "CURRENT").exists())
 
+    def test_destination_before_pointer_is_inert_and_abort_checks_every_file(self) -> None:
+        # Adversarial round M1 (forward side) and m3.
+        plan = self._plan()
+        txid = plan["core"]["transaction_id"]
+        relocate._fault = _crash_at("after_publish")
+        with self.assertRaises(SimulatedCrash):
+            commit_relocation(self.store, plan, self.revision)
+        relocate._fault = None
+        early = MemoryStore(self.project, store_root=self.vault)
+        with self.assertRaises(Exception) as caught:
+            _commit_fact(early, "f-early")
+        self.assertEqual(str(caught.exception), "store_root_divergence")
+        foreign = self.vault / "memory" / "indexes" / "foreign.bin"
+        foreign.parent.mkdir(parents=True)
+        foreign.write_bytes(b"not ours")
+        with self.assertRaises(RelocateError) as caught:
+            reconcile_relocation(self.project, txid, abort=True)
+        self.assertEqual(str(caught.exception), "relocate_destination_unrecognized")
+        self.assertTrue(foreign.exists())
+        foreign.unlink()
+        self.assertEqual(reconcile_relocation(self.project, txid, abort=True)["stage"], "aborted")
+        self._assert_origin_intact()
+
     def test_cli_plan_commit_inspect(self) -> None:
         env = {key: value for key, value in os.environ.items() if key != "AN_KLA_STORE_ROOT"}
         env["AN_KLA_NO_UPDATE_CHECK"] = "1"

@@ -3,7 +3,7 @@
 - **Estado:** Aceptada (2026-09-05, orden explícita del maintainer en
   sesión: "adelante con paso 1 y 3" — aceptar tal cual, con la
   re-verificación H1–H4 ya ejecutada como condición cumplida de F1)
-- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3);
+- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3); R3 (Enmienda 4);
   R1a en adelante según `docs/plans/2026-10-10-g3-discovery-agent-roadmap.md`
 - **Fecha:** 2026-09-05
 - **Decide sobre:** G3 de ADR-0031 — cómo separa AN-KLA la custodia física
@@ -392,3 +392,25 @@ maintainer; concretan §3.5–§3.6:
 6. **`init` externo no bifurca una bóveda project-local**: si el anchor del
    proyecto ya tiene identidad o CURRENT, falla con `store_root_divergence`
    (cierra la vía de gemela sin puntero).
+
+## Enmienda 4 (2026-10-13) — R3 y ronda adversarial final
+
+Actas: `docs/planning/g3-r3-consumidores-2026-10-13.md` y
+`docs/planning/g3-r3-ronda-adversarial-2026-10-13.md`.
+
+1. **Export** claro y sellado lee la raíz de custodia resuelta y falla cerrado
+   con puntero divergente; `restore` sigue publicando sólo project-local.
+2. **Bóveda externa sin puntero, con bóveda project-local presente:** toda
+   mutación falla con `store_root_divergence` (`check_custody`). Cubre la
+   copia externa tras el commit de relocate-back y la copia publicada antes
+   del puntero en el traslado de ida.
+3. **`init` que escribiría un puntero hacia una bóveda existente** exige que
+   la bóveda se haya creado en esta misma raíz de proyecto
+   (`canonical_project_root_at_init`); si no, `store_root_project_mismatch`.
+   Ligar una bóveda creada en otra raíz (checkout recreado en otra ruta)
+   **requiere decisión del maintainer** (REQUIRES_DECISION): hoy no hay forma
+   gobernada de hacerlo.
+4. Las mutaciones por flag/env **sin** puntero hacia una bóveda de otra raíz
+   siguen sólo avisando (`store_root_env_unbound_project`): por bytes no se
+   distingue un worktree legítimo de otro proyecto. Riesgo residual
+   declarado.
