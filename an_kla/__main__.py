@@ -391,7 +391,12 @@ def _run() -> None:
             )
     elif args.command == "relocate":
         if args.relocate_command == "plan":
-            result = plan_relocation(store, args.to)
+            if args.back:
+                from .relocate_back import plan_back
+
+                result = plan_back(store)
+            else:
+                result = plan_relocation(store, args.to)
         elif args.relocate_command == "commit":
             result = commit_relocation(store, _json(args.plan), args.expected_current)
         elif args.relocate_command == "inspect":

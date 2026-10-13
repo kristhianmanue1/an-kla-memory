@@ -164,6 +164,14 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
 
         if store_identity is not None:
             raise StoreError("external_store_identity_not_allowed")
+        local = self.project_root / ".an-kla"
+        if self.store_external and any(
+            os.path.lexists(local / name)
+            for name in ("project-identity.json", "memory/refs/CURRENT")
+        ):
+            # A project-local vault already exists: an external ``init``
+            # would fork it (ADR-0048 §1).  Move it with ``relocate``.
+            raise CustodyError("store_root_divergence")
         result = bootstrap_initialize(self, transaction_id)
         if self.store_external and result["identity"]["identity_state"] == "complete":
             # ADR-0048 Enmienda 1 §4: an external vault leaves its pointer

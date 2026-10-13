@@ -36,7 +36,9 @@ from .store_errors import StoreError
 PLAN_SCHEMA = "an-kla/relocate-plan-v1"
 JOURNAL_SCHEMA = "an-kla/relocate-journal-v1"
 DIRECTION = "project_local_to_external"
-STAGES = ("staging", "published", "pointer_written", "cleaned", "aborted")
+BACK_DIRECTION = "external_to_project_local"  # R2b, see relocate_back.py
+# ``pointer_written`` is the forward commit point, ``pointer_removed`` the back one.
+STAGES = ("staging", "published", "pointer_written", "pointer_removed", "cleaned", "aborted")
 # attest receipts/nonces and hook-runs are minted with O_EXCL and no store
 # lock (ADR-0048 §3, H7): files born there after the plan stay in the origin
 # and are reported, never deleted and never silently moved.
@@ -203,7 +205,7 @@ def validate_plan(plan: Any) -> dict[str, Any]:
         or plan["schema"] != PLAN_SCHEMA
         or not isinstance(plan["core"], dict)
         or set(plan["core"]) != _CORE_KEYS
-        or plan["core"]["direction"] != DIRECTION
+        or plan["core"]["direction"] not in {DIRECTION, BACK_DIRECTION}
         or not isinstance(plan["core"]["transaction_id"], str)
         or not _TXID.fullmatch(plan["core"]["transaction_id"])
         or not isinstance(plan["core"]["entries"], list)
@@ -215,6 +217,10 @@ def validate_plan(plan: Any) -> dict[str, Any]:
         raise RelocateError("relocate_plan_invalid") from exc
     if digest != plan["plan_sha256"]:
         raise RelocateError("relocate_plan_digest_mismatch")
+    if plan["core"]["direction"] == BACK_DIRECTION and plan["core"]["destination_store_root"] != str(
+        default_store_root(plan["core"]["project_root"])
+    ):
+        raise RelocateError("relocate_plan_invalid")
     seen = set()
     for entry in plan["core"]["entries"]:
         if (
@@ -433,6 +439,10 @@ def commit_relocation(store: Any, plan: Any, expected_current: str) -> dict[str,
     replayed = _replay(project_root, plan)
     if replayed is not None:
         return replayed
+    if core["direction"] == BACK_DIRECTION:
+        from .relocate_back import commit_back
+
+        return commit_back(store, plan)
     if str(store.store_root) != core["source_store_root"]:
         raise RelocateError("relocate_plan_root_mismatch")
     target = Path(core["destination_store_root"])
@@ -546,6 +556,11 @@ def inspect_relocation(project_root: str | Path, transaction_id: str) -> dict[st
         raise RelocateError("relocate_transaction_unknown")
     core = journal["plan"]["core"]
     target = Path(core["destination_store_root"])
+    staging = _staging(target, transaction_id)
+    if core["direction"] == BACK_DIRECTION:
+        from .relocate_back import _staging as back_staging
+
+        staging = back_staging(root, transaction_id)
     try:
         pointer = read_pointer(root)
         pointer_state = "absent" if pointer is None else (
@@ -556,7 +571,7 @@ def inspect_relocation(project_root: str | Path, transaction_id: str) -> dict[st
     return {
         **_result(journal),
         "observed": {
-            "staging_present": os.path.lexists(_staging(target, transaction_id)),
+            "staging_present": os.path.lexists(staging),
             "destination_present": os.path.lexists(target),
             "pointer": pointer_state,
             "source_current_matches_plan": _raw_current(Path(core["source_store_root"])) == core["base_revision"],
@@ -580,6 +595,10 @@ def reconcile_relocation(
         return _result(journal, replayed=True)
     if core["project_root"] != str(root):
         raise RelocateError("relocate_plan_root_mismatch")
+    if core["direction"] == BACK_DIRECTION:
+        from .relocate_back import reconcile_back
+
+        return reconcile_back(journal, abort=abort)
     target = Path(core["destination_store_root"])
     staging = _staging(target, transaction_id)
     source = _source_store(core)

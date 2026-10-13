@@ -3,7 +3,7 @@
 - **Estado:** Aceptada (2026-09-05, orden explícita del maintainer en
   sesión: "adelante con paso 1 y 3" — aceptar tal cual, con la
   re-verificación H1–H4 ya ejecutada como condición cumplida de F1)
-- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2);
+- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3);
   R1a en adelante según `docs/plans/2026-10-10-g3-discovery-agent-roadmap.md`
 - **Fecha:** 2026-09-05
 - **Decide sobre:** G3 de ADR-0031 — cómo separa AN-KLA la custodia física
@@ -367,3 +367,28 @@ maintainer; no cambian §3, la concretan:
    cambio del set planificado aborta (`relocate_source_changed`).
 7. **`capabilities.storage.custody.relocate`** pasa de `false` a la lista de
    direcciones soportadas (`["project_local_to_external"]`).
+
+## Enmienda 3 (2026-10-13) — relocate-back y recuperación (R2b)
+
+Registro completo: `docs/planning/g3-r2b-regreso-recuperacion-2026-10-13.md`.
+Decisiones de mecanismo tomadas por el agente ejecutor bajo la delegación del
+maintainer; concretan §3.5–§3.6:
+
+1. **`relocate plan --back`**: misma forma de plan (`direction:
+   external_to_project_local`), mismo `commit`, `inspect` y `reconcile`.
+2. **Publicación por subárbol**: staging en `<proyecto>/.an-kla.staging-<txid>`
+   (mismo filesystem que el destino y raíz de custodia válida para
+   `verify`); cada subárbol de primer nivel —y cada hijo de `memory/`— se
+   publica con `rename_noreplace`. Un subárbol ya presente en el destino
+   aborta (`relocate_destination_occupied`); no se mezcla.
+3. **Punto de commit = borrar el puntero** (`pointer_removed`). Antes, la
+   lectura sigue yendo a la bóveda externa y `reconcile --abort` retira sólo
+   subárboles que son copia exacta del plan; después sólo se avanza.
+4. **La raíz externa vaciada no se borra**: conserva archivos de lock; volver
+   a salir exige un destino nuevo (`rename_noreplace` no reutiliza
+   directorios).
+5. **Recuperación tras recrear el checkout**: `--store-root <bóveda> init`
+   reescribe el puntero con la misma identidad y revisión, sin store nuevo.
+6. **`init` externo no bifurca una bóveda project-local**: si el anchor del
+   proyecto ya tiene identidad o CURRENT, falla con `store_root_divergence`
+   (cierra la vía de gemela sin puntero).

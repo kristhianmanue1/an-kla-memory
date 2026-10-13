@@ -63,8 +63,8 @@ def capabilities() -> dict[str, Any]:
                 "relocation_receipt": "an-kla/relocation-receipt-v1",
                 "startup_schema": "an-kla/startup-diagnostic-v3",
                 "divergence_error": "store_root_divergence",
-                # Supported relocate directions (R2a); relocate-back is R2b.
-                "relocate": ["project_local_to_external"],
+                # Supported relocate directions (R2a forward, R2b back).
+                "relocate": ["project_local_to_external", "external_to_project_local"],
                 "platforms": ["linux", "macos"],
                 "decision": "ADR-0048",
             },
