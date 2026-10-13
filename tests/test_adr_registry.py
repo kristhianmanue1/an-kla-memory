@@ -21,7 +21,7 @@ class AdrRegistryTests(unittest.TestCase):
     def test_repository_registry_is_consistent(self) -> None:
         errors, states = MODULE.check_registry(ROOT)
         self.assertEqual(errors, [])
-        self.assertEqual(states["Aceptada"], 46)
+        self.assertEqual(states["Aceptada"], 47)
         # 0045 aceptada 2026-09-01 (orden explícita del dueño: adoptar
         # Skevi); 0046 aceptada en el ciclo beta.21 (S2 implementado,
         # ed64994); 0047 aceptada 2026-09-05 (orden del dueño, G2 #56);
@@ -29,8 +29,8 @@ class AdrRegistryTests(unittest.TestCase):
         # aceptada 2026-09-11 (orden del dueño, ciclo zero_score #118/#133)
         # — las 3 Propuestas vigentes (0029, 0030, 0044) son posteriores a
         # 0028. 0050 (descubrimiento de stores, #134) propuesta 2026-10-13
-        # por D0 del plan G3, pendiente de decisión del dueño.
-        self.assertEqual(states["Propuesta"], 4)
+        # por D0 del plan G3 y aceptada el mismo día por el dueño.
+        self.assertEqual(states["Propuesta"], 3)
 
     def test_detects_gap_and_state_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

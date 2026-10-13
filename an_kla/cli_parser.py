@@ -421,6 +421,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--back", action="store_true",
         help="Regresar la custodia externa al proyecto, por subárbol (R2b).",
     )
+    relocate_attach_cmd = relocate_sub.add_parser(
+        "attach", help="Ligar a este checkout una bóveda externa creada en otra raíz."
+    )
+    relocate_attach_cmd.add_argument(
+        "--store-root", dest="attach_store_root", required=True,
+        help="Bóveda externa existente (raíz de custodia).",
+    )
+    relocate_attach_cmd.add_argument("--expected-current", required=True)
     relocate_commit_cmd = relocate_sub.add_parser("commit")
     relocate_commit_cmd.add_argument("--plan", required=True)
     relocate_commit_cmd.add_argument("--expected-current", required=True)
@@ -432,6 +440,20 @@ def build_parser() -> argparse.ArgumentParser:
                 "--abort", action="store_true",
                 help="Antes del puntero: borrar la copia publicada y conservar el origen.",
             )
+    stores_cmd = sub.add_parser(
+        "stores", help="Descubrir bóvedas por escaneo explícito de sólo lectura (ADR-0050)."
+    )
+    stores_sub = stores_cmd.add_subparsers(dest="stores_command", required=True)
+    stores_scan_cmd = stores_sub.add_parser("scan")
+    stores_scan_cmd.add_argument(
+        "--root", dest="scan_roots", action="append", required=True,
+        help="Raíz absoluta a recorrer; repetible. Nunca se escanea ~ por defecto.",
+    )
+    stores_scan_cmd.add_argument("--max-depth", type=int, default=4)
+    stores_scan_cmd.add_argument(
+        "--show-paths", action="store_true",
+        help="Incluir rutas (sólo para un artefacto efímero del operador).",
+    )
     identity_cmd = sub.add_parser("identity", help="Inspeccionar o adoptar identidad local.")
     identity_sub = identity_cmd.add_subparsers(dest="identity_command", required=True)
     identity_status_cmd = identity_sub.add_parser("status")

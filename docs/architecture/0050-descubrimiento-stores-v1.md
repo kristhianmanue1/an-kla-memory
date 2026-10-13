@@ -1,9 +1,10 @@
 # ADR-0050: descubrir stores por escaneo explícito y de sólo lectura, sin registro con autoridad
 
-- **Estado:** Propuesta (D0 del plan G3, 2026-10-13). Pendiente de decisión
-  del maintainer. Ningún registro operativo, schema ni código se crea con
-  este ADR.
-- **Implementación:** No iniciada
+- **Estado:** Aceptada (decisión del maintainer, 2026-10-13, hilo «Ejecución
+  del roadmap G3»: «Confirmado» a la recomendación de aceptar el ADR tal cual
+  y censar `/Users/krisnova/www` a profundidad 4). Ver Enmienda 1.
+- **Implementación:** Implementada — `stores scan` (`an_kla/stores_scan.py`,
+  `tests/test_stores_scan.py`). D1 (índice orientativo) no iniciado.
 - **Fecha:** 2026-10-13
 - **Decide sobre:** cómo descubre el operador las bóvedas AN-KLA de una
   máquina (#134) sin que el mecanismo de descubrimiento se convierta en
@@ -133,3 +134,24 @@ No aplica hasta la implementación; los criterios 1–5 son los tests a escribir
   externa, puntero, receipts).
 - `docs/plans/2026-10-10-g3-discovery-agent-roadmap.md` (D0, D1).
 - `docs/planning/g3-d0-descubrimiento-2026-10-13.md` (método de censo y estado).
+
+## Enmienda 1 (2026-10-13) — censo e implementación
+
+Acta del censo: `docs/planning/g3-d0-censo-2026-10-13.md`.
+
+1. **Paquetes de export:** el censo encontró dos directorios `entries/anchor`
+   de bundles de export que el patrón «raíz de custodia externa» de §Decisión 2
+   habría contado como bóvedas huérfanas. `stores scan` reconoce un
+   directorio con `manifest.json` y `entries/anchor/` como clase
+   `export_bundle`, que no es bóveda ni cuenta como copia.
+2. **Sin `verify`:** la clase `active` significa «identidad completa por
+   bytes y CURRENT con forma válida», no `verify` OK. `verify` abre el
+   reader gate, que puede crear un archivo de lock, y eso violaría el
+   criterio 2. La salida lo declara con `verify_run: false`; integridad
+   completa sigue siendo `status` sobre la bóveda elegida.
+3. **Clases y banderas:** `copy` y `moved` son banderas sobre la clase, no
+   clases excluyentes. Se añaden `pointer_only` (anchor con puntero y sin
+   bóveda local) y las banderas `pointer_divergent` y
+   `pointer_target_out_of_scope`.
+4. **Poda declarada:** `.git` y `node_modules` no se recorren
+   (`pruned_names` en la salida).

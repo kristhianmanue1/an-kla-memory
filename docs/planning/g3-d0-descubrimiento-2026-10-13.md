@@ -1,7 +1,10 @@
 # G3 · D0 — diseño de descubrimiento de stores (#134)
 
 - **Tarea:** D0 del plan `docs/plans/2026-10-10-g3-discovery-agent-roadmap.md`.
-- **Estado:** `partial`.
+- **Estado:** `verified` (actualizado 2026-10-13: ADR-0050 aceptado, censo
+  ejecutado en `g3-d0-censo-2026-10-13.md`, `stores scan` implementado).
+  Abajo queda el estado original del corte.
+- **Estado original:** `partial`.
   - Comparación de alternativas, threat model y ADR propuesto: entregados
     (`docs/architecture/0050-descubrimiento-stores-v1.md`).
   - Censo nuevo: **no ejecutado** (ver §Censo).

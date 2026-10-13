@@ -65,6 +65,10 @@ def capabilities() -> dict[str, Any]:
                 "divergence_error": "store_root_divergence",
                 # Supported relocate directions (R2a forward, R2b back).
                 "relocate": ["project_local_to_external", "external_to_project_local"],
+                # Bind an external vault created at another project root.
+                "attach": "an-kla/relocate-attach-result-v1",
+                # Read-only discovery (ADR-0050); never authority.
+                "stores_scan": "an-kla/stores-scan-v1",
                 "platforms": ["linux", "macos"],
                 "decision": "ADR-0048",
             },
