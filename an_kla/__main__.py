@@ -397,13 +397,6 @@ def _run() -> None:
                 result = plan_back(store)
             else:
                 result = plan_relocation(store, args.to)
-        elif args.relocate_command == "attach":
-            from .relocate_attach import attach_store
-
-            result = attach_store(
-                MemoryStore(args.project_root, store_root=args.attach_store_root),
-                args.expected_current,
-            )
         elif args.relocate_command == "commit":
             result = commit_relocation(store, _json(args.plan), args.expected_current)
         elif args.relocate_command == "inspect":

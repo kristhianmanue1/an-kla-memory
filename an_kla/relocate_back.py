@@ -159,6 +159,13 @@ def _remove_pointer(core: Mapping[str, Any]) -> None:
     fsync_directory(path.parent)
 
 
+def _pointer_removed(project_root: Path) -> bool:
+    try:
+        return read_pointer(project_root) is None
+    except CustodyError as exc:
+        raise RelocateError("store_root_pointer_invalid") from exc
+
+
 def _finish(core: Mapping[str, Any], journal: dict[str, Any], source: Any) -> None:
     """Commit point (pointer removal), project-local verify, then cleanup."""
 
@@ -283,6 +290,11 @@ def reconcile_back(journal: dict[str, Any], *, abort: bool) -> dict[str, Any]:
                 forward._discard_staging(staging)
                 forward._write_journal(root, journal, "published")
             if journal["stage"] == "published":
+                if abort and _pointer_removed(root):
+                    # Crashed after removing the pointer, before its journal
+                    # update: the commit point has passed (round 3, R3-03).
+                    forward._write_journal(root, journal, "pointer_removed")
+                    raise RelocateError("relocate_abort_too_late")
                 if abort:
                     if not _published_matches(core, journal["relocation_receipt"]):
                         raise RelocateError("relocate_destination_unrecognized")

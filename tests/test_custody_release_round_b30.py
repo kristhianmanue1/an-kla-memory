@@ -1,6 +1,6 @@
 """Regressions from the beta.30 release adversarial rounds (reviewer: Muse
-CLI, a different model family).  H-01..H-04 (round 1) and N-01..N-03
-(round 2) reproduce its findings."""
+CLI, a different model family).  H-01..H-04 (round 1), N-01..N-03
+(round 2) and R3-02..R3-04 (round 3) reproduce its findings."""
 
 from __future__ import annotations
 
@@ -10,17 +10,29 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from an_kla import relocate
 from an_kla.canonical import canonical_json
 from an_kla.custody import CustodyError, read_pointer
 from an_kla.identity import IdentityError, read_binding
-from an_kla.relocate import SimulatedCrash, commit_relocation, plan_relocation
+from an_kla.relocate import (
+    RelocateError, SimulatedCrash, commit_relocation, plan_relocation, reconcile_relocation,
+)
+from an_kla.relocate_back import plan_back
 from an_kla.relocate_attach import AttachError, attach_store, bound_project_root
 from an_kla.store import MemoryStore
 from an_kla.store_resolution import open_resolved_store
 from an_kla.stores_scan import scan
 from tests.test_custody_root import _commit_fact
+
+
+def _fault_at(point: str):
+    def fault(name: str) -> None:
+        if name == point:
+            raise SimulatedCrash(name)
+
+    return fault
 
 
 class CopiedVaultTests(unittest.TestCase):
@@ -128,6 +140,94 @@ class AttachRoundTwoTests(unittest.TestCase):
         shutil.copytree(self.vault_a, self.vault_b)
         with self.assertRaises((CustodyError, IdentityError)):
             _commit_fact(MemoryStore(self.p1, store_root=self.vault_b), "f-b")
+
+
+def _crash_before_journal(stage: str):
+    """Process death after a stage's filesystem change, before its journal."""
+
+    original = relocate._write_journal
+
+    def write(project_root, journal, name):
+        if name == stage:
+            raise SimulatedCrash(stage)
+        return original(project_root, journal, name)
+
+    return mock.patch.object(relocate, "_write_journal", side_effect=write)
+
+
+class RoundThreeTests(unittest.TestCase):
+    """Round 3 (R3-02..R3-04): abort after the commit point, FIFO in scan."""
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.base = Path(self._tmp.name).resolve()
+        self.project = self.base / "project"
+        self.project.mkdir()
+        self.vault = self.base / "vault"
+
+    def _local(self) -> tuple[MemoryStore, str]:
+        local = MemoryStore(self.project)
+        local.initialize()
+        return local, _commit_fact(local, "f-local")
+
+    def test_r3_02_abort_after_pointer_before_journal_is_too_late(self) -> None:
+        local, revision = self._local()
+        plan = plan_relocation(local, self.vault)
+        with _crash_before_journal("pointer_written"):
+            with self.assertRaises(SimulatedCrash):
+                commit_relocation(local, plan, revision)
+        txid = plan["core"]["transaction_id"]
+        with self.assertRaises(RelocateError) as caught:
+            reconcile_relocation(self.project, txid, abort=True)
+        self.assertEqual(str(caught.exception), "relocate_abort_too_late")
+        self.assertTrue((self.vault / "memory" / "refs" / "CURRENT").is_file())
+        self.assertEqual(reconcile_relocation(self.project, txid)["stage"], "cleaned")
+        self.assertEqual(open_resolved_store(self.project, environ={}).verify()["revision"], revision)
+
+    def test_r3_02_positive_control_abort_before_pointer_still_aborts(self) -> None:
+        local, revision = self._local()
+        plan = plan_relocation(local, self.vault)
+        relocate._fault = _fault_at("after_publish")
+        try:
+            with self.assertRaises(SimulatedCrash):
+                commit_relocation(local, plan, revision)
+        finally:
+            relocate._fault = None
+        txid = plan["core"]["transaction_id"]
+        self.assertEqual(reconcile_relocation(self.project, txid, abort=True)["stage"], "aborted")
+        self.assertFalse(self.vault.exists())
+        self.assertEqual(MemoryStore(self.project).verify()["revision"], revision)
+
+    def test_r3_03_back_abort_after_pointer_removal_is_too_late(self) -> None:
+        local, revision = self._local()
+        plan = plan_relocation(local, self.vault)
+        commit_relocation(local, plan, revision)
+        external = MemoryStore(self.project, store_root=self.vault)
+        revision = _commit_fact(external, "f-external")
+        back = plan_back(external)
+        with _crash_before_journal("pointer_removed"):
+            with self.assertRaises(SimulatedCrash):
+                commit_relocation(external, back, revision)
+        txid = back["core"]["transaction_id"]
+        with self.assertRaises(RelocateError) as caught:
+            reconcile_relocation(self.project, txid, abort=True)
+        self.assertEqual(str(caught.exception), "relocate_abort_too_late")
+        self.assertEqual(reconcile_relocation(self.project, txid)["stage"], "cleaned")
+        self.assertEqual(MemoryStore(self.project).verify()["revision"], revision)
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "needs mkfifo")
+    def test_r3_04_scan_never_blocks_on_a_fifo(self) -> None:
+        MemoryStore(self.project, store_root=self.vault).initialize()
+        root = self.base / "scanroot"
+        anchor = root / "proj" / ".an-kla"
+        (anchor / "memory" / "refs").mkdir(parents=True)
+        shutil.copy(self.vault / "project-identity.json", anchor / "project-identity.json")
+        shutil.copy(self.vault / "memory" / "identity.json", anchor / "memory" / "identity.json")
+        os.mkfifo(anchor / "memory" / "refs" / "CURRENT")
+        result = scan([root])
+        self.assertEqual(result["counts"]["unreadable"], 1)
+        self.assertEqual(result["entries"][0]["code"], "non_regular_file_in_vault")
 
 
 class LongLivedSnapshotTests(unittest.TestCase):

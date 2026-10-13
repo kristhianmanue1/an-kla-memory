@@ -363,6 +363,16 @@ def _raw_current(anchor: Path) -> str | None:
         return None
 
 
+def _pointer_matches(project_root: Path, core: Mapping[str, Any]) -> bool:
+    """A pointer for this transaction's custody already exists."""
+
+    try:
+        pointer = read_pointer(project_root)
+    except CustodyError:
+        return True  # unreadable: never delete what it may point at
+    return pointer is not None and pointer["custody_fingerprint"] == core["custody_fingerprint"]
+
+
 def _publish_pointer(core: Mapping[str, Any], binding: Mapping[str, Any]) -> None:
     from .store import MemoryStore
 
@@ -662,6 +672,11 @@ def reconcile_relocation(
                 receipt = _destination_receipt(core)
                 if receipt is None or receipt != journal["relocation_receipt"]:
                     raise RelocateError("relocate_destination_unrecognized")
+                if abort and _pointer_matches(root, core):
+                    # Crashed after the pointer, before its journal update:
+                    # the commit point has passed (release round 3, R3-02).
+                    _write_journal(root, journal, "pointer_written")
+                    raise RelocateError("relocate_abort_too_late")
                 if abort:
                     if not _only_planned_files(target, core, receipt):
                         raise RelocateError("relocate_destination_unrecognized")

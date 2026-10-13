@@ -3,7 +3,7 @@
 - **Estado:** Aceptada (2026-09-05, orden explícita del maintainer en
   sesión: "adelante con paso 1 y 3" — aceptar tal cual, con la
   re-verificación H1–H4 ya ejecutada como condición cumplida de F1)
-- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3); R3 (Enmienda 4); attach (Enmienda 5); residuales m1/m4 (Enmienda 6); ronda de release beta.30 (Enmiendas 7 y 8);
+- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3); R3 (Enmienda 4); attach (Enmienda 5); residuales m1/m4 (Enmienda 6); ronda de release beta.30 (Enmiendas 7, 8 y 9; `relocate attach` fuera de la CLI, rediseño en ADR-0051);
   R1a en adelante según `docs/plans/2026-10-10-g3-discovery-agent-roadmap.md`
 - **Fecha:** 2026-09-05
 - **Decide sobre:** G3 de ADR-0031 — cómo separa AN-KLA la custodia física
@@ -510,3 +510,28 @@ Segunda ronda con Muse CLI sobre la Enmienda 7, veredicto `FIX-AND-RETRY`:
      checkout crea una bóveda project-local nueva y la externa queda
      huérfana. Sin el puntero ni el marcador de intención no hay testigo
      local; `stores scan` la muestra como `orphan_uncertain`.
+
+## Enmienda 9 (2026-10-13) — ronda 3 de release beta.30 y corte de `attach`
+
+Tercera ronda con Muse CLI, veredicto `FIX-AND-RETRY`:
+`docs/releases/v0.1.0-beta.30-adversarial.md` §Ronda 3.
+
+1. **`relocate attach` sale de la CLI (R3-01, HIGH).** Basta renombrar el
+   checkout anterior para que `attach` acepte una copia viva. Por la regla de
+   corte del maintainer (2026-10-13), beta.30 no expone el comando ni lo
+   anuncia en `capabilities`. La API y sus tests se quedan; el rediseño es
+   ADR-0051 (Propuesta). La Enmienda 5 §4 (`init` acepta la bóveda cuando su
+   raíz ligada es la actual) sigue vigente.
+2. **Abort tras el punto de compromiso (R3-02, HIGH).** Si el proceso muere
+   después de escribir el puntero y antes de registrar `pointer_written`,
+   `reconcile --abort` ve un puntero con el fingerprint de la transacción,
+   registra `pointer_written` y falla con `relocate_abort_too_late`. Antes
+   borraba el destino y dejaba el puntero colgando.
+3. **Lo mismo en la vuelta (R3-03, MEDIUM).** Si el puntero ya no existe en
+   `published`, el abort de `relocate back` registra `pointer_removed` y falla
+   con `relocate_abort_too_late`.
+4. **`stores scan` con archivos no regulares (R3-04, LOW).** Lee sólo
+   archivos regulares, abiertos sin bloquear y con un tope de 1 MiB. Un FIFO o
+   un dispositivo dentro de la bóveda candidata la clasifica `unreadable` con
+   código `non_regular_file_in_vault`.
+5. R3-05 (LOW, `replayed` de `attach`) queda con el rediseño de ADR-0051.

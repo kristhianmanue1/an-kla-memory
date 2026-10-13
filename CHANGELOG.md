@@ -12,7 +12,16 @@ en fase de pre-release `0.1.0`.
 
 ## [No publicadas]
 
-Nada aún.
+G3 (custodia externa, ADR-0048) y `stores scan` (ADR-0050), pendientes de la
+ronda de release `docs/releases/v0.1.0-beta.30-adversarial.md`. Para las
+notas de beta.30:
+
+- `relocate attach` **no** forma parte de la CLI (ADR-0048 Enmienda 9;
+  rediseño en ADR-0051).
+- Riesgo residual declarado (N-04, Enmienda 8 §4): si se borra a mano
+  `.an-kla/store-root.txt` y se corre `init`, nace una bóveda project-local
+  nueva y la externa queda huérfana; `stores scan` la muestra como
+  `orphan_uncertain`.
 
 ## [v0.1.0-beta.29]
 

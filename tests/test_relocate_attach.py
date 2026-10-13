@@ -4,7 +4,6 @@ Enmienda 5)."""
 
 from __future__ import annotations
 
-import json
 import os
 import shutil
 import subprocess
@@ -18,7 +17,7 @@ from an_kla import relocate_attach
 from an_kla.custody import CustodyError, custody_fingerprint, pointer_path, read_pointer
 from an_kla.identity import read_binding
 from an_kla.relocate_attach import AttachError, attach_store, bound_project_root
-from an_kla.relocation_receipts import load_relocation_receipt, receipts_dir
+from an_kla.relocation_receipts import load_relocation_receipt
 from an_kla.store import MemoryStore
 from an_kla.store_resolution import open_resolved_store
 from tests.test_custody_root import _commit_fact
@@ -135,7 +134,8 @@ class RelocateAttachTests(unittest.TestCase):
         self.assertEqual(pointer_path(other_project).read_bytes(), before)
         self.assertEqual(_receipts(self.vault), [])
 
-    def test_cli_attach(self) -> None:
+    def test_cli_does_not_expose_attach(self) -> None:
+        # Withheld from beta.30 (ADR-0048 Enmienda 9); the API stays tested.
         env = {key: value for key, value in os.environ.items() if key != "AN_KLA_STORE_ROOT"}
         env["AN_KLA_NO_UPDATE_CHECK"] = "1"
         completed = subprocess.run(
@@ -146,16 +146,16 @@ class RelocateAttachTests(unittest.TestCase):
             ],
             capture_output=True, text=True, cwd=str(ROOT), env=env,
         )
-        self.assertEqual(completed.returncode, 0, completed.stderr)
-        self.assertEqual(json.loads(completed.stdout)["custody_fingerprint"], self.fingerprint)
-        status = subprocess.run(
-            [sys.executable, "-m", "an_kla", "--project-root", str(self.project), "status"],
+        self.assertEqual(completed.returncode, 2, completed.stderr)
+        self.assertIn("invalid choice", completed.stderr)
+        self.assertIsNone(read_pointer(self.project))
+        self.assertEqual(_receipts(self.vault), [])
+        capabilities = subprocess.run(
+            [sys.executable, "-m", "an_kla", "--project-root", str(self.project), "capabilities"],
             capture_output=True, text=True, cwd=str(ROOT), env=env,
         )
-        self.assertEqual(status.returncode, 0, status.stderr)
-        self.assertEqual(json.loads(status.stdout)["revision"], self.revision)
-        self.assertTrue(receipts_dir(self._store()).is_dir())
-
+        self.assertEqual(capabilities.returncode, 0, capabilities.stderr)
+        self.assertNotIn("relocate-attach-result", capabilities.stdout)
 
 if __name__ == "__main__":
     unittest.main()
