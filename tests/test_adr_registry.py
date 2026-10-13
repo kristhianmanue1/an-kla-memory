@@ -28,8 +28,9 @@ class AdrRegistryTests(unittest.TestCase):
         # 0048 aceptada 2026-09-05 (orden del dueño, G3 #57); 0049
         # aceptada 2026-09-11 (orden del dueño, ciclo zero_score #118/#133)
         # — las 3 Propuestas vigentes (0029, 0030, 0044) son posteriores a
-        # 0028.
-        self.assertEqual(states["Propuesta"], 3)
+        # 0028. 0050 (descubrimiento de stores, #134) propuesta 2026-10-13
+        # por D0 del plan G3, pendiente de decisión del dueño.
+        self.assertEqual(states["Propuesta"], 4)
 
     def test_detects_gap_and_state_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

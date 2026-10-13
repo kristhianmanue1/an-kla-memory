@@ -119,6 +119,11 @@ def check_custody(store: Any, *, binding: Mapping[str, Any] | None) -> None:
 
     pointer = read_pointer(store.project_root)
     if pointer is None:
+        if store.store_external and project_local_vault_present(store.project_root):
+            # The project-local vault is the authority (never relocated, or
+            # relocated back): an external root opened by flag/env without
+            # a pointer is a stale or twin copy and must not accept writes.
+            raise CustodyError("store_root_divergence")
         return
     if not store.store_external or binding is None:
         # A pointer exists only for external custody: opening the
@@ -126,6 +131,14 @@ def check_custody(store: Any, *, binding: Mapping[str, Any] | None) -> None:
         raise CustodyError("store_root_divergence")
     if custody_fingerprint(binding) != pointer["custody_fingerprint"]:
         raise CustodyError("store_root_divergence")
+
+
+def project_local_vault_present(project_root: str | Path) -> bool:
+    anchor = default_store_root(project_root)
+    return any(
+        os.path.lexists(anchor / name)
+        for name in ("project-identity.json", "memory/refs/CURRENT")
+    )
 
 
 def write_pointer(store: Any, binding: Mapping[str, Any]) -> dict[str, Any]:
@@ -165,6 +178,7 @@ __all__ = [
     "custody_fingerprint",
     "default_store_root",
     "pointer_path",
+    "project_local_vault_present",
     "read_pointer",
     "resolve_store_root",
     "write_pointer",

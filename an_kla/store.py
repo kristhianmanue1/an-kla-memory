@@ -19,7 +19,7 @@ from .canonical import bare_digest, canonical_json, digest_bytes, digest_json
 from .checkpoint_policy import CheckpointPolicyError, validate_working_state
 from .compaction_store_mixin import CompactionStoreMixin
 from .context_package import context_status
-from .custody import POINTER_NAME, CustodyError
+from .custody import POINTER_NAME, CustodyError, project_local_vault_present, read_pointer
 from .custody import write_pointer as write_custody_pointer
 from .identity import (
     assert_unchanged,
@@ -164,14 +164,12 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
 
         if store_identity is not None:
             raise StoreError("external_store_identity_not_allowed")
-        local = self.project_root / ".an-kla"
-        if self.store_external and any(
-            os.path.lexists(local / name)
-            for name in ("project-identity.json", "memory/refs/CURRENT")
-        ):
+        if self.store_external and project_local_vault_present(self.project_root):
             # A project-local vault already exists: an external ``init``
             # would fork it (ADR-0048 §1).  Move it with ``relocate``.
             raise CustodyError("store_root_divergence")
+        if self.store_external and read_pointer(self.project_root) is None:
+            self._require_same_project_for_binding()
         result = bootstrap_initialize(self, transaction_id)
         if self.store_external and result["identity"]["identity_state"] == "complete":
             # ADR-0048 Enmienda 1 §4: an external vault leaves its pointer
@@ -197,6 +195,21 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         # point.  Computed outside any lock; never masks the outcome.
         result["context_diagnostics"] = self._context_diagnostics()
         return result
+
+    def _require_same_project_for_binding(self) -> None:
+        """An existing vault is bound only by the project it was created for.
+
+        ``init`` without a pointer writes one: binding another project's
+        vault that way would let two projects share it silently (G3 R3
+        adversarial round, M3).  A vault created elsewhere needs a separate
+        decision (ADR-0048 Enmienda 4 §3).
+        """
+
+        if identity_status(self)["identity_status"] != "complete":
+            return
+        identity = read_binding(self)["store"]
+        if identity.get("canonical_project_root_at_init") != str(self.project_root):
+            raise CustodyError("store_root_project_mismatch")
 
     def read_current(self) -> str:
         """Read and close CURRENT before doing any other I/O."""

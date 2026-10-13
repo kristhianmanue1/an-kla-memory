@@ -165,6 +165,7 @@ def _finish(core: Mapping[str, Any], journal: dict[str, Any], source: Any) -> No
     from .store import MemoryStore
 
     root = Path(core["project_root"])
+    committed_before = journal["stage"] == "pointer_removed"
     if journal["stage"] == "published":
         if not _published_matches(core, journal["relocation_receipt"]):
             raise RelocateError("relocate_destination_unrecognized")
@@ -173,10 +174,11 @@ def _finish(core: Mapping[str, Any], journal: dict[str, Any], source: Any) -> No
         forward._point("after_pointer")
     local = MemoryStore(root)
     checked = local.verify()
-    if (
-        checked["revision"] != core["base_revision"]
-        or custody_fingerprint(read_binding(local)) != core["custody_fingerprint"]
-    ):
+    if custody_fingerprint(read_binding(local)) != core["custody_fingerprint"]:
+        raise RelocateError("relocate_destination_unrecognized")
+    # After the commit point the project-local vault is live and may have
+    # advanced; cleanup still deletes only byte-matching planned files.
+    if not committed_before and checked["revision"] != core["base_revision"]:
         raise RelocateError("relocate_destination_unrecognized")
     journal["cleanup"] = forward._cleanup(source, core)
     forward._write_journal(root, journal, "cleaned")

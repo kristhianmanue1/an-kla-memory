@@ -39,7 +39,7 @@
 ## Evidencia
 
 - Tests focalizados: `tests.test_custody_export tests.test_custody_root tests.test_export_restore tests.test_sealed_bundle tests.test_relocate tests.test_relocate_back` → 80 tests OK.
-- Suite completa y gates: ver la PR de R3.
+- Suite completa y gates: ver la PR de R3 y el acta adversarial.
 
 ## Límites
 
