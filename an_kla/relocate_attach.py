@@ -16,8 +16,8 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from .custody import (
-    CustodyError, custody_fingerprint, project_local_vault_present, read_pointer,
-    write_pointer,
+    CustodyError, clear_bind_intent, custody_fingerprint, project_local_vault_present,
+    read_bind_intent, read_pointer, write_pointer,
 )
 from .identity import IdentityError, identity_lock, mutation_preflight
 from .relocation_receipts import (
@@ -65,6 +65,10 @@ def attach_store(store: Any, expected_current: str) -> dict[str, Any]:
         raise AttachError("relocate_attach_not_external")
     if project_local_vault_present(store.project_root):
         raise CustodyError("store_root_divergence")
+    pending = read_bind_intent(store.project_root)
+    if pending is not None and pending != str(store.store_root):
+        # An unfinished ``init`` toward another vault (#147, m1).
+        raise CustodyError("store_root_bind_pending")
     try:
         existing = read_pointer(store.project_root)
         binding = mutation_preflight(store)
@@ -72,6 +76,7 @@ def attach_store(store: Any, expected_current: str) -> dict[str, Any]:
         raise AttachError(str(exc)) from exc
     if existing is not None:
         # mutation_preflight already proved the fingerprint matches.
+        clear_bind_intent(store.project_root, store.store_root)
         return _result(binding, store.read_current(), None, replayed=True)
     checked = store.verify()
     if checked["revision"] != expected_current:
@@ -97,6 +102,7 @@ def attach_store(store: Any, expected_current: str) -> dict[str, Any]:
             except RelocationReceiptError as exc:
                 raise AttachError(str(exc)) from exc
             write_pointer(store, binding)
+            clear_bind_intent(store.project_root, store.store_root)
     return _result(binding, expected_current, receipt, replayed=False)
 
 
