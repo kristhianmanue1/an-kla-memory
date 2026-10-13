@@ -157,11 +157,13 @@ class CustodyDiagnosticsTests(unittest.TestCase):
                 "store_external": False,
                 "pointer": "absent",
                 "project_root_relocated_since_init": False,
+                "project_local_residue": None,
             },
         )
         shutil.rmtree(self.project / ".an-kla")
         external = self._external()
         self.assertEqual(external.doctor()["custody_divergence"]["code"], "none")
+        self.assertEqual(external.doctor()["custody_divergence"]["project_local_residue"], 0)
         shutil.copytree(self.vault, self.project / ".an-kla", dirs_exist_ok=True)
         local = MemoryStore(self.project)
         report = local.doctor()

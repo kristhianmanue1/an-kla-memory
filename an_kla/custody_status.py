@@ -89,11 +89,21 @@ def custody_divergence_axis(store: Any) -> dict[str, Any]:
         )
     except Exception:
         relocated = None
+    residue: int | None = None
+    if descriptor["store_external"]:
+        # ADR-0048 §3 (H7): evidence left in the project anchor after a
+        # relocate (lock-free receipts minted after the plan, quarantine)
+        # is reported, never deleted or silently moved.
+        from .custody import default_store_root
+        from .relocate import project_anchor_residue
+
+        residue = len(project_anchor_residue(default_store_root(store.project_root)))
     return {
         "code": descriptor["divergence"],
         "store_external": descriptor["store_external"],
         "pointer": descriptor["pointer"],
         "project_root_relocated_since_init": relocated,
+        "project_local_residue": residue,
     }
 
 

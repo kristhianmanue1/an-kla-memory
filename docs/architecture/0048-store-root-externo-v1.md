@@ -3,7 +3,7 @@
 - **Estado:** Aceptada (2026-09-05, orden explícita del maintainer en
   sesión: "adelante con paso 1 y 3" — aceptar tal cual, con la
   re-verificación H1–H4 ya ejecutada como condición cumplida de F1)
-- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13);
+- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2);
   R1a en adelante según `docs/plans/2026-10-10-g3-discovery-agent-roadmap.md`
 - **Fecha:** 2026-09-05
 - **Decide sobre:** G3 de ADR-0031 — cómo separa AN-KLA la custodia física
@@ -341,3 +341,29 @@ Registro completo: `docs/planning/g3-r0-contrato-baseline-2026-10-13.md`.
    rutas; formato del puntero; `init` con store externo también deja el
    puntero (cierra H1 para bóvedas frescas); relocation receipts bajo
    `store_root/relocation-receipts/`. Detalle en el registro R0 §5.
+
+## Enmienda 2 (2026-10-13) — mecanismo de `relocate` (R2a)
+
+Registro completo: `docs/planning/g3-r2a-relocate-2026-10-13.md`. Decisiones
+de mecanismo tomadas por el agente ejecutor bajo la delegación explícita del
+maintainer; no cambian §3, la concretan:
+
+1. **CLI.** `relocate plan|commit|inspect|reconcile` como grupo de primer
+   nivel (no existe un grupo `store`); `commit` exige `--plan` y
+   `--expected-current`.
+2. **Journal** por etapas (`staging → published → pointer_written →
+   cleaned`, o `aborted`) en `<proyecto>/.an-kla/relocations/<txid>.json`:
+   estado del proyecto, no de la bóveda; `export` lo excluye. No reutiliza
+   `memory/transactions/`, cuyo schema es el de commits de memoria.
+3. **Receipt `store_root`** escrito en el staging antes de verificar, de
+   modo que se publica en el mismo `rename`.
+4. **Alcance de R2a:** sólo project-local → externo. Externo → externo
+   falla cerrado (`relocate_source_external_unsupported`); el regreso es R2b.
+5. **Índices:** el cleanup borra `memory/indexes/` del origen (derivable y
+   con texto de registros); el destino lo reconstruye bajo demanda.
+6. **Evidencia sin lock** (`receipts/`, `hook-runs/`) acuñada tras el plan
+   queda en el origen y se reporta (`lock_free_residue`,
+   `doctor.custody_divergence.project_local_residue`); cualquier otro
+   cambio del set planificado aborta (`relocate_source_changed`).
+7. **`capabilities.storage.custody.relocate`** pasa de `false` a la lista de
+   direcciones soportadas (`["project_local_to_external"]`).

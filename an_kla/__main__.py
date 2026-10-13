@@ -17,6 +17,9 @@ from .benchmark_fixture import run_reference_benchmark
 from .canonical import canonical_json
 from .checkpoint_policy import CheckpointPolicyError
 from .compaction import CompactionError, commit_compaction, plan_compaction
+from .relocate import (
+    commit_relocation, inspect_relocation, plan_relocation, reconcile_relocation,
+)
 from .checkpoints import (
     commit_checkpoint,
     emit_authority_template,
@@ -386,6 +389,17 @@ def _run() -> None:
                 store, _json(args.planning_result), args.expected_current,
                 args.bundle,
             )
+    elif args.command == "relocate":
+        if args.relocate_command == "plan":
+            result = plan_relocation(store, args.to)
+        elif args.relocate_command == "commit":
+            result = commit_relocation(store, _json(args.plan), args.expected_current)
+        elif args.relocate_command == "inspect":
+            result = inspect_relocation(args.project_root, args.transaction_id)
+        else:
+            result = reconcile_relocation(
+                args.project_root, args.transaction_id, abort=args.abort
+            )
     elif args.command == "identity":
         if args.identity_command == "status":
             result = identity_status(store, include_ids=args.show_ids)
@@ -559,6 +573,7 @@ def _run() -> None:
         "export",
         "resume",
         "refute",
+        "relocate",
         "schema",
         "subject",
         "transaction",
