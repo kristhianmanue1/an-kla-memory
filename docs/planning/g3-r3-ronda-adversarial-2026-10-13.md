@@ -44,4 +44,4 @@
   custody_*, export_restore, adr_registry).
 - Scripts del revisor re-ejecutados: M1 bloqueado, M2 reconcilia, M3 bloqueado;
   la gemela de m1 se sigue reproduciendo (no corregida).
-- Suite completa y gates: ver la PR de R3.
+- Suite completa sobre `302b7b1` (Python 3.13.16, Linux): `Ran 1122 tests in 555.030s` · `OK (skipped=12)`. Gates `check_sizes`, `check_plans`, `check_adr_registry` OK.

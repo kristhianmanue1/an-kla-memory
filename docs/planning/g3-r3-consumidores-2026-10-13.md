@@ -39,7 +39,7 @@
 ## Evidencia
 
 - Tests focalizados: `tests.test_custody_export tests.test_custody_root tests.test_export_restore tests.test_sealed_bundle tests.test_relocate tests.test_relocate_back` → 80 tests OK.
-- Suite completa y gates: ver la PR de R3 y el acta adversarial.
+- Suite completa sobre `302b7b1`: `Ran 1122 tests in 555.030s` · `OK (skipped=12)`; gates OK.
 
 ## Límites
 
