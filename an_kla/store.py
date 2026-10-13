@@ -250,6 +250,10 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         return value
 
     def snapshot(self, revision_id: str | None = None) -> Snapshot:
+        if self.custody_pointer_present:
+            # An explicit revision skips read_current(); the twin check must
+            # not (beta.30 release round, H-03).
+            raise CustodyError("store_root_divergence")
         with shared_reader_gate(self):
             return self._snapshot_under_gate(revision_id)
 

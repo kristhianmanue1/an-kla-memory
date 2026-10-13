@@ -17,7 +17,7 @@ from typing import Any, Mapping
 
 from .custody import (
     CustodyError, clear_bind_intent, custody_fingerprint, project_local_vault_present,
-    read_bind_intent, read_pointer, write_pointer,
+    read_bind_intent, read_pointer, relocate_pointer_locator, write_pointer,
 )
 from .identity import IdentityError, identity_lock, mutation_preflight
 from .relocation_receipts import (
@@ -75,9 +75,18 @@ def attach_store(store: Any, expected_current: str) -> dict[str, Any]:
     except IdentityError as exc:
         raise AttachError(str(exc)) from exc
     if existing is not None:
-        # mutation_preflight already proved the fingerprint matches.
-        clear_bind_intent(store.project_root, store.store_root)
-        return _result(binding, store.read_current(), None, replayed=True)
+        # mutation_preflight already proved the fingerprint matches and that
+        # the pointer's locator holds no other live copy.  The replay still
+        # requires the exact CURRENT (beta.30 release round, H-02).
+        with identity_lock(store):
+            with store.write_lock():
+                if store.read_current() != expected_current:
+                    raise AttachError("relocate_attach_base_changed")
+                binding = mutation_preflight(store)
+                # A vault moved away from the pointer's locator: point at it.
+                relocate_pointer_locator(store, binding)
+                clear_bind_intent(store.project_root, store.store_root)
+        return _result(binding, expected_current, None, replayed=True)
     checked = store.verify()
     if checked["revision"] != expected_current:
         raise AttachError("relocate_attach_base_changed")

@@ -13,6 +13,7 @@ from .custody_status import custody_descriptor
 from .store import MemoryStore
 
 _WARN_DIVERGENCE = {
+    "pointer_stale_locator",
     "pointer_fingerprint_mismatch",
     "pointer_invalid",
     "project_local_with_pointer",

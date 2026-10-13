@@ -34,11 +34,20 @@ class ScanError(ValueError):
     pass
 
 
-def _read(path: Path) -> bytes | None:
+class _Symlink(Exception):
+    """A path component under the candidate root is a symlink."""
+
+
+def _read(root: Path, *parts: str) -> bytes | None:
+    """Read ``root/parts`` without following any symlinked component."""
+
+    cursor = root
+    for part in parts:
+        cursor = cursor / part
+        if cursor.is_symlink():
+            raise _Symlink
     try:
-        if path.is_symlink():
-            return None
-        with path.open("rb") as handle:
+        with cursor.open("rb") as handle:
             return handle.read()
     except OSError:
         return None
@@ -48,9 +57,15 @@ def _identity(root: Path) -> dict[str, Any]:
     """Identity facts of one custody root, read without any lock."""
 
     facts: dict[str, Any] = {"store_identity": None, "custody_fingerprint": None}
-    current = _read(root / "memory" / "refs" / "CURRENT")
-    project_bytes = _read(root / "project-identity.json")
-    store_bytes = _read(root / "memory" / "identity.json")
+    try:
+        current = _read(root, "memory", "refs", "CURRENT")
+        project_bytes = _read(root, "project-identity.json")
+        store_bytes = _read(root, "memory", "identity.json")
+    except _Symlink:
+        # Never read through a symlink: it could point outside the roots
+        # the operator named (beta.30 release round, H-04).
+        facts.update(state="unreadable", code="symlink_in_vault")
+        return facts
     if project_bytes is None and store_bytes is None:
         facts["state"] = "legacy_unadopted" if current is not None else "absent"
         return facts
@@ -93,7 +108,10 @@ def _identity(root: Path) -> dict[str, Any]:
 
 
 def _pointer(anchor: Path) -> dict[str, Any] | None:
-    payload = _read(anchor / POINTER_NAME)
+    try:
+        payload = _read(anchor, POINTER_NAME)
+    except _Symlink:
+        return {"store_root": None, "fingerprint": None}
     if payload is None:
         return None
     try:

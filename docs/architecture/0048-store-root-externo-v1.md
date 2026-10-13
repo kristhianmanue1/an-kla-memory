@@ -3,7 +3,7 @@
 - **Estado:** Aceptada (2026-09-05, orden explícita del maintainer en
   sesión: "adelante con paso 1 y 3" — aceptar tal cual, con la
   re-verificación H1–H4 ya ejecutada como condición cumplida de F1)
-- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3); R3 (Enmienda 4); attach (Enmienda 5); residuales m1/m4 (Enmienda 6);
+- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3); R3 (Enmienda 4); attach (Enmienda 5); residuales m1/m4 (Enmienda 6); ronda de release beta.30 (Enmienda 7);
   R1a en adelante según `docs/plans/2026-10-10-g3-discovery-agent-roadmap.md`
 - **Fecha:** 2026-09-05
 - **Decide sobre:** G3 de ADR-0031 — cómo separa AN-KLA la custodia física
@@ -460,3 +460,24 @@ Decisión del maintainer (2026-10-13): corregir #147 antes de beta.30.
    longevo abierto antes de un `relocate` deja de servir el origen aunque el
    cleanup haya quedado pendiente.
 3. Siguen declarados la Enmienda 4 §4 y la Enmienda 5 §5.
+
+## Enmienda 7 (2026-10-13) — correcciones de la ronda de release beta.30
+
+Ronda adversarial con Muse CLI (otra familia de modelo), veredicto
+`FIX-AND-RETRY`: `docs/releases/v0.1.0-beta.30-adversarial.md`.
+
+1. **Copia viva de una bóveda (H-01).** Con puntero presente, una mutación
+   sobre una raíz externa cuyo fingerprint coincide pero cuya ruta difiere del
+   localizador falla con `store_root_divergence` si el localizador todavía
+   contiene una bóveda. Una bóveda movida (localizador sin bóveda) sigue
+   siendo escribible. La resolución por flag/env avisa
+   `pointer_stale_locator`.
+2. **`attach` sobre un puntero existente (H-02)** exige CURRENT exacto y, si
+   el localizador quedó vacío porque la bóveda se movió, reescribe el puntero
+   hacia la ruta actual (mismo fingerprint). Nunca reescribe un localizador
+   que todavía contiene una bóveda.
+3. **Lecturas con revisión explícita (H-03).** `snapshot(revision)` aplica la
+   misma comprobación de puntero que `read_current`.
+4. **`stores scan` (H-04)** no lee a través de ningún componente symlink
+   dentro de la bóveda candidata; la clasifica `unreadable` con código
+   `symlink_in_vault`.
