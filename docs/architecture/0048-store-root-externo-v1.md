@@ -3,7 +3,7 @@
 - **Estado:** Aceptada (2026-09-05, orden explícita del maintainer en
   sesión: "adelante con paso 1 y 3" — aceptar tal cual, con la
   re-verificación H1–H4 ya ejecutada como condición cumplida de F1)
-- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3); R3 (Enmienda 4); attach (Enmienda 5); residuales m1/m4 (Enmienda 6); ronda de release beta.30 (Enmiendas 7, 8 y 9; `relocate attach` fuera de la CLI, rediseño en ADR-0051);
+- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3); R3 (Enmienda 4); attach (Enmienda 5); residuales m1/m4 (Enmienda 6); ronda de release beta.30 (Enmiendas 7 a 10; `relocate attach` fuera de la CLI, rediseño en ADR-0051);
   R1a en adelante según `docs/plans/2026-10-10-g3-discovery-agent-roadmap.md`
 - **Fecha:** 2026-09-05
 - **Decide sobre:** G3 de ADR-0031 — cómo separa AN-KLA la custodia física
@@ -535,3 +535,31 @@ Tercera ronda con Muse CLI, veredicto `FIX-AND-RETRY`:
    un dispositivo dentro de la bóveda candidata la clasifica `unreadable` con
    código `non_regular_file_in_vault`.
 5. R3-05 (LOW, `replayed` de `attach`) queda con el rediseño de ADR-0051.
+
+## Enmienda 10 (2026-10-13) — ronda 4 de release beta.30
+
+Cuarta ronda con Muse CLI, sobre el diff completo desde beta.29, veredicto
+`FIX-AND-RETRY`: `docs/releases/v0.1.0-beta.30-adversarial.md` §Ronda 4.
+
+1. **`reconcile` tras el punto de compromiso (R4-01, HIGH).** La Enmienda 9
+   §2–§3 sólo cubría `--abort`. Sin abort, si la bóveda ya viva avanzó tras el
+   crash, `reconcile` fallaba siempre con `relocate_destination_unrecognized`
+   porque la comparaba con la copia planificada. Ahora, en `published`:
+   - ida: si existe un puntero con el fingerprint de la transacción,
+     `reconcile` registra `pointer_written` y termina la limpieza sin
+     comparar el destino con la base;
+   - vuelta: si el puntero ya no existe, registra `pointer_removed` y
+     termina como cuando esa etapa sí quedó registrada (la bóveda local puede
+     haber avanzado).
+   Un puntero ilegible falla con `store_root_pointer_invalid`, nunca limpia.
+2. **Receipts que no son archivos regulares (R4-02, MEDIUM).** Los receipts
+   se leen sin bloquear y sólo si son archivos regulares; un FIFO o un
+   directorio es `relocation_receipt_invalid`. `stores scan` clasifica esa
+   bóveda `unreadable` con `relocation_receipt_chain_invalid` en vez de
+   colgarse. Aplica también a las lecturas normales de la cadena.
+3. **Superficies aditivas por defecto (R4-03, LOW).** Sin flag, env ni
+   puntero, `capabilities` incluye el bloque `custody`, `doctor` incluye
+   `custody_divergence` y el catálogo publica los schemas v3. Son cambios
+   aditivos deliberados de G3; el layout y `startup-diagnostic` v1/v2 no
+   cambian. La afirmación 1 de la ronda se precisa en ese sentido y las
+   notas de beta.30 los listan.

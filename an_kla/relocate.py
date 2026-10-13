@@ -368,8 +368,8 @@ def _pointer_matches(project_root: Path, core: Mapping[str, Any]) -> bool:
 
     try:
         pointer = read_pointer(project_root)
-    except CustodyError:
-        return True  # unreadable: never delete what it may point at
+    except CustodyError as exc:
+        raise RelocateError("store_root_pointer_invalid") from exc
     return pointer is not None and pointer["custody_fingerprint"] == core["custody_fingerprint"]
 
 
@@ -668,15 +668,16 @@ def reconcile_relocation(
                 # The rename happened; the journal update did not.
                 journal["relocation_receipt"] = receipt
                 _write_journal(root, journal, "published")
+            if journal["stage"] == "published" and _pointer_matches(root, core):
+                # Crashed after the pointer, before its journal update: the
+                # commit point has passed (release rounds 3 and 4, R3-02 and
+                # R4-01).  The external vault is live and may have advanced,
+                # so it is no longer compared with the planned copy.
+                _write_journal(root, journal, "pointer_written")
             if journal["stage"] == "published":
                 receipt = _destination_receipt(core)
                 if receipt is None or receipt != journal["relocation_receipt"]:
                     raise RelocateError("relocate_destination_unrecognized")
-                if abort and _pointer_matches(root, core):
-                    # Crashed after the pointer, before its journal update:
-                    # the commit point has passed (release round 3, R3-02).
-                    _write_journal(root, journal, "pointer_written")
-                    raise RelocateError("relocate_abort_too_late")
                 if abort:
                     if not _only_planned_files(target, core, receipt):
                         raise RelocateError("relocate_destination_unrecognized")

@@ -1,6 +1,7 @@
 """Regressions from the beta.30 release adversarial rounds (reviewer: Muse
 CLI, a different model family).  H-01..H-04 (round 1), N-01..N-03
-(round 2) and R3-02..R3-04 (round 3) reproduce its findings."""
+(round 2) R3-02..R3-04 (round 3) and R4-01..R4-02
+(round 4) reproduce its findings."""
 
 from __future__ import annotations
 
@@ -228,6 +229,36 @@ class RoundThreeTests(unittest.TestCase):
         result = scan([root])
         self.assertEqual(result["counts"]["unreadable"], 1)
         self.assertEqual(result["entries"][0]["code"], "non_regular_file_in_vault")
+
+    def test_r4_01_reconcile_finishes_after_the_live_vault_advanced(self) -> None:
+        local, revision = self._local()
+        plan = plan_relocation(local, self.vault)
+        with _crash_before_journal("pointer_written"):
+            with self.assertRaises(SimulatedCrash):
+                commit_relocation(local, plan, revision)
+        advanced = _commit_fact(MemoryStore(self.project, store_root=self.vault), "f-live")
+        txid = plan["core"]["transaction_id"]
+        self.assertEqual(reconcile_relocation(self.project, txid)["stage"], "cleaned")
+        self.assertEqual(open_resolved_store(self.project, environ={}).verify()["revision"], advanced)
+        external = MemoryStore(self.project, store_root=self.vault)
+        back = plan_back(external)
+        with _crash_before_journal("pointer_removed"):
+            with self.assertRaises(SimulatedCrash):
+                commit_relocation(external, back, advanced)
+        local_advanced = _commit_fact(MemoryStore(self.project), "f-local-live")
+        back_txid = back["core"]["transaction_id"]
+        self.assertEqual(reconcile_relocation(self.project, back_txid)["stage"], "cleaned")
+        self.assertEqual(MemoryStore(self.project).verify()["revision"], local_advanced)
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "needs mkfifo")
+    def test_r4_02_scan_never_blocks_on_a_fifo_receipt(self) -> None:
+        MemoryStore(self.project, store_root=self.vault).initialize()
+        receipts = self.vault / "relocation-receipts" / "sha256"
+        receipts.mkdir(parents=True, exist_ok=True)
+        os.mkfifo(receipts / ("0" * 64 + ".json"))
+        result = scan([self.base])
+        codes = [entry.get("code") for entry in result["entries"]]
+        self.assertIn("relocation_receipt_chain_invalid", codes)
 
 
 class LongLivedSnapshotTests(unittest.TestCase):

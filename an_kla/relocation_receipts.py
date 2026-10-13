@@ -11,6 +11,8 @@ with the vault.
 from __future__ import annotations
 
 import json
+import os
+import stat
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -58,11 +60,28 @@ def _path(store: Any, identifier: str) -> Path:
     return receipts_dir(store) / (hexpart + ".json")
 
 
+def _read_regular(path: Path) -> bytes:
+    """Read a receipt only if it is a regular file, never blocking on a FIFO
+    (beta.30 release round 4, R4-02)."""
+
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
+    descriptor = os.open(path, flags)
+    try:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            raise OSError("relocation receipt is not a regular file")
+        chunks = []
+        while chunk := os.read(descriptor, 1 << 16):
+            chunks.append(chunk)
+        return b"".join(chunks)
+    finally:
+        os.close(descriptor)
+
+
 def _load_one(store: Any, identifier: str) -> dict[str, Any]:
     path = _path(store, identifier)
     _reject_symlink(path, store.custody_walk_root)
     try:
-        payload = path.read_bytes()
+        payload = _read_regular(path)
         value = json.loads(payload)
     except FileNotFoundError as exc:
         raise RelocationReceiptError("relocation_receipt_missing") from exc

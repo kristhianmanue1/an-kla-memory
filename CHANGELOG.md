@@ -22,6 +22,10 @@ notas de beta.30:
   `.an-kla/store-root.txt` y se corre `init`, nace una bóveda project-local
   nueva y la externa queda huérfana; `stores scan` la muestra como
   `orphan_uncertain`.
+- Cambios aditivos visibles sin custodia externa (ADR-0048 Enmienda 10 §3):
+  bloque `custody` en `capabilities`, `custody_divergence` en `doctor` y
+  schemas v3 en el catálogo. El layout y `startup-diagnostic` v1/v2 no
+  cambian.
 
 ## [v0.1.0-beta.29]
 

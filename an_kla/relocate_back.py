@@ -290,18 +290,20 @@ def reconcile_back(journal: dict[str, Any], *, abort: bool) -> dict[str, Any]:
                 forward._discard_staging(staging)
                 forward._write_journal(root, journal, "published")
             if journal["stage"] == "published":
-                if abort and _pointer_removed(root):
+                if _pointer_removed(root):
                     # Crashed after removing the pointer, before its journal
-                    # update: the commit point has passed (round 3, R3-03).
+                    # update: the commit point has passed (rounds 3 and 4,
+                    # R3-03 and R4-01); the project-local vault may advance.
                     forward._write_journal(root, journal, "pointer_removed")
-                    raise RelocateError("relocate_abort_too_late")
-                if abort:
+                    if abort:
+                        raise RelocateError("relocate_abort_too_late")
+                elif abort:
                     if not _published_matches(core, journal["relocation_receipt"]):
                         raise RelocateError("relocate_destination_unrecognized")
                     _remove_units(core, units, journal["relocation_receipt"])
                     forward._write_journal(root, journal, "aborted")
                     return forward._result(journal)
-                if forward._raw_current(Path(core["source_store_root"])) != core["base_revision"]:
+                elif forward._raw_current(Path(core["source_store_root"])) != core["base_revision"]:
                     raise RelocateError("relocate_source_advanced")
             elif abort:
                 raise RelocateError("relocate_abort_too_late")
