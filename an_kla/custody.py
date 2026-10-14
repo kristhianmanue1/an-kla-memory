@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from .canonical import canonical_json, digest_json
+from .relocation_receipts import _read_regular
 from .storage_primitives import atomic_write, fsync_directory, write_immutable
 from .store_errors import StoreError
 
@@ -60,7 +61,10 @@ def read_pointer(project_root: str | Path) -> dict[str, Any] | None:
     if anchor.is_symlink() or path.is_symlink():
         raise CustodyError("store_root_pointer_invalid")
     try:
-        payload = path.read_bytes()
+        # Never block on a FIFO and never trip on a directory: the pointer
+        # is re-read on every access of a long-lived external store
+        # (release round 8, R8-01).
+        payload = _read_regular(path)
     except FileNotFoundError:
         return None
     except OSError as exc:

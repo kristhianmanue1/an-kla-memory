@@ -439,6 +439,72 @@ class RoundSixTests(_VaultCase):
         self.assertEqual(str(caught.exception), "relocate_journal_invalid")
 
 
+class RoundEightTests(_VaultCase):
+    """Round 8 (R8-01): a FIFO in place of the pointer never blocks a
+    long-lived external reader, a fresh open or a pending reconcile."""
+
+    def _crashed_back(self) -> str:
+        local, revision = self._local()
+        commit_relocation(local, plan_relocation(local, self.vault), revision)
+        reader = open_resolved_store(self.project, environ={})
+        self.assertEqual(reader.read_current(), revision)
+        external = MemoryStore(self.project, store_root=self.vault)
+        back = plan_back(external)
+        relocate._fault = _fault_at("before_pointer_removal")
+        try:
+            with self.assertRaises(SimulatedCrash):
+                commit_relocation(external, back, external.verify()["revision"])
+        finally:
+            relocate._fault = None
+        slot = self.project / ".an-kla" / "store-root.txt"
+        slot.unlink()
+        os.mkfifo(str(slot))
+        return back["core"]["transaction_id"]
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "needs mkfifo")
+    def test_r8_01_fifo_pointer_never_blocks_the_long_lived_reader(self) -> None:
+        local, revision = self._local()
+        commit_relocation(local, plan_relocation(local, self.vault), revision)
+        reader = open_resolved_store(self.project, environ={})
+        self.assertEqual(reader.read_current(), revision)
+        slot = self.project / ".an-kla" / "store-root.txt"
+        slot.unlink()
+        os.mkfifo(str(slot))
+        for read in (reader.read_current, reader.snapshot):
+            with self.assertRaises(CustodyError) as caught:
+                read()
+            self.assertEqual(str(caught.exception), "store_root_divergence")
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "needs mkfifo")
+    def test_r8_01_fifo_pointer_never_blocks_open_or_reconcile(self) -> None:
+        txid = self._crashed_back()
+        warnings = io.StringIO()
+        store = open_resolved_store(self.project, warnings=warnings, environ={})
+        self.assertEqual(store.store_root, self.project / ".an-kla")
+        self.assertIn("store_root_pointer_invalid", warnings.getvalue())
+        with self.assertRaises(RelocateError) as caught:
+            reconcile_relocation(self.project, txid)
+        self.assertEqual(str(caught.exception), "store_root_pointer_invalid")
+
+    def test_r8_01_directory_pointer_is_a_stable_error(self) -> None:
+        local, revision = self._local()
+        commit_relocation(local, plan_relocation(local, self.vault), revision)
+        slot = self.project / ".an-kla" / "store-root.txt"
+        slot.unlink()
+        slot.mkdir()
+        warnings = io.StringIO()
+        store = open_resolved_store(self.project, warnings=warnings, environ={})
+        self.assertEqual(store.store_root, self.project / ".an-kla")
+        self.assertIn("store_root_pointer_invalid", warnings.getvalue())
+
+    def test_r8_01_positive_control_valid_pointer_still_serves(self) -> None:
+        local, revision = self._local()
+        commit_relocation(local, plan_relocation(local, self.vault), revision)
+        reader = open_resolved_store(self.project, environ={})
+        self.assertEqual(reader.read_current(), revision)
+        self.assertEqual(reader.snapshot().revision_id, revision)
+
+
 class RoundSevenTests(_VaultCase):
     """Round 7 (R7-01): a long-lived reader of an external origin stops
     serving it once ``relocate back`` passes its commit point."""

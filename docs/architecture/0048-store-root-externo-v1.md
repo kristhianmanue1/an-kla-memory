@@ -633,3 +633,22 @@ las Enmiendas 11 y 12 resistieron todas las variantes del revisor.
    env o el destino de una relocación en curso) conserva las comprobaciones
    de apertura y de mutación; no cambia el comportamiento sin custodia
    externa.
+
+## Enmienda 14 (2026-10-14) — ronda 8 de release beta.30
+
+Octava ronda, opencode con GLM 5.3, sobre `3d22cc0`, veredicto
+`FIX-AND-RETRY` con un único hallazgo MEDIUM:
+`docs/releases/v0.1.0-beta.30-adversarial.md` §Ronda 8. Por orden del
+maintainer la corrección la ejecutó la propia sesión revisora (el autor
+llevaba la rama quieta); la ronda 9 (Muse CLI) revisa esta enmienda para
+restaurar la revisión no propia.
+
+1. **Puntero que no es archivo regular (R8-01, MEDIUM).** `read_pointer`
+   lee el puntero con un abierto no bloqueante que sólo acepta archivos
+   regulares (el patrón de `_read_regular` de la Enmienda 12 §2): un FIFO o
+   un directorio en `store-root.txt` es `store_root_pointer_invalid` en
+   vez de bloquear la lectura. Con ello la re-verificación por lectura de
+   la Enmienda 13, `reconcile` de una transacción pendiente y cualquier
+   consumidor del puntero fallan estable; la resolución por defecto avisa
+   (`store_root_pointer_invalid`) y usa la raíz project-local, como ya
+   hacía con cualquier puntero ilegible.
