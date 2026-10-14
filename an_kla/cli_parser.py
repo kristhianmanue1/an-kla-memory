@@ -421,14 +421,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--back", action="store_true",
         help="Regresar la custodia externa al proyecto, por subárbol (R2b).",
     )
-    relocate_attach_cmd = relocate_sub.add_parser(
-        "attach", help="Ligar a este checkout una bóveda externa creada en otra raíz."
-    )
-    relocate_attach_cmd.add_argument(
-        "--store-root", dest="attach_store_root", required=True,
-        help="Bóveda externa existente (raíz de custodia).",
-    )
-    relocate_attach_cmd.add_argument("--expected-current", required=True)
+    # ``relocate attach`` is withheld from beta.30 (ADR-0048 Enmienda 9):
+    # the release round showed it can fork custody into two live vaults.
     relocate_commit_cmd = relocate_sub.add_parser("commit")
     relocate_commit_cmd.add_argument("--plan", required=True)
     relocate_commit_cmd.add_argument("--expected-current", required=True)

@@ -28,7 +28,7 @@ from .export_io import ExportIOError, normalize_and_sync_tree, rename_noreplace,
 from .export_restore import _allowed, _files
 from .identity import identity_lock, mutation_preflight, read_binding
 from .reader_gate import ReaderGateError, exclusive_reader_gate
-from .relocation_receipts import write_relocation_receipt
+from .relocation_receipts import _read_regular, write_relocation_receipt
 from .storage_primitives import atomic_write, fsync_directory
 from .store_errors import StoreError
 
@@ -88,9 +88,13 @@ def _read_journal(project_root: Path, txid: str) -> dict[str, Any] | None:
     if path.parent.is_symlink() or path.is_symlink():
         raise RelocateError("relocate_journal_invalid")
     try:
-        payload = path.read_bytes()
+        # Never block on a FIFO or trip on a directory (release round 6,
+        # R6-01 and R6-02).
+        payload = _read_regular(path)
     except FileNotFoundError:
         return None
+    except OSError as exc:
+        raise RelocateError("relocate_journal_invalid") from exc
     try:
         value = json.loads(payload)
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
@@ -363,6 +367,22 @@ def _raw_current(anchor: Path) -> str | None:
         return None
 
 
+def _pointer_matches(project_root: Path, core: Mapping[str, Any]) -> bool:
+    """A pointer for this transaction's custody already exists."""
+
+    try:
+        pointer = read_pointer(project_root)
+    except CustodyError as exc:
+        raise RelocateError("store_root_pointer_invalid") from exc
+    if pointer is None or pointer["custody_fingerprint"] != core["custody_fingerprint"]:
+        return False
+    if Path(pointer["store_root"]).resolve() != Path(core["destination_store_root"]).resolve():
+        # Same custody, another locator: not the pointer this transaction
+        # writes (release round 5, R5-01).  Fail closed; never clean up.
+        raise RelocateError("relocate_pointer_unrecognized")
+    return True
+
+
 def _publish_pointer(core: Mapping[str, Any], binding: Mapping[str, Any]) -> None:
     from .store import MemoryStore
 
@@ -582,7 +602,7 @@ def unfinished_relocations(project_root: str | Path) -> int:
     count = 0
     for path in directory.glob("*.json"):
         try:
-            stage = json.loads(path.read_bytes()).get("stage")
+            stage = json.loads(_read_regular(path)).get("stage")
         except (OSError, ValueError, AttributeError):
             stage = None
         if stage not in {"cleaned", "aborted"}:
@@ -658,6 +678,12 @@ def reconcile_relocation(
                 # The rename happened; the journal update did not.
                 journal["relocation_receipt"] = receipt
                 _write_journal(root, journal, "published")
+            if journal["stage"] == "published" and _pointer_matches(root, core):
+                # Crashed after the pointer, before its journal update: the
+                # commit point has passed (release rounds 3 and 4, R3-02 and
+                # R4-01).  The external vault is live and may have advanced,
+                # so it is no longer compared with the planned copy.
+                _write_journal(root, journal, "pointer_written")
             if journal["stage"] == "published":
                 receipt = _destination_receipt(core)
                 if receipt is None or receipt != journal["relocation_receipt"]:

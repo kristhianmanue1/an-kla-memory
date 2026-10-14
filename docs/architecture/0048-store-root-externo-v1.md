@@ -3,7 +3,7 @@
 - **Estado:** Aceptada (2026-09-05, orden explícita del maintainer en
   sesión: "adelante con paso 1 y 3" — aceptar tal cual, con la
   re-verificación H1–H4 ya ejecutada como condición cumplida de F1)
-- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3); R3 (Enmienda 4); attach (Enmienda 5); residuales m1/m4 (Enmienda 6);
+- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3); R3 (Enmienda 4); attach (Enmienda 5); residuales m1/m4 (Enmienda 6); ronda de release beta.30 (Enmiendas 7 a 13; `relocate attach` fuera de la CLI, rediseño en ADR-0051);
   R1a en adelante según `docs/plans/2026-10-10-g3-discovery-agent-roadmap.md`
 - **Fecha:** 2026-09-05
 - **Decide sobre:** G3 de ADR-0031 — cómo separa AN-KLA la custodia física
@@ -460,3 +460,195 @@ Decisión del maintainer (2026-10-13): corregir #147 antes de beta.30.
    longevo abierto antes de un `relocate` deja de servir el origen aunque el
    cleanup haya quedado pendiente.
 3. Siguen declarados la Enmienda 4 §4 y la Enmienda 5 §5.
+
+## Enmienda 7 (2026-10-13) — correcciones de la ronda de release beta.30
+
+Ronda adversarial con Muse CLI (otra familia de modelo), veredicto
+`FIX-AND-RETRY`: `docs/releases/v0.1.0-beta.30-adversarial.md`.
+
+1. **Copia viva de una bóveda (H-01).** Con puntero presente, una mutación
+   sobre una raíz externa cuyo fingerprint coincide pero cuya ruta difiere del
+   localizador falla con `store_root_divergence` si el localizador todavía
+   contiene una bóveda. Una bóveda movida (localizador sin bóveda) sigue
+   siendo escribible. La resolución por flag/env avisa
+   `pointer_stale_locator`.
+2. **`attach` sobre un puntero existente (H-02)** exige CURRENT exacto y, si
+   el localizador quedó vacío porque la bóveda se movió, reescribe el puntero
+   hacia la ruta actual (mismo fingerprint). Nunca reescribe un localizador
+   que todavía contiene una bóveda.
+3. **Lecturas con revisión explícita (H-03).** `snapshot(revision)` aplica la
+   misma comprobación de puntero que `read_current`.
+4. **`stores scan` (H-04)** no lee a través de ningún componente symlink
+   dentro de la bóveda candidata; la clasifica `unreadable` con código
+   `symlink_in_vault`.
+
+## Enmienda 8 (2026-10-13) — ronda 2 de release beta.30
+
+Segunda ronda con Muse CLI sobre la Enmienda 7, veredicto `FIX-AND-RETRY`:
+`docs/releases/v0.1.0-beta.30-adversarial.md` §Ronda 2.
+
+1. **`attach` de una copia con el checkout anterior vivo (N-01).** Antes de
+   escribir el receipt, `attach` mira la raíz ligada anterior. Si allí hay
+   un puntero con el mismo fingerprint cuyo localizador contiene una bóveda
+   en otra ruta, o una bóveda project-local con la misma identidad (o
+   ilegible), falla con `relocate_attach_source_live`. Por bytes una copia
+   no se distingue de una bóveda movida: el checkout anterior es el único
+   testigo. Si ya no existe, `attach` procede como antes.
+2. **Un puntero copiado no es replay (N-02).** `attach` sólo responde
+   `replayed: true` cuando la raíz ligada (cabeza de la cadena o init) ya es
+   la raíz actual. Si no, verifica, aplica §1 y escribe el receipt
+   `project_root` aunque el puntero ya exista.
+3. **Localizador no canónico (N-03).** `check_custody`,
+   `relocate_pointer_locator` y el descriptor de custodia comparan el
+   localizador resuelto (`..`, symlinks), así que la misma bóveda escrita
+   con otra ortografía no se bloquea ni avisa `pointer_stale_locator`.
+4. **Límites declarados:**
+   - Sigue la Enmienda 5 §5: dos checkouts vivos que comparten la *misma*
+     bóveda (incluido un puntero copiado a mano) escriben en ella; tras
+     `attach`, la raíz ligada pasa al último checkout.
+   - **N-04 (LOW):** si el operador borra el puntero a mano, `init` en ese
+     checkout crea una bóveda project-local nueva y la externa queda
+     huérfana. Sin el puntero ni el marcador de intención no hay testigo
+     local; `stores scan` la muestra como `orphan_uncertain`.
+
+## Enmienda 9 (2026-10-13) — ronda 3 de release beta.30 y corte de `attach`
+
+Tercera ronda con Muse CLI, veredicto `FIX-AND-RETRY`:
+`docs/releases/v0.1.0-beta.30-adversarial.md` §Ronda 3.
+
+1. **`relocate attach` sale de la CLI (R3-01, HIGH).** Basta renombrar el
+   checkout anterior para que `attach` acepte una copia viva. Por la regla de
+   corte del maintainer (2026-10-13), beta.30 no expone el comando ni lo
+   anuncia en `capabilities`. La API y sus tests se quedan; el rediseño es
+   ADR-0051 (Propuesta). La Enmienda 5 §4 (`init` acepta la bóveda cuando su
+   raíz ligada es la actual) sigue vigente.
+2. **Abort tras el punto de compromiso (R3-02, HIGH).** Si el proceso muere
+   después de escribir el puntero y antes de registrar `pointer_written`,
+   `reconcile --abort` ve un puntero con el fingerprint de la transacción,
+   registra `pointer_written` y falla con `relocate_abort_too_late`. Antes
+   borraba el destino y dejaba el puntero colgando.
+3. **Lo mismo en la vuelta (R3-03, MEDIUM).** Si el puntero ya no existe en
+   `published`, el abort de `relocate back` registra `pointer_removed` y falla
+   con `relocate_abort_too_late`.
+4. **`stores scan` con archivos no regulares (R3-04, LOW).** Lee sólo
+   archivos regulares, abiertos sin bloquear y con un tope de 1 MiB. Un FIFO o
+   un dispositivo dentro de la bóveda candidata la clasifica `unreadable` con
+   código `non_regular_file_in_vault`.
+5. R3-05 (LOW, `replayed` de `attach`) queda con el rediseño de ADR-0051.
+
+## Enmienda 10 (2026-10-13) — ronda 4 de release beta.30
+
+Cuarta ronda con Muse CLI, sobre el diff completo desde beta.29, veredicto
+`FIX-AND-RETRY`: `docs/releases/v0.1.0-beta.30-adversarial.md` §Ronda 4.
+
+1. **`reconcile` tras el punto de compromiso (R4-01, HIGH).** La Enmienda 9
+   §2–§3 sólo cubría `--abort`. Sin abort, si la bóveda ya viva avanzó tras el
+   crash, `reconcile` fallaba siempre con `relocate_destination_unrecognized`
+   porque la comparaba con la copia planificada. Ahora, en `published`:
+   - ida: si existe un puntero con el fingerprint de la transacción,
+     `reconcile` registra `pointer_written` y termina la limpieza sin
+     comparar el destino con la base;
+   - vuelta: si el puntero ya no existe, registra `pointer_removed` y
+     termina como cuando esa etapa sí quedó registrada (la bóveda local puede
+     haber avanzado).
+   Un puntero ilegible falla con `store_root_pointer_invalid`, nunca limpia.
+2. **Receipts que no son archivos regulares (R4-02, MEDIUM).** Los receipts
+   se leen sin bloquear y sólo si son archivos regulares; un FIFO o un
+   directorio es `relocation_receipt_invalid`. `stores scan` clasifica esa
+   bóveda `unreadable` con `relocation_receipt_chain_invalid` en vez de
+   colgarse. Aplica también a las lecturas normales de la cadena.
+3. **Superficies aditivas por defecto (R4-03, LOW).** Sin flag, env ni
+   puntero, `capabilities` incluye el bloque `custody`, `doctor` incluye
+   `custody_divergence` y el catálogo publica los schemas v3. Son cambios
+   aditivos deliberados de G3; el layout y `startup-diagnostic` v1/v2 no
+   cambian. La afirmación 1 de la ronda se precisa en ese sentido y las
+   notas de beta.30 los listan.
+
+## Enmienda 11 (2026-10-14) — ronda 5 de release beta.30
+
+Quinta ronda con Muse CLI, sobre `5995767` y el diff completo desde beta.29,
+veredicto `FIX-AND-RETRY`: `docs/releases/v0.1.0-beta.30-adversarial.md`
+§Ronda 5. Precisa la Enmienda 10 §1–§2: el punto de compromiso se reconoce
+sólo por evidencia que la propia transacción dejó.
+
+1. **Ida: puntero con otro localizador (R5-01, HIGH).** Tras un crash antes
+   del journal `pointer_written`, un puntero con el fingerprint de la
+   transacción pero cuyo `store_root` resuelto no es el destino planificado
+   (la bóveda local o una copia) ya no cuenta como punto de compromiso:
+   `reconcile` falla con `relocate_pointer_unrecognized` y no limpia el
+   origen. La forma resuelta del localizador sigue valiendo (N-03).
+2. **Vuelta: puntero ausente sin intención registrada (R5-02, MEDIUM).**
+   Antes de borrar el puntero, la vuelta registra en el journal
+   `pointer_removal_started` (etapa `published`, fsync). Un puntero ausente
+   en `published` cuenta como punto de compromiso sólo con esa marca; sin
+   ella, `reconcile` falla con `relocate_pointer_unrecognized` y no toca la
+   bóveda externa. Con la marca y el puntero todavía presente (crash entre
+   ambos), la transacción sigue antes del punto de compromiso: termina o se
+   aborta como en `published`. Residual: quien borre el puntero a mano justo
+   en esa ventana de crash consuma la vuelta; no hay pérdida de revisiones,
+   porque la bóveda local publicada es la que queda viva.
+3. **Árbol de receipts que no es directorio (R5-03, LOW).** Si
+   `relocation-receipts/` o `relocation-receipts/sha256/` existen y no son
+   directorios reales (`lstat`), la cadena es `relocation_receipt_invalid`;
+   `stores scan` clasifica la bóveda `unreadable` con
+   `relocation_receipt_chain_invalid`.
+
+## Enmienda 12 (2026-10-14) — ronda 6 de release beta.30
+
+Sexta ronda, primera con opencode y GLM 5.3 (`zai-coding-plan/glm-5.3`) como
+revisor, sobre `d9e3975`, veredicto `FIX-AND-RETRY`:
+`docs/releases/v0.1.0-beta.30-adversarial.md` §Ronda 6.
+
+1. **Vuelta: puntero hacia otra bóveda con la misma custodia (R6-03, HIGH).**
+   Espejo de la Enmienda 11 §1 en la vuelta. Antes de borrar el puntero, la
+   vuelta exige que su `store_root` resuelto sea el origen planificado; si
+   apunta a otra bóveda (por ejemplo una copia que siguió escribiendo), falla
+   con `relocate_pointer_unrecognized` sin borrar el puntero ni limpiar nada.
+   Vale con y sin la marca `pointer_removal_started`.
+2. **Journals que no son archivos regulares (R6-01, MEDIUM; R6-02, LOW).**
+   `relocate inspect`, `reconcile`, el replay de `commit` y `doctor` leen los
+   journals sin bloquear y sólo si son archivos regulares. Un FIFO o un
+   directorio es `relocate_journal_invalid` (antes colgaba o emitía
+   `IsADirectoryError`); `doctor` lo cuenta como relocación sin terminar.
+3. **Marca forjable (nota del revisor, no hallazgo).** Editar el journal para
+   añadir `pointer_removal_started` permite consumir una vuelta; exige el
+   mismo acceso que borrar la bóveda y queda dentro de los residuales
+   declarados.
+
+## Enmienda 13 (2026-10-14) — ronda 7 de release beta.30
+
+Séptima ronda, opencode con GLM 5.3, sobre `f62341a`, veredicto
+`FIX-AND-RETRY` con un único hallazgo MEDIUM:
+`docs/releases/v0.1.0-beta.30-adversarial.md` §Ronda 7. Las correcciones de
+las Enmiendas 11 y 12 resistieron todas las variantes del revisor.
+
+1. **m4 en la vuelta (R7-01, MEDIUM).** La Enmienda 6 §2 sólo cubría un
+   origen project-local: un proceso longevo abierto sobre la bóveda externa
+   seguía sirviéndola después del punto de compromiso de `relocate back`, y
+   tras la limpieza fallaba con `current_missing` en vez de un código de
+   custodia. Ahora un store externo abierto cuando el puntero lo nombraba
+   comprueba en cada lectura que el puntero lo siga nombrando (forma
+   resuelta); si falta, es ilegible o nombra otra raíz, la lectura falla con
+   `store_root_divergence`. Un store externo abierto sin ese puntero (flag,
+   env o el destino de una relocación en curso) conserva las comprobaciones
+   de apertura y de mutación; no cambia el comportamiento sin custodia
+   externa.
+
+## Enmienda 14 (2026-10-14) — ronda 8 de release beta.30
+
+Octava ronda, opencode con GLM 5.3, sobre `3d22cc0`, veredicto
+`FIX-AND-RETRY` con un único hallazgo MEDIUM:
+`docs/releases/v0.1.0-beta.30-adversarial.md` §Ronda 8. Por orden del
+maintainer la corrección la ejecutó la propia sesión revisora (el autor
+llevaba la rama quieta); la ronda 9 (Muse CLI) revisa esta enmienda para
+restaurar la revisión no propia.
+
+1. **Puntero que no es archivo regular (R8-01, MEDIUM).** `read_pointer`
+   lee el puntero con un abierto no bloqueante que sólo acepta archivos
+   regulares (el patrón de `_read_regular` de la Enmienda 12 §2): un FIFO o
+   un directorio en `store-root.txt` es `store_root_pointer_invalid` en
+   vez de bloquear la lectura. Con ello la re-verificación por lectura de
+   la Enmienda 13, `reconcile` de una transacción pendiente y cualquier
+   consumidor del puntero fallan estable; la resolución por defecto avisa
+   (`store_root_pointer_invalid`) y usa la raíz project-local, como ya
+   hacía con cualquier puntero ilegible.

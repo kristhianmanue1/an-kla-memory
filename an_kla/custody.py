@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Any, Mapping
 
 from .canonical import canonical_json, digest_json
+from .relocation_receipts import _read_regular
 from .storage_primitives import atomic_write, fsync_directory, write_immutable
 from .store_errors import StoreError
 
@@ -60,7 +61,10 @@ def read_pointer(project_root: str | Path) -> dict[str, Any] | None:
     if anchor.is_symlink() or path.is_symlink():
         raise CustodyError("store_root_pointer_invalid")
     try:
-        payload = path.read_bytes()
+        # Never block on a FIFO and never trip on a directory: the pointer
+        # is re-read on every access of a long-lived external store
+        # (release round 8, R8-01).
+        payload = _read_regular(path)
     except FileNotFoundError:
         return None
     except OSError as exc:
@@ -133,14 +137,50 @@ def check_custody(store: Any, *, binding: Mapping[str, Any] | None) -> None:
         raise CustodyError("store_root_divergence")
     if custody_fingerprint(binding) != pointer["custody_fingerprint"]:
         raise CustodyError("store_root_divergence")
+    located = Path(pointer["store_root"]).resolve()
+    if located != store.store_root and vault_present(located):
+        # Same bytes at two live locations (a copied vault opened by flag or
+        # env): the pointer's locator still holds a vault, so writing here
+        # would fork it.  A stale locator (vault moved away) stays usable.
+        raise CustodyError("store_root_divergence")
 
 
-def project_local_vault_present(project_root: str | Path) -> bool:
-    anchor = default_store_root(project_root)
+def vault_present(store_root: str | Path) -> bool:
+    anchor = Path(store_root)
     return any(
         os.path.lexists(anchor / name)
         for name in ("project-identity.json", "memory/refs/CURRENT")
     )
+
+
+def project_local_vault_present(project_root: str | Path) -> bool:
+    return vault_present(default_store_root(project_root))
+
+
+def relocate_pointer_locator(store: Any, binding: Mapping[str, Any]) -> dict[str, Any]:
+    """Point an existing, matching pointer at ``store.store_root``.
+
+    Only for a stale locator: the fingerprint must match and the old
+    location must no longer hold a vault.  Callers hold the store locks.
+    """
+
+    existing = read_pointer(store.project_root)
+    if existing is None or existing["custody_fingerprint"] != custody_fingerprint(binding):
+        raise CustodyError("store_root_divergence")
+    if Path(existing["store_root"]).resolve() == store.store_root:
+        # Same vault, possibly spelled with ``..`` or a symlink (round 2, N-03).
+        return existing
+    if vault_present(existing["store_root"]):
+        raise CustodyError("store_root_divergence")
+    value = {
+        "schema": POINTER_SCHEMA,
+        "store_root": str(store.store_root),
+        "custody_fingerprint": existing["custody_fingerprint"],
+    }
+    atomic_write(
+        pointer_path(store.project_root), canonical_json(value), fsync_directory=fsync_directory
+    )
+    return value
 
 
 def bind_intent_path(project_root: str | Path) -> Path:
@@ -227,7 +267,9 @@ __all__ = [
     "project_local_vault_present",
     "read_bind_intent",
     "read_pointer",
+    "relocate_pointer_locator",
     "resolve_store_root",
+    "vault_present",
     "write_bind_intent",
     "write_pointer",
 ]

@@ -10,9 +10,46 @@ El formato de cada entrada sigue [Keep a Changelog](https://keepachangelog.com/e
 por intención, y el proyecto usa [versionado semántico](https://semver.org/lang/es/)
 en fase de pre-release `0.1.0`.
 
-## [No publicadas]
+## [v0.1.0-beta.30]
 
-Nada aún.
+**G3: custodia externa del store** (ADR-0048, Enmiendas 1 a 14) y
+**`stores scan`** de sólo lectura (ADR-0050). Nueve rondas adversariales
+(`docs/releases/v0.1.0-beta.30-adversarial.md`), la última `proceed` sin
+hallazgos. No cambia la plantilla gestionada (`TEMPLATE_VERSION` sigue en
+`0.1.0-beta.26`), el formato físico ni la recuperación.
+
+**Añadido**:
+- `store_root` externo por `--store-root`/`AN_KLA_STORE_ROOT` con puntero
+  project-local firmado por fingerprint de custodia; resolución
+  flag > env > puntero > project-local (`startup-diagnostic-v3`).
+- `relocate plan|commit|inspect|reconcile` con journal por transacción,
+  ida y vuelta (`--back`), `reconcile --abort` y receipts encadenados que
+  viajan con la bóveda.
+- `stores scan`: inventario de sólo lectura bajo raíces dadas, sin seguir
+  symlinks y sin emitir rutas sin `--show-paths`.
+- Cambios aditivos sin custodia externa (Enmienda 10 §3): bloque
+  `custody` en `capabilities`, `custody_divergence` en `doctor` y schemas
+  v3 en el catálogo. El layout y `startup-diagnostic` v1/v2 no cambian.
+
+**Retirado**:
+- `relocate attach` **no** forma parte de la CLI (Enmienda 9, regla de
+  corte tras R3-01; rediseño diferido en ADR-0051).
+
+**Corregido** (desde la primera candidata, por ronda): doble bóveda
+escribiendo por copia `cp -a` (H-01, N-01, R3-01), abort tras el punto de
+compromiso (R3-02/R3-03), FIFO/directorio en journals, receipts y puntero
+(R3-04, R4-02, R5-03, R6-01, R6-02, R8-01), reconcile ante puntero o
+origen no reconocidos (R4-01, R5-01, R5-02, R6-03), lector longevo del
+origen externo tras la vuelta (R7-01).
+
+**Riesgos residuales declarados**:
+- N-04 (Enmienda 8 §4): si se borra a mano `.an-kla/store-root.txt` y se
+  corre `init`, nace una bóveda project-local nueva y la externa queda
+  huérfana; `stores scan` la muestra como `orphan_uncertain`.
+- Enmienda 4 §4: mutaciones por flag/env sin puntero hacia otra raíz sólo
+  avisan.
+- Enmienda 5 §5: el receipt de `attach` registra la declaración del
+  operador; no prueba que las dos raíces sean el mismo proyecto.
 
 ## [v0.1.0-beta.29]
 

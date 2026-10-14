@@ -125,6 +125,7 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         # Identity symlink walks stop here: project_root by default (ADR-0048
         # Enmienda 1 §4), so the legacy layout keeps its exact checks.
         self.custody_walk_root = self.store_root.parent
+        self._opened_under_pointer = self.store_external and self._pointer_names_root()
         self.root = self.store_root / "memory"
         self.refute_authority_resolver = refute_authority_resolver
         self._refute_resolver_descriptor: Mapping[str, Any] | None = None
@@ -148,9 +149,23 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         opened before a ``relocate`` stops serving the origin (#147, m4).
         """
 
-        return not self.store_external and os.path.lexists(
-            self.project_root / ".an-kla" / POINTER_NAME
-        )
+        if not self.store_external:
+            return os.path.lexists(self.project_root / ".an-kla" / POINTER_NAME)
+        # An external root the pointer named when this object was opened
+        # stops serving once the pointer no longer names it, e.g. after
+        # ``relocate back`` (release round 7, R7-01).  Roots opened without
+        # such a pointer (flag, env, a relocation's own destination) keep
+        # their checks at open and mutation time.
+        if not self._opened_under_pointer:
+            return False
+        return not self._pointer_names_root()
+
+    def _pointer_names_root(self) -> bool:
+        try:
+            pointer = read_pointer(self.project_root)
+        except CustodyError:
+            return False
+        return pointer is not None and Path(pointer["store_root"]).resolve() == self.store_root
 
     @property
     def current_path(self) -> Path:
@@ -250,6 +265,10 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         return value
 
     def snapshot(self, revision_id: str | None = None) -> Snapshot:
+        if self.custody_pointer_present:
+            # An explicit revision skips read_current(); the twin check must
+            # not (beta.30 release round, H-03).
+            raise CustodyError("store_root_divergence")
         with shared_reader_gate(self):
             return self._snapshot_under_gate(revision_id)
 

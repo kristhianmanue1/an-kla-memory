@@ -12,6 +12,7 @@ from __future__ import annotations
 from collections import Counter
 import json
 import os
+import stat
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, Iterable
@@ -34,23 +35,67 @@ class ScanError(ValueError):
     pass
 
 
-def _read(path: Path) -> bytes | None:
+class _Symlink(Exception):
+    """A path component under the candidate root is a symlink."""
+
+
+class _NotRegular(Exception):
+    """A vault file is a FIFO, device or directory, not a regular file."""
+
+
+_MAX_READ = 1 << 20
+
+
+def _read(root: Path, *parts: str) -> bytes | None:
+    """Read ``root/parts`` without following any symlinked component.
+
+    Only regular files are read, opened non-blocking so a FIFO can never
+    hang the scan (release round 3, R3-04), and at most ``_MAX_READ`` bytes.
+    """
+
+    cursor = root
+    for part in parts:
+        cursor = cursor / part
+        if cursor.is_symlink():
+            raise _Symlink
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
     try:
-        if path.is_symlink():
-            return None
-        with path.open("rb") as handle:
-            return handle.read()
+        descriptor = os.open(cursor, flags)
+    except FileNotFoundError:
+        return None
+    except OSError:
+        if os.path.lexists(cursor) and not cursor.is_file():
+            raise _NotRegular from None
+        return None
+    try:
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            raise _NotRegular
+        with os.fdopen(descriptor, "rb") as handle:
+            descriptor = -1
+            return handle.read(_MAX_READ + 1)
     except OSError:
         return None
+    finally:
+        if descriptor >= 0:
+            os.close(descriptor)
 
 
 def _identity(root: Path) -> dict[str, Any]:
     """Identity facts of one custody root, read without any lock."""
 
     facts: dict[str, Any] = {"store_identity": None, "custody_fingerprint": None}
-    current = _read(root / "memory" / "refs" / "CURRENT")
-    project_bytes = _read(root / "project-identity.json")
-    store_bytes = _read(root / "memory" / "identity.json")
+    try:
+        current = _read(root, "memory", "refs", "CURRENT")
+        project_bytes = _read(root, "project-identity.json")
+        store_bytes = _read(root, "memory", "identity.json")
+    except _Symlink:
+        # Never read through a symlink: it could point outside the roots
+        # the operator named (beta.30 release round, H-04).
+        facts.update(state="unreadable", code="symlink_in_vault")
+        return facts
+    except _NotRegular:
+        facts.update(state="unreadable", code="non_regular_file_in_vault")
+        return facts
     if project_bytes is None and store_bytes is None:
         facts["state"] = "legacy_unadopted" if current is not None else "absent"
         return facts
@@ -93,7 +138,10 @@ def _identity(root: Path) -> dict[str, Any]:
 
 
 def _pointer(anchor: Path) -> dict[str, Any] | None:
-    payload = _read(anchor / POINTER_NAME)
+    try:
+        payload = _read(anchor, POINTER_NAME)
+    except (_Symlink, _NotRegular):
+        return {"store_root": None, "fingerprint": None}
     if payload is None:
         return None
     try:

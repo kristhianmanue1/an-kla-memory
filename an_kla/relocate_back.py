@@ -154,9 +154,20 @@ def _remove_pointer(core: Mapping[str, Any]) -> None:
         return
     if pointer["custody_fingerprint"] != core["custody_fingerprint"]:
         raise RelocateError("store_root_divergence")
+    if Path(pointer["store_root"]).resolve() != Path(core["source_store_root"]).resolve():
+        # Same custody, another vault: not the pointer this transaction
+        # removes (release round 6, R6-03, mirror of R5-01).
+        raise RelocateError("relocate_pointer_unrecognized")
     path = pointer_path(core["project_root"])
     path.unlink()
     fsync_directory(path.parent)
+
+
+def _pointer_removed(project_root: Path) -> bool:
+    try:
+        return read_pointer(project_root) is None
+    except CustodyError as exc:
+        raise RelocateError("store_root_pointer_invalid") from exc
 
 
 def _finish(core: Mapping[str, Any], journal: dict[str, Any], source: Any) -> None:
@@ -169,6 +180,12 @@ def _finish(core: Mapping[str, Any], journal: dict[str, Any], source: Any) -> No
     if journal["stage"] == "published":
         if not _published_matches(core, journal["relocation_receipt"]):
             raise RelocateError("relocate_destination_unrecognized")
+        # Record the intent first: a missing pointer counts as the commit
+        # point only when this transaction was about to remove it
+        # (release round 5, R5-02).
+        journal["pointer_removal_started"] = True
+        forward._write_journal(root, journal, "published")
+        forward._point("before_pointer_removal")
         _remove_pointer(core)
         forward._write_journal(root, journal, "pointer_removed")
         forward._point("after_pointer")
@@ -283,13 +300,25 @@ def reconcile_back(journal: dict[str, Any], *, abort: bool) -> dict[str, Any]:
                 forward._discard_staging(staging)
                 forward._write_journal(root, journal, "published")
             if journal["stage"] == "published":
-                if abort:
+                removed = _pointer_removed(root)
+                if removed and not journal.get("pointer_removal_started"):
+                    # Removed by someone else: the commit point never
+                    # happened, so the external vault stays untouched.
+                    raise RelocateError("relocate_pointer_unrecognized")
+                if removed:
+                    # Crashed after removing the pointer, before its journal
+                    # update: the commit point has passed (rounds 3 and 4,
+                    # R3-03 and R4-01); the project-local vault may advance.
+                    forward._write_journal(root, journal, "pointer_removed")
+                    if abort:
+                        raise RelocateError("relocate_abort_too_late")
+                elif abort:
                     if not _published_matches(core, journal["relocation_receipt"]):
                         raise RelocateError("relocate_destination_unrecognized")
                     _remove_units(core, units, journal["relocation_receipt"])
                     forward._write_journal(root, journal, "aborted")
                     return forward._result(journal)
-                if forward._raw_current(Path(core["source_store_root"])) != core["base_revision"]:
+                elif forward._raw_current(Path(core["source_store_root"])) != core["base_revision"]:
                     raise RelocateError("relocate_source_advanced")
             elif abort:
                 raise RelocateError("relocate_abort_too_late")

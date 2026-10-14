@@ -138,7 +138,7 @@ Registros: `docs/planning/g3-*-2026-10-13.md` y `docs/planning/g4-a0-threat-mode
 | R2a, R2b | hecho | PRs #143 y #144 |
 | R3 | hecho, con ronda adversarial `fix-and-retry` → `proceed` tras correcciones | PR #145; acta `g3-r3-ronda-adversarial-2026-10-13.md` |
 | D0 | hecho: ADR-0050 aceptado por el maintainer, censo de sólo lectura en `~/www`, `stores scan` implementado | `g3-d0-descubrimiento-2026-10-13.md`, `g3-d0-censo-2026-10-13.md` |
-| Enmienda 4 §3 | resuelta: `relocate attach` (ADR-0048 Enmienda 5, opción 2b del maintainer) | `an_kla/relocate_attach.py` |
+| Enmienda 4 §3 | `relocate attach` (ADR-0048 Enmienda 5, opción 2b del maintainer); fuera de la CLI de beta.30 por la regla de corte (Enmienda 9), rediseño en ADR-0051 | `an_kla/relocate_attach.py` |
 | Residuales m1/m4 | corregidos antes de beta.30 (ADR-0048 Enmienda 6, decisión del maintainer) | #147 |
 | D1 | descartado por el maintainer (2026-10-13): `stores scan` basta | #134 |
 | A0 | hecho (lectura) | `g4-a0-threat-model-2026-10-13.md` |
