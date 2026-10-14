@@ -535,19 +535,32 @@ class WriteCommitTests(unittest.TestCase):
         self.assertEqual(outcomes.count("conflict") + outcomes.count("busy"), 1)
         self.assertEqual(len(self.store.snapshot().records["facts"]), 1)
 
-    def test_python_api_can_receive_resolved_channel_authority(self) -> None:
-        candidate = proposal(self.root_revision, representation="full")
-        auth = authority(candidate, authority_class="channel_confirmed")
-        planning = self.store.plan_write(candidate, auth)
-        result = self.store.commit_write_plan(
-            expected_current_hash=self.root_revision,
-            proposal=candidate,
-            authority=auth,
-            decision=planning["decision"],
-            plan=planning["plan"],
+    def test_python_api_rejects_self_declared_channel_authority(self) -> None:
+        # Issue #152 (beta.29 checkpoint parity): the engine must refuse what
+        # the CLI already refuses.  Plan fails closed, and a commit that swaps
+        # in a channel_confirmed authority after a valid plan also fails
+        # closed under the lock, with zero effects.
+        candidate = proposal(self.root_revision, representation="summary")
+        ok_auth = authority(candidate)
+        planning = self.store.plan_write(candidate, ok_auth)
+
+        swapped = authority(candidate, authority_class="channel_confirmed")
+        with self.assertRaises(WritePolicyError) as caught_plan:
+            self.store.plan_write(candidate, swapped)
+        self.assertEqual(caught_plan.exception.code, "channel_confirmed_requires_adapter")
+
+        with self.assertRaises(WritePolicyError) as caught_commit:
+            self.store.commit_write_plan(
+                expected_current_hash=self.root_revision,
+                proposal=candidate,
+                authority=swapped,
+                decision=planning["decision"],
+                plan=planning["plan"],
+            )
+        self.assertEqual(
+            caught_commit.exception.code, "channel_confirmed_requires_adapter"
         )
-        self.assertTrue(result["committed"])
-        self.assertEqual(result["decision"], "write-full")
+        self.assertEqual(self.store.read_current(), self.root_revision)
 
 
 if __name__ == "__main__":
