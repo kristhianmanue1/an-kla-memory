@@ -47,7 +47,7 @@ def proposal(
 def authority(
     candidate: dict,
     *,
-    authority_class: str = "channel_confirmed",
+    authority_class: str = "tool_observed",
     evidence: list | None = None,
     operations: list | None = None,
     representations: list | None = None,
@@ -69,7 +69,15 @@ def authority(
             "id": "test-authority",
             "configuration_fingerprint": DIGEST_B,
         },
-        "evidence": evidence or [],
+        "evidence": evidence
+        or [
+            {
+                "kind": "external",
+                "id": DIGEST_B,
+                "resolution": "verified",
+                "sha256": DIGEST_B,
+            }
+        ],
         "scope": {
             "streams": [candidate["stream"]],
             "representations": representations or [candidate["requested_representation"]],
@@ -85,13 +93,38 @@ class WritePolicyTests(unittest.TestCase):
         self.assertEqual(caught.exception.code, code)
         self.assertEqual(str(caught.exception), code)
 
-    def test_channel_confirmed_full_proposal_is_accepted(self) -> None:
+    def test_channel_confirmed_fails_closed_without_adapter(self) -> None:
+        # Issue #152: engine-level rejection (plan y commit) hasta que
+        # exista un adaptador del host, en paridad con checkpoint (beta.29).
+        candidate = proposal()
+        self.assert_error(
+            "channel_confirmed_requires_adapter",
+            lambda: evaluate_write(candidate, authority(candidate, authority_class="channel_confirmed")),
+        )
+        self.assert_error(
+            "channel_confirmed_requires_adapter",
+            lambda: validate_write_authority(
+                authority(candidate, authority_class="channel_confirmed")
+            ),
+        )
+
+    def test_channel_confirmed_rejection_precedes_scope_evaluation(self) -> None:
+        # Even a scope-mismatched channel_confirmed authority fails with the
+        # adapter error: validation runs before any decision path.
+        candidate = proposal()
+        auth = authority(candidate, authority_class="channel_confirmed", representations=["summary"])
+        self.assert_error(
+            "channel_confirmed_requires_adapter",
+            lambda: evaluate_write(candidate, auth),
+        )
+
+    def test_tool_observed_full_proposal_is_accepted(self) -> None:
         candidate = proposal()
         result = evaluate_write(candidate, authority(candidate))
         self.assertEqual(result["decision"], "write-full")
         self.assertEqual(
             result["reason_codes"],
-            ["channel_confirmation_resolved", "representation_accepted"],
+            ["representation_accepted", "tool_evidence_verified"],
         )
 
     def test_model_derived_summary_is_accepted_with_ceiling_visible(self) -> None:
@@ -118,7 +151,7 @@ class WritePolicyTests(unittest.TestCase):
         result = evaluate_write(candidate, authority(candidate))
         self.assertEqual(result["decision"], "write-full")
         self.assertIn("derived_from_retrieval", result["reason_codes"])
-        self.assertIn("channel_confirmation_resolved", result["reason_codes"])
+        self.assertIn("tool_evidence_verified", result["reason_codes"])
 
     def test_unresolved_authority_cannot_be_overridden_by_record_fields(self) -> None:
         candidate = proposal(
@@ -344,9 +377,9 @@ class WritePolicyTests(unittest.TestCase):
         )
         self.assertEqual(
             policy_fingerprint(),
-            # ADR-0046: bump por write-authority-v2 (evidence kind attestation_receipt
-            # + bloque attestation). Pin intencional por release.
-            "sha256:2d13bb1dffe23c83de25bd763503970f1bf6f85e4fac166e37c952bcbc81a5c8",
+            # Issue #152: bump por channel_confirmed_requires_adapter
+            # (catálogos + flag). Pin intencional por release.
+            "sha256:21bc0dd31eae9e1a56af1c851e8c34ebd667bec7d699e13e8e5ec9ae09355984",
         )
 
     def test_verified_at_is_validated_but_never_elevates_authority(self) -> None:
@@ -394,6 +427,7 @@ class WritePolicyTests(unittest.TestCase):
             [
                 "authority_scope_mismatch",
                 "channel_confirmation_resolved",
+                "channel_confirmed_requires_adapter",
                 "derived_authority_capped",
                 "derived_from_retrieval",
                 "operation_not_supported",
@@ -409,6 +443,7 @@ class WritePolicyTests(unittest.TestCase):
         self.assertEqual(
             configuration["terminal_error_codes"],
             [
+                "channel_confirmed_requires_adapter",
                 "invalid_supersede_target",
                 "invalid_write_authority",
                 "invalid_write_decision",
@@ -574,7 +609,14 @@ class SupersedePolicyTests(unittest.TestCase):
         )
         self.assertEqual(result["decision"], "write-summary")
 
-    def test_channel_confirmed_supersede_full_is_accepted(self) -> None:
+    def test_channel_confirmed_supersede_fails_closed_without_adapter(self) -> None:
+        candidate = proposal(operation="supersede", representation="full")
+        candidate["supersedes"] = "f-old"
+        with self.assertRaises(WritePolicyError) as caught:
+            evaluate_write(candidate, authority(candidate, authority_class="channel_confirmed"))
+        self.assertEqual(caught.exception.code, "channel_confirmed_requires_adapter")
+
+    def test_tool_observed_supersede_full_is_accepted(self) -> None:
         candidate = proposal(operation="supersede", representation="full")
         candidate["supersedes"] = "f-old"
         result = evaluate_write(candidate, authority(candidate))
@@ -694,9 +736,9 @@ class SubjectRefPolicyTests(unittest.TestCase):
     def test_subject_ref_and_terminal_code_freeze_policy_fingerprint(self) -> None:
         self.assertEqual(
             policy_fingerprint(),
-            # ADR-0046: bump por write-authority-v2 (evidence kind attestation_receipt
-            # + bloque attestation). Pin intencional por release.
-            "sha256:2d13bb1dffe23c83de25bd763503970f1bf6f85e4fac166e37c952bcbc81a5c8",
+            # Issue #152: bump por channel_confirmed_requires_adapter
+            # (catálogos + flag). Pin intencional por release.
+            "sha256:21bc0dd31eae9e1a56af1c851e8c34ebd667bec7d699e13e8e5ec9ae09355984",
         )
         self.assertIn(
             "subject_ref_namespace_mismatch",

@@ -94,6 +94,17 @@ canal que lo originó. Por ello F2 no deberá tratar un archivo JSON creado por 
 candidato como prueba suficiente de `channel_confirmed`: el adaptador de llamada
 construirá esa autoridad desde configuración y estado separados del contenido.
 
+> **Actualización (post-beta.30, issue #152):** esa frontera pasó de regla de
+> integración a exigencia del motor. Mientras no exista un adaptador del host,
+> `_POLICY_CONFIGURATION` fija `channel_confirmed_adapter=false` y la API pura
+> falla cerrado: `validate_write_authority()` rechaza una autoridad
+> `channel_confirmed` con el código terminal
+> `channel_confirmed_requires_adapter`, y `evaluate_write()` devuelve `skip`
+> con esa misma razón — en paridad con la frontera de checkpoint de ADR-0023
+> (beta.29). La API de Python ya no acepta lo que el CLI rechaza con
+> `cli_privileged_authority_unresolved`. El catálogo y la bandera forman parte
+> del perfil: el fingerprint cambió (`2d13bb1d` → `21bc0dd3`).
+
 La clase y el tipo de emisor deben ser compatibles: `tool_observed` exige
 `issuer.kind=tool`, `channel_confirmed` exige `channel`, `model_derived` exige
 `model`, `derived_from_retrieval` admite `model` o `resolver`, y `unresolved`
@@ -128,6 +139,7 @@ Códigos emitidos por `write-policy/v1`:
 | `derived_from_retrieval` | diagnóstico |
 | `tool_evidence_verified` | elegibilidad |
 | `channel_confirmation_resolved` | elegibilidad |
+| `channel_confirmed_requires_adapter` | rechazo terminal y `skip`; sin adaptador del host (post-beta.30, issue #152) |
 | `representation_accepted` | elegibilidad |
 | `summary_required_for_authority_ceiling` | `skip`; requiere nueva propuesta |
 | `operation_not_supported` | `skip` hasta implementar su semántica |
@@ -212,10 +224,15 @@ un resolver externo, rechaza archivos que afirmen `tool_observed` o
 `channel_confirmed` con `cli_privileged_authority_unresolved`. Las clases
 privilegiadas sólo pueden llegar a la API de Python desde una integración que
 controle el canal fuera del contenido candidato. Esta frontera no prueba aún
-identidad criptográfica.
+identidad criptográfica. Desde el issue #152 el motor aplica la misma frontera
+en la API pura (ver «Clases de autoridad»): declarar `channel_confirmed` en
+JSON falla cerrado con `channel_confirmed_requires_adapter` tanto al planificar
+como al confirmar.
 
 ## Códigos terminales implementados para F1/F2
 
+- `channel_confirmed_requires_adapter` (post-beta.30, issue #152; emitido por
+  `validate_write_authority()` mientras `channel_confirmed_adapter=false`)
 - `invalid_write_proposal`
 - `invalid_write_authority`
 - `invalid_write_decision`

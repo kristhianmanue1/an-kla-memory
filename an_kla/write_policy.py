@@ -89,6 +89,7 @@ _POLICY_CONFIGURATION = {
     "reason_codes": [
         "authority_scope_mismatch",
         "channel_confirmation_resolved",
+        "channel_confirmed_requires_adapter",
         "derived_authority_capped",
         "derived_from_retrieval",
         "operation_not_supported",
@@ -101,6 +102,7 @@ _POLICY_CONFIGURATION = {
         "unresolved_authority",
     ],
     "terminal_error_codes": [
+        "channel_confirmed_requires_adapter",
         "invalid_supersede_target",
         "invalid_write_authority",
         "invalid_write_decision",
@@ -117,6 +119,7 @@ _POLICY_CONFIGURATION = {
         "maximum_representation": "summary",
     },
     "require_verified_tool_evidence": True,
+    "channel_confirmed_adapter": False,
     "record_validators": {
         "subject_ref": "an-kla-subject-ref/v1",
         "verified_at": VERIFIED_AT_VALIDATOR,
@@ -427,6 +430,12 @@ def validate_write_authority(authority: Mapping[str, Any]) -> None:
     }
     if issuer["kind"] not in allowed_issuer_kinds[authority["authority_class"]]:
         raise WritePolicyError(code, "issuer.kind:authority_class_mismatch")
+    # Issue #152: channel_confirmed fails closed until a host adapter exists.
+    if (
+        authority["authority_class"] == "channel_confirmed"
+        and not _POLICY_CONFIGURATION["channel_confirmed_adapter"]
+    ):
+        raise WritePolicyError("channel_confirmed_requires_adapter", "authority_class")
     evidence = authority["evidence"]
     if not isinstance(evidence, list):
         raise WritePolicyError(code, "evidence:not_list")
@@ -516,6 +525,11 @@ def evaluate_write(
             return _decision(proposal_sha256, authority_sha256, "skip", reasons)
         reasons.add("tool_evidence_verified")
     elif authority_class == "channel_confirmed":
+        # Defense in depth: validate_write_authority already raised while the
+        # adapter flag is off; this gate keeps evaluate_write itself closed.
+        if not _POLICY_CONFIGURATION["channel_confirmed_adapter"]:
+            reasons.add("channel_confirmed_requires_adapter")
+            return _decision(proposal_sha256, authority_sha256, "skip", reasons)
         reasons.add("channel_confirmation_resolved")
     else:
         reasons.add("derived_authority_capped")
