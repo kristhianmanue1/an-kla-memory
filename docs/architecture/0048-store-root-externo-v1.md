@@ -3,7 +3,7 @@
 - **Estado:** Aceptada (2026-09-05, orden explícita del maintainer en
   sesión: "adelante con paso 1 y 3" — aceptar tal cual, con la
   re-verificación H1–H4 ya ejecutada como condición cumplida de F1)
-- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3); R3 (Enmienda 4); attach (Enmienda 5); residuales m1/m4 (Enmienda 6); ronda de release beta.30 (Enmiendas 7 a 12; `relocate attach` fuera de la CLI, rediseño en ADR-0051);
+- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3); R3 (Enmienda 4); attach (Enmienda 5); residuales m1/m4 (Enmienda 6); ronda de release beta.30 (Enmiendas 7 a 13; `relocate attach` fuera de la CLI, rediseño en ADR-0051);
   R1a en adelante según `docs/plans/2026-10-10-g3-discovery-agent-roadmap.md`
 - **Fecha:** 2026-09-05
 - **Decide sobre:** G3 de ADR-0031 — cómo separa AN-KLA la custodia física
@@ -614,3 +614,22 @@ revisor, sobre `d9e3975`, veredicto `FIX-AND-RETRY`:
    añadir `pointer_removal_started` permite consumir una vuelta; exige el
    mismo acceso que borrar la bóveda y queda dentro de los residuales
    declarados.
+
+## Enmienda 13 (2026-10-14) — ronda 7 de release beta.30
+
+Séptima ronda, opencode con GLM 5.3, sobre `f62341a`, veredicto
+`FIX-AND-RETRY` con un único hallazgo MEDIUM:
+`docs/releases/v0.1.0-beta.30-adversarial.md` §Ronda 7. Las correcciones de
+las Enmiendas 11 y 12 resistieron todas las variantes del revisor.
+
+1. **m4 en la vuelta (R7-01, MEDIUM).** La Enmienda 6 §2 sólo cubría un
+   origen project-local: un proceso longevo abierto sobre la bóveda externa
+   seguía sirviéndola después del punto de compromiso de `relocate back`, y
+   tras la limpieza fallaba con `current_missing` en vez de un código de
+   custodia. Ahora un store externo abierto cuando el puntero lo nombraba
+   comprueba en cada lectura que el puntero lo siga nombrando (forma
+   resuelta); si falta, es ilegible o nombra otra raíz, la lectura falla con
+   `store_root_divergence`. Un store externo abierto sin ese puntero (flag,
+   env o el destino de una relocación en curso) conserva las comprobaciones
+   de apertura y de mutación; no cambia el comportamiento sin custodia
+   externa.

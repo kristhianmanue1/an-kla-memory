@@ -1,8 +1,8 @@
 """Regressions from the beta.30 release adversarial rounds (reviewer: Muse
 CLI, a different model family).  H-01..H-04 (round 1), N-01..N-03
 (round 2), R3-02..R3-04 (round 3), R4-01..R4-02 (round 4) and
-R5-01..R5-03 (round 5, Muse) and R6-01..R6-03 (round 6, opencode with
-GLM 5.3) reproduce their findings."""
+R5-01..R5-03 (round 5, Muse), R6-01..R6-03 (round 6) and R7-01 (round 7,
+both opencode with GLM 5.3) reproduce their findings."""
 
 from __future__ import annotations
 
@@ -437,6 +437,49 @@ class RoundSixTests(_VaultCase):
         with self.assertRaises(RelocateError) as caught:
             inspect_relocation(self.project, txid)
         self.assertEqual(str(caught.exception), "relocate_journal_invalid")
+
+
+class RoundSevenTests(_VaultCase):
+    """Round 7 (R7-01): a long-lived reader of an external origin stops
+    serving it once ``relocate back`` passes its commit point."""
+
+    def _external_reader(self) -> tuple[MemoryStore, MemoryStore, str]:
+        local, revision = self._local()
+        commit_relocation(local, plan_relocation(local, self.vault), revision)
+        reader = open_resolved_store(self.project, environ={})
+        self.assertEqual(reader.read_current(), revision)
+        return reader, MemoryStore(self.project, store_root=self.vault), revision
+
+    def test_r7_01_long_lived_external_reader_stops_after_back(self) -> None:
+        reader, external, revision = self._external_reader()
+        back = plan_back(external)
+        relocate._fault = _fault_at("after_pointer")
+        try:
+            with self.assertRaises(SimulatedCrash):
+                commit_relocation(external, back, revision)
+        finally:
+            relocate._fault = None
+        for read in (reader.read_current, reader.snapshot):
+            with self.assertRaises(CustodyError) as caught:
+                read()
+            self.assertEqual(str(caught.exception), "store_root_divergence")
+        reconcile_relocation(self.project, back["core"]["transaction_id"])
+        with self.assertRaises(CustodyError) as caught:
+            reader.read_current()
+        self.assertEqual(str(caught.exception), "store_root_divergence")
+
+    def test_r7_01_positive_control_external_reader_serves_while_live(self) -> None:
+        reader, external, revision = self._external_reader()
+        back = plan_back(external)
+        relocate._fault = _fault_at("before_pointer_removal")
+        try:
+            with self.assertRaises(SimulatedCrash):
+                commit_relocation(external, back, revision)
+        finally:
+            relocate._fault = None
+        # Units published, pointer still names the external root: still live.
+        self.assertEqual(reader.read_current(), revision)
+        self.assertEqual(reader.snapshot().revision_id, revision)
 
 
 class LongLivedSnapshotTests(unittest.TestCase):
