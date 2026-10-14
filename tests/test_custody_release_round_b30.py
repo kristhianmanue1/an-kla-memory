@@ -1,10 +1,12 @@
 """Regressions from the beta.30 release adversarial rounds (reviewer: Muse
 CLI, a different model family).  H-01..H-04 (round 1), N-01..N-03
 (round 2), R3-02..R3-04 (round 3), R4-01..R4-02 (round 4) and
-R5-01..R5-03 (round 5) reproduce its findings."""
+R5-01..R5-03 (round 5, Muse) and R6-01..R6-03 (round 6, opencode with
+GLM 5.3) reproduce their findings."""
 
 from __future__ import annotations
 
+import contextlib
 import io
 import os
 import shutil
@@ -18,7 +20,8 @@ from an_kla.canonical import canonical_json
 from an_kla.custody import CustodyError, read_pointer
 from an_kla.identity import IdentityError, read_binding
 from an_kla.relocate import (
-    RelocateError, SimulatedCrash, commit_relocation, plan_relocation, reconcile_relocation,
+    RelocateError, SimulatedCrash, commit_relocation, inspect_relocation, plan_relocation,
+    reconcile_relocation, unfinished_relocations,
 )
 from an_kla.relocate_back import plan_back
 from an_kla.relocate_attach import AttachError, attach_store, bound_project_root
@@ -368,6 +371,72 @@ class RoundFiveTests(_VaultCase):
             os.mkfifo(receipts)
 
         self.assertIn("relocation_receipt_chain_invalid", self._scan_codes_with(make))
+
+
+class RoundSixTests(_VaultCase):
+    """Round 6 (R6-01..R6-03): the back direction never removes a pointer
+    to another vault; journals that are not regular files fail closed."""
+
+    def _crashed_back_to_copy(self, crash) -> tuple[str, Path, str]:
+        local, revision = self._local()
+        commit_relocation(local, plan_relocation(local, self.vault), revision)
+        external = MemoryStore(self.project, store_root=self.vault)
+        back = plan_back(external)
+        with crash():
+            with self.assertRaises(SimulatedCrash):
+                commit_relocation(external, back, external.verify()["revision"])
+        copy = self.base / "copy"
+        shutil.copytree(self.vault, copy)
+        pointer = read_pointer(self.project)
+        (self.project / ".an-kla" / "store-root.txt").write_bytes(
+            canonical_json({**pointer, "store_root": str(copy)})
+        )
+        advanced = _commit_fact(open_resolved_store(self.project, environ={}), "f-copy")
+        return back["core"]["transaction_id"], copy, advanced
+
+    def _assert_copy_kept(self, txid: str, copy: Path, advanced: str) -> None:
+        with self.assertRaises(RelocateError) as caught:
+            reconcile_relocation(self.project, txid)
+        self.assertEqual(str(caught.exception), "relocate_pointer_unrecognized")
+        self.assertEqual(Path(read_pointer(self.project)["store_root"]), copy)
+        self.assertEqual(MemoryStore(self.project, store_root=copy).verify()["revision"], advanced)
+
+    def test_r6_03_back_never_removes_a_pointer_to_a_live_copy(self) -> None:
+        @contextlib.contextmanager
+        def crash():
+            relocate._fault = _fault_at("before_pointer_removal")
+            try:
+                yield
+            finally:
+                relocate._fault = None
+
+        self._assert_copy_kept(*self._crashed_back_to_copy(crash))
+
+    def test_r6_03_back_without_mark_never_removes_a_pointer_to_a_copy(self) -> None:
+        self._assert_copy_kept(*self._crashed_back_to_copy(lambda: _crash_on_second("published")))
+
+    def _journal_slot(self) -> tuple[str, Path]:
+        local, _ = self._local()
+        txid = plan_relocation(local, self.vault)["core"]["transaction_id"]
+        directory = self.project / ".an-kla" / "relocations"
+        directory.mkdir(exist_ok=True)
+        return txid, directory / f"{txid}.json"
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "needs mkfifo")
+    def test_r6_01_fifo_journal_never_blocks(self) -> None:
+        txid, slot = self._journal_slot()
+        os.mkfifo(slot)
+        with self.assertRaises(RelocateError) as caught:
+            inspect_relocation(self.project, txid)
+        self.assertEqual(str(caught.exception), "relocate_journal_invalid")
+        self.assertEqual(unfinished_relocations(self.project), 1)
+
+    def test_r6_02_directory_journal_is_a_stable_error(self) -> None:
+        txid, slot = self._journal_slot()
+        slot.mkdir()
+        with self.assertRaises(RelocateError) as caught:
+            inspect_relocation(self.project, txid)
+        self.assertEqual(str(caught.exception), "relocate_journal_invalid")
 
 
 class LongLivedSnapshotTests(unittest.TestCase):

@@ -154,6 +154,10 @@ def _remove_pointer(core: Mapping[str, Any]) -> None:
         return
     if pointer["custody_fingerprint"] != core["custody_fingerprint"]:
         raise RelocateError("store_root_divergence")
+    if Path(pointer["store_root"]).resolve() != Path(core["source_store_root"]).resolve():
+        # Same custody, another vault: not the pointer this transaction
+        # removes (release round 6, R6-03, mirror of R5-01).
+        raise RelocateError("relocate_pointer_unrecognized")
     path = pointer_path(core["project_root"])
     path.unlink()
     fsync_directory(path.parent)

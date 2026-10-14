@@ -28,7 +28,7 @@ from .export_io import ExportIOError, normalize_and_sync_tree, rename_noreplace,
 from .export_restore import _allowed, _files
 from .identity import identity_lock, mutation_preflight, read_binding
 from .reader_gate import ReaderGateError, exclusive_reader_gate
-from .relocation_receipts import write_relocation_receipt
+from .relocation_receipts import _read_regular, write_relocation_receipt
 from .storage_primitives import atomic_write, fsync_directory
 from .store_errors import StoreError
 
@@ -88,9 +88,13 @@ def _read_journal(project_root: Path, txid: str) -> dict[str, Any] | None:
     if path.parent.is_symlink() or path.is_symlink():
         raise RelocateError("relocate_journal_invalid")
     try:
-        payload = path.read_bytes()
+        # Never block on a FIFO or trip on a directory (release round 6,
+        # R6-01 and R6-02).
+        payload = _read_regular(path)
     except FileNotFoundError:
         return None
+    except OSError as exc:
+        raise RelocateError("relocate_journal_invalid") from exc
     try:
         value = json.loads(payload)
     except (json.JSONDecodeError, UnicodeDecodeError) as exc:
@@ -598,7 +602,7 @@ def unfinished_relocations(project_root: str | Path) -> int:
     count = 0
     for path in directory.glob("*.json"):
         try:
-            stage = json.loads(path.read_bytes()).get("stage")
+            stage = json.loads(_read_regular(path)).get("stage")
         except (OSError, ValueError, AttributeError):
             stage = None
         if stage not in {"cleaned", "aborted"}:

@@ -3,7 +3,7 @@
 - **Estado:** Aceptada (2026-09-05, orden explícita del maintainer en
   sesión: "adelante con paso 1 y 3" — aceptar tal cual, con la
   re-verificación H1–H4 ya ejecutada como condición cumplida de F1)
-- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3); R3 (Enmienda 4); attach (Enmienda 5); residuales m1/m4 (Enmienda 6); ronda de release beta.30 (Enmiendas 7 a 11; `relocate attach` fuera de la CLI, rediseño en ADR-0051);
+- **Implementación:** En curso — R0 reconciliado (Enmienda 1, 2026-10-13); R2a (Enmienda 2); R2b (Enmienda 3); R3 (Enmienda 4); attach (Enmienda 5); residuales m1/m4 (Enmienda 6); ronda de release beta.30 (Enmiendas 7 a 12; `relocate attach` fuera de la CLI, rediseño en ADR-0051);
   R1a en adelante según `docs/plans/2026-10-10-g3-discovery-agent-roadmap.md`
 - **Fecha:** 2026-09-05
 - **Decide sobre:** G3 de ADR-0031 — cómo separa AN-KLA la custodia física
@@ -592,3 +592,25 @@ sólo por evidencia que la propia transacción dejó.
    directorios reales (`lstat`), la cadena es `relocation_receipt_invalid`;
    `stores scan` clasifica la bóveda `unreadable` con
    `relocation_receipt_chain_invalid`.
+
+## Enmienda 12 (2026-10-14) — ronda 6 de release beta.30
+
+Sexta ronda, primera con opencode y GLM 5.3 (`zai-coding-plan/glm-5.3`) como
+revisor, sobre `d9e3975`, veredicto `FIX-AND-RETRY`:
+`docs/releases/v0.1.0-beta.30-adversarial.md` §Ronda 6.
+
+1. **Vuelta: puntero hacia otra bóveda con la misma custodia (R6-03, HIGH).**
+   Espejo de la Enmienda 11 §1 en la vuelta. Antes de borrar el puntero, la
+   vuelta exige que su `store_root` resuelto sea el origen planificado; si
+   apunta a otra bóveda (por ejemplo una copia que siguió escribiendo), falla
+   con `relocate_pointer_unrecognized` sin borrar el puntero ni limpiar nada.
+   Vale con y sin la marca `pointer_removal_started`.
+2. **Journals que no son archivos regulares (R6-01, MEDIUM; R6-02, LOW).**
+   `relocate inspect`, `reconcile`, el replay de `commit` y `doctor` leen los
+   journals sin bloquear y sólo si son archivos regulares. Un FIFO o un
+   directorio es `relocate_journal_invalid` (antes colgaba o emitía
+   `IsADirectoryError`); `doctor` lo cuenta como relocación sin terminar.
+3. **Marca forjable (nota del revisor, no hallazgo).** Editar el journal para
+   añadir `pointer_removal_started` permite consumir una vuelta; exige el
+   mismo acceso que borrar la bóveda y queda dentro de los residuales
+   declarados.
