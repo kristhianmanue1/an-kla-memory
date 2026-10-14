@@ -85,6 +85,19 @@ release **no cambia la plantilla gestionada** ni el contrato de recuperación
 de beta.27: añade la custodia externa del store (G3, ADR-0048) y
 `stores scan` (ADR-0050).
 
+Posterior a la release (2026-10-14), una revisión crítica contra el código
+revalidó la degradación O(historia) reportada en el issue
+[#149](https://github.com/kristhianmanue1/an-kla-memory/issues/149) —
+`context_view limit=50` medido en 3,2 s a 20.000 registros y coste de commit
+~cuadrático con las revisiones — y contrastó qué propiedades de gobernanza
+son mecanismo y cuáles convención, incluido un hueco de `channel_confirmed`
+re-verificado sólo en CLI. El informe, con el plan propuesto para los issues
+abiertos (#149, #140, #58), está en
+[docs/planning/revision-critica-escalado-gobernanza-2026-10-14.md](docs/planning/revision-critica-escalado-gobernanza-2026-10-14.md).
+Las cifras son sondas sintéticas reproducibles, no una batería oficial; esa
+batería es precisamente el primer paso propuesto, pendiente de decisión del
+operador.
+
 GitHub puede mostrar una beta anterior como “Latest” porque la más reciente
 está marcada como prerelease. El update-check de AN-KLA no depende de ese
 distintivo: consulta el
@@ -240,6 +253,9 @@ y las decisiones de arquitectura en `docs/architecture/`.
 
 ## Documentación
 
+- [Revisión crítica de escalado y gobernanza](docs/planning/revision-critica-escalado-gobernanza-2026-10-14.md)
+  — post-beta.30: revalidación del issue #149 contra código, mecanismos vs
+  convenciones y plan propuesto para #149/#140/#58.
 - [Contrato del agente](AN-KLA.md) — desarrollo del bloque administrado.
 - [Uso diario y mantenimiento](docs/uso-diario.md) — referencia estable del
   consumidor: actualizar, desinstalar, comandos cotidianos y respaldo sellado.
