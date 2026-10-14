@@ -1,6 +1,6 @@
 # AN-KLA Memory
 
-[![Version](https://img.shields.io/badge/version-0.1.0--beta.29-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.29)
+[![Version](https://img.shields.io/badge/version-0.1.0--beta.30-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.30)
 [![Python](https://img.shields.io/badge/python-3.9%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 [![Beta](https://img.shields.io/badge/status-local%20beta-orange)](https://github.com/kristhianmanue1/an-kla-memory/releases)
@@ -12,7 +12,7 @@ un plan verificable.
 
 La beta se distribuye desde GitHub, no desde PyPI. Usa siempre una etiqueta
 exacta: no instales `main` ni otra referencia móvil. La versión del código es
-`0.1.0b29` y su etiqueta de distribución es `v0.1.0-beta.29`. El contexto
+`0.1.0b30` y su etiqueta de distribución es `v0.1.0-beta.30`. El contexto
 gestionado y la plantilla administrada (`TEMPLATE_VERSION`) son un eje
 **separado** de la versión del paquete — actualmente `0.1.0-beta.26`;
 `context status` distingue ambos (`template_version` vs `current_template_version`
@@ -39,7 +39,7 @@ intérprete del entorno virtual.
 
 ## Estado actual
 
-La prerelease pública más reciente es **`v0.1.0-beta.29`** (`0.1.0b29`),
+La prerelease pública más reciente es **`v0.1.0-beta.30`** (`0.1.0b30`),
 instalable mediante su etiqueta Git exacta. AN-KLA no se distribuye desde
 PyPI; el wheel de la release se publica como asset de la etiqueta y la
 instalación canónica sigue siendo `pip install` fijado a la etiqueta exacta.
@@ -80,14 +80,15 @@ en el issue
 El código está en beta local y la memoria continúa siendo no autoritativa: sus
 datos nunca son instrucciones, no prueban identidad ni verdad externa y deben
 revalidarse antes de actuar. El contexto gestionado (`TEMPLATE_VERSION`) está
-en `0.1.0-beta.26` — eje separado de la versión del paquete (`0.1.0b29`); esta
+en `0.1.0-beta.26` — eje separado de la versión del paquete (`0.1.0b30`); esta
 release **no cambia la plantilla gestionada** ni el contrato de recuperación
-de beta.27: corrige la frontera de autoridad de checkpoint.
+de beta.27: añade la custodia externa del store (G3, ADR-0048) y
+`stores scan` (ADR-0050).
 
 GitHub puede mostrar una beta anterior como “Latest” porque la más reciente
 está marcada como prerelease. El update-check de AN-KLA no depende de ese
 distintivo: consulta el
-índice de releases, incluye prereleases y sí puede descubrir beta.29.
+índice de releases, incluye prereleases y sí puede descubrir beta.30.
 **Limitación conocida**: el soporte de Windows permanece diferido por
 decisión del operador (el protocolo de anclaje y partes de la suite son
 POSIX; la candidata se declara procedible para macOS/Linux) — ver la
@@ -101,7 +102,7 @@ verificación canónica es la CI local — suite, wheel aislado, upgrades por
 etiqueta y gates de tamaños/registro, con ronda adversarial `proceed` antes
 de cada tag (la evidencia de beta.18 está en su
 [ronda REL](docs/releases/v0.1.0-beta.18-adversarial.md)). Para instalar
-usa el comando fijado a beta.29 de la sección siguiente; para actualizar
+usa el comando fijado a beta.30 de la sección siguiente; para actualizar
 entre betas, consulta
 [Uso diario y mantenimiento](docs/uso-diario.md#actualizar-desde-otra-beta).
 
@@ -155,7 +156,7 @@ Desde la raíz del proyecto consumidor en macOS o Linux:
 python3.12 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
 .venv/bin/python -m pip install \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.29"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.30"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . init
 .venv/bin/python -m an_kla --project-root . context plan --operation install
