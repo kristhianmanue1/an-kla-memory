@@ -48,7 +48,7 @@ def run_ingest_cell(
     cell_ws, store, cur = _new_cell(ws, name)
     refs = subject_refs(store, subjects)
     rng = random.Random(seed)
-    written: list[str] = []
+    written: list[str] = []  # ids vigentes (nunca un target ya sustituido)
     latencies: list[float] = []
     supersedes_done = 0
     abort: dict[str, Any] | None = None
@@ -56,26 +56,23 @@ def run_ingest_cell(
     t_cell = time.perf_counter()
 
     for i in range(n_target):
+        record = {
+            "id": f"f-{i}",
+            "subject_ref": refs[i % len(refs)],
+            "payload": {"text": TEXT.format(i=i)},
+        }
         do_supersede = (
             supersede_ratio > 0 and written and rng.random() < supersede_ratio
         )
         if do_supersede:
             target = rng.choice(written)
-            record = {
-                "id": f"f-{i}",
-                "subject_ref": refs[i % len(refs)],
-                "payload": {"text": TEXT.format(i=i)},
-            }
             cur, elapsed, _ = governed_write(
                 store, cur, record, operation="supersede", supersedes=target
             )
+            written.remove(target)
+            written.append(record["id"])
             supersedes_done += 1
         else:
-            record = {
-                "id": f"f-{i}",
-                "subject_ref": refs[i % len(refs)],
-                "payload": {"text": TEXT.format(i=i)},
-            }
             cur, elapsed, _ = governed_write(store, cur, record)
             written.append(record["id"])
         latencies.append(elapsed)
@@ -115,7 +112,7 @@ def run_ingest_cell(
             "seed": seed,
         },
         "n_written": len(latencies),
-        "records_added": len(written),
+        "records_added": len(written) - supersedes_done,
         "supersedes_done": supersedes_done,
         "abort": abort,
         "write_latency_s": stats(latencies),
@@ -133,7 +130,12 @@ def run_ingest_cell(
 def _measure_reads(store: MemoryStore, cur: str) -> dict[str, Any]:
     # Término raro: sólo un registro de cada 500 lo menciona.
     build_index(store)
+    view = context_view(store, revision=cur, limit=50)
+    view_outcome = (
+        view.get("code") if isinstance(view, dict) and not view.get("ok", True) else "ok"
+    )
     return {
+        "context_view_outcome": view_outcome,
         "retrieve_scan_common_s": timed(
             lambda: retrieve(store, "quetzal", 4096, profile=SCAN_PROFILE)
         ),
@@ -158,20 +160,29 @@ def run_ingest_governed(
     read_points = [p for p in ov.get("read_points", cfg["read_points"]) if p <= n_target]
     cells: list[dict[str, Any]] = []
     for cell in cfg["cells"]:
-        cells.append(
-            run_ingest_cell(
-                ws,
-                th,
-                subjects=cell["subjects"],
-                supersede_ratio=cell["supersede_ratio"],
-                n_target=n_target,
-                read_points=read_points,
+        try:
+            cells.append(
+                run_ingest_cell(
+                    ws,
+                    th,
+                    subjects=cell["subjects"],
+                    supersede_ratio=cell["supersede_ratio"],
+                    n_target=n_target,
+                    read_points=read_points,
+                )
             )
-        )
+        except Exception as exc:  # una celda rota no pierde a las demás
+            cells.append(
+                {
+                    "scenario": f"ingest-s{cell['subjects']}-r{int(cell['supersede_ratio'] * 100)}",
+                    "ok": False,
+                    "error": f"{type(exc).__name__}: {exc}",
+                }
+            )
     return {
         "schema": "an-kla/scale-battery-scenario/v1",
         "scenario": "ingest_governed",
-        "ok": all(c["ok"] for c in cells),
+        "ok": all(c.get("ok") for c in cells),
         "cells": cells,
     }
 

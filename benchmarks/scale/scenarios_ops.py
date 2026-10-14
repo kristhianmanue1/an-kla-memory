@@ -288,7 +288,8 @@ def run_compaction(
 
     t0 = time.perf_counter()
     commit = cli(comp_ws, "compact", "commit",
-                 "--planning-result", str(plan_path), "--expected-current", cur)
+                 "--planning-result", str(plan_path), "--expected-current", cur,
+                 "--bundle", str(bundle))
     commit_s = time.perf_counter() - t0
 
     snapshot_after_s = timed(store.snapshot)
@@ -313,6 +314,7 @@ def run_compaction(
         "export_ok": bool(export.get("ok")),
         "plan_ok": bool(plan.get("ok")),
         "commit_ok": bool(commit.get("ok")),
+        "commit_result": commit,
         "verify_after": verify,
         "ok": bool(export.get("ok") and plan.get("ok") and commit.get("ok")
                   and verify.get("ok")),

@@ -18,6 +18,7 @@ from benchmarks.scale.core import (
     timed,
 )
 from benchmarks.scale.scenarios_ingest import _measure_reads, _rare_payload
+from an_kla.context_view import context_view
 
 
 def run_reads_diagnostic(
@@ -29,10 +30,36 @@ def run_reads_diagnostic(
     subjects = ov.get("subjects", cfg["subjects"])
     batch = ov.get("batch", cfg["batch"])
 
-    diag_ws = ws / "reads-diagnostic"
+    many = _diagnostic_pass(ws / "reads-diagnostic", points, subjects, batch, full=True)
+    # Régimen patológico de la sonda del #149: un único sujeto acumula todo
+    # el universo y context_view cae en view_subject_exceeds_budget tras
+    # pagar la derivación completa. Eje sujetos de la matriz P0.
+    single = _diagnostic_pass(
+        ws / "reads-diagnostic-s1", points, 1, batch, full=False
+    )
+    return {
+        "schema": "an-kla/scale-battery-scenario/v1",
+        "scenario": "reads_diagnostic",
+        "internal_commit_diagnostic": True,
+        "label": "columna interna (MemoryStore.commit): diagnóstico, no vía pública",
+        "params": {"records_points": points, "subjects": subjects, "batch": batch},
+        "ok": bool(many.get("ok") and single.get("ok")),
+        "subjects_many": many,
+        "subjects_single": single,
+    }
+
+
+def _diagnostic_pass(
+    diag_ws: Path,
+    points: list[int],
+    subjects: int,
+    batch: int,
+    *,
+    full: bool,
+) -> dict[str, Any]:
     diag_ws.mkdir(parents=True, exist_ok=True)
     store, cur = make_store(diag_ws)
-    refs = subject_refs(store, subjects)
+    refs = subject_refs(store, max(subjects, 1))
 
     rows: list[dict[str, Any]] = []
     t_all = time.perf_counter()
@@ -55,18 +82,23 @@ def run_reads_diagnostic(
                 "n": n,
                 "build_s": time.perf_counter() - t_build,
                 "snapshot_s": timed(store.snapshot),
+                "context_view_limit50_s": timed(
+                    lambda: context_view(store, revision=cur, limit=50)
+                ),
                 "store_bytes": dir_size_bytes(diag_ws),
             }
         )
     measurements = dict(rows=rows)
-    measurements.update(_measure_reads(store, cur))
-    return {
-        "schema": "an-kla/scale-battery-scenario/v1",
-        "scenario": "reads_diagnostic",
-        "internal_commit_diagnostic": True,
-        "label": "columna interna (MemoryStore.commit): diagnóstico, no vía pública",
-        "params": {"records_points": points, "subjects": subjects, "batch": batch},
-        "ok": True,
-        "measurements": measurements,
-        "wall_s": time.perf_counter() - t_all,
-    }
+    if full:
+        measurements.update(_measure_reads(store, cur))
+    else:
+        view = context_view(store, revision=cur, limit=50)
+        measurements["context_view_outcome_final"] = (
+            view.get("code")
+            if isinstance(view, dict) and not view.get("ok", True)
+            else "ok"
+        )
+    measurements["wall_s"] = time.perf_counter() - t_all
+    measurements["ok"] = True
+    measurements["subjects"] = subjects
+    return measurements
