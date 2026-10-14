@@ -146,8 +146,17 @@ def chain_head(store: Any, store_identity: str, kind: str) -> str | None:
     """Return the single unreferenced receipt for this binding and kind."""
 
     directory = receipts_dir(store)
-    if not directory.exists():
-        return None
+    for level in (directory.parent, directory):
+        # A FIFO or regular file standing in for a receipts directory is a
+        # broken chain, not an empty one (release round 5, R5-03).
+        try:
+            info = level.lstat()
+        except FileNotFoundError:
+            return None
+        except OSError as exc:
+            raise RelocationReceiptError("relocation_receipt_invalid") from exc
+        if not stat.S_ISDIR(info.st_mode):
+            raise RelocationReceiptError("relocation_receipt_invalid")
     _reject_symlink(directory, store.custody_walk_root)
     members: dict[str, dict[str, Any]] = {}
     for path in sorted(directory.glob("*.json")):

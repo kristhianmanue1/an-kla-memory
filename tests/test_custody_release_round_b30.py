@@ -1,7 +1,7 @@
 """Regressions from the beta.30 release adversarial rounds (reviewer: Muse
 CLI, a different model family).  H-01..H-04 (round 1), N-01..N-03
-(round 2) R3-02..R3-04 (round 3) and R4-01..R4-02
-(round 4) reproduce its findings."""
+(round 2), R3-02..R3-04 (round 3), R4-01..R4-02 (round 4) and
+R5-01..R5-03 (round 5) reproduce its findings."""
 
 from __future__ import annotations
 
@@ -156,9 +156,7 @@ def _crash_before_journal(stage: str):
     return mock.patch.object(relocate, "_write_journal", side_effect=write)
 
 
-class RoundThreeTests(unittest.TestCase):
-    """Round 3 (R3-02..R3-04): abort after the commit point, FIFO in scan."""
-
+class _VaultCase(unittest.TestCase):
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self._tmp.cleanup)
@@ -171,6 +169,10 @@ class RoundThreeTests(unittest.TestCase):
         local = MemoryStore(self.project)
         local.initialize()
         return local, _commit_fact(local, "f-local")
+
+
+class RoundThreeTests(_VaultCase):
+    """Round 3 (R3-02..R3-04): abort after the commit point, FIFO in scan."""
 
     def test_r3_02_abort_after_pointer_before_journal_is_too_late(self) -> None:
         local, revision = self._local()
@@ -259,6 +261,113 @@ class RoundThreeTests(unittest.TestCase):
         result = scan([self.base])
         codes = [entry.get("code") for entry in result["entries"]]
         self.assertIn("relocation_receipt_chain_invalid", codes)
+
+
+def _crash_on_second(stage: str):
+    """Process death on the second journal write of ``stage``."""
+
+    original = relocate._write_journal
+    seen = []
+
+    def write(project_root, journal, name):
+        if name == stage:
+            seen.append(name)
+            if len(seen) == 2:
+                raise SimulatedCrash(stage)
+        return original(project_root, journal, name)
+
+    return mock.patch.object(relocate, "_write_journal", side_effect=write)
+
+
+class RoundFiveTests(_VaultCase):
+    """Round 5 (R5-01..R5-03): a pointer this transaction did not write or
+    remove is not its commit point; a non-directory receipts tree."""
+
+    def _point_pointer_at(self, store_root: Path) -> None:
+        pointer = read_pointer(self.project)
+        (self.project / ".an-kla" / "store-root.txt").write_bytes(
+            canonical_json({**pointer, "store_root": str(store_root)})
+        )
+
+    def test_r5_01_foreign_locator_with_same_custody_fails_closed(self) -> None:
+        local, revision = self._local()
+        plan = plan_relocation(local, self.vault)
+        with _crash_before_journal("pointer_written"):
+            with self.assertRaises(SimulatedCrash):
+                commit_relocation(local, plan, revision)
+        copy = self.base / "copy"
+        shutil.copytree(self.vault, copy)
+        self._point_pointer_at(copy)
+        txid = plan["core"]["transaction_id"]
+        with self.assertRaises(RelocateError) as caught:
+            reconcile_relocation(self.project, txid)
+        self.assertEqual(str(caught.exception), "relocate_pointer_unrecognized")
+        self.assertTrue((self.project / ".an-kla" / "memory" / "refs" / "CURRENT").exists())
+        self.assertTrue((self.vault / "memory" / "refs" / "CURRENT").exists())
+
+    def test_r5_01_positive_control_locator_spelled_differently(self) -> None:
+        local, revision = self._local()
+        plan = plan_relocation(local, self.vault)
+        with _crash_before_journal("pointer_written"):
+            with self.assertRaises(SimulatedCrash):
+                commit_relocation(local, plan, revision)
+        self._point_pointer_at(self.base / "project" / ".." / "vault")
+        txid = plan["core"]["transaction_id"]
+        self.assertEqual(reconcile_relocation(self.project, txid)["stage"], "cleaned")
+
+    def _crashed_back(self) -> tuple[MemoryStore, str]:
+        local, revision = self._local()
+        commit_relocation(local, plan_relocation(local, self.vault), revision)
+        external = MemoryStore(self.project, store_root=self.vault)
+        return external, plan_back(external)
+
+    def test_r5_02_pointer_removed_by_hand_is_not_the_commit_point(self) -> None:
+        external, back = self._crashed_back()
+        revision = external.verify()["revision"]
+        with _crash_on_second("published"):
+            with self.assertRaises(SimulatedCrash):
+                commit_relocation(external, back, revision)
+        (self.project / ".an-kla" / "store-root.txt").unlink()
+        txid = back["core"]["transaction_id"]
+        with self.assertRaises(RelocateError) as caught:
+            reconcile_relocation(self.project, txid)
+        self.assertEqual(str(caught.exception), "relocate_pointer_unrecognized")
+        self.assertTrue((self.vault / "memory" / "refs" / "CURRENT").exists())
+
+    def test_r5_02_positive_control_crash_before_removal_finishes(self) -> None:
+        external, back = self._crashed_back()
+        revision = external.verify()["revision"]
+        relocate._fault = _fault_at("before_pointer_removal")
+        try:
+            with self.assertRaises(SimulatedCrash):
+                commit_relocation(external, back, revision)
+        finally:
+            relocate._fault = None
+        self.assertIsNotNone(read_pointer(self.project))
+        txid = back["core"]["transaction_id"]
+        self.assertEqual(reconcile_relocation(self.project, txid)["stage"], "cleaned")
+        self.assertIsNone(read_pointer(self.project))
+
+    def _scan_codes_with(self, make) -> list:
+        MemoryStore(self.project, store_root=self.vault).initialize()
+        make(self.vault / "relocation-receipts")
+        return [entry.get("code") for entry in scan([self.base])["entries"]]
+
+    def test_r5_03_receipts_leaf_as_regular_file_is_a_broken_chain(self) -> None:
+        def make(receipts: Path) -> None:
+            receipts.mkdir(parents=True, exist_ok=True)
+            (receipts / "sha256").write_bytes(b"")
+
+        self.assertIn("relocation_receipt_chain_invalid", self._scan_codes_with(make))
+
+    @unittest.skipUnless(hasattr(os, "mkfifo"), "needs mkfifo")
+    def test_r5_03_receipts_root_as_fifo_is_a_broken_chain(self) -> None:
+        def make(receipts: Path) -> None:
+            if receipts.exists():
+                shutil.rmtree(receipts)
+            os.mkfifo(receipts)
+
+        self.assertIn("relocation_receipt_chain_invalid", self._scan_codes_with(make))
 
 
 class LongLivedSnapshotTests(unittest.TestCase):

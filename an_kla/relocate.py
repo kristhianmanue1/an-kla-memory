@@ -370,7 +370,13 @@ def _pointer_matches(project_root: Path, core: Mapping[str, Any]) -> bool:
         pointer = read_pointer(project_root)
     except CustodyError as exc:
         raise RelocateError("store_root_pointer_invalid") from exc
-    return pointer is not None and pointer["custody_fingerprint"] == core["custody_fingerprint"]
+    if pointer is None or pointer["custody_fingerprint"] != core["custody_fingerprint"]:
+        return False
+    if Path(pointer["store_root"]).resolve() != Path(core["destination_store_root"]).resolve():
+        # Same custody, another locator: not the pointer this transaction
+        # writes (release round 5, R5-01).  Fail closed; never clean up.
+        raise RelocateError("relocate_pointer_unrecognized")
+    return True
 
 
 def _publish_pointer(core: Mapping[str, Any], binding: Mapping[str, Any]) -> None:
