@@ -430,17 +430,12 @@ def validate_write_authority(authority: Mapping[str, Any]) -> None:
     }
     if issuer["kind"] not in allowed_issuer_kinds[authority["authority_class"]]:
         raise WritePolicyError(code, "issuer.kind:authority_class_mismatch")
-    # Issue #152 (beta.29 checkpoint parity): a caller-asserted
-    # ``channel_confirmed`` fails closed at engine level until a host
-    # adapter exists.  The CLI already rejected it; the Python API must not
-    # accept what the CLI refuses.
+    # Issue #152: channel_confirmed fails closed until a host adapter exists.
     if (
         authority["authority_class"] == "channel_confirmed"
         and not _POLICY_CONFIGURATION["channel_confirmed_adapter"]
     ):
-        raise WritePolicyError(
-            "channel_confirmed_requires_adapter", "authority_class"
-        )
+        raise WritePolicyError("channel_confirmed_requires_adapter", "authority_class")
     evidence = authority["evidence"]
     if not isinstance(evidence, list):
         raise WritePolicyError(code, "evidence:not_list")

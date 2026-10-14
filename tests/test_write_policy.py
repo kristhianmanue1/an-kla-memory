@@ -94,9 +94,8 @@ class WritePolicyTests(unittest.TestCase):
         self.assertEqual(str(caught.exception), code)
 
     def test_channel_confirmed_fails_closed_without_adapter(self) -> None:
-        # Issue #152: a self-declared channel_confirmed authority is rejected
-        # at engine level (plan and commit) until a host adapter exists,
-        # mirroring checkpoint_policy (beta.29).
+        # Issue #152: engine-level rejection (plan y commit) hasta que
+        # exista un adaptador del host, en paridad con checkpoint (beta.29).
         candidate = proposal()
         self.assert_error(
             "channel_confirmed_requires_adapter",
@@ -379,8 +378,7 @@ class WritePolicyTests(unittest.TestCase):
         self.assertEqual(
             policy_fingerprint(),
             # Issue #152: bump por channel_confirmed_requires_adapter
-            # (catálogos reason/terminal + flag channel_confirmed_adapter).
-            # Pin intencional por release.
+            # (catálogos + flag). Pin intencional por release.
             "sha256:21bc0dd31eae9e1a56af1c851e8c34ebd667bec7d699e13e8e5ec9ae09355984",
         )
 
@@ -739,8 +737,7 @@ class SubjectRefPolicyTests(unittest.TestCase):
         self.assertEqual(
             policy_fingerprint(),
             # Issue #152: bump por channel_confirmed_requires_adapter
-            # (catálogos reason/terminal + flag channel_confirmed_adapter).
-            # Pin intencional por release.
+            # (catálogos + flag). Pin intencional por release.
             "sha256:21bc0dd31eae9e1a56af1c851e8c34ebd667bec7d699e13e8e5ec9ae09355984",
         )
         self.assertIn(
