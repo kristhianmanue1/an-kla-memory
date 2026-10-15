@@ -193,14 +193,25 @@ def _validate_compaction_root(
 
 
 def validate_revision_chain(
-    store: Any, revision_id: str, manifest: Mapping[str, Any], error: type[Exception]
+    store: Any, revision_id: str, manifest: Mapping[str, Any], error: type[Exception],
+    *, stop: Mapping[str, Any] | None = None,
 ) -> None:
+    """Valida la ascendencia; con ``stop`` (watermark ADR-0053) valida el sufijo.
+
+    El recorrido se detiene en la revisión que el watermark liga exactamente
+    (id, parent y epoch). Si el binding no coincide, el watermark se ignora
+    y el recorrido es completo: la equivalencia de resultado se preserva.
+    """
+    from .watermark import binding_matches
+
     child_id, child = revision_id, manifest
     seen: set[str] = set()
     for _ in range(int(manifest["revision"]) + 2):
         if child_id in seen:
             raise error("revision_transition_invalid")
         seen.add(child_id)
+        if binding_matches(stop, child_id, child):
+            return
         parent_id = child.get("parent")
         if parent_id is None:
             if child.get("schema") == "an-kla/revision-v3":

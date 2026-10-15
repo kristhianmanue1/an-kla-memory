@@ -334,6 +334,11 @@ def _cleanup_under_gate(source: Any, core: Mapping[str, Any], anchor: Path) -> d
         indexes = anchor / "memory" / "indexes"
         if indexes.is_dir() and not indexes.is_symlink():
             shutil.rmtree(indexes)
+        # Derived verification watermark (ADR-0053): caché sin contenido de
+        # registros; se reconstruye en el destino con el próximo commit.
+        watermarks = anchor / "memory" / "watermarks"
+        if watermarks.is_dir() and not watermarks.is_symlink():
+            shutil.rmtree(watermarks)
         _prune_empty(anchor)
     return {"changed_kept": kept_changed, "residue": project_anchor_residue(anchor)}
 

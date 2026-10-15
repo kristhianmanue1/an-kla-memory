@@ -678,6 +678,11 @@ def commit_locked(
         if store.read_current() != observed:
             raise OSError("current_changed_before_commit")
         store._replace_current(candidate)
+        # ADR-0053 §4: refresco del watermark dentro de la misma
+        # transacción/lock; la cadena hasta `candidate` acaba de validarse.
+        from .watermark import write_watermark
+
+        write_watermark(store, candidate, manifest)
         current_receipt = write_receipt(
             store,
             attempt=checked,

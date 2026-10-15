@@ -743,7 +743,7 @@ def verify_revision(store: Any, revision: str) -> dict[str, Any]:
             availability = "unknown"
             integrity = "not_available"
         else:
-            store._snapshot_under_gate(revision)
+            store._snapshot_under_gate(revision, use_watermark=False)
             availability = "present"
             integrity = "verified"
         return {
