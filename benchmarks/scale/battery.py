@@ -171,6 +171,7 @@ def main(argv: list[str] | None = None) -> int:
         for name in names:
             if time.perf_counter() - t_all > budget:
                 results[name] = {"ok": False, "skipped": "total_budget_exceeded"}
+                write_result(out, name, results[name])
                 continue
             overrides = SMOKE_OVERRIDES.get(name) if args.smoke else None
             try:
@@ -182,6 +183,8 @@ def main(argv: list[str] | None = None) -> int:
                     "ok": False,
                     "error": f"{type(exc).__name__}: {exc}",
                 }
+            # Persistencia inmediata: la muerte del padre no pierde lo corrido.
+            write_result(out, name, results[name])
     finally:
         write_result(out, "env", env)
         write_result(out, "summary", results)
