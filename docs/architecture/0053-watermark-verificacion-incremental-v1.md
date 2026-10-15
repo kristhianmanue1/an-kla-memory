@@ -1,9 +1,12 @@
 # ADR-0053: Watermark de verificación incremental (P1 del escalado)
 
-- **Estado:** Propuesta
+- **Estado:** Aceptada
 - **Implementación:** No iniciada
 - **Fecha:** 2026-10-14
 - **Decide sobre:** cómo las lecturas normales dejan de revalidar la cadena completa de revisiones sin perder equivalencia de resultado ni tamper-evidence.
+
+> Aceptada por orden del maintainer (2026-10-15: "adelante con implementación
+> recomendada" sobre la mesa completa ADR-0052/0053/0054).
 
 ## Contexto
 
