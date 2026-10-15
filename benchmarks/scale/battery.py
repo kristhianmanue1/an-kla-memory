@@ -30,6 +30,7 @@ from benchmarks.scale.core import (
 
 SCENARIOS = (
     "ingest-governed",
+    "ingest-batch",
     "reads-diagnostic",
     "concurrency",
     "crash",
@@ -38,6 +39,7 @@ SCENARIOS = (
 
 SMOKE_OVERRIDES: dict[str, dict[str, Any]] = {
     "ingest-governed": {"n_target": 6, "read_points": [3, 6]},
+    "ingest-batch": {"n_target": 6, "batch_size": 2},
     "reads-diagnostic": {"records_points": [50], "batch": 25},
     "concurrency": {
         "writers": 2,
@@ -62,6 +64,10 @@ def _run_one(
         from benchmarks.scale.scenarios_ingest import run_ingest_governed
 
         return run_ingest_governed(ws, th, overrides)
+    if name == "ingest-batch":
+        from benchmarks.scale.scenarios_ingest import run_ingest_batch
+
+        return run_ingest_batch(ws, th, overrides)
     if name == "reads-diagnostic":
         from benchmarks.scale.scenarios_diagnostic import run_reads_diagnostic
 

@@ -120,6 +120,7 @@ _POLICY_CONFIGURATION = {
     },
     "require_verified_tool_evidence": True,
     "channel_confirmed_adapter": False,
+    "max_batch_records": 1000,
     "record_validators": {
         "subject_ref": "an-kla-subject-ref/v1",
         "verified_at": VERIFIED_AT_VALIDATOR,
@@ -265,6 +266,10 @@ def emit_write_authority_template(proposal: Mapping[str, Any]) -> dict[str, Any]
 
 
 def validate_write_proposal(proposal: Mapping[str, Any]) -> None:
+    if isinstance(proposal, dict) and proposal.get("schema") == "an-kla/write-proposal-v2":
+        from .write_batch import validate_batch_proposal
+
+        return validate_batch_proposal(proposal)
     code = "invalid_write_proposal"
     if not isinstance(proposal, dict):
         raise WritePolicyError(code, "proposal:not_object")
@@ -293,8 +298,7 @@ def validate_write_proposal(proposal: Mapping[str, Any]) -> None:
         raise WritePolicyError(code, "operation")
     if proposal["requested_representation"] not in _REPRESENTATIONS:
         raise WritePolicyError(code, "requested_representation")
-    # Validate record shape BEFORE the co-occurrence block: the self-reference
-    # check reads record["id"], which must already be a stable non-empty string.
+    # Validate record shape BEFORE the co-occurrence block (record["id"] read).
     record = proposal["record"]
     if not isinstance(record, dict) or not record:
         raise WritePolicyError(code, "record:not_object")
@@ -306,9 +310,8 @@ def validate_write_proposal(proposal: Mapping[str, Any]) -> None:
         except TemporalError as exc:
             raise WritePolicyError(code, "record.verified_at") from exc
     for vigency_field in ("status", "nu"):
-        # Issue #113/R1: un valor no escalar (lista/dict) pasaba el schema
-        # abierto y luego tumbase a retrieve/index/evaluation con
-        # TypeError (pertenencia en set). La escritura lo rechaza aquí.
+        # Issue #113/R1: non-scalar values passed the open schema and later
+        # crashed retrieve/index with TypeError; rejected here at write time.
         if vigency_field in record and not (
             record[vigency_field] is None
             or isinstance(record[vigency_field], str)
@@ -320,8 +323,7 @@ def validate_write_proposal(proposal: Mapping[str, Any]) -> None:
         except SubjectRefError as exc:
             raise WritePolicyError(code, "record.subject_ref") from exc
     # Co-occurrence contract (ADR-0019): operation=supersede <-> supersedes
-    # present.  supersedes names the target id (unique within stream) and must
-    # not self-reference the new record.
+    # present; the target id must not self-reference the new record.
     if proposal["operation"] == "supersede":
         supersedes = proposal.get("supersedes")
         if not isinstance(supersedes, str) or not supersedes:
@@ -489,6 +491,10 @@ def evaluate_write(
 ) -> dict[str, Any]:
     """Evaluate one proposal and authority without reading or writing state."""
 
+    if proposal.get("schema") == "an-kla/write-proposal-v2":
+        from .write_batch import evaluate_batch_write
+
+        return evaluate_batch_write(proposal, authority)
     validate_write_proposal(proposal)
     validate_write_authority(authority)
     proposal_sha256 = digest_json(proposal)
@@ -525,17 +531,14 @@ def evaluate_write(
             return _decision(proposal_sha256, authority_sha256, "skip", reasons)
         reasons.add("tool_evidence_verified")
     elif authority_class == "channel_confirmed":
-        # Defense in depth: validate_write_authority already raised while the
-        # adapter flag is off; this gate keeps evaluate_write itself closed.
+        # Defense in depth (el gate de validate ya lanzó con la bandera apagada).
         if not _POLICY_CONFIGURATION["channel_confirmed_adapter"]:
             reasons.add("channel_confirmed_requires_adapter")
             return _decision(proposal_sha256, authority_sha256, "skip", reasons)
         reasons.add("channel_confirmation_resolved")
     else:
         reasons.add("derived_authority_capped")
-        # ADR-0019: supersede mutates vigency (hides the target from retrieve);
-        # derived_from_retrieval is memory-recovered data and must not silence a
-        # current fact.  model_derived may supersede; derived_from_retrieval may not.
+        # ADR-0019: derived_from_retrieval must not silence a current fact.
         if (
             proposal["operation"] == "supersede"
             and authority_class == "derived_from_retrieval"
@@ -555,11 +558,8 @@ def evaluate_write(
         if proposal["requested_representation"] == "full"
         else "write-summary"
     )
-    # Surface, at decision time, that the record will be committed but produce
-    # no FTS text and therefore be unrecoverable via retrieve/assemble-context.
-    # The beta policy only supports ``add``, so such a record cannot be
-    # superseded/refuted later; the operator must add ``indexable_text`` (or a
-    # text|render|summary|p fallback) to make it retrievable.  See issue #15.
+    # Surface at decision time: the record commits but produces no FTS text
+    # and is unrecoverable via retrieve (issue #15).
     if not record_text(proposal["record"]):
         reasons.add("record_without_indexable_text")
     return _decision(proposal_sha256, authority_sha256, decision, reasons)
@@ -635,6 +635,10 @@ def build_write_plan(
 ) -> dict[str, Any]:
     """Build a content-bound plan; skipped decisions contain no records."""
 
+    if proposal.get("schema") == "an-kla/write-proposal-v2":
+        from .write_batch import build_batch_write_plan
+
+        return build_batch_write_plan(proposal, authority, decision)
     checked_decision = _verified_decision(proposal, authority, decision)
     records: list[dict[str, Any]] = []
     if checked_decision["decision"] != "skip":
@@ -644,8 +648,7 @@ def build_write_plan(
             "representation": proposal["requested_representation"],
             "record": deepcopy(proposal["record"]),
         }
-        # ADR-0019: carry the supersede target so the store knows what to mark
-        # "sustituida".  Present only for operation=supersede (co-occurrence).
+        # ADR-0019: carry the supersede target for the vigency flip.
         if proposal["operation"] == "supersede":
             planned_item["supersedes"] = proposal["supersedes"]
         records.append(planned_item)
@@ -747,7 +750,7 @@ def validate_write_plan(plan: Mapping[str, Any]) -> None:
             raise WritePolicyError(code, "records[]:representation")
         if not isinstance(item["record"], dict) or not item["record"]:
             raise WritePolicyError(code, "records[].record:not_object")
-        # ADR-0019: supersedes travels in the planned item only for supersede.
+        # ADR-0019: supersedes travels in the planned item (co-occurrence).
         if item["operation"] == "supersede":
             if not isinstance(item.get("supersedes"), str) or not item["supersedes"]:
                 raise WritePolicyError(code, "records[]:supersedes:missing_for_supersede")

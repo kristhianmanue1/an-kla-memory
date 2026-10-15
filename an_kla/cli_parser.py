@@ -210,7 +210,7 @@ def build_parser() -> argparse.ArgumentParser:
     plan_write_cmd.add_argument(
         "--proposal",
         required=True,
-        help="Archivo JSON con schema an-kla/write-proposal-v1.",
+        help="Archivo JSON con schema an-kla/write-proposal-v1 (único) o v2 (lote, ADR-0054).",
     )
     plan_write_cmd.add_argument(
         "--authority",
@@ -287,7 +287,7 @@ def build_parser() -> argparse.ArgumentParser:
     commit_plan_cmd.add_argument(
         "--proposal",
         required=True,
-        help="Mismo archivo write-proposal-v1 usado al planificar.",
+        help="Mismo archivo write-proposal-v1/v2 usado al planificar.",
     )
     commit_plan_cmd.add_argument(
         "--authority",

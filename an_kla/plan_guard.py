@@ -22,6 +22,8 @@ def guard_plan_against_snapshot(
 ) -> None:
     """Raise ``WritePolicyError`` with a ``plan_*`` code, or return None."""
 
+    if proposal.get("schema") == "an-kla/write-proposal-v2":
+        return _guard_batch_against_snapshot(records, proposal)
     stream_records = records.get(proposal["stream"], ())
     record_id = str(proposal["record"].get("id", ""))
     if any(str(row.get("id", "")) == record_id for row in stream_records):
@@ -35,6 +37,31 @@ def guard_plan_against_snapshot(
             ),
             None,
         )
+        if target is None:
+            raise WritePolicyError("plan_supersede_target_missing")
+        if target.get("status", target.get("nu", "vigente")) not in {
+            "vigente",
+            "active",
+            None,
+        }:
+            raise WritePolicyError("plan_supersede_target_not_vigente")
+
+
+def _guard_batch_against_snapshot(
+    records: Mapping[str, tuple[Mapping[str, Any], ...]],
+    proposal: Mapping[str, Any],
+) -> None:
+    """ADR-0054: el lote se guarda contra el snapshot base (pre-lote)."""
+
+    stream_records = records.get(proposal["stream"], ())
+    by_id = {str(row.get("id", "")): row for row in stream_records}
+    for record in proposal["records"]:
+        record_id = str(record.get("id", ""))
+        if record_id in by_id:
+            raise WritePolicyError("plan_duplicate_id")
+        if proposal["operation"] != "supersede":
+            continue
+        target = by_id.get(proposal["supersedes"][record["id"]])
         if target is None:
             raise WritePolicyError("plan_supersede_target_missing")
         if target.get("status", target.get("nu", "vigente")) not in {
