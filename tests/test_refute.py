@@ -576,8 +576,12 @@ class RefuteTests(unittest.TestCase):
         )
         self.store._write_json_object(f"transactions/{txid}/stages", stage)
         original_path.unlink()
+        # ADR-0053: la lectura normal confía en el prefijo cacheado por el
+        # watermark; la inmutabilidad del attempt se exige en la auditoría
+        # completa, que debe fallar cerrado.
         with self.assertRaisesRegex(IntegrityError, "revision_transition_invalid"):
-            self.store.snapshot(result["revision"])
+            self.store.snapshot(result["revision"], use_watermark=False)
+        self.assertEqual(self.store.snapshot(result["revision"]).revision_id, result["revision"])
 
     def test_legacy_root_transaction_id_is_only_valid_at_root(self) -> None:
         root_manifest = {

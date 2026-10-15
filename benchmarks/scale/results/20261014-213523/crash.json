@@ -1,0 +1,129 @@
+{
+  "doctor": {
+    "current_error": null,
+    "current_ok": true,
+    "custody_divergence": {
+      "code": "none",
+      "pointer": "absent",
+      "project_local_residue": null,
+      "project_root_relocated_since_init": false,
+      "relocations_unfinished": 0,
+      "store_external": false
+    },
+    "durability_profile": "posix-fsync-dir/v1",
+    "fts5": true,
+    "index_orphan_temporaries": 0,
+    "memory_exists": true,
+    "ok": true,
+    "quarantine_bytes": 0,
+    "quarantine_objects": 0,
+    "schema": "an-kla/doctor-v1",
+    "status": {
+      "counts": {
+        "episodes": 0,
+        "events": 191,
+        "facts": 391
+      },
+      "durability_profile": "posix-fsync-dir/v1",
+      "identity_status": "complete",
+      "ok": true,
+      "revision": "sha256:dc993e8972ac559d69c15896b2e979b1aec2bfd361771295c5c64731db0f3ae5",
+      "revision_number": 192,
+      "root_relocated": false
+    }
+  },
+  "internal_commit_diagnostic": false,
+  "kills": [
+    {
+      "attempt": 1,
+      "delay_s": null,
+      "revision_after": "sha256:2b1184e1a789283952169b294b340ea47ab513809a61a6db609931bb85037dca",
+      "revision_number": 51,
+      "verify_ok": true
+    },
+    {
+      "attempt": 2,
+      "delay_s": null,
+      "revision_after": "sha256:80041dab65d0d00ebb5259802ed3fd339c69c3a051faa4cead708b95b99f67a8",
+      "revision_number": 82,
+      "verify_ok": true
+    },
+    {
+      "attempt": 3,
+      "delay_s": null,
+      "revision_after": "sha256:347ae1570bf98375c6f9e5675c1a3ebf5b16bd906445a2bc50d3dbd8ce1f3bda",
+      "revision_number": 114,
+      "verify_ok": true
+    },
+    {
+      "attempt": 4,
+      "delay_s": null,
+      "revision_after": "sha256:1aee73e3ed09abd57b35b6d1cfb7baf710d10cf68f12ed2ead6508b0566128d6",
+      "revision_number": 128,
+      "verify_ok": true
+    },
+    {
+      "attempt": 5,
+      "delay_s": null,
+      "revision_after": "sha256:3b0483fdc78a0307d9f080bc4999b0256021b5046ac27957d64391ab1c115dff",
+      "revision_number": 141,
+      "verify_ok": true
+    },
+    {
+      "attempt": 6,
+      "delay_s": null,
+      "revision_after": "sha256:206a0a799968789c900b63a9bffac7de67bd9943e63ba3c1bc294016cc87f512",
+      "revision_number": 154,
+      "verify_ok": true
+    },
+    {
+      "attempt": 7,
+      "delay_s": null,
+      "revision_after": "sha256:3cbe108b165c0c8c5a5dc14a63e4b50d715908b75b718c508c23ecb251143fdc",
+      "revision_number": 159,
+      "verify_ok": true
+    },
+    {
+      "attempt": 8,
+      "delay_s": null,
+      "revision_after": "sha256:e653c14b42afb039dea8a9cb870758fba2349db074d692bad26eccb0814bcaab",
+      "revision_number": 169,
+      "verify_ok": true
+    },
+    {
+      "attempt": 9,
+      "delay_s": null,
+      "revision_after": "sha256:0e7e1a0ff0ca28ab4441c8ec91381556c927127626ab5b6a299d6a9460837b54",
+      "revision_number": 180,
+      "verify_ok": true
+    },
+    {
+      "attempt": 10,
+      "delay_s": null,
+      "revision_after": "sha256:dc993e8972ac559d69c15896b2e979b1aec2bfd361771295c5c64731db0f3ae5",
+      "revision_number": 192,
+      "verify_ok": true
+    }
+  ],
+  "method": "SIGKILL con retardos sembrados; probabil\u00edstico, declarado",
+  "ok": true,
+  "params": {
+    "attempts": 10,
+    "preload_records": 200
+  },
+  "recover": {
+    "action": "none_current_authoritative",
+    "current": "sha256:dc993e8972ac559d69c15896b2e979b1aec2bfd361771295c5c64731db0f3ae5",
+    "ok": true,
+    "pending_transactions": [
+      {
+        "path": "8ae6a556-91ba-448b-b96d-440c9c6524ac.json",
+        "status": "prepared"
+      }
+    ],
+    "schema": "an-kla/recovery-report-v1"
+  },
+  "scenario": "crash",
+  "schema": "an-kla/scale-battery-scenario/v1",
+  "verify_all_ok": true
+}
