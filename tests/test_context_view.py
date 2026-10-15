@@ -427,6 +427,107 @@ class ContextViewCoreTests(unittest.TestCase):
             if (store.root / ".reader-gate").exists():
                 self.assertEqual((store.root / ".reader-gate").stat().st_mode & 0o777, 0o600)
 
+    def test_invalid_subject_ref_fails_closed_even_when_filtered_out(self):
+        good = fact("f-a", "a", "A")
+        bad = {"id": "f-bad", "schema": "an-kla/fact-v1", "subject_ref": "not-a-ref", "payload": {"text": "B"}}
+        output = context_view(FakeStore({"facts": [good, bad]}), revision=REVISION)
+        self.assertEqual(output["code"], "view_invalid_subject_ref_in_revision")
+        self.assertEqual(output["detail"]["record_sha256"], digest_json(bad))
+        filtered = context_view(
+            FakeStore({"facts": [good, bad]}), revision=REVISION, subject_filter=subject("a"),
+        )
+        self.assertEqual(filtered["code"], "view_invalid_subject_ref_in_revision")
+        self.assertEqual(filtered["detail"]["record_sha256"], digest_json(bad))
+
+    def test_unserializable_record_classification_follows_served_window(self):
+        nan_row = {
+            "id": "f-nan", "schema": "an-kla/fact-v1",
+            "subject_ref": subject("nan"), "payload": {"value": float("nan")},
+        }
+        rows = [fact("f-a", "a", "A"), fact("f-b", "b", "B"), nan_row]
+        outside = context_view(FakeStore({"facts": rows}), revision=REVISION, limit=1)
+        self.assertEqual(outside["schema"], "an-kla/context-view-v1")
+        self.assertEqual(outside["pagination"]["total_subjects"], 3)
+        self.assertEqual(outside["pagination"]["truncated_subjects"], 2)
+        inside = context_view(FakeStore({"facts": [nan_row]}), revision=REVISION)
+        self.assertEqual(inside["code"], "view_rule_ambiguous")
+
+    def test_refutation_matches_by_record_digest_not_id_or_text(self):
+        row_x = fact("f-1", "dup", "same")
+        row_y = fact("f-2", "dup", "same")
+        one = context_view(FakeStore(
+            {"facts": [row_x, row_y]},
+            manifest={"refutations_map": [{"stream": "facts", "target_record_sha256": digest_json(row_y)}]},
+        ), revision=REVISION)
+        subject_out = one["subjects"][0]
+        self.assertFalse(subject_out["data_conflict"])
+        self.assertEqual([x["id"] for x in subject_out["alternatives"]], ["f-1"])
+        self.assertEqual([x["id"] for x in subject_out["history"]], ["f-2"])
+        self.assertEqual(subject_out["history"][0]["state"], "refuted")
+        both = context_view(FakeStore(
+            {"facts": [row_x, row_y]},
+            manifest={"refutations_map": [
+                {"stream": "facts", "target_record_sha256": digest_json(row_x)},
+                {"stream": "facts", "target_record_sha256": digest_json(row_y)},
+            ]},
+        ), revision=REVISION)
+        self.assertEqual(both["subjects"][0]["alternatives"], [])
+        self.assertEqual(
+            sorted(x["id"] for x in both["subjects"][0]["history"]), ["f-1", "f-2"],
+        )
+        self.assertTrue(all(x["state"] == "refuted" for x in both["subjects"][0]["history"]))
+
+    def test_warnings_order_legacy_first_then_namespaces(self):
+        legacy = {"id": "f-legacy", "schema": "an-kla/fact-v1", "payload": {"text": "L"}}
+        other_namespace = "p-" + "3" * 32
+        cross = {**fact("f-ns2", "x", "X"), "subject_ref": f"an-kla:subject:v1:service:{other_namespace}:x"}
+        output = context_view(FakeStore({"facts": [legacy, cross, fact("f-ns1", "y", "Y")]}), revision=REVISION)
+        self.assertEqual(output["warnings"], ["legacy_records_without_subject_ref", "multiple_namespaces_observed"])
+        self.assertEqual(output["subjects_without_subject_ref"], {"facts": 1, "events": 0, "episodes": 0})
+
+    def test_record_text_projected_once_on_budget_error_paths(self):
+        from an_kla.record_text import record_text as real_record_text
+        rows = [fact("f-a", "a", "small"), fact("f-b", "b", "x" * 4000)]
+        store = FakeStore({"facts": rows})
+        seen: list[str] = []
+        counter = lambda record: (seen.append(record.get("id")), real_record_text(record))[1]
+        with patch("an_kla.context_view.record_text", side_effect=counter):
+            first = context_view(store, revision=REVISION, budget_bytes=2500)
+        self.assertEqual([x["subject_ref"] for x in first["subjects"]], [subject("a")])
+        cursor = first["pagination"]["next_cursor"]
+        seen.clear()
+        with patch("an_kla.context_view.record_text", side_effect=counter):
+            blocked = context_view(store, revision=REVISION, budget_bytes=2500, cursor=cursor)
+        self.assertEqual(blocked["code"], "view_subject_exceeds_budget")
+        self.assertEqual(seen, ["f-b"])
+        empty_store = FakeStore({"facts": [fact("f-c", "c", "C")]})
+        seen.clear()
+        with patch("an_kla.context_view.record_text", side_effect=counter):
+            envelope = context_view(empty_store, revision=REVISION, budget_bytes=1)
+        self.assertEqual(envelope["code"], "view_envelope_exceeds_budget")
+        self.assertEqual(seen, [])
+
+    def test_large_universe_projects_only_served_window(self):
+        # Umbral estructural documentado (ADR-0058): con 2.000 sujetos y
+        # limit=50, la proyección pesada (record_text) sólo toca la ventana
+        # servida — una regresión a proyección universal haría 2.000 llamadas.
+        rows = [fact(f"f-{index:04d}", f"svc-{index:04d}", "payload text") for index in range(2000)]
+        store = FakeStore({"facts": rows})
+        seen: list[str] = []
+        from an_kla.record_text import record_text as real_record_text
+        with patch(
+            "an_kla.context_view.record_text",
+            side_effect=lambda record: (seen.append(record.get("id")), real_record_text(record))[1],
+        ):
+            output = context_view(store, revision=REVISION, limit=50)
+        self.assertEqual(output["schema"], "an-kla/context-view-v1")
+        self.assertEqual(output["pagination"]["total_subjects"], 2000)
+        self.assertEqual(output["pagination"]["served_subjects"], 50)
+        self.assertEqual(output["pagination"]["truncated_subjects"], 1950)
+        self.assertFalse(output["pagination"]["complete"])
+        self.assertLessEqual(len(seen), 50)
+        self.assertGreaterEqual(len(seen), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

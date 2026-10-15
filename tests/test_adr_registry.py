@@ -37,9 +37,13 @@ class AdrRegistryTests(unittest.TestCase):
         # implementada 2026-10-15; 0056 (caché de segmentos) propuesta
         # con tradeoff de tamper-evidence pendiente de decisión. 0057
         # (lectura sin re-canonicalización) aceptada e implementada el
-        # mismo día tras spike de perfilado.
+        # mismo día tras spike de perfilado. 0058 (paginación de
+        # context_view en el origen, #149 P2b/#165) propuesta 2026-10-15
+        # tras spike pre-implementación; aceptada e implementada el mismo
+        # día por orden del maintainer ("ADELANTE CON PENDIENTES") tras
+        # absorber la ronda adversarial fix-and-retry.
         self.assertEqual(states["Propuesta"], 5)
-        self.assertEqual(states["Aceptada"], 52)
+        self.assertEqual(states["Aceptada"], 53)
 
     def test_detects_gap_and_state_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
