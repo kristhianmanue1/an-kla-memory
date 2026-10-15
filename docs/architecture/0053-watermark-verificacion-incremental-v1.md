@@ -1,8 +1,11 @@
 # ADR-0053: Watermark de verificación incremental (P1 del escalado)
 
 - **Estado:** Aceptada
-- **Implementación:** Parcial (P1: watermark en `an_kla/watermark.py` +
-  sufijo en `validate_revision_chain`; batería de aceptación en curso)
+- **Implementación:** Implementada (P1: `an_kla/watermark.py`, sufijo en
+  `validate_revision_chain`, auditoría completa en `verify`/`verify_revision`,
+  refresco del escritor, exclusión en export/relocate; batería de aceptación
+  `results/20261014-213523`: 3/3 celdas a n=600 sin aborto vs línea base
+  403-478; suite 1183 OK)
 - **Fecha:** 2026-10-14
 - **Decide sobre:** cómo las lecturas normales dejan de revalidar la cadena completa de revisiones sin perder equivalencia de resultado ni tamper-evidence.
 
