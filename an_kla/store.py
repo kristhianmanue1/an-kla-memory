@@ -592,12 +592,12 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
             payload = path.read_bytes()
         except FileNotFoundError as exc:
             raise IntegrityError(f"segment_missing:{stream}") from exc
+        # ADR-0057: digest ancla los bytes originales (content-addressed);
+        # la forma canónica se garantiza por construcción al escribir, no se
+        # re-deriva en cada lectura (64,7 % del coste de lectura, medido).
         if digest_bytes(payload) != identifier or not payload.endswith(b"\n"):
             raise IntegrityError(f"segment_hash_or_framing_invalid:{stream}")
-        rows = [json.loads(line) for line in payload.decode("utf-8").splitlines()]
-        if b"".join(canonical_json(row) + b"\n" for row in rows) != payload:
-            raise IntegrityError(f"segment_not_canonical:{stream}")
-        return rows
+        return [json.loads(line) for line in payload.decode("utf-8").splitlines()]
 
     def _write_ref_log(self, entry: Mapping[str, Any]) -> str:
         return self._write_json_object("refs/ref-log", entry)

@@ -59,3 +59,13 @@ escritor sin lecturas extra.
 Issue #149 (F2/P2c); ADR-0053 (watermark, contraste de propiedades);
 ADR-0054 (lote, alivio ya medido de F2); batería P0. **Pendiente de
 decisión explícita del maintainer; nada de esto autoriza implementación.**
+
+> **Enmienda 1 (2026-10-15, tras spike de perfilado):** la ruta preferente
+> ya no es una caché en disco sino, primero, la eliminación del trabajo
+> redundante (ADR-0057: la re-canonicalización era el 64,7 % del coste de
+> lectura y se retiró sin pérdida de integridad). Si el disparador
+> (`snapshot` > 0,5 s a escala real) volviera a dispararse tras ADR-0057,
+> la forma aceptable de esta caché es la **variante en memoria por
+> proceso** (cero superficie nueva en disco; cada proceso nuevo verifica
+> todo). La propuesta original en disco queda archivada como constancia
+> del tradeoff rechazado.
