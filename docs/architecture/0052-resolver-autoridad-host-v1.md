@@ -1,9 +1,12 @@
 # ADR-0052: Resolver de autoridad del host con interfaz única
 
-- **Estado:** Propuesta
+- **Estado:** Aceptada
 - **Implementación:** No iniciada
 - **Fecha:** 2026-10-14
 - **Decide sobre:** la interfaz única mediante la cual el host resuelve autoridad privilegiada (`channel_confirmed` y, donde aplique, `tool_observed` externa) para checkpoint, escrituras y refute.
+
+> Aceptada por orden del maintainer (2026-10-15: "adelante con implementación
+> recomendada" sobre la mesa completa ADR-0052/0053/0054).
 
 ## Contexto
 
