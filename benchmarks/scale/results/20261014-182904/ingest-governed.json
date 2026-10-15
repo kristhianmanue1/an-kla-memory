@@ -1,0 +1,163 @@
+{
+  "cells": [
+    {
+      "abort": {
+        "abort_reason": "sustained_latency",
+        "at_n": 472,
+        "window_median_s": 2.019783291994827
+      },
+      "internal_commit_diagnostic": false,
+      "n_written": 472,
+      "ok": true,
+      "params": {
+        "n_target": 600,
+        "seed": 7,
+        "subjects": 1,
+        "supersede_ratio": 0.0
+      },
+      "records_added": 472,
+      "scenario": "ingest-s1-r0",
+      "schema": "an-kla/scale-battery-cell/v1",
+      "snapshot_points": [
+        {
+          "n": 50,
+          "read_current_s": 3.333299537189305e-05,
+          "snapshot_s": 0.016192750015761703
+        },
+        {
+          "n": 100,
+          "read_current_s": 3.516700235195458e-05,
+          "snapshot_s": 0.047427749988855794
+        },
+        {
+          "n": 200,
+          "read_current_s": 4.491599975153804e-05,
+          "snapshot_s": 0.15972349999356084
+        },
+        {
+          "n": 400,
+          "read_current_s": 4.470799467526376e-05,
+          "snapshot_s": 0.5596827499975916
+        }
+      ],
+      "store_bytes": 20093074,
+      "supersedes_done": 0,
+      "wall_s": 343.2328571250255,
+      "write_latency_s": {
+        "count": 472,
+        "max": 2.4701594169891905,
+        "mean": 0.725150878371358,
+        "min": 0.007112166989827529,
+        "p50": 0.5724927080154885,
+        "p95": 1.8179640830203425
+      }
+    },
+    {
+      "abort": {
+        "abort_reason": "sustained_latency",
+        "at_n": 478,
+        "window_median_s": 2.000873209006386
+      },
+      "internal_commit_diagnostic": false,
+      "n_written": 478,
+      "ok": true,
+      "params": {
+        "n_target": 600,
+        "seed": 7,
+        "subjects": 200,
+        "supersede_ratio": 0.0
+      },
+      "records_added": 478,
+      "scenario": "ingest-s200-r0",
+      "schema": "an-kla/scale-battery-cell/v1",
+      "snapshot_points": [
+        {
+          "n": 50,
+          "read_current_s": 3.987498348578811e-05,
+          "snapshot_s": 0.017399916978320107
+        },
+        {
+          "n": 100,
+          "read_current_s": 4.470799467526376e-05,
+          "snapshot_s": 0.05068520799977705
+        },
+        {
+          "n": 200,
+          "read_current_s": 4.8416986828669906e-05,
+          "snapshot_s": 0.1631319580192212
+        },
+        {
+          "n": 400,
+          "read_current_s": 4.516699118539691e-05,
+          "snapshot_s": 0.5600932090019342
+        }
+      ],
+      "store_bytes": 20561280,
+      "supersedes_done": 0,
+      "wall_s": 358.76915654199547,
+      "write_latency_s": {
+        "count": 478,
+        "max": 2.239897999999812,
+        "mean": 0.7484233664556589,
+        "min": 0.006719458004226908,
+        "p50": 0.6009357079747133,
+        "p95": 1.9181627919897437
+      }
+    },
+    {
+      "abort": {
+        "abort_reason": "sustained_latency",
+        "at_n": 403,
+        "window_median_s": 2.048875542008318
+      },
+      "internal_commit_diagnostic": false,
+      "n_written": 403,
+      "ok": true,
+      "params": {
+        "n_target": 600,
+        "seed": 7,
+        "subjects": 1,
+        "supersede_ratio": 0.1
+      },
+      "records_added": 317,
+      "scenario": "ingest-s1-r10",
+      "schema": "an-kla/scale-battery-cell/v1",
+      "snapshot_points": [
+        {
+          "n": 50,
+          "read_current_s": 3.5250006476417184e-05,
+          "snapshot_s": 0.016842042008647695
+        },
+        {
+          "n": 100,
+          "read_current_s": 4.0915998397395015e-05,
+          "snapshot_s": 0.04925720801111311
+        },
+        {
+          "n": 200,
+          "read_current_s": 4.3042004108428955e-05,
+          "snapshot_s": 0.16125012500560842
+        },
+        {
+          "n": 400,
+          "read_current_s": 8.175001130439341e-05,
+          "snapshot_s": 0.8652541250048671
+        }
+      ],
+      "store_bytes": 15632584,
+      "supersedes_done": 43,
+      "wall_s": 254.22502754200832,
+      "write_latency_s": {
+        "count": 403,
+        "max": 4.6486780410050415,
+        "mean": 0.6274560110403165,
+        "min": 0.006894334015669301,
+        "p50": 0.467393875005655,
+        "p95": 1.7426767500001006
+      }
+    }
+  ],
+  "ok": true,
+  "scenario": "ingest_governed",
+  "schema": "an-kla/scale-battery-scenario/v1"
+}

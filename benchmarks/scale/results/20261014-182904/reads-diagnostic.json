@@ -1,0 +1,78 @@
+{
+  "internal_commit_diagnostic": true,
+  "label": "columna interna (MemoryStore.commit): diagn\u00f3stico, no v\u00eda p\u00fablica",
+  "ok": true,
+  "params": {
+    "batch": 1000,
+    "records_points": [
+      1000,
+      5000,
+      20000
+    ],
+    "subjects": 200
+  },
+  "scenario": "reads_diagnostic",
+  "schema": "an-kla/scale-battery-scenario/v1",
+  "subjects_many": {
+    "context_view_limit50_s": 0.40294962498592213,
+    "context_view_outcome": "ok",
+    "ok": true,
+    "retrieve_index_rare_s": 0.20968995898147114,
+    "retrieve_scan_common_s": 0.21212920802645385,
+    "retrieve_scan_rare_s": 0.2153812090109568,
+    "rows": [
+      {
+        "build_s": 0.013852166972355917,
+        "context_view_limit50_s": 0.10320312500698492,
+        "n": 1000,
+        "snapshot_s": 0.006109457986894995,
+        "store_bytes": 190189
+      },
+      {
+        "build_s": 0.12055600000894628,
+        "context_view_limit50_s": 0.11734320799587294,
+        "n": 5000,
+        "snapshot_s": 0.027485124999657273,
+        "store_bytes": 926957
+      },
+      {
+        "build_s": 1.366642375010997,
+        "context_view_limit50_s": 0.442333500017412,
+        "n": 20000,
+        "snapshot_s": 0.1260889160039369,
+        "store_bytes": 3720393
+      }
+    ],
+    "subjects": 200,
+    "wall_s": 3.9908250409935135
+  },
+  "subjects_single": {
+    "context_view_outcome_final": "view_subject_exceeds_budget",
+    "ok": true,
+    "rows": [
+      {
+        "build_s": 0.01505470898700878,
+        "context_view_limit50_s": 0.15335362497717142,
+        "n": 1000,
+        "snapshot_s": 0.005980542016914114,
+        "store_bytes": 188751
+      },
+      {
+        "build_s": 0.11064341699238867,
+        "context_view_limit50_s": 1.0671471670211758,
+        "n": 5000,
+        "snapshot_s": 0.02922308401321061,
+        "store_bytes": 919719
+      },
+      {
+        "build_s": 1.5170470839948393,
+        "context_view_limit50_s": 4.0804505410196725,
+        "n": 20000,
+        "snapshot_s": 0.11906641701352783,
+        "store_bytes": 3691405
+      }
+    ],
+    "subjects": 1,
+    "wall_s": 11.307698624994373
+  }
+}

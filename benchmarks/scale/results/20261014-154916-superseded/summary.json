@@ -1,0 +1,410 @@
+{
+  "compaction": {
+    "bytes": {
+      "after": 18670224,
+      "before": 8183650
+    },
+    "commit_ok": false,
+    "deviation_declared": "compactaci\u00f3n al m\u00e1ximo alcanzable pre-P1; 20k queda como criterio post-P1",
+    "export_ok": true,
+    "internal_commit_diagnostic": false,
+    "ok": false,
+    "params": {
+      "issue_target_revisions": 20000,
+      "target_revisions": 400
+    },
+    "plan_ok": true,
+    "scenario": "compaction",
+    "schema": "an-kla/scale-battery-scenario/v1",
+    "snapshot_s": {
+      "after": 0.35329020899371244,
+      "before": 0.2940440830134321
+    },
+    "timings_s": {
+      "build": 82.61010275001172,
+      "compact_commit": 0.16225712501909584,
+      "compact_plan": 96.71242379199248,
+      "export_create": 3.6593032919918187
+    },
+    "verify_after": {
+      "counts": {
+        "episodes": 0,
+        "events": 0,
+        "facts": 400
+      },
+      "durability_profile": "posix-fsync-dir/v1",
+      "identity_status": "complete",
+      "ok": true,
+      "revision": "sha256:431ceee1eb867d52bf81f1c516bebc38dd206b4e304a29a771d4c3bba3300b85",
+      "revision_number": 400,
+      "root_relocated": false
+    }
+  },
+  "concurrency": {
+    "internal_commit_diagnostic": false,
+    "ok": true,
+    "params": {
+      "duration_s": 60,
+      "lock_deadline_s": 10,
+      "preload_records": 2000,
+      "readers": 8,
+      "writers": 4
+    },
+    "readers": [
+      {
+        "latency_s": {
+          "count": 45,
+          "max": 2.305272290977882,
+          "mean": 1.3382985620423116,
+          "min": 0.5809107079985552,
+          "p50": 1.269209874997614,
+          "p95": 2.1669289170240518
+        },
+        "ops": 45,
+        "role": "reader",
+        "tag": "r0"
+      },
+      {
+        "latency_s": {
+          "count": 45,
+          "max": 2.287438833998749,
+          "mean": 1.334564638045332,
+          "min": 0.5521446669881698,
+          "p50": 1.2477058750228025,
+          "p95": 2.174767249991419
+        },
+        "ops": 45,
+        "role": "reader",
+        "tag": "r1"
+      },
+      {
+        "latency_s": {
+          "count": 45,
+          "max": 2.2309183329925872,
+          "mean": 1.3488406684443666,
+          "min": 0.5917085419932846,
+          "p50": 1.2691449580015615,
+          "p95": 2.1789330419851467
+        },
+        "ops": 45,
+        "role": "reader",
+        "tag": "r2"
+      },
+      {
+        "latency_s": {
+          "count": 46,
+          "max": 2.254124500002945,
+          "mean": 1.3300209220653176,
+          "min": 0.567266958008986,
+          "p50": 1.2199646669905633,
+          "p95": 2.146795040986035
+        },
+        "ops": 46,
+        "role": "reader",
+        "tag": "r3"
+      },
+      {
+        "latency_s": {
+          "count": 45,
+          "max": 2.3402890829893295,
+          "mean": 1.3497047666427937,
+          "min": 0.5875894579803571,
+          "p50": 1.2805905419809278,
+          "p95": 2.144872790988302
+        },
+        "ops": 45,
+        "role": "reader",
+        "tag": "r4"
+      },
+      {
+        "latency_s": {
+          "count": 45,
+          "max": 2.3135329999786336,
+          "mean": 1.3393213620189475,
+          "min": 0.5748644999985117,
+          "p50": 1.2500199580099434,
+          "p95": 2.142138833005447
+        },
+        "ops": 45,
+        "role": "reader",
+        "tag": "r5"
+      },
+      {
+        "latency_s": {
+          "count": 45,
+          "max": 2.2475135830172803,
+          "mean": 1.338624022245252,
+          "min": 0.5686337090155575,
+          "p50": 1.2592479590093717,
+          "p95": 2.137270292005269
+        },
+        "ops": 45,
+        "role": "reader",
+        "tag": "r6"
+      },
+      {
+        "latency_s": {
+          "count": 45,
+          "max": 2.2092322910029907,
+          "mean": 1.3458391157548046,
+          "min": 0.5773172919871286,
+          "p50": 1.2761062079807743,
+          "p95": 2.1458831669879146
+        },
+        "ops": 45,
+        "role": "reader",
+        "tag": "r7"
+      }
+    ],
+    "scenario": "concurrency",
+    "schema": "an-kla/scale-battery-scenario/v1",
+    "totals": {
+      "cas_conflicts_total": 439,
+      "governed_writes_ok": 172,
+      "lock_busy_total": 0,
+      "reader_op_rounds": 361,
+      "writer_latency_s": {
+        "count": 4,
+        "max": 0.2984153330035042,
+        "mean": 0.237254895742808,
+        "min": 0.1888297919940669,
+        "p50": 0.232632332976209,
+        "p95": 0.2984153330035042
+      }
+    },
+    "wall_s": 61.40313212500769,
+    "writers": [
+      {
+        "busy": 0,
+        "cas": 108,
+        "latency_s": {
+          "count": 49,
+          "max": 1.194983041001251,
+          "mean": 0.32609764628506704,
+          "min": 0.031248209008481354,
+          "p50": 0.232632332976209,
+          "p95": 0.9941307090048213
+        },
+        "ok": 49,
+        "role": "writer",
+        "tag": "w0"
+      },
+      {
+        "busy": 0,
+        "cas": 117,
+        "latency_s": {
+          "count": 45,
+          "max": 1.1018016249872744,
+          "mean": 0.31918858431292596,
+          "min": 0.03593425001599826,
+          "p50": 0.1888297919940669,
+          "p95": 0.9988355420064181
+        },
+        "ok": 45,
+        "role": "writer",
+        "tag": "w1"
+      },
+      {
+        "busy": 0,
+        "cas": 104,
+        "latency_s": {
+          "count": 39,
+          "max": 1.1535225000116043,
+          "mean": 0.37617621366277887,
+          "min": 0.05752358300378546,
+          "p50": 0.2984153330035042,
+          "p95": 0.9502984169812407
+        },
+        "ok": 39,
+        "role": "writer",
+        "tag": "w2"
+      },
+      {
+        "busy": 0,
+        "cas": 110,
+        "latency_s": {
+          "count": 39,
+          "max": 1.0291763750137761,
+          "mean": 0.3263057991287683,
+          "min": 0.04805366601794958,
+          "p50": 0.2291421249974519,
+          "p95": 0.8818410829990171
+        },
+        "ok": 39,
+        "role": "writer",
+        "tag": "w3"
+      }
+    ]
+  },
+  "crash": {
+    "doctor": {
+      "current_error": null,
+      "current_ok": true,
+      "custody_divergence": {
+        "code": "none",
+        "pointer": "absent",
+        "project_local_residue": null,
+        "project_root_relocated_since_init": false,
+        "relocations_unfinished": 0,
+        "store_external": false
+      },
+      "durability_profile": "posix-fsync-dir/v1",
+      "fts5": true,
+      "index_orphan_temporaries": 0,
+      "memory_exists": true,
+      "ok": true,
+      "quarantine_bytes": 0,
+      "quarantine_objects": 0,
+      "schema": "an-kla/doctor-v1",
+      "status": {
+        "counts": {
+          "episodes": 0,
+          "events": 119,
+          "facts": 319
+        },
+        "durability_profile": "posix-fsync-dir/v1",
+        "identity_status": "complete",
+        "ok": true,
+        "revision": "sha256:4354de7c2889aada63e7531b82cc271990d427a92e65bd3df9ac7bc1fe3c9288",
+        "revision_number": 120,
+        "root_relocated": false
+      }
+    },
+    "internal_commit_diagnostic": false,
+    "kills": [
+      {
+        "attempt": 1,
+        "delay_s": null,
+        "revision_after": "sha256:2c4be987ebf198ba254bbad5ffbfa20bf44995cd7de1d268ff45d5c7010ad2a0",
+        "revision_number": 38,
+        "verify_ok": true
+      },
+      {
+        "attempt": 2,
+        "delay_s": null,
+        "revision_after": "sha256:6ece9de6063d85dc3d9b592b5ff1115abc50832de6ce36719863fe9492f670f5",
+        "revision_number": 57,
+        "verify_ok": true
+      },
+      {
+        "attempt": 3,
+        "delay_s": null,
+        "revision_after": "sha256:e02f82c0e1961512ba30bbd84ffc4aa9cc4a3bfea95888d293667189a5fd5b11",
+        "revision_number": 77,
+        "verify_ok": true
+      },
+      {
+        "attempt": 4,
+        "delay_s": null,
+        "revision_after": "sha256:5d2a942ee10db30511215230aa5d66935ea9355427af474da350cab666830adb",
+        "revision_number": 85,
+        "verify_ok": true
+      },
+      {
+        "attempt": 5,
+        "delay_s": null,
+        "revision_after": "sha256:4274029504df35d60e58f07d1182fb3ab7a495f61e76553c2cc4a064752a4475",
+        "revision_number": 92,
+        "verify_ok": true
+      },
+      {
+        "attempt": 6,
+        "delay_s": null,
+        "revision_after": "sha256:67e5f939e4d2f43457a2c5d5417f87a00bdad9f020b3b02f969da0b892568abc",
+        "revision_number": 99,
+        "verify_ok": true
+      },
+      {
+        "attempt": 7,
+        "delay_s": null,
+        "revision_after": "sha256:d66b8859c9c80eb516d421b1782b41d79356c269c1c4a0313f48e261aed45e40",
+        "revision_number": 102,
+        "verify_ok": true
+      },
+      {
+        "attempt": 8,
+        "delay_s": null,
+        "revision_after": "sha256:36ffdad8449af68290669c09167299539e313f344f93cf78cab75292e5bafcc4",
+        "revision_number": 108,
+        "verify_ok": true
+      },
+      {
+        "attempt": 9,
+        "delay_s": null,
+        "revision_after": "sha256:39f3458219e6f50a156f613997c138832174d6ecbce3799807717dd1caf34000",
+        "revision_number": 114,
+        "verify_ok": true
+      },
+      {
+        "attempt": 10,
+        "delay_s": null,
+        "revision_after": "sha256:4354de7c2889aada63e7531b82cc271990d427a92e65bd3df9ac7bc1fe3c9288",
+        "revision_number": 120,
+        "verify_ok": true
+      }
+    ],
+    "method": "SIGKILL con retardos sembrados; probabil\u00edstico, declarado",
+    "ok": true,
+    "params": {
+      "attempts": 10,
+      "preload_records": 200
+    },
+    "recover": {
+      "action": "none_current_authoritative",
+      "current": "sha256:4354de7c2889aada63e7531b82cc271990d427a92e65bd3df9ac7bc1fe3c9288",
+      "ok": true,
+      "pending_transactions": [],
+      "schema": "an-kla/recovery-report-v1"
+    },
+    "scenario": "crash",
+    "schema": "an-kla/scale-battery-scenario/v1",
+    "verify_all_ok": true
+  },
+  "ingest-governed": {
+    "error": "WritePolicyError: plan_supersede_target_not_vigente",
+    "ok": false
+  },
+  "reads-diagnostic": {
+    "internal_commit_diagnostic": true,
+    "label": "columna interna (MemoryStore.commit): diagn\u00f3stico, no v\u00eda p\u00fablica",
+    "measurements": {
+      "context_view_limit50_s": 0.2803862080036197,
+      "retrieve_index_rare_s": 0.12832087502465583,
+      "retrieve_scan_common_s": 0.22528358400450088,
+      "retrieve_scan_rare_s": 0.1373293329961598,
+      "rows": [
+        {
+          "build_s": 0.009438250010134652,
+          "n": 1000,
+          "snapshot_s": 0.00391520801349543,
+          "store_bytes": 190189
+        },
+        {
+          "build_s": 0.07940458299708553,
+          "n": 5000,
+          "snapshot_s": 0.019032292009796947,
+          "store_bytes": 926957
+        },
+        {
+          "build_s": 0.8967584169877227,
+          "n": 20000,
+          "snapshot_s": 0.07593204197473824,
+          "store_bytes": 3720393
+        }
+      ]
+    },
+    "ok": true,
+    "params": {
+      "batch": 1000,
+      "records_points": [
+        1000,
+        5000,
+        20000
+      ],
+      "subjects": 200
+    },
+    "scenario": "reads_diagnostic",
+    "schema": "an-kla/scale-battery-scenario/v1",
+    "wall_s": 2.016922583017731
+  }
+}
