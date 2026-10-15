@@ -10,6 +10,7 @@ un commit en `main` o un PR no constituyen una versión soportada.
 
 | Version | Supported |
 |---|---|
+| `v0.1.0-beta.31` | ✅ |
 | `v0.1.0-beta.30` | ✅ |
 | `v0.1.0-beta.29` | ✅ |
 | `v0.1.0-beta.28` | ✅ |
