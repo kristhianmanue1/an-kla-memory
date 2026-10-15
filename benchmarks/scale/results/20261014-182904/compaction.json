@@ -1,0 +1,69 @@
+{
+  "bytes": {
+    "after": 11431292,
+    "before": 8183650
+  },
+  "commit_ok": true,
+  "commit_result": {
+    "candidate_revision": "sha256:05607991ca838c95a0bd4621acf6208bf02532275c174e3af8660fdc79422b10",
+    "cleanup_remaining": 0,
+    "committed": true,
+    "current_after": "sha256:05607991ca838c95a0bd4621acf6208bf02532275c174e3af8660fdc79422b10",
+    "epoch_id": "252eca57-69d5-49fe-988a-938afaa0f8cf",
+    "ok": true,
+    "outcome": {
+      "audit_state": "complete",
+      "authority_state": "candidate_authoritative",
+      "candidate_relation": "current",
+      "candidate_revision": "sha256:05607991ca838c95a0bd4621acf6208bf02532275c174e3af8660fdc79422b10",
+      "committed": true,
+      "current_observed": "sha256:05607991ca838c95a0bd4621acf6208bf02532275c174e3af8660fdc79422b10",
+      "durability_state": "complete",
+      "operation_error_code": null,
+      "parent_revision": "sha256:7c75a4309742e3ba26e49ae10c0309a77800b03ead585be1d3454785d2b1412a",
+      "recorded": true,
+      "schema": "an-kla/commit-outcome-v2",
+      "state": "committed",
+      "transaction_id": "4c8b7ce5-83f8-4ab8-861c-4adbe7ecde6a",
+      "warnings": []
+    },
+    "plan_fingerprint": "sha256:e352c207f4fd2f94679fafb236838473e89f8635f0a4a14bc146329aa6eb48a2",
+    "schema": "an-kla/compaction-result-v1",
+    "state": "committed",
+    "warnings": []
+  },
+  "deviation_declared": "compactaci\u00f3n al m\u00e1ximo alcanzable pre-P1; 20k queda como criterio post-P1",
+  "export_ok": true,
+  "internal_commit_diagnostic": false,
+  "ok": true,
+  "params": {
+    "issue_target_revisions": 20000,
+    "target_revisions": 400
+  },
+  "plan_ok": true,
+  "scenario": "compaction",
+  "schema": "an-kla/scale-battery-scenario/v1",
+  "snapshot_s": {
+    "after": 0.05700379199697636,
+    "before": 0.29863887501414865
+  },
+  "timings_s": {
+    "build": 77.48428075000993,
+    "compact_commit": 73.49042200000258,
+    "compact_plan": 69.8765086659987,
+    "export_create": 3.231876000005286
+  },
+  "verify_after": {
+    "counts": {
+      "episodes": 0,
+      "events": 0,
+      "facts": 400
+    },
+    "durability_profile": "posix-fsync-dir/v1",
+    "identity_status": "complete",
+    "ok": true,
+    "revision": "sha256:05607991ca838c95a0bd4621acf6208bf02532275c174e3af8660fdc79422b10",
+    "revision_number": 401,
+    "root_relocated": false
+  }
+}

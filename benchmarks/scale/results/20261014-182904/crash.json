@@ -1,0 +1,129 @@
+{
+  "doctor": {
+    "current_error": null,
+    "current_ok": true,
+    "custody_divergence": {
+      "code": "none",
+      "pointer": "absent",
+      "project_local_residue": null,
+      "project_root_relocated_since_init": false,
+      "relocations_unfinished": 0,
+      "store_external": false
+    },
+    "durability_profile": "posix-fsync-dir/v1",
+    "fts5": true,
+    "index_orphan_temporaries": 0,
+    "memory_exists": true,
+    "ok": true,
+    "quarantine_bytes": 0,
+    "quarantine_objects": 0,
+    "schema": "an-kla/doctor-v1",
+    "status": {
+      "counts": {
+        "episodes": 0,
+        "events": 122,
+        "facts": 322
+      },
+      "durability_profile": "posix-fsync-dir/v1",
+      "identity_status": "complete",
+      "ok": true,
+      "revision": "sha256:c52068cb25ec9cea899b1f011cfebb9e621970ceb415a3988650434decdb5a11",
+      "revision_number": 123,
+      "root_relocated": false
+    }
+  },
+  "internal_commit_diagnostic": false,
+  "kills": [
+    {
+      "attempt": 1,
+      "delay_s": null,
+      "revision_after": "sha256:1064c0df5b1003d315048fa0b86bfda642347f28d0f893060f8ad7cd13716242",
+      "revision_number": 33,
+      "verify_ok": true
+    },
+    {
+      "attempt": 2,
+      "delay_s": null,
+      "revision_after": "sha256:f120dadfc084abfa2043fc6df13864e5b62c62439a8bd5e9e4076e8d9a7dea41",
+      "revision_number": 55,
+      "verify_ok": true
+    },
+    {
+      "attempt": 3,
+      "delay_s": null,
+      "revision_after": "sha256:f864a458c192956141cfd945d6e36abe7118228b9bd095fd01bcaec5938f7b4e",
+      "revision_number": 76,
+      "verify_ok": true
+    },
+    {
+      "attempt": 4,
+      "delay_s": null,
+      "revision_after": "sha256:535f51152c5fae00cdc75ced57609e2d991d5926ee8afbc27c9c1100e0be7a16",
+      "revision_number": 85,
+      "verify_ok": true
+    },
+    {
+      "attempt": 5,
+      "delay_s": null,
+      "revision_after": "sha256:bf7beeae0f4f40d8fef7ff6870d231eb6ceaf3356a91dab9ac7bb89f4f369363",
+      "revision_number": 93,
+      "verify_ok": true
+    },
+    {
+      "attempt": 6,
+      "delay_s": null,
+      "revision_after": "sha256:8de1eaaf29ed22062d0db17c281e616ff14d42de345e9a5e7ba716cca181984e",
+      "revision_number": 101,
+      "verify_ok": true
+    },
+    {
+      "attempt": 7,
+      "delay_s": null,
+      "revision_after": "sha256:b1d0562fe6b79843a2f567a0e27940356e24f9e620474d559eeb243078e70480",
+      "revision_number": 104,
+      "verify_ok": true
+    },
+    {
+      "attempt": 8,
+      "delay_s": null,
+      "revision_after": "sha256:f670aaa750b3086843750315bd040a5e68db05532379da4bb1b4cb547b5e9ff2",
+      "revision_number": 110,
+      "verify_ok": true
+    },
+    {
+      "attempt": 9,
+      "delay_s": null,
+      "revision_after": "sha256:c6408f2b6d5ba8d2e86f2ea34376b14e1893fc218582e1e6914f3f3bf59dc782",
+      "revision_number": 116,
+      "verify_ok": true
+    },
+    {
+      "attempt": 10,
+      "delay_s": null,
+      "revision_after": "sha256:c52068cb25ec9cea899b1f011cfebb9e621970ceb415a3988650434decdb5a11",
+      "revision_number": 123,
+      "verify_ok": true
+    }
+  ],
+  "method": "SIGKILL con retardos sembrados; probabil\u00edstico, declarado",
+  "ok": true,
+  "params": {
+    "attempts": 10,
+    "preload_records": 200
+  },
+  "recover": {
+    "action": "none_current_authoritative",
+    "current": "sha256:c52068cb25ec9cea899b1f011cfebb9e621970ceb415a3988650434decdb5a11",
+    "ok": true,
+    "pending_transactions": [
+      {
+        "path": "17f79463-f5ca-45c9-91a8-7a2d79d7d878.json",
+        "status": "candidate_prepared"
+      }
+    ],
+    "schema": "an-kla/recovery-report-v1"
+  },
+  "scenario": "crash",
+  "schema": "an-kla/scale-battery-scenario/v1",
+  "verify_all_ok": true
+}
