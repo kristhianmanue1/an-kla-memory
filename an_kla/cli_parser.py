@@ -119,6 +119,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--revision", default=None,
         help="Revisión objetivo; por defecto la vigente (CURRENT).",
     )
+    index_cmd.add_argument(
+        "--prune", action="store_true",
+        help="Podar índices huérfanos: elimina los de revisiones != objetivo "
+             "(caché derivada, ADR-0055); no reconstruye.",
+    )
     retrieve_cmd = sub.add_parser(
         "retrieve", help="Recuperar registros por consulta bajo presupuesto exacto."
     )

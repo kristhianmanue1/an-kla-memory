@@ -479,7 +479,12 @@ def _run() -> None:
     elif args.command == "resume":
         result = resume(store, args.budget, query=args.query, profile=args.profile)
     elif args.command == "rebuild-index":
-        result = build_index(store, revision_id=args.revision)
+        if getattr(args, "prune", False):
+            from .index_maintenance import prune_indexes
+
+            result = prune_indexes(store, keep_revision=args.revision)
+        else:
+            result = build_index(store, revision_id=args.revision)
     elif args.command == "retrieve":
         streams_tuple = tuple(s for s in args.streams.split(",") if s)
         if args.freshness_profile is None and (
