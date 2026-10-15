@@ -10,6 +10,20 @@ El formato de cada entrada sigue [Keep a Changelog](https://keepachangelog.com/e
 por intención, y el proyecto usa [versionado semántico](https://semver.org/lang/es/)
 en fase de pre-release `0.1.0`.
 
+## [v0.1.0-beta.31]
+
+**Escalado medido del store** (issue #149, fases P0–P2): batería P0 oficial
+con umbrales pre-corrida y resultados versionados; **watermark de
+verificación incremental** (ADR-0053: techo gobernado 450→600+ escrituras,
+p50 −52 %); **commit gobernado en lote** `write-proposal/v2` (ADR-0054:
+600 registros en 12 revisiones y 0,2 s, ~1000× en ingesta); **lectura de
+segmentos sin re-canonicalización** (ADR-0057: 2,4× en `snapshot`); **poda
+de índices derivados** `rebuild-index --prune` (ADR-0055); y cierre del
+hueco `channel_confirmed` a nivel motor (#152, Enmienda ADR-0007). Seis
+ADRs (0052–0057); ADR-0056 (caché en disco) queda en Propuesta con el
+tradeoff explícito. Fingerprint del perfil `21bc0dd3`→`4c5b2873`. Detalle
+en [`docs/releases/v0.1.0-beta.31.md`](docs/releases/v0.1.0-beta.31.md).
+
 ## [v0.1.0-beta.30]
 
 **G3: custodia externa del store** (ADR-0048, Enmiendas 1 a 14) y
