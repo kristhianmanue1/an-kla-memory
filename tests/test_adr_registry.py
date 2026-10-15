@@ -33,9 +33,11 @@ class AdrRegistryTests(unittest.TestCase):
         # 0052/0053/0054 (resolver del host, watermark incremental, lote
         # gobernado) propuestas 2026-10-14 por la mesa de diseño del plan
         # de escalado (#140/#149), PRs #155-#157; aceptadas por orden del
-        # maintainer (2026-10-15).
-        self.assertEqual(states["Propuesta"], 4)
-        self.assertEqual(states["Aceptada"], 50)
+        # maintainer (2026-10-15). 0055 (poda de índices) aceptada e
+        # implementada 2026-10-15; 0056 (caché de segmentos) propuesta
+        # con tradeoff de tamper-evidence pendiente de decisión.
+        self.assertEqual(states["Propuesta"], 5)
+        self.assertEqual(states["Aceptada"], 51)
 
     def test_detects_gap_and_state_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
