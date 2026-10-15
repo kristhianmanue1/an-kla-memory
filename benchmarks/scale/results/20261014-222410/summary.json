@@ -1,0 +1,719 @@
+{
+  "compaction": {
+    "bytes": {
+      "after": 11431508,
+      "before": 8183866
+    },
+    "commit_ok": true,
+    "commit_result": {
+      "candidate_revision": "sha256:d9088e6b0def5aa94ecb8af17d92dbfb6b59542c49e196e68fc9191e1c1113ed",
+      "cleanup_remaining": 0,
+      "committed": true,
+      "current_after": "sha256:d9088e6b0def5aa94ecb8af17d92dbfb6b59542c49e196e68fc9191e1c1113ed",
+      "epoch_id": "ed468b36-a2da-4d88-a409-79f7922e5216",
+      "ok": true,
+      "outcome": {
+        "audit_state": "complete",
+        "authority_state": "candidate_authoritative",
+        "candidate_relation": "current",
+        "candidate_revision": "sha256:d9088e6b0def5aa94ecb8af17d92dbfb6b59542c49e196e68fc9191e1c1113ed",
+        "committed": true,
+        "current_observed": "sha256:d9088e6b0def5aa94ecb8af17d92dbfb6b59542c49e196e68fc9191e1c1113ed",
+        "durability_state": "complete",
+        "operation_error_code": null,
+        "parent_revision": "sha256:4eb0a0819c5ddce02fa3e169e529d4e840ec0ec01de018148e62accd997b0002",
+        "recorded": true,
+        "schema": "an-kla/commit-outcome-v2",
+        "state": "committed",
+        "transaction_id": "d04199ab-a7e1-475e-badb-3b848ae1f815",
+        "warnings": []
+      },
+      "plan_fingerprint": "sha256:05cf12383199abbc3466600dde3276ccdacecf87642651c7125684944d1066f4",
+      "schema": "an-kla/compaction-result-v1",
+      "state": "committed",
+      "warnings": []
+    },
+    "deviation_declared": "compactaci\u00f3n al m\u00e1ximo alcanzable pre-P1; 20k queda como criterio post-P1",
+    "export_ok": true,
+    "internal_commit_diagnostic": false,
+    "ok": true,
+    "params": {
+      "issue_target_revisions": 20000,
+      "target_revisions": 400
+    },
+    "plan_ok": true,
+    "scenario": "compaction",
+    "schema": "an-kla/scale-battery-scenario/v1",
+    "snapshot_s": {
+      "after": 0.06837770802667364,
+      "before": 0.021179832983762026
+    },
+    "timings_s": {
+      "build": 60.66760812498978,
+      "compact_commit": 79.35814329201821,
+      "compact_plan": 80.16386333300034,
+      "export_create": 4.904902584006777
+    },
+    "verify_after": {
+      "counts": {
+        "episodes": 0,
+        "events": 0,
+        "facts": 400
+      },
+      "durability_profile": "posix-fsync-dir/v1",
+      "identity_status": "complete",
+      "ok": true,
+      "revision": "sha256:d9088e6b0def5aa94ecb8af17d92dbfb6b59542c49e196e68fc9191e1c1113ed",
+      "revision_number": 401,
+      "root_relocated": false
+    }
+  },
+  "concurrency": {
+    "internal_commit_diagnostic": false,
+    "ok": true,
+    "params": {
+      "duration_s": 60,
+      "lock_deadline_s": 10,
+      "preload_records": 2000,
+      "readers": 8,
+      "writers": 4
+    },
+    "readers": [
+      {
+        "latency_s": {
+          "count": 42,
+          "max": 4.909375707997242,
+          "mean": 1.4835572846689804,
+          "min": 0.49831141700269654,
+          "p50": 1.1567397080070805,
+          "p95": 3.140013917000033
+        },
+        "ops": 42,
+        "role": "reader",
+        "tag": "r0"
+      },
+      {
+        "latency_s": {
+          "count": 41,
+          "max": 4.042633000004571,
+          "mean": 1.521178424853843,
+          "min": 0.5604964999947697,
+          "p50": 1.1837074579962064,
+          "p95": 3.1731549999967683
+        },
+        "ops": 41,
+        "role": "reader",
+        "tag": "r1"
+      },
+      {
+        "latency_s": {
+          "count": 41,
+          "max": 4.077328249986749,
+          "mean": 1.5212839684639377,
+          "min": 0.5346976250002626,
+          "p50": 1.1895287499937695,
+          "p95": 3.5536421249853447
+        },
+        "ops": 41,
+        "role": "reader",
+        "tag": "r2"
+      },
+      {
+        "latency_s": {
+          "count": 42,
+          "max": 4.119105374993524,
+          "mean": 1.4679867431910854,
+          "min": 0.49801283300621435,
+          "p50": 1.144347708002897,
+          "p95": 3.061396125005558
+        },
+        "ops": 42,
+        "role": "reader",
+        "tag": "r3"
+      },
+      {
+        "latency_s": {
+          "count": 43,
+          "max": 4.026196082995739,
+          "mean": 1.4460675959532192,
+          "min": 0.5005382079980336,
+          "p50": 1.175837374990806,
+          "p95": 3.1599694580072537
+        },
+        "ops": 43,
+        "role": "reader",
+        "tag": "r4"
+      },
+      {
+        "latency_s": {
+          "count": 43,
+          "max": 3.9193147500045598,
+          "mean": 1.4455924466750476,
+          "min": 0.47786154100322165,
+          "p50": 1.1606910410046112,
+          "p95": 3.138401958014583
+        },
+        "ops": 43,
+        "role": "reader",
+        "tag": "r5"
+      },
+      {
+        "latency_s": {
+          "count": 43,
+          "max": 4.078740790981101,
+          "mean": 1.4310337858109432,
+          "min": 0.5595713749935385,
+          "p50": 1.1266865830111783,
+          "p95": 2.902179333003005
+        },
+        "ops": 43,
+        "role": "reader",
+        "tag": "r6"
+      },
+      {
+        "latency_s": {
+          "count": 41,
+          "max": 4.281856000015978,
+          "mean": 1.5257874634393729,
+          "min": 0.5221148339915089,
+          "p50": 1.2081941250071395,
+          "p95": 3.745043957984308
+        },
+        "ops": 41,
+        "role": "reader",
+        "tag": "r7"
+      }
+    ],
+    "scenario": "concurrency",
+    "schema": "an-kla/scale-battery-scenario/v1",
+    "totals": {
+      "cas_conflicts_total": 517,
+      "governed_writes_ok": 207,
+      "lock_busy_total": 0,
+      "reader_op_rounds": 336,
+      "writer_p50s_s": [
+        0.19877416698727757,
+        0.10824733399203978,
+        0.17859562500962056,
+        0.16467620801995508
+      ]
+    },
+    "wall_s": 62.80325825000182,
+    "writers": [
+      {
+        "busy": 0,
+        "cas": 133,
+        "latency_s": {
+          "count": 45,
+          "max": 1.16349533299217,
+          "mean": 0.2685435250000511,
+          "min": 0.029300166992470622,
+          "p50": 0.16467620801995508,
+          "p95": 1.1123851670126896
+        },
+        "ok": 45,
+        "role": "writer",
+        "tag": "w0"
+      },
+      {
+        "busy": 0,
+        "cas": 124,
+        "latency_s": {
+          "count": 69,
+          "max": 1.746669916989049,
+          "mean": 0.25868316489842086,
+          "min": 0.026520040992181748,
+          "p50": 0.10824733399203978,
+          "p95": 1.1673963329812977
+        },
+        "ok": 69,
+        "role": "writer",
+        "tag": "w1"
+      },
+      {
+        "busy": 0,
+        "cas": 127,
+        "latency_s": {
+          "count": 49,
+          "max": 1.4552612499974202,
+          "mean": 0.31995714118416724,
+          "min": 0.0347991659946274,
+          "p50": 0.19877416698727757,
+          "p95": 1.2685836670279969
+        },
+        "ok": 49,
+        "role": "writer",
+        "tag": "w2"
+      },
+      {
+        "busy": 0,
+        "cas": 133,
+        "latency_s": {
+          "count": 44,
+          "max": 1.429512375005288,
+          "mean": 0.2790202794567449,
+          "min": 0.043651040992699564,
+          "p50": 0.17859562500962056,
+          "p95": 0.6827370419923682
+        },
+        "ok": 44,
+        "role": "writer",
+        "tag": "w3"
+      }
+    ]
+  },
+  "crash": {
+    "doctor": {
+      "current_error": null,
+      "current_ok": true,
+      "custody_divergence": {
+        "code": "none",
+        "pointer": "absent",
+        "project_local_residue": null,
+        "project_root_relocated_since_init": false,
+        "relocations_unfinished": 0,
+        "store_external": false
+      },
+      "durability_profile": "posix-fsync-dir/v1",
+      "fts5": true,
+      "index_orphan_temporaries": 0,
+      "memory_exists": true,
+      "ok": true,
+      "quarantine_bytes": 0,
+      "quarantine_objects": 0,
+      "schema": "an-kla/doctor-v1",
+      "status": {
+        "counts": {
+          "episodes": 0,
+          "events": 141,
+          "facts": 341
+        },
+        "durability_profile": "posix-fsync-dir/v1",
+        "identity_status": "complete",
+        "ok": true,
+        "revision": "sha256:a1e1af65f28ae85b618c806ed9ae9f1122aa0b4a6abd6f82c1a14b17e55b9ad8",
+        "revision_number": 142,
+        "root_relocated": false
+      }
+    },
+    "internal_commit_diagnostic": false,
+    "kills": [
+      {
+        "attempt": 1,
+        "delay_s": null,
+        "revision_after": "sha256:0ebf3d282c3aad11517eb2e3ed49f9b494d4054ad2358dae3cb8810e8d135db0",
+        "revision_number": 29,
+        "verify_ok": true
+      },
+      {
+        "attempt": 2,
+        "delay_s": null,
+        "revision_after": "sha256:c759ac8db3f45c28c3f1460c853487980b0b9dcb3688ef31489eb78e972af7d2",
+        "revision_number": 51,
+        "verify_ok": true
+      },
+      {
+        "attempt": 3,
+        "delay_s": null,
+        "revision_after": "sha256:3002a9dade47c88700cd86073a94d477085b45b7eeea0121fac85777b948c2b9",
+        "revision_number": 78,
+        "verify_ok": true
+      },
+      {
+        "attempt": 4,
+        "delay_s": null,
+        "revision_after": "sha256:a18e804fe0f3ed7274537f5af5cad379099509ee5c60b7ec3553b247f901ca61",
+        "revision_number": 89,
+        "verify_ok": true
+      },
+      {
+        "attempt": 5,
+        "delay_s": null,
+        "revision_after": "sha256:f382b07e3ce1f16d57d9d6e54d2fcf09c0a88e2984f5b89ca581df5b1d5cb491",
+        "revision_number": 100,
+        "verify_ok": true
+      },
+      {
+        "attempt": 6,
+        "delay_s": null,
+        "revision_after": "sha256:c3c488953b5e2a71d9ed2ba176046b0efb248df65aba5147fc9cde58d39564f7",
+        "revision_number": 111,
+        "verify_ok": true
+      },
+      {
+        "attempt": 7,
+        "delay_s": null,
+        "revision_after": "sha256:971bfad01a98db41027524d10b3e7a98b33d85ecb57cf7c153935d6572228211",
+        "revision_number": 115,
+        "verify_ok": true
+      },
+      {
+        "attempt": 8,
+        "delay_s": null,
+        "revision_after": "sha256:9b5790677cc7b6200b0b0c37fe5fae675893ed23787745c06e5539966bb2edbe",
+        "revision_number": 123,
+        "verify_ok": true
+      },
+      {
+        "attempt": 9,
+        "delay_s": null,
+        "revision_after": "sha256:901dc3b04a63eb88690a4deee4cdb002b13c4521d8ea91d641ee8c72f832562a",
+        "revision_number": 132,
+        "verify_ok": true
+      },
+      {
+        "attempt": 10,
+        "delay_s": null,
+        "revision_after": "sha256:a1e1af65f28ae85b618c806ed9ae9f1122aa0b4a6abd6f82c1a14b17e55b9ad8",
+        "revision_number": 142,
+        "verify_ok": true
+      }
+    ],
+    "method": "SIGKILL con retardos sembrados; probabil\u00edstico, declarado",
+    "ok": true,
+    "params": {
+      "attempts": 10,
+      "preload_records": 200
+    },
+    "recover": {
+      "action": "none_current_authoritative",
+      "current": "sha256:a1e1af65f28ae85b618c806ed9ae9f1122aa0b4a6abd6f82c1a14b17e55b9ad8",
+      "ok": true,
+      "pending_transactions": [
+        {
+          "path": "6b70b54a-adcb-4a9d-bf90-4b29756ead62.json",
+          "status": "prepared"
+        }
+      ],
+      "schema": "an-kla/recovery-report-v1"
+    },
+    "scenario": "crash",
+    "schema": "an-kla/scale-battery-scenario/v1",
+    "verify_all_ok": true
+  },
+  "ingest-batch": {
+    "abort": null,
+    "internal_commit_diagnostic": false,
+    "n_records": 600,
+    "ok": true,
+    "params": {
+      "batch_size": 50,
+      "n_target": 600
+    },
+    "per_batch_latency_s": {
+      "count": 12,
+      "max": 0.0188567090081051,
+      "mean": 0.015244708161238426,
+      "min": 0.011205999995581806,
+      "p50": 0.01614195801084861,
+      "p95": 0.018794332980178297
+    },
+    "per_record_latency_s": {
+      "count": 600,
+      "max": 0.000377134180162102,
+      "mean": 0.0003048941632247685,
+      "min": 0.0002241199999116361,
+      "p50": 0.00032283916021697223,
+      "p95": 0.000377134180162102
+    },
+    "reads": {
+      "context_view_limit50_s": 0.06487324999761768,
+      "context_view_outcome": "view_subject_exceeds_budget",
+      "retrieve_index_rare_s": 0.005778749997261912,
+      "retrieve_scan_common_s": 0.00532870800816454,
+      "retrieve_scan_rare_s": 0.004936667013680562
+    },
+    "revisions": 12,
+    "scenario": "ingest_batch",
+    "schema": "an-kla/scale-battery-scenario/v1",
+    "snapshot_points": [
+      {
+        "n": 50,
+        "snapshot_s": 0.0006271659804042429
+      },
+      {
+        "n": 100,
+        "snapshot_s": 0.0015626669919583946
+      },
+      {
+        "n": 200,
+        "snapshot_s": 0.0014201249869074672
+      },
+      {
+        "n": 400,
+        "snapshot_s": 0.0025825839838944376
+      },
+      {
+        "n": 600,
+        "snapshot_s": 0.004312958975788206
+      }
+    ],
+    "store_bytes": 258117,
+    "wall_s": 0.1997996249992866
+  },
+  "ingest-governed": {
+    "cells": [
+      {
+        "abort": null,
+        "internal_commit_diagnostic": false,
+        "n_written": 600,
+        "ok": true,
+        "params": {
+          "n_target": 600,
+          "seed": 7,
+          "subjects": 1,
+          "supersede_ratio": 0.0
+        },
+        "reads": {
+          "context_view_limit50_s": 0.11534804198890924,
+          "context_view_outcome": "view_subject_exceeds_budget",
+          "retrieve_index_rare_s": 0.04914291700697504,
+          "retrieve_scan_common_s": 0.054207999986829236,
+          "retrieve_scan_rare_s": 0.049737124994862825
+        },
+        "records_added": 600,
+        "scenario": "ingest-s1-r0",
+        "schema": "an-kla/scale-battery-cell/v1",
+        "snapshot_points": [
+          {
+            "n": 50,
+            "read_current_s": 3.462500171735883e-05,
+            "snapshot_s": 0.004024875001050532
+          },
+          {
+            "n": 100,
+            "read_current_s": 3.433399251662195e-05,
+            "snapshot_s": 0.0076333330071065575
+          },
+          {
+            "n": 200,
+            "read_current_s": 3.462500171735883e-05,
+            "snapshot_s": 0.015296583995223045
+          },
+          {
+            "n": 400,
+            "read_current_s": 3.7667021388188004e-05,
+            "snapshot_s": 0.030493708996800706
+          },
+          {
+            "n": 600,
+            "read_current_s": 3.833399387076497e-05,
+            "snapshot_s": 0.04641179199097678
+          }
+        ],
+        "store_bytes": 31223274,
+        "supersedes_done": 0,
+        "wall_s": 186.22793945801095,
+        "write_latency_s": {
+          "count": 600,
+          "max": 0.9341626660025213,
+          "mean": 0.3098732679919825,
+          "min": 0.007123207993572578,
+          "p50": 0.2568359160213731,
+          "p95": 0.7435897919931449
+        }
+      },
+      {
+        "abort": null,
+        "internal_commit_diagnostic": false,
+        "n_written": 600,
+        "ok": true,
+        "params": {
+          "n_target": 600,
+          "seed": 7,
+          "subjects": 200,
+          "supersede_ratio": 0.0
+        },
+        "reads": {
+          "context_view_limit50_s": 0.14228920900495723,
+          "context_view_outcome": "ok",
+          "retrieve_index_rare_s": 0.056171042000642046,
+          "retrieve_scan_common_s": 0.052116667007794604,
+          "retrieve_scan_rare_s": 0.048439875012263656
+        },
+        "records_added": 600,
+        "scenario": "ingest-s200-r0",
+        "schema": "an-kla/scale-battery-cell/v1",
+        "snapshot_points": [
+          {
+            "n": 50,
+            "read_current_s": 3.462500171735883e-05,
+            "snapshot_s": 0.004021417000330985
+          },
+          {
+            "n": 100,
+            "read_current_s": 3.6250014090910554e-05,
+            "snapshot_s": 0.00819141700048931
+          },
+          {
+            "n": 200,
+            "read_current_s": 3.491601091809571e-05,
+            "snapshot_s": 0.015406791993882507
+          },
+          {
+            "n": 400,
+            "read_current_s": 4.00420103687793e-05,
+            "snapshot_s": 0.03170895800576545
+          },
+          {
+            "n": 600,
+            "read_current_s": 3.8416997995227575e-05,
+            "snapshot_s": 0.04573766700923443
+          }
+        ],
+        "store_bytes": 31224152,
+        "supersedes_done": 0,
+        "wall_s": 187.01606541700312,
+        "write_latency_s": {
+          "count": 600,
+          "max": 0.8758212499960791,
+          "mean": 0.3111857609617194,
+          "min": 0.007014208997134119,
+          "p50": 0.26082262498675846,
+          "p95": 0.7367606250045355
+        }
+      },
+      {
+        "abort": null,
+        "internal_commit_diagnostic": false,
+        "n_written": 600,
+        "ok": true,
+        "params": {
+          "n_target": 600,
+          "seed": 7,
+          "subjects": 1,
+          "supersede_ratio": 0.1
+        },
+        "reads": {
+          "context_view_limit50_s": 0.2452428339747712,
+          "context_view_outcome": "view_subject_exceeds_budget",
+          "retrieve_index_rare_s": 0.04811649999464862,
+          "retrieve_scan_common_s": 0.04871979099698365,
+          "retrieve_scan_rare_s": 0.04835950001142919
+        },
+        "records_added": 472,
+        "scenario": "ingest-s1-r10",
+        "schema": "an-kla/scale-battery-cell/v1",
+        "snapshot_points": [
+          {
+            "n": 50,
+            "read_current_s": 3.320799442008138e-05,
+            "snapshot_s": 0.004004624992376193
+          },
+          {
+            "n": 100,
+            "read_current_s": 3.5124976420775056e-05,
+            "snapshot_s": 0.007751500001177192
+          },
+          {
+            "n": 200,
+            "read_current_s": 3.587501123547554e-05,
+            "snapshot_s": 0.015301333012757823
+          },
+          {
+            "n": 400,
+            "read_current_s": 5.266699008643627e-05,
+            "snapshot_s": 0.035290250001708046
+          },
+          {
+            "n": 600,
+            "read_current_s": 4.845901275984943e-05,
+            "snapshot_s": 0.04712308300076984
+          }
+        ],
+        "store_bytes": 32434118,
+        "supersedes_done": 64,
+        "wall_s": 202.55886729198392,
+        "write_latency_s": {
+          "count": 600,
+          "max": 0.9574003749876283,
+          "mean": 0.3370667387213325,
+          "min": 0.007646625017514452,
+          "p50": 0.28096729100798257,
+          "p95": 0.8114430000132415
+        }
+      }
+    ],
+    "ok": true,
+    "scenario": "ingest_governed",
+    "schema": "an-kla/scale-battery-scenario/v1"
+  },
+  "reads-diagnostic": {
+    "internal_commit_diagnostic": true,
+    "label": "columna interna (MemoryStore.commit): diagn\u00f3stico, no v\u00eda p\u00fablica",
+    "ok": true,
+    "params": {
+      "batch": 1000,
+      "records_points": [
+        1000,
+        5000,
+        20000
+      ],
+      "subjects": 200
+    },
+    "scenario": "reads_diagnostic",
+    "schema": "an-kla/scale-battery-scenario/v1",
+    "subjects_many": {
+      "context_view_limit50_s": 0.261321041994961,
+      "context_view_outcome": "ok",
+      "ok": true,
+      "retrieve_index_rare_s": 0.12575862498488277,
+      "retrieve_scan_common_s": 0.1302827920007985,
+      "retrieve_scan_rare_s": 0.1226985829998739,
+      "rows": [
+        {
+          "build_s": 0.010077749990159646,
+          "context_view_limit50_s": 0.07160304198623635,
+          "n": 1000,
+          "snapshot_s": 0.003961000009439886,
+          "store_bytes": 190405
+        },
+        {
+          "build_s": 0.08834591699996963,
+          "context_view_limit50_s": 0.08165775000816211,
+          "n": 5000,
+          "snapshot_s": 0.020298667019233108,
+          "store_bytes": 927173
+        },
+        {
+          "build_s": 0.8889240419957787,
+          "context_view_limit50_s": 0.2921028329874389,
+          "n": 20000,
+          "snapshot_s": 0.08547704198281281,
+          "store_bytes": 3720609
+        }
+      ],
+      "subjects": 200,
+      "wall_s": 2.6055220830021426
+    },
+    "subjects_single": {
+      "context_view_outcome_final": "view_subject_exceeds_budget",
+      "ok": true,
+      "rows": [
+        {
+          "build_s": 0.010253166983602569,
+          "context_view_limit50_s": 0.10824199998751283,
+          "n": 1000,
+          "snapshot_s": 0.0039362499956041574,
+          "store_bytes": 188967
+        },
+        {
+          "build_s": 0.08047308298409916,
+          "context_view_limit50_s": 0.6655116670008283,
+          "n": 5000,
+          "snapshot_s": 0.01836762498714961,
+          "store_bytes": 919935
+        },
+        {
+          "build_s": 0.873985874990467,
+          "context_view_limit50_s": 3.1461678330088034,
+          "n": 20000,
+          "snapshot_s": 0.07752199997776188,
+          "store_bytes": 3691621
+        }
+      ],
+      "subjects": 1,
+      "wall_s": 8.169130750000477
+    }
+  }
+}

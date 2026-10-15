@@ -1,9 +1,10 @@
 # ADR-0054: Commit gobernado en lote (write-proposal/v2)
 
 - **Estado:** Aceptada
-- **Implementación:** Parcial (P2d: `an_kla/write_batch.py` con despacho en
-  `write_policy.py`/`plan_guard.py`/`write_commit.py`; batería de aceptación
-  en curso)
+- **Implementación:** Implementada (P2d: `an_kla/write_batch.py` + despachos
+  en `write_policy.py`/`plan_guard.py`/`write_commit.py`; batería
+  `results/20261014-222410`: 600 registros, 12 revisiones, 0,2 s de pared;
+  suite 1196 OK)
 - **Fecha:** 2026-10-14
 - **Decide sobre:** el contrato versionado que permite ingesta gobernada de N registros en una revisión sin debilitar CAS ni política por registro.
 
