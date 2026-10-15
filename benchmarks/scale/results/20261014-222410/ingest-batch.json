@@ -1,0 +1,60 @@
+{
+  "abort": null,
+  "internal_commit_diagnostic": false,
+  "n_records": 600,
+  "ok": true,
+  "params": {
+    "batch_size": 50,
+    "n_target": 600
+  },
+  "per_batch_latency_s": {
+    "count": 12,
+    "max": 0.0188567090081051,
+    "mean": 0.015244708161238426,
+    "min": 0.011205999995581806,
+    "p50": 0.01614195801084861,
+    "p95": 0.018794332980178297
+  },
+  "per_record_latency_s": {
+    "count": 600,
+    "max": 0.000377134180162102,
+    "mean": 0.0003048941632247685,
+    "min": 0.0002241199999116361,
+    "p50": 0.00032283916021697223,
+    "p95": 0.000377134180162102
+  },
+  "reads": {
+    "context_view_limit50_s": 0.06487324999761768,
+    "context_view_outcome": "view_subject_exceeds_budget",
+    "retrieve_index_rare_s": 0.005778749997261912,
+    "retrieve_scan_common_s": 0.00532870800816454,
+    "retrieve_scan_rare_s": 0.004936667013680562
+  },
+  "revisions": 12,
+  "scenario": "ingest_batch",
+  "schema": "an-kla/scale-battery-scenario/v1",
+  "snapshot_points": [
+    {
+      "n": 50,
+      "snapshot_s": 0.0006271659804042429
+    },
+    {
+      "n": 100,
+      "snapshot_s": 0.0015626669919583946
+    },
+    {
+      "n": 200,
+      "snapshot_s": 0.0014201249869074672
+    },
+    {
+      "n": 400,
+      "snapshot_s": 0.0025825839838944376
+    },
+    {
+      "n": 600,
+      "snapshot_s": 0.004312958975788206
+    }
+  ],
+  "store_bytes": 258117,
+  "wall_s": 0.1997996249992866
+}

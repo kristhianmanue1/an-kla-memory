@@ -1,0 +1,187 @@
+{
+  "cells": [
+    {
+      "abort": null,
+      "internal_commit_diagnostic": false,
+      "n_written": 600,
+      "ok": true,
+      "params": {
+        "n_target": 600,
+        "seed": 7,
+        "subjects": 1,
+        "supersede_ratio": 0.0
+      },
+      "reads": {
+        "context_view_limit50_s": 0.11534804198890924,
+        "context_view_outcome": "view_subject_exceeds_budget",
+        "retrieve_index_rare_s": 0.04914291700697504,
+        "retrieve_scan_common_s": 0.054207999986829236,
+        "retrieve_scan_rare_s": 0.049737124994862825
+      },
+      "records_added": 600,
+      "scenario": "ingest-s1-r0",
+      "schema": "an-kla/scale-battery-cell/v1",
+      "snapshot_points": [
+        {
+          "n": 50,
+          "read_current_s": 3.462500171735883e-05,
+          "snapshot_s": 0.004024875001050532
+        },
+        {
+          "n": 100,
+          "read_current_s": 3.433399251662195e-05,
+          "snapshot_s": 0.0076333330071065575
+        },
+        {
+          "n": 200,
+          "read_current_s": 3.462500171735883e-05,
+          "snapshot_s": 0.015296583995223045
+        },
+        {
+          "n": 400,
+          "read_current_s": 3.7667021388188004e-05,
+          "snapshot_s": 0.030493708996800706
+        },
+        {
+          "n": 600,
+          "read_current_s": 3.833399387076497e-05,
+          "snapshot_s": 0.04641179199097678
+        }
+      ],
+      "store_bytes": 31223274,
+      "supersedes_done": 0,
+      "wall_s": 186.22793945801095,
+      "write_latency_s": {
+        "count": 600,
+        "max": 0.9341626660025213,
+        "mean": 0.3098732679919825,
+        "min": 0.007123207993572578,
+        "p50": 0.2568359160213731,
+        "p95": 0.7435897919931449
+      }
+    },
+    {
+      "abort": null,
+      "internal_commit_diagnostic": false,
+      "n_written": 600,
+      "ok": true,
+      "params": {
+        "n_target": 600,
+        "seed": 7,
+        "subjects": 200,
+        "supersede_ratio": 0.0
+      },
+      "reads": {
+        "context_view_limit50_s": 0.14228920900495723,
+        "context_view_outcome": "ok",
+        "retrieve_index_rare_s": 0.056171042000642046,
+        "retrieve_scan_common_s": 0.052116667007794604,
+        "retrieve_scan_rare_s": 0.048439875012263656
+      },
+      "records_added": 600,
+      "scenario": "ingest-s200-r0",
+      "schema": "an-kla/scale-battery-cell/v1",
+      "snapshot_points": [
+        {
+          "n": 50,
+          "read_current_s": 3.462500171735883e-05,
+          "snapshot_s": 0.004021417000330985
+        },
+        {
+          "n": 100,
+          "read_current_s": 3.6250014090910554e-05,
+          "snapshot_s": 0.00819141700048931
+        },
+        {
+          "n": 200,
+          "read_current_s": 3.491601091809571e-05,
+          "snapshot_s": 0.015406791993882507
+        },
+        {
+          "n": 400,
+          "read_current_s": 4.00420103687793e-05,
+          "snapshot_s": 0.03170895800576545
+        },
+        {
+          "n": 600,
+          "read_current_s": 3.8416997995227575e-05,
+          "snapshot_s": 0.04573766700923443
+        }
+      ],
+      "store_bytes": 31224152,
+      "supersedes_done": 0,
+      "wall_s": 187.01606541700312,
+      "write_latency_s": {
+        "count": 600,
+        "max": 0.8758212499960791,
+        "mean": 0.3111857609617194,
+        "min": 0.007014208997134119,
+        "p50": 0.26082262498675846,
+        "p95": 0.7367606250045355
+      }
+    },
+    {
+      "abort": null,
+      "internal_commit_diagnostic": false,
+      "n_written": 600,
+      "ok": true,
+      "params": {
+        "n_target": 600,
+        "seed": 7,
+        "subjects": 1,
+        "supersede_ratio": 0.1
+      },
+      "reads": {
+        "context_view_limit50_s": 0.2452428339747712,
+        "context_view_outcome": "view_subject_exceeds_budget",
+        "retrieve_index_rare_s": 0.04811649999464862,
+        "retrieve_scan_common_s": 0.04871979099698365,
+        "retrieve_scan_rare_s": 0.04835950001142919
+      },
+      "records_added": 472,
+      "scenario": "ingest-s1-r10",
+      "schema": "an-kla/scale-battery-cell/v1",
+      "snapshot_points": [
+        {
+          "n": 50,
+          "read_current_s": 3.320799442008138e-05,
+          "snapshot_s": 0.004004624992376193
+        },
+        {
+          "n": 100,
+          "read_current_s": 3.5124976420775056e-05,
+          "snapshot_s": 0.007751500001177192
+        },
+        {
+          "n": 200,
+          "read_current_s": 3.587501123547554e-05,
+          "snapshot_s": 0.015301333012757823
+        },
+        {
+          "n": 400,
+          "read_current_s": 5.266699008643627e-05,
+          "snapshot_s": 0.035290250001708046
+        },
+        {
+          "n": 600,
+          "read_current_s": 4.845901275984943e-05,
+          "snapshot_s": 0.04712308300076984
+        }
+      ],
+      "store_bytes": 32434118,
+      "supersedes_done": 64,
+      "wall_s": 202.55886729198392,
+      "write_latency_s": {
+        "count": 600,
+        "max": 0.9574003749876283,
+        "mean": 0.3370667387213325,
+        "min": 0.007646625017514452,
+        "p50": 0.28096729100798257,
+        "p95": 0.8114430000132415
+      }
+    }
+  ],
+  "ok": true,
+  "scenario": "ingest_governed",
+  "schema": "an-kla/scale-battery-scenario/v1"
+}

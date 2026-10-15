@@ -195,11 +195,15 @@ def commit_write_plan(
             outcome["operation_error_code"] = "lock_release_incomplete"
     if outcome["committed"] is True and revision != observed:
         store._maybe_reindex(observed, revision)
-    if outcome["committed"] is True and not record_text(
-        checked_proposal["record"]
-    ):
+    lacks_text = (
+        not record_text(checked_proposal["record"])
+        if checked_proposal.get("schema") == "an-kla/write-proposal-v1"
+        else "record_without_indexable_text" in checked_decision["reason_codes"]
+    )
+    if outcome["committed"] is True and lacks_text:
         # Issue #104 (H2): warning visible en el outcome (el reason ya
-        # viaja en la decisión; ADR-0018/issue #15).
+        # viaja en la decisión; ADR-0018/issue #15). En lote v2 la razón
+        # es agregada por registro (ADR-0054).
         outcome = deepcopy(outcome)
         outcome["warnings"] = sorted(
             set([*outcome["warnings"], "record_without_indexable_text"])

@@ -379,7 +379,7 @@ class WritePolicyTests(unittest.TestCase):
             policy_fingerprint(),
             # Issue #152: bump por channel_confirmed_requires_adapter
             # (catálogos + flag). Pin intencional por release.
-            "sha256:21bc0dd31eae9e1a56af1c851e8c34ebd667bec7d699e13e8e5ec9ae09355984",
+            "sha256:4c5b287374d8a809fd2d73daa46f4de1c297605b94a0c1814d8c6d9178028027",
         )
 
     def test_verified_at_is_validated_but_never_elevates_authority(self) -> None:
@@ -738,7 +738,7 @@ class SubjectRefPolicyTests(unittest.TestCase):
             policy_fingerprint(),
             # Issue #152: bump por channel_confirmed_requires_adapter
             # (catálogos + flag). Pin intencional por release.
-            "sha256:21bc0dd31eae9e1a56af1c851e8c34ebd667bec7d699e13e8e5ec9ae09355984",
+            "sha256:4c5b287374d8a809fd2d73daa46f4de1c297605b94a0c1814d8c6d9178028027",
         )
         self.assertIn(
             "subject_ref_namespace_mismatch",

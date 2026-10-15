@@ -105,6 +105,16 @@ construirá esa autoridad desde configuración y estado separados del contenido.
 > `cli_privileged_authority_unresolved`. El catálogo y la bandera forman parte
 > del perfil: el fingerprint cambió (`2d13bb1d` → `21bc0dd3`).
 
+> **Enmienda (2026-10-15, ADR-0054 / issue #149 P2d):** existe un segundo
+> perfil de propuesta, `write-proposal/v2` (lote), definido y gobernado por
+> ADR-0054: registros homogéneos evaluados contra el estado pre-lote, UNA
+> decisión/plan/revisión/CAS, supersede intra-lote prohibido, atomicidad
+> all-or-nothing y un evento por lote con los digests ordenados de sus
+> registros. `write-proposal/v1` queda congelada como vía canónica de
+> registro único; el perfil gana `max_batch_records=1000` en
+> `_POLICY_CONFIGURATION` (fingerprint `21bc0dd3` → `4c5b2873`). La frontera
+> de autoridad y los techos de este ADR aplican igual por registro.
+
 La clase y el tipo de emisor deben ser compatibles: `tool_observed` exige
 `issuer.kind=tool`, `channel_confirmed` exige `channel`, `model_derived` exige
 `model`, `derived_from_retrieval` admite `model` o `resolver`, y `unresolved`
