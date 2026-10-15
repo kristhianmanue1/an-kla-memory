@@ -264,15 +264,21 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
             raise IntegrityError("current_invalid_syntax") from exc
         return value
 
-    def snapshot(self, revision_id: str | None = None) -> Snapshot:
+    def snapshot(
+        self, revision_id: str | None = None, *, use_watermark: bool = True
+    ) -> Snapshot:
         if self.custody_pointer_present:
             # An explicit revision skips read_current(); the twin check must
             # not (beta.30 release round, H-03).
             raise CustodyError("store_root_divergence")
         with shared_reader_gate(self):
-            return self._snapshot_under_gate(revision_id)
+            return self._snapshot_under_gate(revision_id, use_watermark=use_watermark)
 
-    def _snapshot_under_gate(self, revision_id: str | None = None) -> Snapshot:
+    def _snapshot_under_gate(
+        self, revision_id: str | None = None, *, use_watermark: bool = True
+    ) -> Snapshot:
+        from .watermark import usable_watermark
+
         revision_id = revision_id or self.read_current()
         try:
             manifest = self._read_json_object("revisions", revision_id)
@@ -289,7 +295,10 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         if digest_json(manifest) != revision_id:
             raise IntegrityError("revision_hash_mismatch")
         self._validate_manifest(manifest)
-        self._validate_revision_chain(revision_id, manifest)
+        self._validate_revision_chain(
+            revision_id, manifest,
+            stop=usable_watermark(self) if use_watermark else None,
+        )
         verify_manifest_link(self, manifest)
         checkpoint_id = str(manifest.get("checkpoint", ""))
         checkpoint = self._read_json_object("checkpoints", checkpoint_id)
@@ -498,7 +507,9 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         )
 
     def verify(self) -> dict[str, Any]:
-        snapshot = self.snapshot()
+        # Auditoría completa (ADR-0053 §1): verify ignora el watermark y
+        # recorre toda la cadena.
+        snapshot = self.snapshot(use_watermark=False)
         binding = verify_current_binding(self, snapshot.manifest, snapshot.revision_id)
         return {
             "ok": True,
@@ -651,11 +662,12 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         validate_manifest(manifest, IntegrityError)
 
     def _validate_revision_chain(
-        self, revision_id: str, manifest: Mapping[str, Any]
+        self, revision_id: str, manifest: Mapping[str, Any],
+        *, stop: Mapping[str, Any] | None = None,
     ) -> None:
         from .revision_validation import validate_revision_chain
 
-        validate_revision_chain(self, revision_id, manifest, IntegrityError)
+        validate_revision_chain(self, revision_id, manifest, IntegrityError, stop=stop)
 
     def _validate_lifecycle(
         self, manifest: Mapping[str, Any], raw_records: Mapping[str, tuple[Mapping[str, Any], ...]]
