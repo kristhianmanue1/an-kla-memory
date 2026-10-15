@@ -135,8 +135,6 @@ def run_concurrency(
         item["latency_s"] = _summarize(item.pop("latency_s"))
         (writers_out if item["role"] == "writer" else readers_out).append(item)
 
-    from benchmarks.scale.core import stats
-
     return {
         "schema": "an-kla/scale-battery-scenario/v1",
         "scenario": "concurrency",
@@ -153,10 +151,11 @@ def run_concurrency(
             "lock_busy_total": sum(w["busy"] for w in writers_out),
             "cas_conflicts_total": sum(w["cas"] for w in writers_out),
             "reader_op_rounds": sum(r["ops"] for r in readers_out),
-            "writer_latency_s": stats(
-                [s for w in writers_out for s in [w["latency_s"].get("p50")]]
-                if writers_out and all(w["latency_s"] for w in writers_out) else []
-            ),
+            "writer_p50s_s": [
+                w["latency_s"]["p50"]
+                for w in writers_out
+                if w["latency_s"].get("p50") is not None
+            ],
         },
         "wall_s": wall,
         "ok": len(writers_out) == writers and len(readers_out) == readers,
