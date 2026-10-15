@@ -13,6 +13,7 @@ aborte. El presupuesto total detiene el lanzamiento de escenarios restantes.
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import sys
 import tempfile
@@ -186,11 +187,23 @@ def main(argv: list[str] | None = None) -> int:
             # Persistencia inmediata: la muerte del padre no pierde lo corrido.
             write_result(out, name, results[name])
     finally:
+        # Fusión con escenarios ya persistidos en el dir de salida: permite
+        # re-corridas parciales sin fragmentar la corrida oficial.
+        merged: dict[str, dict[str, Any]] = {}
+        for existing in sorted(out.glob("*.json")):
+            name = existing.stem
+            if name in ("summary", "env", "thresholds-used"):
+                continue
+            try:
+                merged[name] = json.loads(existing.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+        merged.update(results)
         write_result(out, "env", env)
-        write_result(out, "summary", results)
+        write_result(out, "summary", merged)
         shutil.copyfile(args.thresholds, out / "thresholds-used.json")
         (out / "battery-report.md").write_text(
-            _summary_md(results, env), encoding="utf-8"
+            _summary_md(merged, env), encoding="utf-8"
         )
         if ws_own:
             shutil.rmtree(ws, ignore_errors=True)

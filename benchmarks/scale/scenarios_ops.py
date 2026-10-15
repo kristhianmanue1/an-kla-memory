@@ -282,8 +282,13 @@ def run_compaction(
     plan = cli(comp_ws, "compact", "plan",
                "--proposal", str(proposal_path), "--bundle", str(bundle))
     plan_s = time.perf_counter() - t0
+    # cli() inyecta "ok" para diagnóstico; el validador estricto del CLI
+    # exige el conjunto exacto de campos al re-leer el archivo.
     plan_path = comp_ws / "compact-plan.json"
-    plan_path.write_text(json.dumps(plan), encoding="utf-8")
+    plan_path.write_text(
+        json.dumps({k: v for k, v in plan.items() if k != "ok"}),
+        encoding="utf-8",
+    )
 
     t0 = time.perf_counter()
     commit = cli(comp_ws, "compact", "commit",
