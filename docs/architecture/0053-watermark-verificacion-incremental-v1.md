@@ -1,12 +1,23 @@
 # ADR-0053: Watermark de verificación incremental (P1 del escalado)
 
 - **Estado:** Aceptada
-- **Implementación:** No iniciada
+- **Implementación:** Parcial (P1: watermark en `an_kla/watermark.py` +
+  sufijo en `validate_revision_chain`; batería de aceptación en curso)
 - **Fecha:** 2026-10-14
 - **Decide sobre:** cómo las lecturas normales dejan de revalidar la cadena completa de revisiones sin perder equivalencia de resultado ni tamper-evidence.
 
 > Aceptada por orden del maintainer (2026-10-15: "adelante con implementación
 > recomendada" sobre la mesa completa ADR-0052/0053/0054).
+>
+> **Enmienda 1 (2026-10-15, implementación P1):** el refresco vive como
+> sidecar derivado `memory/watermarks/CURRENT` escrito bajo el mismo lock de
+> la transacción (después de `_replace_current`), no como campo del
+> manifiesto: el schema de `revision-v3` está congelado con conjunto
+> exacto de claves y la regla §4 se satisface sin tocar el contrato (una
+> sola escritura autoritativa por commit; el sidecar es caché). El export
+> excluye `watermarks/` por lista de derivadas (junto a `indexes/`,
+> `leases/`, `quarantine/`). Reset por epoch emerge naturalmente: la
+> historia pre-epoch queda archivada e inalcanzable desde la cadena nueva.
 
 ## Contexto
 
