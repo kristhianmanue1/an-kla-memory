@@ -196,21 +196,6 @@ def _supersede_links(snapshot: Snapshot) -> dict[tuple[str, str], list[dict[str,
     return links
 
 
-def _governed_states(snapshot: Snapshot) -> dict[tuple[str, str], str]:
-    states: dict[tuple[str, str], str] = {}
-    for entry in snapshot.manifest.get("supersedes_map", []):
-        states[(str(entry["stream"]), str(entry["target_id"]))] = "superseded"
-    refuted = {
-        (str(entry["stream"]), str(entry["target_record_sha256"]))
-        for entry in snapshot.manifest.get("refutations_map", [])
-    }
-    for stream in STREAMS:
-        for raw in snapshot.raw_records[stream]:
-            if (stream, digest_json(raw)) in refuted:
-                states[(stream, str(raw.get("id", "")))] = "refuted"
-    return states
-
-
 def _physical_state(raw: Mapping[str, Any]) -> tuple[str, str, Any]:
     if "status" in raw:
         physical = raw["status"]
@@ -229,6 +214,7 @@ def _physical_state(raw: Mapping[str, Any]) -> tuple[str, str, Any]:
 def _project_record(
     raw: Mapping[str, Any], stream: str, projection: str, governed: str | None,
     links: list[dict[str, str]], now: Any, stale_after_days: int | None,
+    record_sha256: str,
 ) -> dict[str, Any]:
     if governed is not None:
         _physical_state_value, _physical_source, physical = _physical_state(raw)
@@ -239,7 +225,7 @@ def _project_record(
         "subject_ref": str(raw["subject_ref"]),
         "stream": stream,
         "id": str(raw.get("id", "")),
-        "record_sha256": digest_json(raw),
+        "record_sha256": record_sha256,
         "state": state,
         "state_source": source,
         "physical_status_untrusted": physical,
@@ -266,11 +252,75 @@ def _project_record(
     return projected
 
 
-def _derive(snapshot: Snapshot, streams: tuple[str, ...], subject_filter: str | None,
-            projection: str, now: Any, stale_after_days: int | None) -> tuple[list[dict[str, Any]], dict[str, int], list[str]]:
-    governed = _governed_states(snapshot)
+def _project_subject(
+    ref: str, records: Sequence[tuple[str, Mapping[str, Any]]], projection: str,
+    links: Mapping[tuple[str, str], list[dict[str, str]]],
+    refuted: set[tuple[str, str]], superseded: set[tuple[str, str]],
+    now: Any, stale_after_days: int | None,
+) -> dict[str, Any]:
+    items: list[dict[str, Any]] = []
+    for stream, raw in records:
+        record_sha256 = digest_json(raw)
+        record_id = str(raw.get("id", ""))
+        if (stream, record_sha256) in refuted:
+            governed: str | None = "refuted"
+        elif (stream, record_id) in superseded:
+            governed = "superseded"
+        else:
+            governed = None
+        items.append(_project_record(raw, stream, projection, governed,
+                                     links.get((stream, record_id), []),
+                                     now, stale_after_days, record_sha256))
+    alternatives = sorted(
+        (item for item in items if item["state"] == "active"),
+        key=lambda item: (STREAMS.index(item["stream"]), item["record_sha256"]),
+    )
+    history = sorted(
+        (item for item in items if item["state"] != "active"),
+        key=lambda item: (STREAMS.index(item["stream"]), item["record_sha256"]),
+    )
+    history.sort(
+        key=lambda item: (
+            isinstance(item.get("verified_at"), str),
+            item.get("verified_at") if isinstance(item.get("verified_at"), str) else "",
+        ),
+        reverse=True,
+    )
+    texts = {item.get("record_text") for item in items if "record_text" in item}
+    raw_digests = {item["record_sha256"] for item in items}
+    subject_out = {
+        "subject_ref": ref,
+        "data_conflict": len(alternatives) >= 2,
+        "alternatives": alternatives,
+        "history": history,
+    }
+    if projection == "text" and len(raw_digests) > len(texts):
+        subject_out["content_differs_beyond_text"] = True
+    return subject_out
+
+
+def _derive_universe(
+    snapshot: Snapshot, streams: tuple[str, ...], subject_filter: str | None,
+) -> tuple[
+    dict[str, list[tuple[str, Mapping[str, Any]]]],
+    dict[tuple[str, str], list[dict[str, str]]],
+    set[tuple[str, str]],
+    set[tuple[str, str]],
+    dict[str, int],
+    list[str],
+]:
+    """Light pass (ADR-0058): references and exact counts, no projection."""
+
     links = _supersede_links(snapshot)
-    grouped: dict[str, list[dict[str, Any]]] = {}
+    refuted = {
+        (str(entry["stream"]), str(entry["target_record_sha256"]))
+        for entry in snapshot.manifest.get("refutations_map", [])
+    }
+    superseded = {
+        (str(entry["stream"]), str(entry["target_id"]))
+        for entry in snapshot.manifest.get("supersedes_map", [])
+    }
+    grouped: dict[str, list[tuple[str, Mapping[str, Any]]]] = {}
     missing = {stream: 0 for stream in streams}
     namespaces: set[str] = set()
     for stream in streams:
@@ -286,46 +336,13 @@ def _derive(snapshot: Snapshot, streams: tuple[str, ...], subject_filter: str | 
             if subject_filter is not None and subject != subject_filter:
                 continue
             namespaces.add(parsed["namespace"])
-            record_id = str(raw.get("id", ""))
-            grouped.setdefault(str(subject), []).append(
-                _project_record(raw, stream, projection, governed.get((stream, record_id)),
-                                links.get((stream, record_id), []), now, stale_after_days)
-            )
-    subjects: list[dict[str, Any]] = []
-    for subject_ref in sorted(grouped):
-        records = grouped[subject_ref]
-        alternatives = sorted(
-            (item for item in records if item["state"] == "active"),
-            key=lambda item: (STREAMS.index(item["stream"]), item["record_sha256"]),
-        )
-        history = sorted(
-            (item for item in records if item["state"] != "active"),
-            key=lambda item: (STREAMS.index(item["stream"]), item["record_sha256"]),
-        )
-        history.sort(
-            key=lambda item: (
-                isinstance(item.get("verified_at"), str),
-                item.get("verified_at") if isinstance(item.get("verified_at"), str) else "",
-            ),
-            reverse=True,
-        )
-        texts = {item.get("record_text") for item in records if "record_text" in item}
-        raw_digests = {item["record_sha256"] for item in records}
-        subject_out = {
-            "subject_ref": subject_ref,
-            "data_conflict": len(alternatives) >= 2,
-            "alternatives": alternatives,
-            "history": history,
-        }
-        if projection == "text" and len(raw_digests) > len(texts):
-            subject_out["content_differs_beyond_text"] = True
-        subjects.append(subject_out)
-    warnings = []
+            grouped.setdefault(str(subject), []).append((stream, raw))
+    warnings: list[str] = []
     if any(missing.values()):
         warnings.append(WARNING_CODES[0])
     if len(namespaces) > 1:
         warnings.append(WARNING_CODES[1])
-    return subjects, missing, warnings
+    return grouped, links, refuted, superseded, missing, warnings
 
 
 def _base_payload(identity: Mapping[str, Any], page: Mapping[str, Any], revision: str,
@@ -422,9 +439,8 @@ def _context_view(
             return _error("view_revision_not_available")
         return _error("view_internal_error")
     try:
-        subjects, missing, warnings = _derive(
-            snapshot, selected_streams, subject_filter, projection,
-            page["parsed_now"], identity["stale_after_days"],
+        grouped, links, refuted, superseded, missing, warnings = _derive_universe(
+            snapshot, selected_streams, subject_filter,
         )
     except ContextViewError as exc:
         if exc.detail.startswith("invalid_subject_ref:"):
@@ -437,12 +453,25 @@ def _context_view(
     except (KeyError, TypeError, ValueError):
         return _error("view_rule_ambiguous")
     identity_digest = digest_json(identity)
-    refs = [item["subject_ref"] for item in subjects]
+    refs = sorted(grouped)
     try:
         start = _decode_cursor(cursor, revision, identity_digest, refs)
     except ContextViewError:
         return _error("view_cursor_invalid")
-    total = len(subjects)
+    total = len(refs)
+
+    projections: dict[str, dict[str, Any]] = {}
+
+    def projected(index: int) -> dict[str, Any]:
+        ref = refs[index]
+        subject_out = projections.get(ref)
+        if subject_out is None:
+            subject_out = _project_subject(
+                ref, grouped[ref], projection, links, refuted, superseded,
+                page["parsed_now"], identity["stale_after_days"],
+            )
+            projections[ref] = subject_out
+        return subject_out
 
     def build(selected: list[dict[str, Any]], next_index: int, budget: int, used: int) -> dict[str, Any]:
         complete = next_index >= total
@@ -470,7 +499,11 @@ def _context_view(
     selected: list[dict[str, Any]] = []
     index = start
     while index < total and len(selected) < limit:
-        candidate = [*selected, subjects[index]]
+        try:
+            candidate_subject = projected(index)
+        except (KeyError, TypeError, ValueError):
+            return _error("view_rule_ambiguous")
+        candidate = [*selected, candidate_subject]
         try:
             measured = _fixed(lambda used: build(candidate, index + 1, budget_bytes, used))
         except ValueError:
@@ -480,15 +513,19 @@ def _context_view(
         selected = candidate
         index += 1
     if not selected and start < total:
+        try:
+            first = projected(start)
+        except (KeyError, TypeError, ValueError):
+            return _error("view_rule_ambiguous")
         minimum = _minimum_budget(
-            lambda budget, used: build([subjects[start]], start + 1, budget, used),
+            lambda budget, used: build([first], start + 1, budget, used),
             budget_bytes,
         )
         if minimum is None:
             return _error("view_budget_measurement_unavailable", provided_budget_bytes=budget_bytes, resume_cursor=cursor)
         return _error(
             "view_subject_exceeds_budget", retryable=True,
-            subject_ref=subjects[start]["subject_ref"],
+            subject_ref=refs[start],
             minimum_budget_bytes=minimum, provided_budget_bytes=budget_bytes,
             resume_cursor=cursor,
         )
