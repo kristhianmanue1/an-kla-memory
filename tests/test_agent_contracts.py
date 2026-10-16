@@ -116,6 +116,7 @@ class InstalledSchemaTests(unittest.TestCase):
         "write-decision-v1",
         "write-plan-v1",
         "write-proposal-v1",
+        "write-proposal-v2",
     )
 
     def test_installed_resources_match_normative_source_bytes(self) -> None:

@@ -273,9 +273,12 @@ ignora ni acepta una copia exterior alterada.
 
 ### Varias escrituras
 
-Cada commit exitoso mueve `CURRENT`. No prepares un batch completo contra una
-sola revisión: el segundo plan quedará obsoleto. Ejecuta cada elemento de forma
-secuencial:
+Para N records del mismo stream y operación usa un lote
+`an-kla/write-proposal-v2` (ADR-0054, `schema show write-proposal-v2`): un
+plan, una revisión y un CAS. Entre lotes, o con streams u operaciones
+distintos, cada commit exitoso mueve `CURRENT`: no prepares varios planes
+contra una sola revisión, porque el segundo quedará obsoleto. Ejecútalos de
+forma secuencial:
 
 ```text
 status → proposal/authority → plan-write → commit-write-plan → verificar outcome

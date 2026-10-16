@@ -14,6 +14,7 @@ python -m an_kla schema show write-plan-v1
 | Schema | Propósito |
 |---|---|
 | `write-proposal-v1.schema.json` | Candidato de escritura (record, stream, lineage). |
+| `write-proposal-v2.schema.json` | Lote gobernado (ADR-0054): `records` homogéneos (1–1000), `supersedes` como mapa id nuevo → id vigente; un plan, una revisión, un CAS. |
 | `write-authority-v1.schema.json` | Autoridad separada del proposal (scope, evidence, issuer). |
 | `write-decision-v1.schema.json` | Decisión determinista de la política (`skip` / `write-full` / `write-summary`). |
 | `write-plan-v1.schema.json` | Plan ejecutable ligado por hashes al proposal + authority + decision. |

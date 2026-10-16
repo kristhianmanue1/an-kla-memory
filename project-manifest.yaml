@@ -57,6 +57,7 @@ publica:
   - { tipo: contrato, id: an-kla/verify-revision-v1 }
   # Escritura gobernada y transacciones
   - { tipo: contrato, id: an-kla/write-proposal-v1 }
+  - { tipo: contrato, id: an-kla/write-proposal-v2 }
   - { tipo: contrato, id: an-kla/write-authority-v1 }
   - { tipo: contrato, id: an-kla/write-authority-v2 }
   - { tipo: contrato, id: an-kla/write-plan-v1 }

@@ -265,6 +265,27 @@ def emit_write_authority_template(proposal: Mapping[str, Any]) -> dict[str, Any]
     }
 
 
+def validate_record_fields(record: Any, code: str, prefix: str) -> None:
+    """Per-record invariants for v1 and every v2 batch record (#176)."""
+    if not isinstance(record, dict) or not record:
+        raise WritePolicyError(code, f"{prefix}:not_object")
+    if not isinstance(record.get("id"), str) or not record["id"]:
+        raise WritePolicyError(code, f"{prefix}.id")
+    try:
+        if "verified_at" in record:
+            parse_verified_at(record["verified_at"])
+    except TemporalError as exc:
+        raise WritePolicyError(code, f"{prefix}.verified_at") from exc
+    for field in ("status", "nu"):  # #113/R1: non-scalars crashed retrieve
+        if field in record and not (record[field] is None or isinstance(record[field], str)):
+            raise WritePolicyError(code, f"{prefix}.{field}")
+    try:
+        if "subject_ref" in record:
+            parse_subject_ref(record["subject_ref"])
+    except SubjectRefError as exc:
+        raise WritePolicyError(code, f"{prefix}.subject_ref") from exc
+
+
 def validate_write_proposal(proposal: Mapping[str, Any]) -> None:
     if isinstance(proposal, dict) and proposal.get("schema") == "an-kla/write-proposal-v2":
         from .write_batch import validate_batch_proposal
@@ -300,28 +321,7 @@ def validate_write_proposal(proposal: Mapping[str, Any]) -> None:
         raise WritePolicyError(code, "requested_representation")
     # Validate record shape BEFORE the co-occurrence block (record["id"] read).
     record = proposal["record"]
-    if not isinstance(record, dict) or not record:
-        raise WritePolicyError(code, "record:not_object")
-    if not isinstance(record.get("id"), str) or not record["id"]:
-        raise WritePolicyError(code, "record.id")
-    if "verified_at" in record:
-        try:
-            parse_verified_at(record["verified_at"])
-        except TemporalError as exc:
-            raise WritePolicyError(code, "record.verified_at") from exc
-    for vigency_field in ("status", "nu"):
-        # Issue #113/R1: non-scalar values passed the open schema and later
-        # crashed retrieve/index with TypeError; rejected here at write time.
-        if vigency_field in record and not (
-            record[vigency_field] is None
-            or isinstance(record[vigency_field], str)
-        ):
-            raise WritePolicyError(code, f"record.{vigency_field}")
-    if "subject_ref" in record:
-        try:
-            parse_subject_ref(record["subject_ref"])
-        except SubjectRefError as exc:
-            raise WritePolicyError(code, "record.subject_ref") from exc
+    validate_record_fields(record, code, "record")
     # Co-occurrence contract (ADR-0019): operation=supersede <-> supersedes
     # present; the target id must not self-reference the new record.
     if proposal["operation"] == "supersede":

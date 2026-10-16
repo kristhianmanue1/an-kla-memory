@@ -325,7 +325,8 @@ class AgentRecipeTests(unittest.TestCase):
         rev = fact_commit["revision"]
 
         # Supersede según el fragmento de la prosa.
-        pairs = dict(re.findall(r'`"([a-z_]+)": "([^"`]+)"`', section))
+        fragment = section.split("Para corregir un record vigente", 1)[1].split(". ", 1)[0]
+        pairs = dict(re.findall(r'`"([a-z_]+)": "([^"`]+)"`', fragment))
         self.assertEqual(set(pairs), {"operation", "supersedes"})
         correction = self._fill(proposal_tpl, {"<REV>": rev})
         original_id = correction["record"]["id"]
@@ -348,6 +349,65 @@ class AgentRecipeTests(unittest.TestCase):
         event["record"]["text"] = "hallazgo registrado como event"
         _, committed = self._plan_and_commit("event", event, rev)
         self.assertIs(committed["committed"], True)
+
+        # Lote v2: cada afirmación de la frase se contrasta con el motor.
+        sentence = section.split("Para varios records", 1)[1].split("\n\n", 1)[0]
+        sentence = " ".join(sentence.split())
+        batch_schema = re.search(r'`"schema": "([^"]+)"` con `"records": \[\.\.\.\]`',
+                                 sentence).group(1)
+        self.assertIn("del mismo stream y operación", sentence)
+        self.assertIn("en lugar de `record`", sentence)
+        self.assertIn("se planifica y confirma igual", sentence)
+        # «Forma exacta en `schema show X`»: X existe y su const es el de la prosa.
+        shown = re.search(r"Forma exacta en `schema show ([a-z0-9-]+)`", sentence).group(1)
+        self.assertEqual(json.loads(schema_bytes(shown))["properties"]["schema"]["const"],
+                         batch_schema)
+        # «del mismo stream y operación»: stream y operación son del lote, no del record.
+        shape = json.loads(schema_bytes(shown))
+        self.assertTrue({"stream", "operation"} <= set(shape["properties"]))
+        self.assertNotIn("stream", shape["$defs"]["record"]["properties"])
+        # «hasta N» es el límite de la política.
+        from an_kla.write_policy import _POLICY_CONFIGURATION
+        limit = int(re.search(r"\(hasta (\d+);", sentence).group(1))
+        self.assertEqual(limit, _POLICY_CONFIGURATION["max_batch_records"])
+
+        base = committed["revision"]
+        batch = self._fill(proposal_tpl, {"<REV>": base})
+        record = batch.pop("record")
+        batch["schema"] = batch_schema
+        batch["records"] = [dict(record, id="f-lote-1"), dict(record, id="f-lote-2")]
+        # «en lugar de `record`»: con ambos, el motor rechaza.
+        both = dict(batch, record=record)
+        self._write("both.json", both)
+        rejected = subprocess.run(
+            [sys.executable, "-m", "an_kla", "--project-root", str(self.root),
+             "plan-write", "--proposal", "both.json", "--emit-authority-template"],
+            capture_output=True, text=True, env=self.env, cwd=str(self.work))
+        self.assertNotEqual(rejected.returncode, 0)
+        # «se planifica y confirma igual»: plan-write -> commit-write-plan.
+        plan, batched = self._plan_and_commit("batch", batch, base)
+        self.assertEqual(plan["decision"]["decision"], f"write-{asked}")
+        self.assertIs(batched["committed"], True)
+        base = batched["revision"]
+
+        # Supersede en lote con el mapa tal como lo escribe la prosa.
+        mapping_tpl = re.search(r'`"supersedes"` es un mapa `(\{[^`]+\})`', sentence).group(1)
+        keys = re.findall(r'"<([^>]+)>"', mapping_tpl)
+        self.assertEqual(keys, ["id nuevo", "id vigente"])
+        correction = self._fill(proposal_tpl, {"<REV>": base})
+        correction.pop("record")
+        correction["schema"] = batch_schema
+        correction["operation"] = "supersede"
+        correction["records"] = [dict(record, id="f-lote-1b"), dict(record, id="f-lote-2b")]
+        correction["supersedes"] = {
+            new: old for new, old in (("f-lote-1b", "f-lote-1"), ("f-lote-2b", "f-lote-2"))}
+        _, corrected = self._plan_and_commit("batch-supersede", correction, base)
+        self.assertIs(corrected["committed"], True)
+        states = {r["id"]: r["status"] for r in
+                  self._cli(["inventory", "--revision", corrected["revision"]])["records"]}
+        self.assertEqual(states["f-lote-1"], "sustituida")
+        self.assertEqual(states["f-lote-2"], "sustituida")
+        self.assertEqual(states["f-lote-1b"], "vigente")
 
         # «sin `--streams` sólo busca `facts`»; resume «busca en los tres streams».
         self.assertIn("sin `--streams` sólo busca `facts`", section)

@@ -20,16 +20,15 @@ from .write_policy import (
     evaluate_write,
     policy_fingerprint,
     record_text,
+    validate_record_fields,
 )
 
 BATCH_SCHEMA = "an-kla/write-proposal-v2"
 
 
 def _validate_one_record(record: Any, code: str, detail: str) -> None:
-    if not isinstance(record, dict) or not record:
-        raise WritePolicyError(code, detail)
-    if not isinstance(record.get("id"), str) or not record["id"]:
-        raise WritePolicyError(code, detail)
+    # #176: the same per-record invariants as v1, for every record.
+    validate_record_fields(record, code, detail)
 
 
 def validate_batch_proposal(proposal: Mapping[str, Any]) -> None:

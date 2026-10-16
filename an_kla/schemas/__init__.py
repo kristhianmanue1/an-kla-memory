@@ -89,6 +89,7 @@ SCHEMA_FILES = {
     "write-decision-v1": "write-decision-v1.schema.json",
     "write-plan-v1": "write-plan-v1.schema.json",
     "write-proposal-v1": "write-proposal-v1.schema.json",
+    "write-proposal-v2": "write-proposal-v2.schema.json",
     "working-state-v2": "working-state-v2.schema.json",
 }
 
