@@ -31,7 +31,7 @@ Los mensajes de error y `runtime` no repiten entradas del caller ni rutas
 
 | Hallazgo | Riesgo | Corrección |
 |---|---|---|
-| MAJOR: sin salida temprana, el error de `resume` probaba todos los candidatos (20k: 0,15 s → 15 s) | Error lento en stores grandes | Salida temprana si root/snapshot no caben; 20k: 4,5 s, igual al coste de un resume exitoso en N |
+| MAJOR: sin salida temprana, el error de `resume` probaba todos los candidatos (20k: 0,15 s → 15 s) | Error lento en stores grandes | Salida temprana si root/snapshot no caben; 20k: 4,5 s con budget 4096 (≈ resume exitoso en N), 9 s con 15000 (dos proyecciones completas, ver ronda 3) |
 | MINOR: tests `--query` sin registros | Evidence no ejercida | Store con 12 facts que casan; guarda de coste sobre llamadas a `retrieve` |
 | MINOR: test de bandas no discriminante | Falsa cobertura | Casos con salto de banda y no monótono |
 | MINOR: `entrypoint` por `argv[0]` | Etiqueta errónea en `-c`/embebido | `__main__.__spec__`; tercer valor `embedded`; tests de los tres |
@@ -39,6 +39,19 @@ Los mensajes de error y `runtime` no repiten entradas del caller ni rutas
 
 Salida exitosa de `resume` byte a byte igual a la base en 2040
 combinaciones (legacy v1/v2, 0/5/60 facts, con/sin query, perfil index).
+
+## Ronda 3, re-verificación de `625cd89`: `fix-and-retry` sólo en tests
+
+| Hallazgo | Estado | Corrección |
+|---|---|---|
+| Salida temprana | Resuelto: 2040 combinaciones byte a byte iguales a la base; ningún budget en `[N-150, N)` cabe | — |
+| Guarda de coste no mata al mutante sin salida temprana | Corregido | Cuenta `_size_at_fixed_point` con 200 facts: corregido 406, mutante 606 > cota 407 (`AssertionError: 606 not less than or equal to 407`) |
+| Dos proyecciones completas cuando el contador `excluded_summary.budget` gana un dígito (15000 → 9 s) | Declarado | Consecuencia de la reserva del peor diagnóstico no implementada; N sigue siendo mínimo |
+| Bandas sin caso que las exija | Aceptado | Defensa, misma regla que ADR-0034 |
+| `entrypoint`, Enmienda 1 | Resueltos | — |
+
+Suite completa `.venv/bin/python` 3.12.12: 1220 tests OK (skipped=5);
+`ci_local --simulate-ci` OK.
 
 ## Límites declarados
 
@@ -48,11 +61,15 @@ combinaciones (legacy v1/v2, 0/5/60 facts, con/sin query, perfil index).
   muestra la pista y exit 2; improbable (digest), no se separa aquí.
 - `runtime` aún no está documentado en el contrato: PR B.
 - La reserva del peor diagnóstico de ADR-0023 sigue sin implementar
-  (declarada en la Enmienda 1).
+  (declarada en la Enmienda 1); cuesta una segunda proyección completa en el
+  error. Saltar el `deepcopy` de candidatos que no caben queda como mejora
+  opcional, no aplicada sin verificar que la evidence añade ≥ `cost_bytes`.
 - El mínimo es exacto si el tamaño crece con el budget; si no, es un budget
   verificado que cabe (misma regla que ADR-0034).
 
 ## Decisión
 
-Pendiente: re-verificación de las correcciones de la ronda 2 por el mismo
-revisor y suite completa en verde.
+- [x] proceed: el revisor condicionó el `proceed` a que la guarda de coste
+  matara al mutante; verificado arriba.
+- [ ] fix-and-retry
+- [ ] escalate

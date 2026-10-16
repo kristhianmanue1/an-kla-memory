@@ -106,20 +106,54 @@ class ResumeMinimumBudgetTests(unittest.TestCase):
 
     def test_error_path_cost_is_bounded(self) -> None:
         # Regresión de la ronda post-implementación: sin salida temprana cada
-        # proyección probaba todos los candidatos aunque el snapshot no cupiera.
+        # proyección del error probaba todos los candidatos aunque el snapshot
+        # no cupiera.  Con ella hay a lo sumo dos proyecciones completas (la
+        # cota base y, si el contador excluded_summary.budget gana un dígito,
+        # una más); las demás miden sólo el base.  Verificado: el mutante sin
+        # salida temprana excede la cota.
         import an_kla.resume as resume_module
 
-        calls = {"retrieve": 0}
-        real = resume_module.retrieve
+        with tempfile.TemporaryDirectory() as temp:
+            store = MemoryStore(temp)
+            base = store.initialize()
+            store.commit(
+                expected_current_hash=base,
+                checkpoint_patch={},
+                facts=[
+                    {"id": f"f-{i:03d}", "schema": "an-kla/fact-v1",
+                     "payload": {"text": "estado actual"}}
+                    for i in range(200)
+                ],
+            )
+            state = _state(store.snapshot().manifest["checkpoint"], "x" * 5000)
+            planning = plan_checkpoint(store, state, _authority(store, state))
+            commit_checkpoint(
+                store, planning, store.read_current(),
+                transaction_id=str(uuid.uuid4()),
+            )
+            calls = {"retrieve": 0, "size": 0}
+            real_retrieve = resume_module.retrieve
+            real_size = resume_module._size_at_fixed_point
 
-        def counting(*args, **kwargs):
-            calls["retrieve"] += 1
-            return real(*args, **kwargs)
+            def counting_retrieve(*args, **kwargs):
+                calls["retrieve"] += 1
+                return real_retrieve(*args, **kwargs)
 
-        with mock.patch.object(resume_module, "retrieve", counting):
-            with self.assertRaises(ResumeBudgetError):
-                resume(self.store, 1, query="estado actual")
-        self.assertLessEqual(calls["retrieve"], 8)
+            def counting_size(value):
+                calls["size"] += 1
+                return real_size(value)
+
+            with mock.patch.object(resume_module, "retrieve", counting_retrieve), \
+                    mock.patch.object(resume_module, "_size_at_fixed_point", counting_size):
+                with self.assertRaises(ResumeBudgetError) as caught:
+                    resume(store, 4096, query="estado actual")
+            minimum = caught.exception.minimum_budget_bytes
+            selected = len(resume_module.retrieve(
+                store, "estado actual", minimum,
+                streams=("facts", "events", "episodes"))["selected"])
+            self.assertGreater(selected, 100)
+            self.assertLessEqual(calls["retrieve"], 8)
+            self.assertLessEqual(calls["size"], calls["retrieve"] + 2 * (selected + 2))
 
     def test_minimum_band_search_handles_non_monotone_sizes(self) -> None:
         # Tamaño que salta al cruzar la banda de 4 dígitos: dentro de ella
