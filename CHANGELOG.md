@@ -10,6 +10,19 @@ El formato de cada entrada sigue [Keep a Changelog](https://keepachangelog.com/e
 por intención, y el proyecto usa [versionado semántico](https://semver.org/lang/es/)
 en fase de pre-release `0.1.0`.
 
+## [v0.1.0-beta.33]
+
+**Lote validado por registro y descubrible**: corrige un defecto del motor
+presente desde beta.31 (en `write-proposal-v2` sólo se validaba el primer
+record; los siguientes podían guardar `verified_at` inválido o `status`/`nu`
+no escalares), publica el lote como JSON Schema (`schema show
+write-proposal-v2`) y completa la referencia para agentes (forma y límites
+de los elementos de working-state). **Cambia la plantilla gestionada** a
+`0.1.0-beta.33` (beta.32 y beta.26 reconocidas: `context update`). Los records
+inválidos ya escritos por lotes en b31/b32 se conservan sin diagnóstico (#179).
+Detalle en
+[`docs/releases/v0.1.0-beta.33.md`](docs/releases/v0.1.0-beta.33.md).
+
 ## [v0.1.0-beta.32]
 
 **Agentes que no adivinan** (issue #171 y evidencia de sesiones reales):
