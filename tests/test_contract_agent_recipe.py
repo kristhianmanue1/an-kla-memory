@@ -325,7 +325,8 @@ class AgentRecipeTests(unittest.TestCase):
         rev = fact_commit["revision"]
 
         # Supersede según el fragmento de la prosa.
-        pairs = dict(re.findall(r'`"([a-z_]+)": "([^"`]+)"`', section))
+        fragment = section.split("Para corregir un record vigente", 1)[1].split(". ", 1)[0]
+        pairs = dict(re.findall(r'`"([a-z_]+)": "([^"`]+)"`', fragment))
         self.assertEqual(set(pairs), {"operation", "supersedes"})
         correction = self._fill(proposal_tpl, {"<REV>": rev})
         original_id = correction["record"]["id"]
@@ -348,6 +349,20 @@ class AgentRecipeTests(unittest.TestCase):
         event["record"]["text"] = "hallazgo registrado como event"
         _, committed = self._plan_and_commit("event", event, rev)
         self.assertIs(committed["committed"], True)
+
+        # Lote v2 según la prosa: varios records en un solo commit.
+        self.assertIn('`"schema": "an-kla/write-proposal-v2"` con `"records": [...]`', section)
+        batch = self._fill(proposal_tpl, {"<REV>": rev})
+        record = batch.pop("record")
+        batch["schema"] = "an-kla/write-proposal-v2"
+        batch["base_revision"] = committed["revision"]
+        batch["records"] = [dict(record, id="f-lote-1"), dict(record, id="f-lote-2")]
+        plan, batched = self._plan_and_commit("batch", batch, committed["revision"])
+        self.assertEqual(plan["decision"]["decision"], f"write-{asked}")
+        self.assertIs(batched["committed"], True)
+        listed = {r["id"] for r in
+                  self._cli(["inventory", "--revision", batched["revision"]])["records"]}
+        self.assertTrue({"f-lote-1", "f-lote-2"} <= listed)
 
         # «sin `--streams` sólo busca `facts`»; resume «busca en los tres streams».
         self.assertIn("sin `--streams` sólo busca `facts`", section)

@@ -93,6 +93,12 @@ Para `events` o `episodes` cambia sólo `stream` (y el prefijo del id). Para
 corregir un record vigente usa `"operation": "supersede"`, `"supersedes": "<id
 vigente>"` y un `record.id` nuevo.
 
+Para varios records del mismo stream y operación en un solo commit usa
+`"schema": "an-kla/write-proposal-v2"` con `"records": [...]` en lugar de
+`record` (hasta 1000; en `supersede`, `"supersedes"` es un mapa `{"<id nuevo>":
+"<id vigente>"}`); se planifica y confirma igual. Forma exacta en
+`schema show write-proposal-v2`.
+
 ```bash
 python3 -m an_kla --project-root . plan-write --proposal proposal.json \
   --emit-authority-template > authority.json
