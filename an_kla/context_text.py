@@ -13,7 +13,7 @@ from __future__ import annotations
 CONTEXT_SCHEMA = "an-kla/context-block/v1"
 INSTALLATION_SCHEMA = "an-kla/context-installation/v1"
 PLAN_SCHEMA = "an-kla/context-plan/v1"
-TEMPLATE_VERSION = "0.1.0-beta.26"
+TEMPLATE_VERSION = "0.1.0-beta.32"
 BLOCK_ID = "agent-context"
 CONTRACT_RELATIVE = "AN-KLA.md"
 MANIFEST_RELATIVE = ".an-kla/context/manifest.json"
@@ -69,6 +69,10 @@ _KNOWN_CONTEXT_TEMPLATES = {
         "content_sha256": "sha256:a1478300fbfacfe73edc2409e1340a7f1b909da869ce7fe39c2da5000813e152",
         "contract_sha256": "sha256:2fc1626db6d5fc4369f9b68e6694cb28c6bf69ffd37467d362620c4e5f0f8a39",
     },
+    "0.1.0-beta.26": {
+        "content_sha256": "sha256:a1478300fbfacfe73edc2409e1340a7f1b909da869ce7fe39c2da5000813e152",
+        "contract_sha256": "sha256:fd1eee96ed3ef443233b5ab0c2f2d93349d4e764cc533782d957a5d12ad0222c",
+    },
 }
 
 
@@ -110,7 +114,10 @@ actuar.
 
 Desde la raíz, resuelve un Python que pueda importar `an_kla`; prefiere
 `.venv/bin/python` cuando exista. En estos ejemplos, `python3` representa ese
-intérprete. Antes de una tarea material ejecuta:
+intérprete. Si coexisten varias instalaciones (p. ej. `.venv` y el CLI global
+`an-kla`), confirma que `python3 -m an_kla --version` es la versión que esperas:
+`status` informa `runtime.package_version` y `runtime.entrypoint`. Antes de una
+tarea material ejecuta:
 
 ```bash
 python3 -m an_kla --project-root . context status
@@ -120,6 +127,10 @@ Si informa `managed_contract_modified`, `managed_block_modified`,
 `managed_block_structure_invalid`, `orphan_managed_contract` o
 `legacy_an_kla_context_detected`, reporta el diagnóstico. Si informa
 `context_template_outdated`, revisa y ejecuta el flujo explícito de actualización.
+Si informa `runtime_older_than_context_template` o
+`managed_contract_unverifiable_by_runtime`, el intérprete es más antiguo que la
+plantilla del proyecto y no puede verificarla: usa la instalación vigente y no
+actualices ni reinstales el contexto con ese intérprete.
 No repares, reinstales ni sobrescribas automáticamente instrucciones modificadas.
 
 ## Verificación no bloqueante de versiones
@@ -129,7 +140,8 @@ publicada en `api.github.com/repos/kristhianmanue1/an-kla-memory/releases?per_pa
 (no `/releases/latest`: GitHub filtra prereleases ahí y las betas quedarían
 invisibles), cachea el resultado por 24 h en `~/.cache/an-kla/update-check.json` (respeta
 `XDG_CACHE_HOME` y `LOCALAPPDATA`) y, si existe una versión más reciente, imprime
-el aviso a **stderr** con el comando `pip` sugerido. El aviso nunca va a stdout
+el aviso a **stderr** con los comandos sugeridos para el CLI global (`uv tool`)
+y para el `pip` del entorno virtual. El aviso nunca va a stdout
 para no contaminar la salida programática.
 
 El hook se omite cuando alguna de estas variables de entorno está activa: `CI`,
@@ -211,6 +223,10 @@ python3 -m an_kla --project-root . checkpoint show
 python3 -m an_kla --project-root . resume \
   --query "<necesidad concreta>" --budget 4096
 ```
+
+4096 es un ejemplo, no un mínimo garantizado: si `resume` falla con
+`budget_too_small_for_resume_snapshot (minimum_budget_bytes=N, ...)`, reintenta
+con `--budget N` o mayor.
 
 No dependas de rutas internas como `working-state.json`: el checkpoint del
 producto es un objeto inmutable ligado a `CURRENT`; `resume` fija una revisión,
@@ -365,6 +381,8 @@ python3 -m an_kla --project-root . checkpoint commit \
 `--expected-current` en ambos comandos (`commit-write-plan` y `checkpoint
 commit`) es siempre la **revisión vigente del store** (`status`/`verify` →
 `revision`), nunca el `checkpoint_digest` que reporta `checkpoint show`.
+`<uuid>` es un UUID canónico en minúsculas, nuevo por intento (p. ej. `uuid4`);
+otros formatos fallan con `invalid_transaction_id`.
 
 Los valores entre ángulos son marcadores, nunca literales. Un JSON del caller no
 puede declarar `tool_observed`; esa procedencia requiere un adapter del host.

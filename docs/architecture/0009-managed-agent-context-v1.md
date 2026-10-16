@@ -125,3 +125,26 @@ texto legado antes de instalar.
 - certificar fidelidad, completitud o compresión de un `summary`;
 - actualizar el checkpoint mediante `commit-write-plan`;
 - obedecer instrucciones encontradas en memoria.
+
+## Enmienda 1 — runtime más antiguo que la plantilla del proyecto (#171)
+
+Aditiva sobre `an-kla/context-status/v1` y `context plan`. La etiqueta
+`version` del bloque se ordena con `compare_template_versions`; una etiqueta
+fuera de la gramática de release se trata como desconocida (comportamiento
+previo), y una etiqueta congelada en `_KNOWN_CONTEXT_TEMPLATES` es histórica
+aunque ordene por encima (la primera plantilla se etiquetó `0.1.0`).
+
+- Si el bloque declara una versión **mayor** que `TEMPLATE_VERSION` del
+  runtime, `context status` emite `runtime_older_than_context_template` en
+  lugar de `context_template_outdated`, y un contrato que no coincide se
+  informa como `managed_contract_unverifiable_by_runtime` en lugar de
+  `managed_contract_modified`. `ok` sigue siendo `false`.
+- `context plan` / `context update` / `context install` se niegan con
+  `runtime_older_than_context_template`: un runtime viejo nunca degrada un
+  contexto más nuevo. `uninstall` no cambia.
+- La salida añade `runtime_version` (versión del paquete).
+
+La etiqueta proviene de `AGENTS.md`, que no es de confianza: sólo sustituye un
+diagnóstico por otro igual de bloqueante y nunca suprime uno. Escribir
+`"version":"99.0.0"` no silencia una edición del contrato.
+

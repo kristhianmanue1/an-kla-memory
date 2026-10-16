@@ -46,3 +46,18 @@ def is_newer_release(candidate_tag: str, installed_version: str = VERSION) -> bo
     return _parse_version_tuple(
         normalized_release_tag(candidate_tag)
     ) > _parse_version_tuple(installed_version)
+
+
+def compare_template_versions(left: str, right: str) -> int:
+    """Order two managed-template labels such as ``0.1.0-beta.26``.
+
+    Returns -1, 0 or 1.  Raises ``ValueError("unsupported_release_tag")`` for
+    any label outside the release grammar, so callers can treat malformed or
+    hostile labels as unknown instead of ordering them (#171).
+    """
+
+    if not isinstance(left, str) or not isinstance(right, str):
+        raise ValueError("unsupported_release_tag")
+    a = _parse_version_tuple(normalized_release_tag("v" + left))
+    b = _parse_version_tuple(normalized_release_tag("v" + right))
+    return (a > b) - (a < b)
