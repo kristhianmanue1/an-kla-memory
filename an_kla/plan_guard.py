@@ -14,6 +14,7 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from .write_policy import WritePolicyError
+from .vigency import is_active
 
 
 def guard_plan_against_snapshot(
@@ -39,11 +40,7 @@ def guard_plan_against_snapshot(
         )
         if target is None:
             raise WritePolicyError("plan_supersede_target_missing")
-        if target.get("status", target.get("nu", "vigente")) not in {
-            "vigente",
-            "active",
-            None,
-        }:
+        if not is_active(target):  # #179: tolera status/nu no escalares
             raise WritePolicyError("plan_supersede_target_not_vigente")
 
 
@@ -64,11 +61,7 @@ def _guard_batch_against_snapshot(
         target = by_id.get(proposal["supersedes"][record["id"]])
         if target is None:
             raise WritePolicyError("plan_supersede_target_missing")
-        if target.get("status", target.get("nu", "vigente")) not in {
-            "vigente",
-            "active",
-            None,
-        }:
+        if not is_active(target):  # #179: tolera status/nu no escalares
             raise WritePolicyError("plan_supersede_target_not_vigente")
 
 

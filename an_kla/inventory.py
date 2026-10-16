@@ -11,6 +11,7 @@ from .context_view import MAX_CURSOR_CHARS
 from .reader_gate import shared_reader_gate
 from .store import ID_FIELDS, IntegrityError, MemoryStore
 from .subject_ref import parse_subject_ref, SubjectRefError
+from .vigency import is_canonical_vigency
 
 INVENTORY_SCHEMA = "an-kla/inventory-v1"
 STREAMS = ("facts", "events", "episodes")
@@ -47,7 +48,14 @@ def _cursor_decode(cursor: Any, revision: str, total: int) -> int:
     return document["offset"]
 
 
+NONCANONICAL_STATUS = "no_canonica"
+
+
 def _physical_status(raw: dict[str, Any]) -> str:
+    # #179: un status/nu no escalar (lotes de b31/b32) no es "vigente" ni un
+    # bucket con su repr: se cuenta aparte como no canónico.
+    if not is_canonical_vigency(raw):
+        return NONCANONICAL_STATUS
     value = raw.get("status", raw.get("nu", _PHYSICAL_DEFAULT))
     return value if isinstance(value, str) and value else _PHYSICAL_DEFAULT
 
@@ -119,7 +127,8 @@ def inventory(
                     continue  # invalid rows are snapshot-level failures already
                 raw_bytes = canonical_json(dict(raw))
                 physical = _physical_status(dict(raw))
-                observable = str(observed.get("status", physical))
+                observed_status = observed.get("status", physical)
+                observable = observed_status if isinstance(observed_status, str) else physical
                 source = "physical"
                 if observable != physical:
                     source = (

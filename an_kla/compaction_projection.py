@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from .canonical import canonical_json, digest_bytes, digest_json
+from .vigency import is_active
 
 
 STREAMS = ("facts", "events", "episodes")
@@ -29,7 +30,7 @@ def project_snapshot(snapshot: Any) -> dict[str, Any]:
                 state = "refuted"
             elif key in superseded:
                 state = "superseded"
-            elif row.get("status", row.get("nu")) in {None, "vigente", "active"}:
+            elif is_active(row):  # #179
                 state = "active"
             else:
                 state = "inactive"

@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from .write_policy import WritePolicyError
+from .vigency import is_active
 
 
 def resolve_supersede_targets(
@@ -43,11 +44,7 @@ def resolve_supersede_targets(
             )
             if target is None:
                 raise WritePolicyError("invalid_supersede_target", "target_missing")
-            if target.get("status", target.get("nu", "vigente")) not in {
-                "vigente",
-                "active",
-                None,
-            }:
+            if not is_active(target):  # #179
                 raise WritePolicyError(
                     "invalid_supersede_target", "target_not_vigente"
                 )

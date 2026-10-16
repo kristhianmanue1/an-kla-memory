@@ -7,6 +7,7 @@ from typing import Any, Mapping
 
 from .canonical import digest_json
 from .refute_contracts import RefutePolicyError, STREAMS, digest
+from .vigency import is_active
 
 
 def _physical(row: Mapping[str, Any]) -> tuple[str | None, str]:
@@ -40,9 +41,8 @@ def _state(
     if (stream, record_id) in supersedes:
         return "superseded", "supersedes_overlay", supersedes[(stream, record_id)], None
     physical, source = _physical(row)
-    value = row.get("status", row.get("nu", "vigente"))
     return (
-        ("active" if value in {"vigente", "active", None} else "inactive"),
+        ("active" if is_active(row) else "inactive"),  # #179
         source,
         None,
         None,
