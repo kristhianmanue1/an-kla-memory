@@ -88,6 +88,7 @@ from .store_resolution import open_resolved_store
 from .store import ConcurrentUpdateError, MemoryStore, StoreError
 from .subject import resolve_namespace
 from .temporal import FRESHNESS_PROFILE, parse_freshness_now
+from .transaction_attempts import TRANSACTION_ID_HINT
 from .transactions import TransactionError
 from .update_check import check_for_update
 from .upgrade import apply_upgrade, inspect_upgrade, verify_upgrade
@@ -100,6 +101,24 @@ class CliUsageError(ValueError):
     def __init__(self, code: str, detail: str | None = None) -> None:
         super().__init__(code)
         self.detail = detail
+
+
+def _runtime_identity() -> dict[str, str]:
+    """Which installation answered (#171), without exposing paths (§11.1).
+
+    `python3 -m an_kla` may resolve to a different copy than the `an-kla`
+    console script; comparing `package_version` across both invocations shows
+    it.
+    """
+
+    spec = getattr(sys.modules.get("__main__"), "__spec__", None)
+    if getattr(spec, "name", None) == "an_kla.__main__":
+        entrypoint = "module"
+    elif Path(sys.argv[0] if sys.argv else "").stem == "an-kla":
+        entrypoint = "console_script"
+    else:
+        entrypoint = "embedded"
+    return {"package_version": VERSION, "entrypoint": entrypoint}
 
 
 def _json(path: str, *, role: str | None = None) -> Any:
@@ -279,7 +298,7 @@ def _run() -> None:
     elif args.command == "init":
         result = store.initialize_with_outcome(transaction_id=args.transaction_id)
     elif args.command == "status":
-        result = store.verify()
+        result = {**store.verify(), "runtime": _runtime_identity()}
         _mint_hook_run(
             store, args.on_behalf_of_hook, "status",
             {"kind": "revision", "value": result.get("revision")},
@@ -666,8 +685,14 @@ def main() -> None:
         sys.stderr.write(f"an-kla error: {exc}{suffix}\n")
         raise SystemExit(2)
     except (CheckpointPolicyError, CompactionError, ExportError, StoreError, ConcurrentUpdateError, IdentityError, ReaderGateError, TransactionError, SealingAdapterError, SealingAdapterRequiredError, SealedPayloadAuthFailedError, SealedEntryTooLargeError, SealedAdapterIdInvalidError, SealedExtraNotInstalledError, ValueError, OSError) as exc:
-        if isinstance(exc, TransactionError) and str(exc) == "invalid_transaction_id":
-            sys.stderr.write("an-kla error: invalid_transaction_id\n")
+        if (
+            isinstance(exc, (TransactionError, IdentityError))
+            and str(exc) == "invalid_transaction_id"
+        ):
+            # #171: same hint and exit code on every path (init included).
+            sys.stderr.write(
+                f"an-kla error: invalid_transaction_id ({TRANSACTION_ID_HINT})\n"
+            )
             raise SystemExit(2)
         # H1 (deuda T5, issue #46): los errores sellados con código canónico
         # se reportan por su código, no por el mensaje genérico del safety

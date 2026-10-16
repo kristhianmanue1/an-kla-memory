@@ -25,6 +25,7 @@ from .relocation_receipts import (
     require_matching_receipt,
 )
 from .storage_primitives import atomic_write, fsync_directory, write_immutable
+from .transaction_attempts import is_canonical_uuid
 from .version import VERSION
 
 
@@ -50,15 +51,7 @@ def _uuid(value: Any) -> str:
 
 
 def _transaction_uuid(value: str) -> str:
-    try:
-        parsed = uuid.UUID(value)
-    except (AttributeError, ValueError) as exc:
-        raise IdentityError("invalid_transaction_id") from exc
-    if (
-        str(parsed) != value
-        or parsed.version not in {1, 2, 3, 4, 5}
-        or parsed.variant != uuid.RFC_4122
-    ):
+    if not is_canonical_uuid(value):
         raise IdentityError("invalid_transaction_id")
     return value
 

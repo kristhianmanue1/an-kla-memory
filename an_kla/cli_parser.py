@@ -10,6 +10,7 @@ from .inventory import DEFAULT_LIMIT as INVENTORY_DEFAULT_LIMIT
 from .inventory import MAX_LIMIT as INVENTORY_MAX_LIMIT
 from .retrieval import SCAN_PROFILE
 from .sealed.bundle import SEALED_PROFILE
+from .transaction_attempts import TRANSACTION_ID_HINT
 from .temporal import FRESHNESS_PROFILE
 from .version import VERSION
 
@@ -35,7 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
     init_cmd = sub.add_parser(
         "init", help="Crear la memoria local .an-kla/memory/ en el proyecto."
     )
-    init_cmd.add_argument("--transaction-id")
+    init_cmd.add_argument("--transaction-id", help=f"UUID del caller ({TRANSACTION_ID_HINT}).")
     status_cmd = sub.add_parser(
         "status", help="Resumen verificable de la revisión vigente."
     )
@@ -306,7 +307,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     commit_plan_cmd.add_argument(
         "--transaction-id",
-        help="UUID opcional del caller para inspección idempotente del outcome.",
+        help=f"UUID opcional del caller para inspección idempotente del outcome ({TRANSACTION_ID_HINT}).",
     )
     transaction_cmd = sub.add_parser(
         "transaction", help="Inspeccionar outcomes por transaction id."
@@ -315,12 +316,12 @@ def build_parser() -> argparse.ArgumentParser:
         dest="transaction_command", required=True
     )
     transaction_inspect = transaction_sub.add_parser("inspect")
-    transaction_inspect.add_argument("transaction_id")
+    transaction_inspect.add_argument("transaction_id", help=f"UUID del caller ({TRANSACTION_ID_HINT}).")
     transaction_repair = transaction_sub.add_parser(
         "repair-durability",
         help="Reparar registro de durabilidad de un outcome (MUTATIVO; requiere autoridad vigente).",
     )
-    transaction_repair.add_argument("transaction_id")
+    transaction_repair.add_argument("transaction_id", help=f"UUID del caller ({TRANSACTION_ID_HINT}).")
     refute_cmd = sub.add_parser("refute", help="Refutación gobernada sin sucesor.")
     refute_sub = refute_cmd.add_subparsers(dest="refute_command", required=True)
     refute_plan = refute_sub.add_parser("plan")
@@ -329,7 +330,7 @@ def build_parser() -> argparse.ArgumentParser:
     refute_commit = refute_sub.add_parser("commit")
     refute_commit.add_argument("--expected-current", required=True)
     refute_commit.add_argument("--planning-result", required=True)
-    refute_commit.add_argument("--transaction-id")
+    refute_commit.add_argument("--transaction-id", help=f"UUID del caller ({TRANSACTION_ID_HINT}).")
     refute_inspect = refute_sub.add_parser("inspect")
     refute_inspect.add_argument("--stream", required=True, choices=("facts", "events", "episodes"))
     refute_inspect.add_argument("--record-sha256", required=True)
@@ -433,7 +434,9 @@ def build_parser() -> argparse.ArgumentParser:
     relocate_commit_cmd.add_argument("--expected-current", required=True)
     for name in ("inspect", "reconcile"):
         relocate_tx_cmd = relocate_sub.add_parser(name)
-        relocate_tx_cmd.add_argument("--transaction-id", required=True)
+        relocate_tx_cmd.add_argument(
+            "--transaction-id", required=True,
+            help="UUID v4 canónico en minúsculas de la relocalización.")
         if name == "reconcile":
             relocate_tx_cmd.add_argument(
                 "--abort", action="store_true",
@@ -515,7 +518,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="Revisión vigente del store (digest reportado por `status`), "
              "NO el `checkpoint_digest` de `checkpoint show`.",
     )
-    checkpoint_commit_cmd.add_argument("--transaction-id", required=True)
+    checkpoint_commit_cmd.add_argument(
+        "--transaction-id", required=True,
+        help=f"UUID nuevo por intento ({TRANSACTION_ID_HINT}).")
     checkpoint_commit_cmd.add_argument("--on-behalf-of-hook", default=None)
     resume_cmd = sub.add_parser("resume", help="Reanudar desde una revisión consistente.")
     resume_cmd.add_argument("--budget", type=int, required=True)

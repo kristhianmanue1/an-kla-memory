@@ -275,6 +275,28 @@ spoofing JSON, planner sin reloj, v1→v2, ordinary write reutiliza digest, carr
 resume con/sin query, live delta fijo null, evidence budget, identidad y outcomes
 post-CURRENT. Se prueba que working_state no es recuperable lexicalmente.
 
+## Enmienda 1 — mínimo informado en `budget_too_small_for_resume_snapshot` (#171)
+
+Aditiva; el código de error no cambia. Cuando el snapshot no cabe, el error
+porta `minimum_budget_bytes` (el menor budget mayor que el provisto con el que
+la proyección completa cabe) y `provided_budget_bytes`; en la CLI se muestran
+como sufijo `(minimum_budget_bytes=N, provided_budget_bytes=B)`. N se mide
+ejecutando la proyección completa —`retrieve` con ese budget incluido— dentro
+de la misma lease de lector y revisión, avanzando por bandas de ancho decimal
+como `minimum_budget_bytes` de ADR-0034 (sin búsqueda binaria), porque el
+tamaño depende del propio `budget_bytes`. N siempre se verifica ejecutando la
+proyección; es el mínimo cuando el tamaño crece con el budget (caso de
+`resume` en régimen de error) y, si no lo hiciera, sigue siendo un budget que
+cabe. Si la medición no converge se emite el código sin sufijo. El entero es
+metadato de tamaño (snapshot, contadores de `excluded_summary`, warnings de
+retrieval), no contenido de memoria. No hay ampliación automática del budget: es
+el tope del caller y este ADR exige fallar en vez de truncar.
+
+Divergencia declarada, no resuelta aquí: la reserva inicial del peor
+diagnóstico (§Resume consistente) no está implementada; el contador
+`excluded_summary.budget` puede añadir bytes al descartar evidence. Con esta
+enmienda el error resultante informa igualmente el mínimo correcto.
+
 ## Dependencias y alternativas
 
 ADR-0024 primitives/outcome primero; ADR-0022 identidad después; este ADR al
