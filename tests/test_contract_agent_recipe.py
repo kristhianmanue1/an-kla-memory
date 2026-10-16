@@ -259,6 +259,11 @@ class AgentRecipeTests(unittest.TestCase):
             "<checkpoint_digest de checkpoint show>": parent,
             "<YYYY-MM-DDTHH:MM:SS.ffffffZ>": now,
         }))
+        # «Cada elemento de `decisions` ... lleva `id`, `value` y `provenance`».
+        self.assertIn("lleva `id` (único en su lista), `value` y `provenance`",
+                      " ".join(_section().split()))
+        filled = json.loads((self.work / "working-state.json").read_text(encoding="utf-8"))
+        self.assertEqual(set(filled["decisions"][0]), {"id", "value", "provenance"})
         values = {"<REV-vigente>": rev2, "<uuid4-nuevo>": str(uuid.uuid4())}
         cp_authority, cp_plan, cp_commit = [
             self._run_documented(argv, values) for argv in _commands(checkpoint_block)]

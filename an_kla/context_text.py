@@ -13,7 +13,7 @@ from __future__ import annotations
 CONTEXT_SCHEMA = "an-kla/context-block/v1"
 INSTALLATION_SCHEMA = "an-kla/context-installation/v1"
 PLAN_SCHEMA = "an-kla/context-plan/v1"
-TEMPLATE_VERSION = "0.1.0-beta.32"
+TEMPLATE_VERSION = "0.1.0-beta.33"
 BLOCK_ID = "agent-context"
 CONTRACT_RELATIVE = "AN-KLA.md"
 MANIFEST_RELATIVE = ".an-kla/context/manifest.json"
@@ -72,6 +72,10 @@ _KNOWN_CONTEXT_TEMPLATES = {
     "0.1.0-beta.26": {
         "content_sha256": "sha256:a1478300fbfacfe73edc2409e1340a7f1b909da869ce7fe39c2da5000813e152",
         "contract_sha256": "sha256:fd1eee96ed3ef443233b5ab0c2f2d93349d4e764cc533782d957a5d12ad0222c",
+    },
+    "0.1.0-beta.32": {
+        "content_sha256": "sha256:00e57150ee8832175657bb46df708ab3c482ea4ba7a45d44a7532a19a3fa6d1b",
+        "contract_sha256": "sha256:7ef316dda43d93f02550adb4f4230f1808de132202be52958c863e00226f7591",
     },
 }
 
@@ -210,7 +214,8 @@ nueva. Sin `record.text` (u otro texto indexable) el commit avisa
  "objective": {"value": "<objetivo>", "provenance": "caller_asserted"},
  "phase": {"value": "<fase>", "provenance": "caller_asserted"},
  "next_step": {"value": "<siguiente paso>", "provenance": "caller_asserted"},
- "decisions": [], "blockers": [], "evidence": [],
+ "decisions": [{"id": "d-<tema>", "value": "<decisión>", "provenance": "caller_asserted"}],
+ "blockers": [], "evidence": [],
  "source_state": {"profile": "none/v1",
                   "head": {"value": null, "provenance": "unavailable"},
                   "branch": {"value": null, "provenance": "unavailable"},
@@ -228,6 +233,8 @@ python3 -m an_kla --project-root . checkpoint commit --plan checkpoint-plan.json
   --expected-current <REV-vigente> --transaction-id <uuid4-nuevo>
 ```
 
+Cada elemento de `decisions`, `blockers` y `evidence` lleva `id` (único en su
+lista), `value` y `provenance`; las listas pueden ir vacías.
 `<REV-vigente>` es la `revision` de `status` (igual a `current_revision` del
 plan de checkpoint): no escribas entre `checkpoint plan` y `checkpoint commit`.
 El plan de checkpoint decide `write`; el commit responde `committed: true`,

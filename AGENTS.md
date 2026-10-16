@@ -85,7 +85,7 @@ pre-implementación, ADR-antes-que-código, secuenciación de releases, CI local
 reporte RAG con evidencia) viven en `docs/practicas-ingenieria.md` — revísalas
 antes de trabajo no trivial.
 
-<!-- an-kla:managed-begin {"content_sha256":"sha256:00e57150ee8832175657bb46df708ab3c482ea4ba7a45d44a7532a19a3fa6d1b","id":"agent-context","schema":"an-kla/context-block/v1","version":"0.1.0-beta.32"} -->
+<!-- an-kla:managed-begin {"content_sha256":"sha256:00e57150ee8832175657bb46df708ab3c482ea4ba7a45d44a7532a19a3fa6d1b","id":"agent-context","schema":"an-kla/context-block/v1","version":"0.1.0-beta.33"} -->
 ## AN-KLA Memory
 
 Este proyecto usa memoria local AN-KLA. Para trabajo material o dependiente del
