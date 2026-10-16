@@ -146,5 +146,13 @@ aunque ordene por encima (la primera plantilla se etiquetó `0.1.0`).
 
 La etiqueta proviene de `AGENTS.md`, que no es de confianza: sólo sustituye un
 diagnóstico por otro igual de bloqueante y nunca suprime uno. Escribir
-`"version":"99.0.0"` no silencia una edición del contrato.
+`"version":"99.0.0"` no silencia una edición del contrato. Sólo se aceptan
+etiquetas ASCII canónicas (sin ceros a la izquierda ni dígitos no ASCII).
+
+Límite declarado: la etiqueta `0.1.0` está congelada como plantilla
+histórica, así que `TEMPLATE_VERSION` nunca podrá valer `0.1.0` (lo impide el
+test de #124); la plantilla de la release final deberá usar otra etiqueta
+(p. ej. `0.1.1`). Los runtimes anteriores a esta enmienda no emiten las señales
+nuevas; el contrato indica comparar `current_template_version` con
+`template_version` para reconocer el caso.
 

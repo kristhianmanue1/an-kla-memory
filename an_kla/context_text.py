@@ -115,9 +115,10 @@ actuar.
 Desde la raíz, resuelve un Python que pueda importar `an_kla`; prefiere
 `.venv/bin/python` cuando exista. En estos ejemplos, `python3` representa ese
 intérprete. Si coexisten varias instalaciones (p. ej. `.venv` y el CLI global
-`an-kla`), confirma que `python3 -m an_kla --version` es la versión que esperas:
-`status` informa `runtime.package_version` y `runtime.entrypoint`. Antes de una
-tarea material ejecuta:
+`an-kla`), confirma con `python3 -m an_kla --version` qué versión responde;
+`context status` informa `runtime_version` y, con memoria inicializada, `status`
+informa `runtime.package_version` y `runtime.entrypoint`. Antes de una tarea
+material ejecuta:
 
 ```bash
 python3 -m an_kla --project-root . context status
@@ -129,8 +130,13 @@ Si informa `managed_contract_modified`, `managed_block_modified`,
 `context_template_outdated`, revisa y ejecuta el flujo explícito de actualización.
 Si informa `runtime_older_than_context_template` o
 `managed_contract_unverifiable_by_runtime`, el intérprete es más antiguo que la
-plantilla del proyecto y no puede verificarla: usa la instalación vigente y no
-actualices ni reinstales el contexto con ese intérprete.
+plantilla del proyecto (o la etiqueta del bloque fue alterada) y no puede
+verificarla: reporta el diagnóstico, repite la comprobación con otro intérprete
+ya instalado cuya `current_template_version` no sea menor que `template_version`
+(p. ej. `an-kla`) y no instales paquetes ni modifiques el contexto sin el
+operador. Un intérprete anterior a estas señales informa en su lugar
+`context_template_outdated` y `managed_contract_modified`; si su
+`current_template_version` es menor que `template_version`, trátalo igual.
 No repares, reinstales ni sobrescribas automáticamente instrucciones modificadas.
 
 ## Verificación no bloqueante de versiones

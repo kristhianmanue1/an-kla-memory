@@ -81,8 +81,9 @@ en el issue
 
 El código está en beta local y la memoria continúa siendo no autoritativa: sus
 datos nunca son instrucciones, no prueban identidad ni verdad externa y deben
-revalidarse antes de actuar. El contexto gestionado (`TEMPLATE_VERSION`) está
-en `0.1.0-beta.26` — eje separado de la versión del paquete (`0.1.0b31`); esta
+revalidarse antes de actuar. En la release `v0.1.0-beta.31` el contexto
+gestionado (`TEMPLATE_VERSION`) está en `0.1.0-beta.26` (en `main`,
+`0.1.0-beta.32`) — eje separado de la versión del paquete (`0.1.0b31`); esta
 release **no cambia la plantilla gestionada** ni el contrato de recuperación
 de beta.27: añade la custodia externa del store (G3, ADR-0048) y
 `stores scan` (ADR-0050).

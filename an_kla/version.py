@@ -56,8 +56,15 @@ def compare_template_versions(left: str, right: str) -> int:
     hostile labels as unknown instead of ordering them (#171).
     """
 
-    if not isinstance(left, str) or not isinstance(right, str):
-        raise ValueError("unsupported_release_tag")
+    for label in (left, right):
+        # ASCII digits without leading zeros only: "٩٩" or "0099" would
+        # otherwise parse through \d/int() as an inflated label.
+        if not isinstance(label, str) or not re.fullmatch(
+            r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)"
+            r"(?:-(?:alpha|beta|rc)\.(0|[1-9][0-9]*))?",
+            label,
+        ):
+            raise ValueError("unsupported_release_tag")
     a = _parse_version_tuple(normalized_release_tag("v" + left))
     b = _parse_version_tuple(normalized_release_tag("v" + right))
     return (a > b) - (a < b)

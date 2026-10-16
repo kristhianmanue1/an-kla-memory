@@ -125,6 +125,8 @@ evidencia mecánica de qué texto pertenece a AN-KLA y cuál al usuario.
 | `context_install_lock_busy` | Otro instalador local está aplicando cambios. |
 | `context_target_symlink_forbidden` | El destino o un padre es enlace simbólico. |
 | `orphan_managed_contract` | El contrato existe, pero falta el bloque; posible instalación parcial. |
+| `runtime_older_than_context_template` | El bloque declara una plantilla más nueva que la del intérprete; usa otro intérprete ya instalado. `plan`/`install`/`update` se niegan (#171). |
+| `managed_contract_unverifiable_by_runtime` | El contrato no coincide y el intérprete, más antiguo que la plantilla, no puede verificarlo. Igual de bloqueante que `managed_contract_modified`. |
 
 Los cambios legítimos fuera del bloque aparecen como la advertencia
 `context_target_changed_outside_managed_block`; no invalidan la instalación.

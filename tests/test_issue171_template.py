@@ -50,7 +50,8 @@ class TemplateVersionOrderingTests(unittest.TestCase):
         self.assertEqual(compare_template_versions("0.1.0-beta.10", "0.1.0-beta.9"), 1)
         self.assertEqual(compare_template_versions("0.1.0-beta.26", "0.1.0-beta.26"), 0)
         self.assertEqual(compare_template_versions("0.1.0-beta.99", "0.1.0"), -1)
-        for bad in ("x", "99", "v0.1.0", "0.1.0-gamma.1", "", None):
+        for bad in ("x", "99", "v0.1.0", "0.1.0-gamma.1", "", None,
+                    "0.1.0-beta.\u0669\u0669", "00.1.0-beta.99", "0.1.0-beta.0099"):
             with self.subTest(bad=bad):
                 with self.assertRaises(ValueError):
                     compare_template_versions(bad, TEMPLATE_VERSION)
@@ -134,6 +135,25 @@ class OlderRuntimeTests(unittest.TestCase):
         self.assertIn("context_template_outdated", status["diagnostics"])
         self.assertIn("managed_contract_modified", status["diagnostics"])
         self.assertNotIn("runtime_older_than_context_template", status["diagnostics"])
+
+    def test_newer_label_never_hides_missing_contract(self) -> None:
+        _relabel(self.agents, "0.1.0-beta.99")
+        self.contract.unlink()
+        status = context_status(self.root)
+        self.assertFalse(status["ok"])
+        self.assertIn("managed_contract_missing", status["diagnostics"])
+
+    def test_refusal_precedes_contract_check(self) -> None:
+        # Caso real: el contrato es el de la plantilla más nueva, que este
+        # runtime no reconoce; debe responder runtime_older, no "modified".
+        _relabel(self.agents, "0.1.0-beta.99")
+        self._edit_contract()
+        for operation in ("update", "install"):
+            with self.subTest(operation=operation):
+                with self.assertRaisesRegex(
+                    ContextPackageError, "^runtime_older_than_context_template$"
+                ):
+                    plan_context_change(self.root, operation, allow_target_drift=True)
 
     def test_older_runtime_refuses_to_downgrade(self) -> None:
         _relabel(self.agents, "0.1.0-beta.99")

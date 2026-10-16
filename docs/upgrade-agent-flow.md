@@ -97,6 +97,7 @@ de integridad; si no existe, informa `not_initialized` sin crearla.
 | `context_file_concurrent_update` | `AGENTS.md` cambió después de inspeccionar. |
 | `context_plan_mismatch` | Cambió otra entrada ligada al plan o el plan no es exacto. |
 | `managed_contract_modified` | `AN-KLA.md` contiene una modificación no administrable automáticamente. |
+| `runtime_older_than_context_template` | El intérprete es más antiguo que la plantilla del proyecto; no degrada el contexto (#171). |
 
 ## Rollback y límites
 
