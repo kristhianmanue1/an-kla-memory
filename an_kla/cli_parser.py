@@ -600,18 +600,27 @@ def build_parser() -> argparse.ArgumentParser:
     view_context_cmd = view_sub.add_parser(
         "context", help="Vista contextual determinista y non-authoritative."
     )
-    view_context_cmd.add_argument("--revision", required=True)
-    view_context_cmd.add_argument("--subject", dest="subject_filter")
-    view_context_cmd.add_argument("--streams", default=None)
     view_context_cmd.add_argument(
-        "--projection", choices=PROJECTIONS, default="text"
-    )
-    view_context_cmd.add_argument("--limit", type=int, default=DEFAULT_LIMIT)
+        "--revision", required=True,
+        help="Digest sha256 exacto de la revisión (`status` -> revision).")
     view_context_cmd.add_argument(
-        "--budget", type=int, default=DEFAULT_BUDGET_BYTES
-    )
-    view_context_cmd.add_argument("--cursor")
-    view_context_cmd.add_argument("--now")
-    view_context_cmd.add_argument("--stale-after-days", type=int)
+        "--subject", dest="subject_filter",
+        help="subject_ref an-kla:subject:v1:... (obligatorio con --projection full).")
+    view_context_cmd.add_argument(
+        "--streams", default=None, help="CSV de facts,events,episodes; por defecto los tres.")
+    view_context_cmd.add_argument(
+        "--projection", choices=PROJECTIONS, default="text",
+        help="metadata (sin texto), text (por defecto) o full (requiere --subject).")
+    view_context_cmd.add_argument(
+        "--limit", type=int, default=DEFAULT_LIMIT, help="Sujetos por página.")
+    view_context_cmd.add_argument(
+        "--budget", type=int, default=DEFAULT_BUDGET_BYTES,
+        help="Presupuesto exacto en bytes; si no alcanza, el error informa minimum_budget_bytes.")
+    view_context_cmd.add_argument(
+        "--cursor", help="`next_cursor` de la página anterior (misma revisión y filtros).")
+    view_context_cmd.add_argument(
+        "--now", help="Instante RFC 3339 para la frescura computada (con --stale-after-days).")
+    view_context_cmd.add_argument(
+        "--stale-after-days", type=int, help="Umbral de antigüedad para marcar registros como stale.")
 
     return parser
