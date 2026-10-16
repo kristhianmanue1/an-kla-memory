@@ -5,8 +5,8 @@ abstract: "Memoria local por revisiones para proyectos con agentes de IA; recupe
 authors:
   - alias: kristhianmanue1
 type: software
-version: "0.1.0-beta.31"
-date-released: "2026-10-14"
+version: "0.1.0-beta.32"
+date-released: "2026-10-16"
 repository-code: "https://github.com/kristhianmanue1/an-kla-memory"
 license: Apache-2.0
 keywords:
