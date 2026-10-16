@@ -160,6 +160,13 @@ def _resume_under_gate(
                 for key in EXCLUDED
             },
         }
+        # Root/snapshot that do not fit cannot be rescued by evidence: return
+        # early, as before #171, instead of trying every candidate.  The base
+        # size is a lower bound, so _minimum_budget still converges on the full
+        # projection.
+        base = _size_at_fixed_point(result)
+        if base > limit:
+            return result, base
         if retrieval is not None:
             for item in retrieval["selected"]:
                 evidence = {

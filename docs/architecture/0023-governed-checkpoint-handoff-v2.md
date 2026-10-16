@@ -284,9 +284,12 @@ como sufijo `(minimum_budget_bytes=N, provided_budget_bytes=B)`. N se mide
 ejecutando la proyección completa —`retrieve` con ese budget incluido— dentro
 de la misma lease de lector y revisión, avanzando por bandas de ancho decimal
 como `minimum_budget_bytes` de ADR-0034 (sin búsqueda binaria), porque el
-tamaño depende del propio `budget_bytes`. Si la medición no converge se emite
-el código sin sufijo. El entero no revela contenido de memoria más allá de lo
-que `checkpoint show` ya expone. No hay ampliación automática del budget: es
+tamaño depende del propio `budget_bytes`. N siempre se verifica ejecutando la
+proyección; es el mínimo cuando el tamaño crece con el budget (caso de
+`resume` en régimen de error) y, si no lo hiciera, sigue siendo un budget que
+cabe. Si la medición no converge se emite el código sin sufijo. El entero es
+metadato de tamaño (snapshot, contadores de `excluded_summary`, warnings de
+retrieval), no contenido de memoria. No hay ampliación automática del budget: es
 el tope del caller y este ADR exige fallar en vez de truncar.
 
 Divergencia declarada, no resuelta aquí: la reserva inicial del peor

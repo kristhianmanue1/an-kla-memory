@@ -19,6 +19,7 @@ import tempfile
 import unittest
 import uuid
 from pathlib import Path
+from unittest import mock
 
 from an_kla.canonical import canonical_json
 from an_kla.checkpoints import commit_checkpoint, plan_checkpoint
@@ -47,7 +48,21 @@ class ResumeMinimumBudgetTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.store = MemoryStore(self.temp.name)
-        self.store.initialize()
+        base = self.store.initialize()
+        # Registros reales que casan con la query: en el mínimo entra evidence
+        # y el resto cuenta en excluded_summary.budget.
+        self.store.commit(
+            expected_current_hash=base,
+            checkpoint_patch={},
+            facts=[
+                {
+                    "id": f"f-{i:02d}",
+                    "schema": "an-kla/fact-v1",
+                    "payload": {"text": f"estado actual del frente {i} " * 8},
+                }
+                for i in range(12)
+            ],
+        )
         # Checkpoint mayor que el ejemplo `--budget 4096` del contrato, como
         # en el consumidor que reportó #171.
         state = _state(self.store.snapshot().manifest["checkpoint"], "x" * 5000)
@@ -80,6 +95,51 @@ class ResumeMinimumBudgetTests(unittest.TestCase):
                 with self.subTest(query=query, provided=provided):
                     minimum = self._assert_minimum_is_exact(provided, query)
                     self.assertGreater(minimum, 4096)
+
+    def test_query_minimum_exercises_real_evidence(self) -> None:
+        minimum = self._assert_minimum_is_exact(4096, "estado actual")
+        fitted = resume(self.store, minimum, query="estado actual")
+        self.assertGreater(
+            len(fitted["retrieved_evidence"]) + fitted["excluded_summary"]["budget"], 0)
+        roomy = resume(self.store, minimum + 4000, query="estado actual")
+        self.assertGreater(len(roomy["retrieved_evidence"]), 0)
+
+    def test_error_path_cost_is_bounded(self) -> None:
+        # Regresión de la ronda post-implementación: sin salida temprana cada
+        # proyección probaba todos los candidatos aunque el snapshot no cupiera.
+        import an_kla.resume as resume_module
+
+        calls = {"retrieve": 0}
+        real = resume_module.retrieve
+
+        def counting(*args, **kwargs):
+            calls["retrieve"] += 1
+            return real(*args, **kwargs)
+
+        with mock.patch.object(resume_module, "retrieve", counting):
+            with self.assertRaises(ResumeBudgetError):
+                resume(self.store, 1, query="estado actual")
+        self.assertLessEqual(calls["retrieve"], 8)
+
+    def test_minimum_band_search_handles_non_monotone_sizes(self) -> None:
+        # Tamaño que salta al cruzar la banda de 4 dígitos: dentro de ella
+        # nunca cabe (12000 > 9999); en 5 dígitos cabe desde 12000.  El punto
+        # fijo sin bandas desde 10000 también da 12000, pero el salto exige
+        # abandonar la banda en vez de iterar dentro de ella.
+        def project(limit: int):
+            return None, (9000 + limit // 1000) if limit < 9000 else 12000
+
+        self.assertEqual(_minimum_budget(project, 1), 12000)
+
+        # No monótono (el tamaño baja al subir el budget): la garantía es un
+        # budget verificado que cabe, no necesariamente el mínimo absoluto —
+        # misma regla que ADR-0034.  En resume el régimen de error es
+        # monótono (ronda post-implementación #171).
+        def bumpy(limit: int):
+            return None, 13000 if 10000 <= limit < 12000 else 12000
+
+        found = _minimum_budget(bumpy, 1)
+        self.assertLessEqual(bumpy(found)[1], found)
 
     def test_minimum_accounts_for_budget_decimal_width(self) -> None:
         # Tamaño = 9998 + ancho decimal del budget: el ingenuo 10002 (medido a
@@ -160,6 +220,18 @@ class InstallAndRuntimeTests(unittest.TestCase):
             runtime = json.loads(result.stdout)["runtime"]
             self.assertEqual(
                 runtime, {"entrypoint": "module", "package_version": VERSION})
+            env = {"PATH": os.environ["PATH"], "AN_KLA_NO_UPDATE_CHECK": "1",
+                   "PYTHONPATH": str(ROOT)}
+            for argv0, expected in (("/opt/bin/an-kla", "console_script"),
+                                    ("embedder", "embedded")):
+                with self.subTest(argv0=argv0):
+                    code = ("import sys; sys.argv=[%r,'--project-root',%r,'status'];"
+                            "from an_kla.__main__ import main; main()" % (argv0, temp))
+                    out = subprocess.run([sys.executable, "-c", code],
+                                         capture_output=True, text=True, env=env)
+                    self.assertEqual(out.returncode, 0, out.stderr)
+                    self.assertEqual(
+                        json.loads(out.stdout)["runtime"]["entrypoint"], expected)
 
 
 if __name__ == "__main__":

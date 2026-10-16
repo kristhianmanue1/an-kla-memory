@@ -111,7 +111,13 @@ def _runtime_identity() -> dict[str, str]:
     it.
     """
 
-    entrypoint = "module" if Path(sys.argv[0]).name == "__main__.py" else "console_script"
+    spec = getattr(sys.modules.get("__main__"), "__spec__", None)
+    if getattr(spec, "name", None) == "an_kla.__main__":
+        entrypoint = "module"
+    elif Path(sys.argv[0] if sys.argv else "").stem == "an-kla":
+        entrypoint = "console_script"
+    else:
+        entrypoint = "embedded"
     return {"package_version": VERSION, "entrypoint": entrypoint}
 
 
