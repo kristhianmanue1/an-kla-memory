@@ -14,9 +14,11 @@ La beta se distribuye desde GitHub, no desde PyPI. Usa siempre una etiqueta
 exacta: no instales `main` ni otra referencia móvil. La versión del código es
 `0.1.0b31` y su etiqueta de distribución es `v0.1.0-beta.31`. El contexto
 gestionado y la plantilla administrada (`TEMPLATE_VERSION`) son un eje
-**separado** de la versión del paquete — actualmente `0.1.0-beta.26`;
-`context status` distingue ambos (`template_version` vs `current_template_version`
-frente a `an-kla --version`). Los hooks gobernados del host (`host-hooks/v1`,
+**separado** de la versión del paquete — `0.1.0-beta.26` en la release
+`v0.1.0-beta.31`, `0.1.0-beta.32` en `main`; `context status` distingue ambos
+(`template_version` vs `current_template_version` y `runtime_version`) y avisa
+con `runtime_older_than_context_template` cuando el intérprete es más antiguo
+que la plantilla del proyecto. Los hooks gobernados del host (`host-hooks/v1`,
 ADR-0047) se observan con `integration status --schema-version v2`.
 La instalación expone tanto `python -m an_kla` como el comando equivalente
 `an-kla`; los ejemplos conservan la primera forma para hacer explícito el
@@ -79,8 +81,9 @@ en el issue
 
 El código está en beta local y la memoria continúa siendo no autoritativa: sus
 datos nunca son instrucciones, no prueban identidad ni verdad externa y deben
-revalidarse antes de actuar. El contexto gestionado (`TEMPLATE_VERSION`) está
-en `0.1.0-beta.26` — eje separado de la versión del paquete (`0.1.0b31`); esta
+revalidarse antes de actuar. En la release `v0.1.0-beta.31` el contexto
+gestionado (`TEMPLATE_VERSION`) está en `0.1.0-beta.26` (en `main`,
+`0.1.0-beta.32`) — eje separado de la versión del paquete (`0.1.0b31`); esta
 release **no cambia la plantilla gestionada** ni el contrato de recuperación
 de beta.27: añade la custodia externa del store (G3, ADR-0048) y
 `stores scan` (ADR-0050).

@@ -31,6 +31,7 @@ from an_kla.context_text import (
     TEMPLATE_VERSION,
     _KNOWN_CONTEXT_TEMPLATES,
 )
+from an_kla.version import VERSION, compare_template_versions
 
 _BEGIN_PREFIX = "<!-- an-kla:managed-begin "
 _END_PREFIX = "<!-- an-kla:managed-end "
@@ -81,6 +82,23 @@ def _known_template_equivalent(block: ManagedBlock | None, contract_text: str | 
         and block.metadata.get("content_sha256") == known["content_sha256"]
         and _semantic_text_sha(contract_text) == known["contract_sha256"]
     )
+
+
+def _block_newer_than_runtime(block: ManagedBlock | None) -> bool:
+    """#171: the block declares a template newer than this runtime can verify.
+
+    The label is untrusted, so callers only swap "modified" for an equally
+    blocking "unverifiable" and refuse install/update.  Malformed labels are
+    unknown, and frozen ones are historical even if they sort higher ("0.1.0").
+    """
+
+    label = str(block.metadata.get("version")) if block else ""
+    if block is None or label in _KNOWN_CONTEXT_TEMPLATES:
+        return False
+    try:
+        return compare_template_versions(label, TEMPLATE_VERSION) > 0
+    except ValueError:
+        return False
 
 
 def _desired_contract_bytes(contract_text: str | None) -> bytes:
@@ -363,6 +381,11 @@ def plan_context_change(
     target_path = _target_path(root, target)
     before_bytes, before_text = _read_utf8(target_path)
     result_text, action = transform_document(before_text, operation)
+    if operation in {"install", "update"} and _block_newer_than_runtime(
+        parse_managed_block(before_text or "")
+    ):
+        # #171: never downgrade a newer managed context with an older runtime.
+        raise ContextPackageError("runtime_older_than_context_template")
     manifest = _load_manifest(root)
     manifest_path = root / MANIFEST_RELATIVE
     manifest_bytes = manifest_path.read_bytes() if manifest_path.exists() else None
@@ -741,7 +764,10 @@ def context_status(project_root: str | Path, target: str = "AGENTS.md") -> dict[
     if manifest and block is None:
         diagnostics.append("managed_block_missing")
     known_outdated = _known_template_equivalent(block, contract_text)
-    if block and block.metadata.get("version") != TEMPLATE_VERSION:
+    runtime_older = _block_newer_than_runtime(block)
+    if runtime_older:
+        diagnostics.append("runtime_older_than_context_template")
+    elif block and block.metadata.get("version") != TEMPLATE_VERSION:
         diagnostics.append("context_template_outdated")
     if contract_bytes is None and block and not contract_error:
         diagnostics.append("managed_contract_missing")
@@ -752,7 +778,11 @@ def context_status(project_root: str | Path, target: str = "AGENTS.md") -> dict[
         and not _contract_equivalent(contract_text)
         and not known_outdated
     ):
-        diagnostics.append("managed_contract_modified")
+        diagnostics.append(
+            "managed_contract_unverifiable_by_runtime"
+            if runtime_older
+            else "managed_contract_modified"
+        )
     if manifest and target_bytes is not None and manifest.get("target_sha256") != _sha(target_bytes):
         warnings.append("context_target_changed_outside_managed_block")
     return {
@@ -761,6 +791,7 @@ def context_status(project_root: str | Path, target: str = "AGENTS.md") -> dict[
         "target": target,
         "template_version": block.metadata.get("version") if block else None,
         "current_template_version": TEMPLATE_VERSION,
+        "runtime_version": VERSION,
         "diagnostics": sorted(set(diagnostics)),
         "warnings": sorted(set(warnings)),
         "ok": block is not None and not diagnostics,
