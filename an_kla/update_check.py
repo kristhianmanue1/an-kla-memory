@@ -145,16 +145,19 @@ def _fetch_latest_release() -> dict[str, Any] | None:
 
 
 def _build_notice(installed: str, latest_tag: str, html_url: str | None) -> str:
-    install_command = (
-        f'python -m pip install --upgrade "an-kla-memory@{INSTALL_HINT}@{latest_tag}"'
-    )
+    requirement = f'"an-kla-memory @ {INSTALL_HINT}@{latest_tag}"'
     see_release = f" Ver: {html_url}" if html_url else ""
     # Issue #116/G1: el aviso apunta también al flujo completo de
     # actualización — instalar el paquete es sólo el primer paso; el
     # contexto gestionado se actualiza aparte (context plan/update).
+    # Issue #171: dos formas de instalación coexisten (CLI global con
+    # `uv tool` y venv del proyecto con pip, mayoritario); el aviso nombra
+    # ambas sin imponer una ni exponer rutas locales (§11.1).
     return (
         f"an-kla-memory {installed}: hay una versión más reciente ({latest_tag})."
-        f" Actualiza con:\n  {install_command}{see_release}\n"
+        f"{see_release}\n  Actualiza la instalación que uses:\n"
+        f"  CLI global (uv tool):  uv tool install --force {requirement}\n"
+        f"  venv del proyecto:     <python-del-venv> -m pip install --upgrade {requirement}\n"
         f"  (AN-KLA no se actualiza a sí mismo; ejecuta el comando manualmente.)\n"
         f"  (Proyecto con contexto gestionado: tras instalar, sigue el flujo"
         f" `context plan --operation update` — docs/uso-diario.md"

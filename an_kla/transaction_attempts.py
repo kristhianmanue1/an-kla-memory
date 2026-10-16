@@ -15,16 +15,24 @@ class TransactionError(RuntimeError):
     pass
 
 
-def canonical_uuid(value: str) -> str:
+# Static hint for `invalid_transaction_id` (#171): never echoes the input.
+TRANSACTION_ID_HINT = "expected lowercase canonical RFC 4122 UUID v1-v5, e.g. uuid4"
+
+
+def is_canonical_uuid(value: Any) -> bool:
     try:
         parsed = uuid.UUID(value)
-    except (AttributeError, ValueError) as exc:
-        raise TransactionError("invalid_transaction_id") from exc
-    if (
-        str(parsed) != value
-        or parsed.version not in {1, 2, 3, 4, 5}
-        or parsed.variant != uuid.RFC_4122
-    ):
+    except (AttributeError, TypeError, ValueError):
+        return False
+    return (
+        str(parsed) == value
+        and parsed.version in {1, 2, 3, 4, 5}
+        and parsed.variant == uuid.RFC_4122
+    )
+
+
+def canonical_uuid(value: str) -> str:
+    if not is_canonical_uuid(value):
         raise TransactionError("invalid_transaction_id")
     return value
 

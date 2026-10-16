@@ -12,6 +12,8 @@ from .retrieval import SCAN_PROFILE, retrieve
 from .reader_gate import shared_reader_gate
 
 
+# Same ceiling as ADR-0034 (context_view.MAX_BUDGET_BYTES).
+MAX_BUDGET_BYTES = 1_000_000_000
 EXCLUDED = ("inactive", "zero_score", "budget", "invalid_record", "no_text")
 
 
@@ -57,6 +59,51 @@ def _snapshot(snapshot: Any) -> tuple[dict[str, Any], list[str]]:
     }, ["legacy_checkpoint_v1"]
 
 
+class ResumeBudgetError(ValueError):
+    """The snapshot (root, provenance, diagnostics) does not fit the budget.
+
+    ``str(exc)`` keeps the canonical code from ADR-0023; ``detail`` adds the
+    smallest budget that fits (#171), computed like ADR-0034's
+    ``minimum_budget_bytes`` and never containing memory content.
+    """
+
+    def __init__(self, provided: int, minimum: int | None) -> None:
+        super().__init__("budget_too_small_for_resume_snapshot")
+        self.provided_budget_bytes = provided
+        self.minimum_budget_bytes = minimum
+        self.detail = (
+            f"minimum_budget_bytes={minimum}, provided_budget_bytes={provided}"
+            if minimum is not None
+            else None
+        )
+
+
+def _minimum_budget(project: Any, provided: int) -> int | None:
+    """Smallest budget > ``provided`` whose full projection fits.
+
+    The size depends on the budget itself (``budget_bytes`` and its decimal
+    width, plus the budget-driven retrieval), so each candidate is measured by
+    running the complete projection.  Per decimal band the candidate only grows
+    towards a fixed point; binary search is avoided as in ADR-0034.
+    """
+
+    lower = provided + 1
+    while lower <= MAX_BUDGET_BYTES:
+        band_end = min(MAX_BUDGET_BYTES, 10 ** len(str(lower)) - 1)
+        candidate = lower
+        for _ in range(64):
+            _, size = project(candidate)
+            if size <= candidate:
+                return candidate
+            if size > band_end:
+                break
+            candidate = size
+        else:
+            return None
+        lower = band_end + 1
+    return None
+
+
 def _resume_under_gate(
     store: Any,
     budget: int,
@@ -70,71 +117,77 @@ def _resume_under_gate(
         raise ValueError("invalid_resume_query")
     revision = store.read_current()
     frozen = store.snapshot(revision)
-    snapshot_value, warnings = _snapshot(frozen)
-    retrieval = None
-    if query is not None:
-        retrieval = retrieve(
-            store,
-            query,
-            budget,
-            profile=profile,
-            streams=("facts", "events", "episodes"),
-            revision_id=revision,
-        )
-        if retrieval["degradation"] != "none":
-            warnings.append("retrieval_degraded_to_scan")
-    source = retrieval["profile"] if retrieval is not None else "disabled"
-    result: dict[str, Any] = {
-        "schema": "an-kla/resume-v1",
-        "untrusted_memory_data": True,
-        "revision": revision,
-        "budget_bytes": budget,
-        "used_bytes": 0,
-        "snapshot": snapshot_value,
-        "live_delta": None,
-        "retrieved_evidence": [],
-        "warnings": sorted(set(warnings)),
-        "provenance": {
-            "memory": {"source": "revision_snapshot", "revision": revision},
-            "retrieval": {
-                "source": source,
-                "revision": revision if retrieval is not None else None,
-                "query": "caller_asserted" if retrieval is not None else "disabled",
+    snapshot_value, snapshot_warnings = _snapshot(frozen)
+
+    def project(limit: int) -> tuple[dict[str, Any], int]:
+        """Project at ``limit``; returns the result and its exact size."""
+
+        warnings = list(snapshot_warnings)
+        retrieval = None
+        if query is not None:
+            retrieval = retrieve(
+                store,
+                query,
+                limit,
+                profile=profile,
+                streams=("facts", "events", "episodes"),
+                revision_id=revision,
+            )
+            if retrieval["degradation"] != "none":
+                warnings.append("retrieval_degraded_to_scan")
+        source = retrieval["profile"] if retrieval is not None else "disabled"
+        result: dict[str, Any] = {
+            "schema": "an-kla/resume-v1",
+            "untrusted_memory_data": True,
+            "revision": revision,
+            "budget_bytes": limit,
+            "used_bytes": 0,
+            "snapshot": deepcopy(snapshot_value),
+            "live_delta": None,
+            "retrieved_evidence": [],
+            "warnings": sorted(set(warnings)),
+            "provenance": {
+                "memory": {"source": "revision_snapshot", "revision": revision},
+                "retrieval": {
+                    "source": source,
+                    "revision": revision if retrieval is not None else None,
+                    "query": "caller_asserted" if retrieval is not None else "disabled",
+                },
+                "live_delta": {"source": "unavailable"},
             },
-            "live_delta": {"source": "unavailable"},
-        },
-        "excluded_summary": {
-            key: int(retrieval["excluded_summary"].get(key, 0)) if retrieval else 0
-            for key in EXCLUDED
-        },
-    }
-    if _size_at_fixed_point(result) > budget:
-        raise ValueError("budget_too_small_for_resume_snapshot")
-    if retrieval is not None:
-        for item in retrieval["selected"]:
-            evidence = {
-                "schema": "an-kla/resume-evidence-v1",
-                "source": "retrieval-result-v1",
-                "revision": revision,
-                "id": item["id"],
-                "stream": item["stream"],
-                "score": item["score"],
-                "render": item["render"],
-                "cost_bytes": item["cost_bytes"],
-            }
-            candidate = deepcopy(result)
-            candidate["retrieved_evidence"].append(evidence)
-            if _size_at_fixed_point(candidate) <= budget:
-                result = candidate
-            else:
-                result["excluded_summary"]["budget"] += 1
-    size = _size_at_fixed_point(result)
-    while size > budget and result["retrieved_evidence"]:
-        result["retrieved_evidence"].pop()
-        result["excluded_summary"]["budget"] += 1
+            "excluded_summary": {
+                key: int(retrieval["excluded_summary"].get(key, 0)) if retrieval else 0
+                for key in EXCLUDED
+            },
+        }
+        if retrieval is not None:
+            for item in retrieval["selected"]:
+                evidence = {
+                    "schema": "an-kla/resume-evidence-v1",
+                    "source": "retrieval-result-v1",
+                    "revision": revision,
+                    "id": item["id"],
+                    "stream": item["stream"],
+                    "score": item["score"],
+                    "render": item["render"],
+                    "cost_bytes": item["cost_bytes"],
+                }
+                candidate = deepcopy(result)
+                candidate["retrieved_evidence"].append(evidence)
+                if _size_at_fixed_point(candidate) <= limit:
+                    result = candidate
+                else:
+                    result["excluded_summary"]["budget"] += 1
         size = _size_at_fixed_point(result)
+        while size > limit and result["retrieved_evidence"]:
+            result["retrieved_evidence"].pop()
+            result["excluded_summary"]["budget"] += 1
+            size = _size_at_fixed_point(result)
+        return result, size
+
+    result, size = project(budget)
     if size > budget:
-        raise ValueError("budget_too_small_for_resume_snapshot")
+        raise ResumeBudgetError(budget, _minimum_budget(project, budget))
     return result
 
 
@@ -152,4 +205,4 @@ def resume(
         return _resume_under_gate(store, budget, query=query, profile=profile)
 
 
-__all__ = ["resume"]
+__all__ = ["ResumeBudgetError", "resume"]
