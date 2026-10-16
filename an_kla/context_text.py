@@ -234,7 +234,9 @@ python3 -m an_kla --project-root . checkpoint commit --plan checkpoint-plan.json
 ```
 
 Cada elemento de `decisions`, `blockers` y `evidence` lleva `id` (único en su
-lista), `value` y `provenance`; las listas pueden ir vacías.
+lista), `value` y `provenance`; las listas pueden ir vacías. Límites: 50
+elementos por lista, 8 KiB por `value` y 64 KiB por working-state, en JSON
+canónico; si los superas falla con `too_many_items` o `too_large`.
 `<REV-vigente>` es la `revision` de `status` (igual a `current_revision` del
 plan de checkpoint): no escribas entre `checkpoint plan` y `checkpoint commit`.
 El plan de checkpoint decide `write`; el commit responde `committed: true`,
