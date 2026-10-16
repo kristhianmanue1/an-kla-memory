@@ -127,15 +127,19 @@ def inventory(
                     continue  # invalid rows are snapshot-level failures already
                 raw_bytes = canonical_json(dict(raw))
                 physical = _physical_status(dict(raw))
-                observed_status = observed.get("status", physical)
-                observable = observed_status if isinstance(observed_status, str) else physical
-                source = "physical"
-                if observable != physical:
+                # #179: hay overlay sólo si el snapshot cambió el status del
+                # record; comparar cadenas atribuía refutaciones inexistentes
+                # (status None/"" o status válido con nu no escalar).
+                overlay = observed.get("status")
+                if overlay != raw.get("status") and isinstance(overlay, str) and overlay:
+                    observable = overlay
                     source = (
                         "supersede_overlay"
-                        if observable == "sustituida"
+                        if overlay == "sustituida"
                         else "refute_overlay"
                     )
+                else:
+                    observable, source = physical, "physical"
                 try:
                     has_subject = isinstance(raw.get("subject_ref"), str) and (
                         parse_subject_ref(raw["subject_ref"]) is not None

@@ -27,15 +27,18 @@ def is_active(record: dict) -> bool:
 
 
 def is_canonical_vigency(record: dict) -> bool:
-    """True si `status`/`nu` faltan, son None o son cadena (forma de escritura).
+    """True si el campo que decide la vigencia es None, cadena o falta.
 
-    #179: los lotes de b31/b32 pudieron persistir valores no escalares en
-    records posteriores al primero; esto los identifica sin interpretarlos.
+    Mismo orden que `is_active`: `status` si existe; si no, `nu`. #179: los
+    lotes de b31/b32 pudieron persistir valores no escalares en records
+    posteriores al primero; esto los identifica sin interpretarlos. Un `nu`
+    raro bajo un `status` válido no decide nada y no cuenta.
     """
-    for field in ("status", "nu"):
-        if field in record and not (record[field] is None or isinstance(record[field], str)):
-            return False
-    return True
+    field = "status" if "status" in record else "nu" if "nu" in record else None
+    if field is None:
+        return True
+    value = record[field]
+    return value is None or isinstance(value, str)
 
 
 __all__ = ["is_active", "is_canonical_vigency"]

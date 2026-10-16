@@ -130,6 +130,13 @@ reparación manual.
 
 ### Diagnóstico de arranque e integración
 
+**Records con vigencia no canónica (#179).** Si `verify` (o `doctor`, que lo
+incluye) devuelve `noncanonical_vigency`, el store tiene records cuyo
+`status`/`nu` no es cadena, escritos por lotes en b31/b32. La integridad no
+está afectada (`ok: true`); se localizan con `inventory --revision <rev>`
+(`physical_status: no_canonica`). Cuentan como no vigentes: no se pueden
+superseder ni refutar, y `compact` los retira como tombstone.
+
 Antes de trabajo material, un agente puede clasificar qué hay integrado sin
 inicializar ni adoptar nada (read-only, exit 0 en todo caso diagnosticable):
 

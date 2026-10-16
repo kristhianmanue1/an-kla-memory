@@ -29,6 +29,10 @@ from an_kla.vigency import is_canonical_vigency
 
 ROOT = Path(__file__).resolve().parents[1]
 POISONED = {"f-nu": {"nu": ["x"]}, "f-st": {"status": 7}, "f-sd": {"status": {"a": 1}}}
+# Canónicos que el inventory de b33 contaba mal: status válido con nu no
+# escalar (decide status), status None y status "" (escribibles en v1).
+CANONICAL_EDGE = {"f-mix": {"status": "vigente", "nu": [1]}, "f-none": {"status": None},
+                  "f-empty": {"status": ""}}
 
 
 class NonScalarVigencyTests(unittest.TestCase):
@@ -43,7 +47,7 @@ class NonScalarVigencyTests(unittest.TestCase):
         base = self.store.initialize()
         facts = [{"id": "f-ok", "payload": {"text": "registro sano"}}]
         facts += [dict({"id": rid, "payload": {"text": "registro de lote antiguo"}}, **extra)
-                  for rid, extra in POISONED.items()]
+                  for rid, extra in {**POISONED, **CANONICAL_EDGE}.items()]
         self.store.commit(expected_current_hash=base, checkpoint_patch={}, facts=facts)
         self.env = {"PATH": os.environ["PATH"], "AN_KLA_NO_UPDATE_CHECK": "1",
                     "PYTHONPATH": str(ROOT)}
@@ -64,6 +68,10 @@ class NonScalarVigencyTests(unittest.TestCase):
         for extra in POISONED.values():
             with self.subTest(extra=extra):
                 self.assertFalse(is_canonical_vigency(extra))
+        for extra in CANONICAL_EDGE.values():
+            with self.subTest(extra=extra):
+                self.assertTrue(is_canonical_vigency(extra))
+        self.assertFalse(is_canonical_vigency({"status": [1], "nu": "vigente"}))
 
     def test_verify_and_doctor_report_without_losing_ok(self) -> None:
         verified = self.store.verify()
@@ -88,9 +96,18 @@ class NonScalarVigencyTests(unittest.TestCase):
                 self.assertEqual(by_id[rid]["status_source"], "physical")
         counts = result["counts"]["facts"]
         self.assertEqual(counts[NONCANONICAL_STATUS], 3)
-        self.assertEqual(counts["vigente"], 1)
-        self.assertNotIn("7", counts)
-        self.assertEqual(by_id["f-ok"]["status"], "vigente")
+        self.assertEqual(counts["vigente"], 1 + len(CANONICAL_EDGE))
+        for bogus in ("7", "None", ""):
+            self.assertNotIn(bogus, counts)
+        # Sin overlay real nunca se atribuye una refutación.
+        for rid in ("f-ok", *CANONICAL_EDGE):
+            with self.subTest(record=rid):
+                self.assertEqual(by_id[rid]["status"], "vigente")
+                self.assertEqual(by_id[rid]["physical_status"], "vigente")
+                self.assertEqual(by_id[rid]["status_source"], "physical")
+        # verify e inventory cuadran.
+        self.assertEqual(self.store.verify()["noncanonical_vigency"]["facts"],
+                         counts[NONCANONICAL_STATUS])
 
     def test_compaction_projection_tolerates_and_tombstones(self) -> None:
         projection = project_snapshot(self.store.snapshot())
@@ -131,6 +148,30 @@ class NonScalarVigencyTests(unittest.TestCase):
                 self.assertNotEqual(planned.returncode, 0)
                 self.assertIn("plan_supersede_target_not_vigente", planned.stderr)
                 self.assertNotIn("cli_unexpected_failure", planned.stderr)
+
+    def test_supersede_commit_resolution_fails_closed(self) -> None:
+        # El commit re-resuelve targets bajo lock (supersede.py), aparte del plan.
+        from an_kla.supersede import resolve_supersede_targets
+        from an_kla.write_policy import WritePolicyError
+        current = self.store.read_current()
+        for rid in POISONED:
+            with self.subTest(record=rid):
+                plan = {"records": [{"operation": "supersede", "stream": "facts",
+                                     "supersedes": rid, "record": {"id": rid + "-v2"}}]}
+                with self.assertRaises(WritePolicyError) as caught:
+                    resolve_supersede_targets(self.store, plan, current)
+                self.assertEqual(caught.exception.detail, "target_not_vigente")
+
+    def test_refute_commit_target_guard_fails_closed(self) -> None:
+        # plan_refute acepta cualquier target; el guard corre en el commit.
+        from an_kla.refutations import _target_guard
+        from an_kla.refute_contracts import RefutePolicyError
+        snapshot = self.store.snapshot()
+        for rid in POISONED:
+            with self.subTest(record=rid):
+                with self.assertRaises(RefutePolicyError) as caught:
+                    _target_guard(snapshot, "facts", digest_json(self._raw(rid)))
+                self.assertEqual(caught.exception.detail, "target_not_active")
 
     def test_batch_supersede_guard_fails_closed(self) -> None:
         rev = self.store.read_current()
