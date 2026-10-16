@@ -93,8 +93,11 @@ class ReferenceAgainstParserTests(unittest.TestCase):
         parser, rest, depth = _subparser(words)
         self.assertGreater(depth, 0, f"comando inexistente: {tokens}")
         pending = [a for a in parser._actions if isinstance(a, argparse._SubParsersAction)]
-        if pending and pending[0].required:
-            self.fail(f"subcomando incompleto o inexistente: {tokens}")
+        if pending:
+            nxt = next((t for t in rest if not t.startswith("-")), None)
+            if (nxt is None and pending[0].required) or (
+                    nxt is not None and nxt not in pending[0].choices):
+                self.fail(f"subcomando incompleto o inexistente: {tokens}")
         flags = {t for t in rest if t.startswith("--")}
         unknown = flags - _options(parser) - {"--project-root"}
         self.assertEqual(unknown, set(), f"flags inexistentes en {tokens}")
@@ -106,6 +109,39 @@ class ReferenceAgainstParserTests(unittest.TestCase):
             with self.subTest(span=span):
                 tokens = re.sub(r"<[^<>]*>", "<x>", span).split()
                 self._assert_resolves(tokens)
+
+    def test_every_command_span_in_the_section_resolves(self) -> None:
+        # Cualquier span cuyo primer token sea un subcomando de primer nivel,
+        # también entre paréntesis y en la columna de acción de los errores.
+        top = set(_subparser([])[0]._subparsers._group_actions[0].choices)
+        checked = 0
+        # Sin los bloques ``` (sus comillas desplazarían el emparejamiento).
+        prose = re.sub(r"```.*?```", "", _section(), flags=re.S)
+        for span in re.findall(r"`([^`]+)`", prose):
+            tokens = re.sub(r"<[^<>]*>", "<x>", span).split()
+            if tokens and tokens[0] in top:
+                parser, _, _ = _subparser(tokens[:1])
+                subs = [a for a in parser._actions
+                        if isinstance(a, argparse._SubParsersAction)]
+                if len(tokens) == 1 and subs and subs[0].required:
+                    continue  # nombre suelto (p. ej. el campo `checkpoint`)
+                with self.subTest(span=span):
+                    self._assert_resolves(tokens)
+                checked += 1
+        self.assertGreaterEqual(checked, 25)
+
+    def test_interpreter_forms_are_real(self) -> None:
+        section = _section()
+        self.assertIn("`.venv/bin/python -m an_kla`", section)
+        self.assertIn("`an-kla`", section)
+        self.assertEqual(set(re.findall(r"-m ([A-Za-z_.]+)", section)), {"an_kla", "pip"})
+        pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+        self.assertRegex(pyproject, r'(?m)^an-kla = "an_kla\.__main__:main"$')
+
+    def test_resume_rejects_streams_as_documented(self) -> None:
+        self.assertIn("no admite `--streams`", " ".join(_section().split()))
+        parser, _, _ = _subparser(["resume"])
+        self.assertNotIn("--streams", _options(parser))
 
     def test_every_bash_line_uses_exact_flags(self) -> None:
         for block in _blocks("bash"):
@@ -227,7 +263,14 @@ class AgentRecipeTests(unittest.TestCase):
         cp_authority, cp_plan, cp_commit = [
             self._run_documented(argv, values) for argv in _commands(checkpoint_block)]
         self.assertEqual(cp_authority["authority_class"], "model_derived")
-        self.assertEqual(cp_plan["decision"]["decision"], "write")
+        section = " ".join(_section().split())
+        decided = re.search(r"El plan de checkpoint decide `([^`]+)`", section).group(1)
+        self.assertEqual(cp_plan["decision"]["decision"], decided)
+        # Campos citados en «el commit responde ...» existen en la salida.
+        for sentence in re.findall(r"[Ee]l commit responde ([^.]*)\.", section):
+            for name in re.findall(r"`([a-z_]+)(?::[^`]*)?`", sentence):
+                with self.subTest(field=name):
+                    self.assertTrue(name in commit or name in cp_commit, name)
         self.assertEqual(cp_plan["current_revision"], rev2)
         self.assertIs(cp_commit["committed"], True)
         self.assertIn("checkpoint", cp_commit)
@@ -251,10 +294,38 @@ class AgentRecipeTests(unittest.TestCase):
                       plan["decision"]["reason_codes"])
         self.assertIs(skipped["committed"], False)
         self.assertEqual(skipped["revision"], rev)
+        for name in re.findall(r"`([a-z_]+)(?::[^`]*)?`",
+                               re.search(r"su commit responde ([^.]*)\.", section).group(1)):
+            self.assertIn(name, skipped)
+
+        # «Con `model_derived` pide `summary`»: es lo que usa la plantilla.
+        asked = re.search(r"Con `model_derived` pide `([a-z]+)`", section).group(1)
+        self.assertEqual(asked, self._fill(proposal_tpl, {"<REV>": rev})
+                         ["requested_representation"])
+        fact, fact_commit = self._plan_and_commit(
+            "fact", self._fill(proposal_tpl, {"<REV>": rev}), rev)
+        self.assertEqual(fact["decision"]["decision"], f"write-{asked}")
+        rev = fact_commit["revision"]
+
+        # Supersede según el fragmento de la prosa.
+        pairs = dict(re.findall(r'`"([a-z_]+)": "([^"`]+)"`', section))
+        self.assertEqual(set(pairs), {"operation", "supersedes"})
+        correction = self._fill(proposal_tpl, {"<REV>": rev})
+        original_id = correction["record"]["id"]
+        correction["operation"] = pairs["operation"]
+        correction["supersedes"] = original_id
+        correction["record"]["id"] = original_id + "-v2"
+        _, superseded = self._plan_and_commit("supersede", correction, rev)
+        self.assertIs(superseded["committed"], True)
+        rev = superseded["revision"]
+        states = {r["id"]: r["status"] for r in
+                  self._cli(["inventory", "--revision", rev])["records"]}
+        self.assertEqual(states[original_id], "sustituida")
 
         # «Para `events` o `episodes` cambia sólo `stream`».
         self.assertIn("cambia sólo `stream`", section)
         event = self._fill(proposal_tpl, {"<REV>": rev})
+        event["base_revision"] = rev
         event["stream"] = "events"
         event["record"]["id"] = "e-x"
         event["record"]["text"] = "hallazgo registrado como event"

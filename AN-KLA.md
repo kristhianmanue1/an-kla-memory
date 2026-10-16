@@ -69,7 +69,7 @@ no ejecutes `init` sin habilitación del usuario.
 | Estado de la integración | `context status`, `integration status` |
 | Retomar trabajo | `checkpoint show`, `resume --query "<necesidad>" --budget <bytes>` (busca en los tres streams; no admite `--streams`) |
 | Buscar registros por texto | `retrieve --query "<términos>" --budget <bytes> --streams facts,events,episodes` (sin `--streams` sólo busca `facts`) |
-| Listar registros de una revisión | `inventory --revision <sha256:...>` (ids y estado, sin texto); `view context --revision <sha256:...> --projection text` (sólo records con `record.subject_ref`; namespace con `subject namespace`) |
+| Listar registros de una revisión | `inventory --revision <sha256:...>` (ids y estado, sin texto); `view context --revision <sha256:...> --projection text` (sólo records con `record.subject_ref` = `an-kla:subject:v1:<kind>:<namespace>:<slug>`; namespace con `subject namespace`, kinds en `schema show write-proposal-v1`) |
 | Formas JSON exactas | `schema list`, `schema show write-proposal-v1` (`write-authority-v1`, `working-state-v2`) |
 | Contratos y límites sin leer memoria | `capabilities` |
 | Registrar un fact, event o episode | `plan-write` -> `commit-write-plan` |

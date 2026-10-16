@@ -51,6 +51,35 @@ decisión, `committed`, código de error inexistente, afirmación falsa sobre
   beta.32 como modificado: reinstalar el contexto. La política exige tags
   exactos.
 
+## Re-verificación de `398ba18`: `fix-and-retry` sólo en el test
+
+El contrato quedó correcto: en un segundo recorrido como agente nuevo no
+apareció ninguna frase falsa (fact con `subject_ref`, event, episode y
+supersede siguiendo la sección; `view context`, `inventory`, `retrieve`,
+`resume`). El revisor refutó una afirmación del autor: 3 de los 12 mutantes
+supervivientes seguían pasando (el script del autor había probado variantes
+distintas), más 9 nuevos sobre prosa y comandos fuera de la tabla.
+
+Correcciones:
+- Todo span de la sección cuyo primer token sea un subcomando se resuelve
+  contra el parser (paréntesis y acciones de la tabla de errores incluidos;
+  sin los bloques ``` que desplazaban el emparejamiento de comillas).
+  Un subcomando inexistente falla aunque el subparser no sea obligatorio.
+- Campos de «el commit responde …» y «su commit responde …» comprobados
+  contra la salida real; la decisión del checkpoint se extrae de la prosa.
+- Supersede ejecutado según el fragmento; `inventory` marca el original
+  `sustituida`. Representación de la plantilla extraída de «pide `summary`».
+- Intérprete anclado: `-m an_kla` y el `console_scripts` `an-kla`.
+- «no admite `--streams`» comprobado contra el parser de `resume`.
+- Forma del `subject_ref` añadida a la fila de `view context`.
+
+Resultado: los 26 mutantes (15 originales, 3 no resueltos y 8 nuevos de la
+re-verificación) fallan con la línea base en verde; tres ejecuciones
+seguidas, deterministas.
+
 ## Decisión
 
-Pendiente de re-verificación de las correcciones por el mismo revisor.
+- [x] proceed: el revisor condicionó el cierre a re-ejecutar los mutantes
+  tras corregir el test; verificado arriba.
+- [ ] fix-and-retry
+- [ ] escalate
