@@ -81,6 +81,10 @@ SHARED_CASES = [
     ("lineage sin refs", _mutate(_base, ["lineage"], {"derived_from_retrieval": False}), False),
     ("ref kind inválido", _mutate(_base, ["lineage", "refs"], [{"kind": "url", "id": "x"}]), False),
     ("ref clave extra", _mutate(_base, ["lineage", "refs"], [{"kind": "external", "id": "x", "url": "y"}]), False),
+    # #176: cada record del lote, no sólo el primero, cumple la forma de v1.
+    ("records[1] verified_at inválido", _mutate(_base, ["records"], [{"id": "e-1"}, {"id": "e-2", "verified_at": "nope"}]), False),
+    ("records[1] subject_ref inválido", _mutate(_base, ["records"], [{"id": "e-1"}, {"id": "e-2", "subject_ref": "x"}]), False),
+    ("records[1] sin id", _mutate(_base, ["records"], [{"id": "e-1"}, {"text": "x"}]), False),
 ]
 
 # Reglas que JSON Schema no expresa; el schema las declara en su descripción.
@@ -90,6 +94,17 @@ ENGINE_ONLY_CASES = [
     ("supersede intra-lote", _mutate(_supersede, ["supersedes"], {"e-1": "e-2", "e-2": "e-old-2"})),
     ("auto-supersede", _mutate(_supersede, ["supersedes"], {"e-1": "e-1", "e-2": "e-old-2"})),
     ("targets duplicados", _mutate(_supersede, ["supersedes"], {"e-1": "e-old", "e-2": "e-old"})),
+    ("records[1] status no escalar", _mutate(_base, ["records"], [{"id": "e-1"}, {"id": "e-2", "status": 7}])),
+    ("records[1] nu no escalar", _mutate(_base, ["records"], [{"id": "e-1"}, {"id": "e-2", "nu": [1, 2]}])),
+    ("records[1] fecha imposible", _mutate(_base, ["records"], [{"id": "e-1"}, {"id": "e-2", "verified_at": "2026-02-30T00:00:00Z"}])),
+    ("valor no finito", _mutate(_base, ["records"], [{"id": "e-1", "x": float("nan")}])),
+    ("digest con salto final", _mutate(_base, ["base_revision"], DIGEST + "\n")),
+]
+
+# Heredado de v1: el schema es más estricto que el motor con `text`.
+SCHEMA_ONLY_CASES = [
+    ("text vacío", _mutate(_base, ["records"], [{"id": "e-1", "text": ""}])),
+    ("text no cadena", _mutate(_base, ["records"], [{"id": "e-1", "text": 5}])),
 ]
 
 
@@ -125,12 +140,21 @@ class WriteProposalV2SchemaTests(unittest.TestCase):
     def test_engine_only_rules_are_declared(self) -> None:
         description = self.schema["description"]
         for phrase in ("unique within the batch", "supersedes keys equal to the batch ids",
-                       "no self or intra-batch supersede", "unique targets"):
+                       "no self or intra-batch supersede", "unique targets",
+                       "scalar status/nu", "calendar-valid verified_at",
+                       "finite JSON values", "no trailing newline"):
             self.assertIn(phrase, description)
         for name, proposal in ENGINE_ONLY_CASES:
             with self.subTest(case=name):
                 self.assertTrue(self.validator.is_valid(proposal), name)
                 self.assertFalse(_engine_accepts(proposal), name)
+
+    def test_schema_only_rules_are_declared(self) -> None:
+        self.assertIn("text", self.schema["description"])
+        for name, proposal in SCHEMA_ONLY_CASES:
+            with self.subTest(case=name):
+                self.assertFalse(self.validator.is_valid(proposal), name)
+                self.assertTrue(_engine_accepts(proposal), name)
 
     def test_too_many_records_rejected_by_both(self) -> None:
         limit = _POLICY_CONFIGURATION["max_batch_records"]

@@ -79,6 +79,21 @@ Crear **`write-proposal/v2` (perfil lote)** con reglas:
 - Batería P0 re-corrida: celda gobernada por lotes supera la línea base
   (~450 escrituras) bajo los mismos umbrales.
 
+## Enmienda 1 — CLI real y validación por registro (#176, 2026-10-16)
+
+- El punto 5 de la Decisión cita `plan-write --batch <archivo>`; ese flag no
+  existe. El lote se pasa con el mismo `--proposal` que v1 (el CLI distingue
+  por `schema`), y `--emit-authority-template` emite la authority v1 ligada al
+  digest del lote.
+- La validación por registro de v1 (`verified_at`, `status`/`nu` escalares,
+  `subject_ref`) sólo se aplicaba a `records[0]` a través del gemelo v1; los
+  demás records pasaban sin ella. Desde #176 `validate_record_fields` se aplica
+  a cada record del lote, con detalle `records[i].<campo>`. La autoridad se
+  sigue evaluando una vez por lote.
+- El lote se publica como `write-proposal-v2.schema.json`; las reglas que JSON
+  Schema no expresa quedan declaradas en su descripción y fijadas por
+  `tests/test_write_proposal_v2_schema.py`.
+
 ## Referencias
 
 Issue #149 (P2d); ADR-0007 y su Enmienda #152; batería P0

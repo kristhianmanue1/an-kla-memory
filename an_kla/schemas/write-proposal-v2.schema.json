@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:an-kla:schema:write-proposal:v2",
   "title": "AN-KLA WriteProposal v2 (ADR-0054: governed batch)",
-  "description": "One batch: homogeneous records (same stream and operation) evaluated against the PRE-BATCH state, with ONE decision, ONE plan, ONE revision and ONE CAS. Plan and commit with plan-write/commit-write-plan exactly as v1. The policy core also enforces what JSON Schema cannot: record ids unique within the batch (x-an-kla-unique-by), supersedes keys equal to the batch ids, no self or intra-batch supersede, unique targets, and targets current in the base snapshot.",
+  "description": "One batch: homogeneous records (same stream and operation) evaluated against the PRE-BATCH state, with ONE decision, ONE plan, ONE revision and ONE CAS. Plan and commit with plan-write/commit-write-plan exactly as v1. The policy core also enforces what JSON Schema cannot: record ids unique within the batch (x-an-kla-unique-by), supersedes keys equal to the batch ids, no self or intra-batch supersede, unique targets, targets current in the base snapshot, scalar status/nu, calendar-valid verified_at, finite JSON values and digests with no trailing newline — the same per-record checks as write-proposal-v1, applied to every record. Inherited from v1, the schema is stricter than the core on record text (non-empty string).",
   "type": "object",
   "additionalProperties": false,
   "required": [
