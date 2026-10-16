@@ -10,6 +10,19 @@ El formato de cada entrada sigue [Keep a Changelog](https://keepachangelog.com/e
 por intención, y el proyecto usa [versionado semántico](https://semver.org/lang/es/)
 en fase de pre-release `0.1.0`.
 
+## [v0.1.0-beta.32]
+
+**Agentes que no adivinan** (issue #171 y evidencia de sesiones reales):
+errores accionables (`resume` informa `minimum_budget_bytes`;
+`invalid_transaction_id` declara el formato y sale con exit 2 también en
+`init`; `check-updates` muestra `uv tool` y `pip`), detección de intérprete
+más antiguo que la plantilla (`runtime_older_than_context_template`, sin
+degradar el contexto), `runtime` en `status` y la «Referencia rápida para
+agentes» ejecutable en el contrato. **Cambia la plantilla gestionada** a
+`0.1.0-beta.32` (beta.26 reconocida como anterior: `context update`).
+Además, paginación de `context_view` en el origen (ADR-0058, ~3,9× a 20k).
+Detalle en [`docs/releases/v0.1.0-beta.32.md`](docs/releases/v0.1.0-beta.32.md).
+
 ## [v0.1.0-beta.31]
 
 **Escalado medido del store** (issue #149, fases P0–P2): batería P0 oficial

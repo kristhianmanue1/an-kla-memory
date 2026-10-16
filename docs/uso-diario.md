@@ -37,7 +37,7 @@ por separado el contrato de contexto:
 
 ```bash
 .venv/bin/python -m pip install --upgrade \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.31"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.32"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . context status
 .venv/bin/python -m an_kla --project-root . context plan --operation update
@@ -46,6 +46,12 @@ git diff -- AGENTS.md AN-KLA.md
 .venv/bin/python -m an_kla --project-root . context status
 .venv/bin/python -m an_kla --project-root . verify
 ```
+
+Con el CLI global instalado con uv, el primer paso es
+`uv tool install --force "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.32"`
+y los siguientes usan `an-kla --project-root .` en lugar de
+`.venv/bin/python -m an_kla --project-root .`. Comprueba con `--version` que
+responde la instalación que acabas de actualizar.
 
 Una plantilla anterior reconocida por huella puede migrarse aunque falte el
 manifiesto local. AN-KLA respalda el `AN-KLA.md` anterior en un directorio
@@ -56,8 +62,10 @@ sobrescribe esos cambios.
 Cuando edites contenido propio fuera del bloque gestionado (referencias a
 `CONTRIBUTING.md`, ADRs, convenciones), el warning
 `context_target_changed_outside_managed_block` es la señal esperada.
-`context update` ya no lo absorbe silenciosamente: adóptalo de forma explícita
-para que la detección de cambios futuros siga viva:
+`context update` ya no lo absorbe silenciosamente (`context plan
+--operation update` y `context update` fallan con
+`context_target_drift_adoption_required`): revisa el diff y, si es legítimo,
+adóptalo de forma explícita para que la detección de cambios futuros siga viva:
 
 ```bash
 .venv/bin/python -m an_kla --project-root . context adopt-baseline
@@ -162,7 +170,7 @@ puede inspeccionar la actualización de la integración sin mutar el proyecto:
 
 ```bash
 .venv/bin/python -m an_kla --project-root . upgrade inspect \
-  --target v0.1.0-beta.31 > RUTA_EFIMERA_NUEVA
+  --target v0.1.0-beta.32 > RUTA_EFIMERA_NUEVA
 ```
 
 El agente debe conservar por separado el `plan_fingerprint` devuelto, revisar
@@ -174,7 +182,7 @@ bytes del upgrade:
 .venv/bin/python -m an_kla --project-root . upgrade apply \
   <plan_fingerprint> --plan RUTA_EFIMERA_NUEVA
 .venv/bin/python -m an_kla --project-root . upgrade verify \
-  --target v0.1.0-beta.31
+  --target v0.1.0-beta.32
 git diff -- AGENTS.md AN-KLA.md
 ```
 
