@@ -27,7 +27,6 @@ from an_kla.context_text import DETAILED_CONTRACT, TEMPLATE_VERSION
 from an_kla.version import VERSION, compare_template_versions
 
 ROOT = Path(__file__).resolve().parents[1]
-BETA26_FIXTURE = ROOT / "tests" / "fixtures" / "context-v0.1.0-beta.26"
 
 
 def _relabel(agents: Path, version: str) -> None:
@@ -57,26 +56,27 @@ class TemplateVersionOrderingTests(unittest.TestCase):
                     compare_template_versions(bad, TEMPLATE_VERSION)
 
 
-class Beta26ConsumerTests(unittest.TestCase):
-    def setUp(self) -> None:
-        self.temp = tempfile.TemporaryDirectory()
-        self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name)
-        for name in ("AGENTS.md", "AN-KLA.md"):
-            shutil.copyfile(BETA26_FIXTURE / name, self.root / name)
-
-    def test_published_beta26_is_outdated_not_modified_and_updates(self) -> None:
-        self.assertNotEqual(TEMPLATE_VERSION, "0.1.0-beta.26")
-        before = context_status(self.root)
-        self.assertEqual(before["template_version"], "0.1.0-beta.26")
-        self.assertEqual(before["diagnostics"], ["context_template_outdated"])
-        self.assertEqual(before["runtime_version"], VERSION)
-        plan = plan_context_change(self.root, "update")
-        self.assertEqual(apply_context_plan(self.root, plan)["action"], "replace")
-        after = context_status(self.root)
-        self.assertTrue(after["ok"], after)
-        self.assertEqual(
-            (self.root / "AN-KLA.md").read_text(encoding="utf-8"), DETAILED_CONTRACT)
+class PublishedConsumerTests(unittest.TestCase):
+    def test_published_templates_are_outdated_not_modified_and_update(self) -> None:
+        # Cada plantilla publicada (bytes del tag) migra sin falsos
+        # managed_contract_modified: beta.26 (#171) y beta.32.
+        for version in ("0.1.0-beta.26", "0.1.0-beta.32"):
+            with self.subTest(version=version), tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                fixture = ROOT / "tests" / "fixtures" / f"context-v{version}"
+                for name in ("AGENTS.md", "AN-KLA.md"):
+                    shutil.copyfile(fixture / name, root / name)
+                self.assertNotEqual(TEMPLATE_VERSION, version)
+                before = context_status(root)
+                self.assertEqual(before["template_version"], version)
+                self.assertEqual(before["diagnostics"], ["context_template_outdated"])
+                self.assertEqual(before["runtime_version"], VERSION)
+                plan = plan_context_change(root, "update")
+                self.assertEqual(apply_context_plan(root, plan)["action"], "replace")
+                after = context_status(root)
+                self.assertTrue(after["ok"], after)
+                self.assertEqual(
+                    (root / "AN-KLA.md").read_text(encoding="utf-8"), DETAILED_CONTRACT)
 
     def test_contract_documents_new_signals(self) -> None:
         for needle in ("minimum_budget_bytes", "runtime_older_than_context_template",

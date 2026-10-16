@@ -138,6 +138,14 @@ class ReferenceAgainstParserTests(unittest.TestCase):
         pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
         self.assertRegex(pyproject, r'(?m)^an-kla = "an_kla\.__main__:main"$')
 
+    def test_working_state_limits_match_the_policy(self) -> None:
+        from an_kla.checkpoint_policy import _CONFIG as cfg
+        section = " ".join(_section().split())
+        self.assertIn(f"{cfg['maximum_items_per_list']} elementos por lista", section)
+        self.assertIn(f"{cfg['maximum_item_bytes'] // 1024} KiB por `value`", section)
+        self.assertIn(f"{cfg['maximum_working_state_bytes'] // 1024} KiB por working-state",
+                      section)
+
     def test_resume_rejects_streams_as_documented(self) -> None:
         self.assertIn("no admite `--streams`", " ".join(_section().split()))
         parser, _, _ = _subparser(["resume"])
@@ -259,6 +267,15 @@ class AgentRecipeTests(unittest.TestCase):
             "<checkpoint_digest de checkpoint show>": parent,
             "<YYYY-MM-DDTHH:MM:SS.ffffffZ>": now,
         }))
+        # «Cada elemento de `decisions` ... lleva `id`, `value` y `provenance`».
+        self.assertIn("lleva `id` (único en su lista), `value` y `provenance`",
+                      " ".join(_section().split()))
+        filled = json.loads((self.work / "working-state.json").read_text(encoding="utf-8"))
+        self.assertEqual(set(filled["decisions"][0]), {"id", "value", "provenance"})
+        # Las tres listas comparten forma: también blockers y evidence no vacíos.
+        for key in ("blockers", "evidence"):
+            filled[key] = [dict(filled["decisions"][0], id=f"{key[0]}-x")]
+        self._write("working-state.json", filled)
         values = {"<REV-vigente>": rev2, "<uuid4-nuevo>": str(uuid.uuid4())}
         cp_authority, cp_plan, cp_commit = [
             self._run_documented(argv, values) for argv in _commands(checkpoint_block)]

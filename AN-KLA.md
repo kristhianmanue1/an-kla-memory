@@ -118,7 +118,8 @@ nueva. Sin `record.text` (u otro texto indexable) el commit avisa
  "objective": {"value": "<objetivo>", "provenance": "caller_asserted"},
  "phase": {"value": "<fase>", "provenance": "caller_asserted"},
  "next_step": {"value": "<siguiente paso>", "provenance": "caller_asserted"},
- "decisions": [], "blockers": [], "evidence": [],
+ "decisions": [{"id": "d-<tema>", "value": "<decisión>", "provenance": "caller_asserted"}],
+ "blockers": [], "evidence": [],
  "source_state": {"profile": "none/v1",
                   "head": {"value": null, "provenance": "unavailable"},
                   "branch": {"value": null, "provenance": "unavailable"},
@@ -136,6 +137,10 @@ python3 -m an_kla --project-root . checkpoint commit --plan checkpoint-plan.json
   --expected-current <REV-vigente> --transaction-id <uuid4-nuevo>
 ```
 
+Cada elemento de `decisions`, `blockers` y `evidence` lleva `id` (único en su
+lista), `value` y `provenance`; las listas pueden ir vacías. Límites: 50
+elementos por lista, 8 KiB por `value` y 64 KiB por working-state, en JSON
+canónico; si los superas falla con `too_many_items` o `too_large`.
 `<REV-vigente>` es la `revision` de `status` (igual a `current_revision` del
 plan de checkpoint): no escribas entre `checkpoint plan` y `checkpoint commit`.
 El plan de checkpoint decide `write`; el commit responde `committed: true`,
