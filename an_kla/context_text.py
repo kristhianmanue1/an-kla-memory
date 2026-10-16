@@ -148,18 +148,20 @@ Resumen operativo verificado contra el CLI. Ante duda mandan `--help` y
 marcadores, nunca literales.
 
 **Intérprete.** Usa `.venv/bin/python -m an_kla` si el proyecto tiene venv; si
-no, el CLI global `an-kla`. Si `.venv/bin/pip` falla (p. ej. shebang roto tras
-mover el proyecto), usa `.venv/bin/python -m pip`. Sin memoria inicializada,
-`status` y `verify` fallan con `reader_gate_unavailable`; no ejecutes `init` sin
-habilitación del usuario.
+no, el CLI global `an-kla`. En los ejemplos, `python3 -m an_kla` representa ese
+intérprete: sustitúyelo por `.venv/bin/python -m an_kla` o por `an-kla`. Si
+`.venv/bin/pip` falla (p. ej. shebang roto tras mover el proyecto), usa
+`.venv/bin/python -m pip`, sólo con autorización vigente de instalación. Sin
+memoria inicializada, `status` y `verify` fallan con `reader_gate_unavailable`;
+no ejecutes `init` sin habilitación del usuario.
 
 | Necesito | Comando |
 |---|---|
 | Saber si hay memoria y si está sana | `startup-diagnostic`, `status`, `verify` |
 | Estado de la integración | `context status`, `integration status` |
-| Retomar trabajo | `checkpoint show`, `resume --query "<necesidad>" --budget <bytes>` |
+| Retomar trabajo | `checkpoint show`, `resume --query "<necesidad>" --budget <bytes>` (busca en los tres streams; no admite `--streams`) |
 | Buscar registros por texto | `retrieve --query "<términos>" --budget <bytes> --streams facts,events,episodes` (sin `--streams` sólo busca `facts`) |
-| Listar registros de una revisión | `view context --revision <sha256:...> --projection text`, `inventory --revision <sha256:...>` |
+| Listar registros de una revisión | `inventory --revision <sha256:...>` (ids y estado, sin texto); `view context --revision <sha256:...> --projection text` (sólo records con `record.subject_ref`; namespace con `subject namespace`) |
 | Formas JSON exactas | `schema list`, `schema show write-proposal-v1` (`write-authority-v1`, `working-state-v2`) |
 | Contratos y límites sin leer memoria | `capabilities` |
 | Registrar un fact, event o episode | `plan-write` -> `commit-write-plan` |
@@ -179,6 +181,10 @@ cada escritura usa la `revision` que devolvió la anterior, tanto en
              "refs": [{"kind": "external", "id": "<issue, PR o artefacto>"}]}}
 ```
 
+Para `events` o `episodes` cambia sólo `stream` (y el prefijo del id). Para
+corregir un record vigente usa `"operation": "supersede"`, `"supersedes": "<id
+vigente>"` y un `record.id` nuevo.
+
 ```bash
 python3 -m an_kla --project-root . plan-write --proposal proposal.json \
   --emit-authority-template > authority.json
@@ -188,12 +194,16 @@ python3 -m an_kla --project-root . commit-write-plan --expected-current <REV> \
   --proposal proposal.json --authority authority.json --planning-result plan.json
 ```
 
-La plantilla de authority sale como `model_derived`, cuyo techo es `summary`:
-corrige `authority_class`/`issuer` sólo si tu procedencia real es otra. El plan
-trae `decision.decision` (`write-full`, `write-summary` o `skip`); el commit
-responde `committed: true` y la `revision` nueva. Sin `record.text` (u otro texto
-indexable) el commit avisa `record_without_indexable_text` y el record no se
-recupera.
+La plantilla de authority sale como `model_derived`: corrige
+`authority_class`/`issuer` sólo si tu procedencia real es otra. El plan trae
+`decision.decision` (`write-full`, `write-summary` o `skip`) y `reason_codes`.
+Con `model_derived` pide `summary`: pedir `full` produce `skip`
+(`summary_required_for_authority_ceiling`); `full` requiere `tool_observed`
+(ver «Resolver autoridad»). Si el plan es `skip` no hay escritura: corrige según
+`reason_codes` o no escribas; su commit responde `committed: false` y la misma
+`revision`. Con escritura, el commit responde `committed: true` y la `revision`
+nueva. Sin `record.text` (u otro texto indexable) el commit avisa
+`record_without_indexable_text` y el record no se recupera.
 
 ```json
 {"schema": "an-kla/working-state-v2",
@@ -215,21 +225,23 @@ python3 -m an_kla --project-root . checkpoint plan --input working-state.json \
 python3 -m an_kla --project-root . checkpoint plan --input working-state.json \
   --authority checkpoint-authority.json > checkpoint-plan.json
 python3 -m an_kla --project-root . checkpoint commit --plan checkpoint-plan.json \
-  --expected-current <REV de la última escritura> --transaction-id <uuid4 nuevo>
+  --expected-current <REV-vigente> --transaction-id <uuid4-nuevo>
 ```
 
+`<REV-vigente>` es la `revision` de `status` (igual a `current_revision` del
+plan de checkpoint): no escribas entre `checkpoint plan` y `checkpoint commit`.
 El plan de checkpoint decide `write`; el commit responde `committed: true`,
 `checkpoint` y `revision`. Cierra con `status` y `verify`.
 
 | Error | Qué hacer |
 |---|---|
 | `reader_gate_unavailable` | No hay memoria inicializada o su custodia no resuelve; repórtalo. |
-| `write_plan_base_changed`, `checkpoint_plan_base_changed` | Relee `status` y rehaz proposal y plan sobre la revisión nueva. |
+| `write_plan_base_changed`, `checkpoint_plan_base_changed`, `invalid_write_planning_result`, `invalid_checkpoint_plan (planning.current_revision)` | El plan no corresponde a la revisión vigente: relee `status` y rehaz proposal, authority y plan; no reutilices un plan tras otra escritura. |
 | `checkpoint_parent_mismatch` | Relee `checkpoint show` y actualiza `supersedes_checkpoint`. |
 | `invalid_working_state (<campo>)` | El detalle nombra el campo; consulta `schema show working-state-v2`. |
 | `budget_too_small_for_resume_snapshot (minimum_budget_bytes=N, ...)` | Reintenta con `--budget N` o mayor. |
 | `invalid_transaction_id (...)` | Usa un UUID nuevo en minúsculas. |
-| `context_target_drift_adoption_required` | `AGENTS.md` cambió fuera del bloque: revisa el diff con el operador; si es legítimo, `context adopt-baseline`. |
+| `context_target_drift_adoption_required` | `AGENTS.md` cambió fuera del bloque: revisa el diff con el operador; si él lo confirma legítimo, `context adopt-baseline`. |
 
 ## Verificación no bloqueante de versiones
 

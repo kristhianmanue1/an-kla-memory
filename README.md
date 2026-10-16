@@ -185,7 +185,7 @@ git diff -- AGENTS.md AN-KLA.md
 En Windows PowerShell, crea el entorno con `py -3.12 -m venv .venv` y sustituye
 `.venv/bin/python` por `.venv\\Scripts\\python.exe`.
 
-**Agentes de IA:** ejecuta los pasos en orden y revisa cada salida. Tras
+**Agentes de IA:** si el usuario pidió instalar, ejecuta los pasos en orden. Tras
 `context install`, la operación diaria (leer, escribir, checkpoint y errores
 frecuentes, con ejemplos JSON verificados) está en `AN-KLA.md`, sección
 «Referencia rápida para agentes», que viaja con el paquete. Como CLI global sin
