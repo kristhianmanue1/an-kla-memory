@@ -6,35 +6,36 @@
 > instrucción del dueño con efecto en este repo, leer este índice. Orden
 > inverso temporal, sin contenido normativo (solo punteros).
 
-## Estado al 29-08
+## Estado al 17-10
 
 | Ítem | Estado |
 |---|---|
-| HEAD | `01d7c788` main, árbol limpio |
-| Release vigente | `v0.1.0-beta.19` (taggeada y publicada 29-08, REL proceed) |
-| Ciclo #46 (sealed-export) | **CLOSED** — T1-T6 merged (#96→#101) |
-| CI | GitHub Actions inactiva por presupuesto; autoridad = `scripts/ci_local.py` (4 gates) |
+| Base | `main@9401115` (PR #182) antes del PR de release de beta.34 |
+| Release vigente | `v0.1.0-beta.34` (en publicación; anterior `v0.1.0-beta.33`). Notas y actas en `docs/releases/` |
+| Plantilla gestionada | `0.1.0-beta.33` (sin cambios en beta.34) |
+| CI | Sin CI remota; autoridad = `scripts/ci_local.py --simulate-ci` con `.venv/bin/python` (Python 3.12) |
 
-## Issues abiertos (verificados 29-08)
+## Issues abiertos (verificados 17-10)
 
-| Issue | Tema | Prioridad propuesta (especialista, run ankla-informes-20260829-01) |
+| Issue | Tema | Prioridad |
 |---|---|---|
-| #95 | Deuda ADR-0042 → quedó C-A/C-B documental | **P1** este ciclo (≤ medio día) |
-| #56 | G2 hooks gobernados | P2 próximo ciclo — primero cerrar 5 decisiones del maintainer (docs/planning/g2-g4-disenos-2026-08-20.md) |
-| #57 | G3 store externo | P3 tras G2 — máximo riesgo físico; tensión DoD-Windows sin resolver |
-| #58 | G4 memoria multi-scope | Diferido por diseño |
+| #140 | Autoridad humana verificable del host para checkpoint (ADR-0052 diseñada; desbloquea expertoGobernanza #90) | Alta; requiere orden explícita del dueño |
+| #181 | `status`/`nu` cadena vacía: `inventory` vigente frente a `is_active` no vigente | Baja |
+| #167 | Batería v2 de escala (concurrencia, compactación, crash mid-commit) | Media, si se retoma escalado |
+| #166 | `retrieve` índice-primero | Baja |
+| #168 | Sustrato SQLite opcional | Condicional a #167 |
+| #169 | Caché de segmentos (ADR-0056) | Condicional: `snapshot()` > 0,5 s |
+| #58 | G4 identidad de agente y memoria multi-scope | Horizonte, diferido por diseño |
+
+Cerrados desde el estado anterior de este índice (29-08): #95, #56 (G2) y
+#57 (G3), entre otros; el detalle está en GitHub y en `docs/releases/`.
 
 ## Decisiones de gobierno vigentes
 
 | Fecha | Qué | Dónde |
 |---|---|---|
-| 28-08 | TECH_DEBT grace #95 (700 líneas) registrada | scripts/check_sizes.py + issue #95 |
+| 17-10 | Toda release lleva ronda adversarial de release con marcador de gate, auditoría §9 en venv limpio y wheel adjunto como asset (restituidos los de beta.31–33) | `docs/practicas-ingenieria.md` §1 y §9; `docs/releases/v0.1.0-beta.34.md` §Wheels |
+| 16-10 | Los consumidores se actualizan proyecto a proyecto al usarlos, con todas sus instalaciones (venv y CLI global) a la vez y luego `context update` con el mismo intérprete | `docs/releases/v0.1.0-beta.32.md` y `v0.1.0-beta.34.md` (§Actualizar, §Límites) |
+| 13-10 | Python 3.12 o superior para rondas, suites y CI local (`.venv/bin/python`) | `docs/adversarial-template.md` |
 | 28-08 | Deferimiento Windows vigente | memory krathos / actas beta.18 |
 | 27-08 | Merge #94 + cierre #93 (orden del dueño) | git 79610ac |
-
-## Deuda documental abierta
-
-| Qué | Issue |
-|---|---|
-| C-A: entrada muerta TECH_DEBT en check_sizes.py:48-56 | #95 |
-| C-B: encabezados duplicados §2 apéndice ADR-0042; §5 vive en ADR corto | #95 |

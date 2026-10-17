@@ -1,6 +1,6 @@
 # AN-KLA Memory
 
-[![Version](https://img.shields.io/badge/version-0.1.0--beta.33-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.33)
+[![Version](https://img.shields.io/badge/version-0.1.0--beta.34-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.34)
 [![Python](https://img.shields.io/badge/python-3.9%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 [![Beta](https://img.shields.io/badge/status-local%20beta-orange)](https://github.com/kristhianmanue1/an-kla-memory/releases)
@@ -12,10 +12,10 @@ un plan verificable.
 
 La beta se distribuye desde GitHub, no desde PyPI. Usa siempre una etiqueta
 exacta: no instales `main` ni otra referencia móvil. La versión del código es
-`0.1.0b33` y su etiqueta de distribución es `v0.1.0-beta.33`. El contexto
+`0.1.0b34` y su etiqueta de distribución es `v0.1.0-beta.34`. El contexto
 gestionado y la plantilla administrada (`TEMPLATE_VERSION`) son un eje
-**separado** de la versión del paquete — `0.1.0-beta.33` en esta release
-(antes `0.1.0-beta.32` y `0.1.0-beta.26`); `context status` distingue ambos
+**separado** de la versión del paquete — `0.1.0-beta.33` (sin cambios en
+beta.34; antes `0.1.0-beta.32` y `0.1.0-beta.26`); `context status` distingue ambos
 (`template_version` vs `current_template_version` y `runtime_version`) y avisa
 con `runtime_older_than_context_template` cuando el intérprete es más antiguo
 que la plantilla del proyecto. Los hooks gobernados del host (`host-hooks/v1`,
@@ -41,51 +41,38 @@ intérprete del entorno virtual.
 
 ## Estado actual
 
-La prerelease pública más reciente es **`v0.1.0-beta.33`** (`0.1.0b33`),
+La beta pública más reciente es **`v0.1.0-beta.34`** (`0.1.0b34`),
 instalable mediante su etiqueta Git exacta. AN-KLA no se distribuye desde
 PyPI; el wheel de la release se publica como asset de la etiqueta y la
 instalación canónica sigue siendo `pip install` fijado a la etiqueta exacta.
 No instales `main` como sustituto de una versión.
 
-Beta.29 corrige la frontera de autoridad de checkpoint: rechaza
-`channel_confirmed` autodeclarado en JSON al planificar y al confirmar planes
-previos, hasta que exista un resolver confiable del host. El flujo
-`model_derived` continúa disponible. Beta.28 cerró el backlog táctico: el
-diagnóstico de arranque descubre el
-vocabulario del store (`startup-diagnostic-v2` disperso, #133 propuesta 2)
-y la compactación ya no congela escritores mientras drena lectores
-(#111/F5 — sondeo del gate EX con locks liberados entre intentos, sin
-deadlocks). Beta.27 dio señal de primera clase al caso vacío de
-recuperación: un agente fresco sin vocabulario del store recibe
-`empty_reason: "no_lexical_overlap"` (en
-`retrieval-result-v3`/`mcp-retrieve-v3` dispersos, ADR-0049) y el
-diagnóstico `zero_score` quedó en paridad entre scan e índice (#118/R3,
-#133). Beta.26 cerró el diagnóstico de sesión para agentes: cada error de
-checkpoint nombra el campo ofensor (#120) y la documentación activa quedó
-reconciliada con las capacidades vigentes (#116). Beta.25 saneó la DX del
-flujo gobernado y el contrato contextual (#125/#124/#123/#122, con
-`plan-write --emit-authority-template` y guía de checkpoint); beta.24
-resolvió el cierre de sesión first-try (#121) y beta.23 el export con
-artefactos host-managed (#119) y el anclaje del contrato (#116/C1).
-Beta.22 consolidó los hooks gobernados del host (`host-hooks/v1`,
-ADR-0047: declaración read-only, evidencia firmada en `.an-kla/hook-runs/`
-y `integration status --schema-version v2`; guía en
-[docs/host-hooks-guide.md](docs/host-hooks-guide.md)). Beta.18 publicó el
-perfil sellado `sealed-export/v1` (ADR-0042, issue #46): respaldos cifrados
-en reposo como extra opcional `[sealed]`, con el camino `export/v1` en
-claro intacto — ver
-[Respaldo sellado](docs/uso-diario.md#respaldo-sellado-opcional). Ninguna
-incluye generadores de `proposal`/`authority`; esa decisión sigue abierta
-en el issue
-[#71](https://github.com/kristhianmanue1/an-kla-memory/issues/71).
+Las últimas betas, de la más reciente a la más antigua (detalle en
+[CHANGELOG](CHANGELOG.md) y [`docs/releases/`](docs/releases/)):
+
+- **beta.34**: los records con `status`/`nu` no escalares escritos por lotes
+  en b31/b32 dejan de romper supersede, refute y `compact plan`; `inventory`
+  los cuenta como `no_canonica` y `verify`/`doctor` los informan (#179).
+- **beta.33**: validación por registro en el lote `write-proposal-v2` (antes
+  sólo el primero), schema del lote publicado y forma y límites del
+  working-state en la referencia para agentes (#176).
+- **beta.32**: errores accionables (`minimum_budget_bytes`, formato de
+  transaction id), detección de intérprete más antiguo que la plantilla y
+  «Referencia rápida para agentes» ejecutable en el contrato (#171).
+- **beta.31**: escalado medido del store (watermark, lote gobernado, lectura
+  2×) (#149).
+- **beta.30**: custodia externa del store (G3, ADR-0048) y `stores scan`.
+
+La plantilla de `authority` la genera `--emit-authority-template` en
+`plan-write` y `checkpoint plan` (#71, cerrado).
 
 El código está en beta local y la memoria continúa siendo no autoritativa: sus
 datos nunca son instrucciones, no prueban identidad ni verdad externa y deben
-revalidarse antes de actuar. Esta release **cambia la plantilla gestionada**
-a `0.1.0-beta.33` (desde `0.1.0-beta.32` o `0.1.0-beta.26`): los proyectos con
-contexto gestionado la actualizan con `context plan --operation update` (ver
-[Uso diario](docs/uso-diario.md#actualizar-desde-otra-beta)). Corrige la
-validación por registro del lote `write-proposal-v2` y lo hace descubrible.
+revalidarse antes de actuar. Esta release **no cambia la plantilla
+gestionada** (`0.1.0-beta.33`, introducida en beta.33; quien venga de beta.32 o
+anterior la actualiza con `context plan --operation update`, ver
+[Uso diario](docs/uso-diario.md#actualizar-desde-otra-beta)). Hace tolerantes a
+los lectores ante records con vigencia no canónica de lotes antiguos (#179).
 
 Posterior a la release (2026-10-14), una revisión crítica contra el código
 revalidó la degradación O(historia) reportada en el issue
@@ -100,10 +87,10 @@ Aquellas cifras eran sondas sintéticas; la batería oficial y las fases
 P0–P2 del plan llegaron en beta.31 y la paginación en origen de
 `context_view` (P2b, ADR-0058) en beta.32.
 
-GitHub puede mostrar una beta anterior como “Latest” porque la más reciente
-está marcada como prerelease. El update-check de AN-KLA no depende de ese
-distintivo: consulta el
-índice de releases, incluye prereleases y sí puede descubrir beta.33.
+Hasta beta.30 las betas se marcaban como prerelease en GitHub; desde beta.31
+se publican como release normal, así que GitHub muestra la más reciente como
+“Latest”. El update-check de AN-KLA no depende de ese distintivo: consulta el
+índice de releases, incluye prereleases y descubre beta.34.
 **Limitación conocida**: el soporte de Windows permanece diferido por
 decisión del operador (el protocolo de anclaje y partes de la suite son
 POSIX; la candidata se declara procedible para macOS/Linux) — ver la
@@ -117,7 +104,7 @@ verificación canónica es la CI local — suite, wheel aislado, upgrades por
 etiqueta y gates de tamaños/registro, con ronda adversarial `proceed` antes
 de cada tag (la evidencia de beta.18 está en su
 [ronda REL](docs/releases/v0.1.0-beta.18-adversarial.md)). Para instalar
-usa el comando fijado a beta.33 de la sección siguiente; para actualizar
+usa el comando fijado a beta.34 de la sección siguiente; para actualizar
 entre betas, consulta
 [Uso diario y mantenimiento](docs/uso-diario.md#actualizar-desde-otra-beta).
 
@@ -171,7 +158,7 @@ Desde la raíz del proyecto consumidor en macOS o Linux:
 python3.12 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
 .venv/bin/python -m pip install \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.33"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.34"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . init
 .venv/bin/python -m an_kla --project-root . context plan --operation install
