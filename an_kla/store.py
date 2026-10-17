@@ -51,6 +51,7 @@ from .subject_binding import check_subject_ref_binding
 from .supersede import resolve_supersede_targets
 from .transactions import begin_transaction, commit_locked
 from .write_commit import commit_write_plan as _commit_write_plan_flow
+from .vigency import is_canonical_vigency
 from .write_policy import (
     WritePolicyError,
     build_write_plan,
@@ -511,7 +512,7 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         # recorre toda la cadena.
         snapshot = self.snapshot(use_watermark=False)
         binding = verify_current_binding(self, snapshot.manifest, snapshot.revision_id)
-        return {
+        result = {
             "ok": True,
             "revision": snapshot.revision_id,
             "revision_number": snapshot.manifest["revision"],
@@ -520,6 +521,16 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
             "identity_status": identity_status(self)["identity_status"],
             "root_relocated": binding["root_relocated"],
         }
+        # #179: records con status/nu no escalares (lotes de b31/b32). La
+        # integridad no se ve afectada: se informa, sólo cuando existen.
+        noncanonical = {
+            stream: sum(1 for row in snapshot.raw_records[stream]
+                        if not is_canonical_vigency(row))
+            for stream in STREAMS
+        }
+        if any(noncanonical.values()):
+            result["noncanonical_vigency"] = noncanonical
+        return result
 
     def recover(self) -> dict[str, Any]:
         """Diagnose interrupted work without guessing a replacement CURRENT."""

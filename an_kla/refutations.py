@@ -27,6 +27,7 @@ from .refute_policy import (
 )
 from .transactions import begin_transaction
 from .transaction_reconcile import reconcile_attempt
+from .vigency import is_active
 
 
 _KIND_STREAM = {"fact": "facts", "event": "events", "episode": "episodes"}
@@ -211,7 +212,7 @@ def _target_guard(snapshot: Any, stream: str, record_sha256: str) -> Mapping[str
         for entry in snapshot.manifest.get("refutations_map", [])
     ):
         raise RefutePolicyError("invalid_refute_target", "overlay_conflict")
-    if target.get("status", target.get("nu", "vigente")) not in {"vigente", "active", None}:
+    if not is_active(target):  # #179
         raise RefutePolicyError("invalid_refute_target", "target_not_active")
     return target
 
