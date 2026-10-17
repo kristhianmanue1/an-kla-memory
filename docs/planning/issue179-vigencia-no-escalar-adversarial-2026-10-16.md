@@ -43,11 +43,32 @@ Revertir cada endurecimiento por separado: plan v1, plan de lote, commit de
 supersede, commit de refute, `refute inspect`, compactación, bucket de
 `inventory` y aviso de `verify` hacen fallar los tests (8 de 9). El noveno,
 volver a comparar el overlay con `physical` en vez de con el `status` crudo,
-es **equivalente** una vez alineado el predicado: produce las mismas salidas
-para todos los casos (canónico, mixto, `None`, `""`, no canónico con y sin
-overlay, `status` físico `sustituida`/`refutada`). Se conserva la forma por
-overlay real porque expresa la intención.
+es **equivalente para todo estado que pueda escribir la vía gobernada**
+(canónico, mixto, `None`, `""`, no canónico con y sin overlay). El revisor lo
+distinguió sólo con un estado falsificado (un record `{"nu": "sustituida"}`
+dentro de `supersedes_map`, imposible porque los guardas de commit exigen
+`is_active`): ahí la forma actual da `supersede_overlay`, que es lo correcto,
+y el mutante `physical`. Se conserva la forma por overlay real.
+
+## Re-verificación de `2a481f2`: `proceed`
+
+- Diferencial e2e sobre 20 records (supersede plan v1/lote y commit, refute
+  plan/commit/inspect, compactación con export real, `retrieve`, `resume`,
+  `view`, `rebuild-index`, `verify`, `doctor`, `status`, `startup`,
+  `integration`, `export verify`): igual que `f6ac70a`; frente a b33 sólo
+  cambian los `TypeError`, ahora errores normales, y la compactación, que
+  ahora hace commit.
+- Inventory con 22 records: las únicas diferencias frente a b33 son
+  correcciones deseadas (`None`/`""` sin refutación falsa, no canónicos en
+  `no_canonica`, mixto `vigente`); la salida valida contra `inventory-v1`
+  (b33 lo violaba con `""`); `verify` y el bucket cuentan 6.
+- Mutantes `sup` y `ref` (y anular `is_canonical_vigency`) mueren.
+- Docs correctos.
+- MINOR preexistente, seguimiento aparte: `status: ""` aparece `vigente` en
+  inventory pero `is_active` lo trata como no vigente.
 
 ## Decisión
 
-Pendiente de re-verificación por el mismo revisor.
+- [x] proceed
+- [ ] fix-and-retry
+- [ ] escalate
