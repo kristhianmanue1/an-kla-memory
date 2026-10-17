@@ -10,6 +10,16 @@ El formato de cada entrada sigue [Keep a Changelog](https://keepachangelog.com/e
 por intención, y el proyecto usa [versionado semántico](https://semver.org/lang/es/)
 en fase de pre-release `0.1.0`.
 
+## [v0.1.0-beta.34]
+
+**Lectores tolerantes a records de lotes antiguos** (#179): los records con
+`status`/`nu` no escalares escritos por lotes en b31/b32 dejan de romper
+supersede, `refute inspect` y `compact plan` (antes
+`cli_unexpected_failure`); `inventory` los cuenta como `no_canonica` sin
+refutaciones falsas y `verify`/`doctor` los informan (`noncanonical_vigency`).
+No cambia la plantilla gestionada (`0.1.0-beta.33`). Detalle en
+[`docs/releases/v0.1.0-beta.34.md`](docs/releases/v0.1.0-beta.34.md).
+
 ## [v0.1.0-beta.33]
 
 **Lote validado por registro y descubrible**: corrige un defecto del motor

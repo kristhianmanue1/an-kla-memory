@@ -124,7 +124,9 @@ con `comando → resultado`, marcando ✓/✗. Sin evidencia no hay afirmación.
 
 Antes de comunicar/publicar, verificar con evidencia: instalador en venv limpio
 (`pip install` → `--version` → `init` → `context plan install` → `context
-install` → `status ok`), schemas embebidos en el wheel, migración desde la
+install` → `status ok`), `scripts/check_clean_wheel.py`, schemas embebidos en
+el wheel, el wheel adjunto como asset de la release (sha256 del asset
+descargado igual al construido), migración desde la
 versión anterior (plantilla reconocida en `_KNOWN_CONTEXT_TEMPLATES`),
 README/contrato/coherencia tag↔VERSION, changelog (`docs/releases/`) y community
 files (LICENSE, SECURITY, COC, CONTRIBUTING, CITATION, dependabot, templates).
