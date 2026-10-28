@@ -1,0 +1,58 @@
+{
+  "battery_phase": "v2-#167",
+  "build_s": 0.12460345899944514,
+  "internal_commit_diagnostic": true,
+  "label": "siembra interna (MemoryStore.commit) etiquetada; consulta t\u00e9rmino raro \u00edndice s\u00ed/no con rebuild-index por CLI",
+  "ok": true,
+  "params": {
+    "batch": 1000,
+    "budget": 4096,
+    "fts5": true,
+    "rare_every": 500,
+    "records": 5000,
+    "subjects": 200
+  },
+  "phases": [
+    {
+      "phase": "sin_indice",
+      "rare_degradation": "index_unavailable",
+      "rare_profile": "scan-fallback/v1",
+      "rare_selected": 10,
+      "retrieve_index_rare_s": 0.03409704200021224,
+      "retrieve_scan_rare_s": 0.030588333000196144,
+      "scan_profile": "scan-fallback/v1",
+      "scan_selected": 10
+    },
+    {
+      "phase": "con_indice",
+      "rare_degradation": "none",
+      "rare_profile": "sqlite-fts5/v1",
+      "rare_selected": 10,
+      "rebuild_index_s": 0.19044075000056182,
+      "rebuild_ok": true,
+      "retrieve_index_rare_s": 0.03252420799981337,
+      "retrieve_scan_rare_s": 0.03440204099933908,
+      "scan_profile": "scan-fallback/v1",
+      "scan_selected": 10,
+      "speedup_index_vs_scan": 1.0577364712320276
+    }
+  ],
+  "rebuild_index": {
+    "index": "indexes/212d4bd23e4456481f037fd739367b23711529e0f6b0b662429e42fccc95622f/sqlite-fts5-v1/f8bb6bdfa677a92bc1f9e7b2459066931423a0af17e21b6fa684928c30060801.sqlite",
+    "index_hash": "sha256:f8bb6bdfa677a92bc1f9e7b2459066931423a0af17e21b6fa684928c30060801",
+    "index_reference": "indexes/212d4bd23e4456481f037fd739367b23711529e0f6b0b662429e42fccc95622f/sqlite-fts5-v1/CURRENT",
+    "index_version": "2",
+    "indexed_per_stream": {
+      "episodes": 0,
+      "events": 0,
+      "facts": 5000
+    },
+    "ok": true,
+    "profile": "sqlite-fts5/v1",
+    "revision": "sha256:212d4bd23e4456481f037fd739367b23711529e0f6b0b662429e42fccc95622f",
+    "skipped_no_text": 0
+  },
+  "scenario": "rare_query_index",
+  "schema": "an-kla/scale-battery-scenario/v1",
+  "wall_s": 0.45726525000009133
+}

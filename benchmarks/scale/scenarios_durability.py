@@ -162,6 +162,7 @@ def run_crash_mid_commit(
 
     crash_ws = ws / "crash-mid-commit"
     crash_ws.mkdir(parents=True, exist_ok=True)
+    t_cell = time.perf_counter()
     store, cur, preload_s = _preload_big(crash_ws, preload_records, preload_batch)
     refs = subject_refs(store, 1)
 
@@ -256,9 +257,26 @@ def run_crash_mid_commit(
         "preload_s": preload_s,
         "commit_probe_s": probe_s,
         "attempts": attempts_out,
+        "landing_summary": {
+            "mid_commit": sum(
+                1 for a in attempts_out if a.get("mid_commit_evidence")
+            ),
+            "post_commit": sum(
+                1 for a in attempts_out
+                if a.get("inspect_committed") is True
+            ),
+            "pre_commit": sum(
+                1 for a in attempts_out
+                if a.get("marker")
+                and a.get("inspect_committed") is not True
+                and not a.get("mid_commit_evidence")
+            ),
+            "no_marker": sum(1 for a in attempts_out if not a.get("marker")),
+        },
         "post_crash": post,
         "verify_all_ok": all(a["verify_ok"] for a in attempts_out),
         "doctor_all_ok": all(a["doctor_current_ok"] for a in attempts_out),
+        "wall_s": time.perf_counter() - t_cell,
         "limitations": [
             "El aterrizaje del SIGKILL dentro de commit_write_plan es "
             "probabilístico incluso con retardo calibrado: cada intento "
@@ -353,6 +371,7 @@ def run_compaction_large(
     target = ov.get("target_revisions", cfg["target_revisions"])
     probe_delay = ov.get("probe_delay_s", cfg["probe_delay_s"])
     probe_budget = ov.get("probe_budget_s", cfg["probe_budget_s"])
+    cli_timeout = ov.get("cli_timeout_s", cfg.get("cli_timeout_s", 14400))
 
     comp_ws = ws / "compaction-large"
     comp_ws.mkdir(parents=True, exist_ok=True)
@@ -376,7 +395,8 @@ def run_compaction_large(
 
     bundle = comp_ws / "bundle.tar"
     t0 = time.perf_counter()
-    export = cli(comp_ws, "export", "create", "--bundle", str(bundle))
+    export = cli(comp_ws, "export", "create", "--bundle", str(bundle),
+                 timeout=cli_timeout)
     export_s = time.perf_counter() - t0
     manifest_sha = next(
         (v for k, v in export.items()
@@ -395,7 +415,8 @@ def run_compaction_large(
 
     t0 = time.perf_counter()
     plan = cli(comp_ws, "compact", "plan",
-               "--proposal", str(proposal_path), "--bundle", str(bundle))
+               "--proposal", str(proposal_path), "--bundle", str(bundle),
+               timeout=cli_timeout)
     plan_s = time.perf_counter() - t0
     # cli() inyecta "ok" para diagnóstico; el validador estricto del CLI
     # exige el conjunto exacto de campos al re-leer el archivo.
@@ -415,7 +436,14 @@ def run_compaction_large(
     )
     time.sleep(probe_delay)
     probe = _probe_writer(store, refs, probe_budget)
-    stdout, stderr = proc.communicate(timeout=max(probe_budget, 300))
+    if not probe["committed"]:
+        # Observación censurada: el presupuesto de la sonda venció antes de
+        # la liberación del lock (compact commit más largo que el presupuesto).
+        probe["censored"] = (
+            "presupuesto de sonda agotado sin commit; la ventana registrada "
+            "es una cota inferior de la indisponibilidad real"
+        )
+    stdout, stderr = proc.communicate(timeout=max(cli_timeout, 300))
     commit_s = time.perf_counter() - t0
     if proc.returncode != 0:
         commit: dict[str, Any] = {

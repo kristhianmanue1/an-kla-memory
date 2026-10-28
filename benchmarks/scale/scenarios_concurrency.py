@@ -203,6 +203,7 @@ def run_rare_query_index(
     rq_ws = ws / "rare-query-index"
     rq_ws.mkdir(parents=True, exist_ok=True)
     store, cur, build_s = _seed_rare_store(rq_ws, records, subjects, batch, rare_every)
+    t_all = time.perf_counter()
 
     # Fase sin índice: ningún commit de la siembra creó referencia de índice
     # para esta línea (maybe_reindex sólo propaga si el padre ya tiene una),
@@ -256,5 +257,6 @@ def run_rare_query_index(
         "build_s": build_s,
         "phases": [no_index, with_index],
         "rebuild_index": rebuild or None,
+        "wall_s": time.perf_counter() - t_all,
         "ok": ok,
     }

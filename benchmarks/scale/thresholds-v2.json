@@ -73,6 +73,7 @@
     "target_revisions": 20000,
     "probe_delay_s": 0.5,
     "probe_lock_deadline_s": 10,
-    "probe_budget_s": 60
+    "probe_budget_s": 3600,
+    "cli_timeout_s": 14400
   }
 }

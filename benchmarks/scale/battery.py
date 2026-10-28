@@ -146,14 +146,18 @@ def _summary_md(
     th_name = (
         thresholds_path.name if thresholds_path is not None else "thresholds-v1.json"
     )
+    try:
+        thresholds_path.resolve().relative_to(REPO_ROOT)
+        th_ref = f"`benchmarks/scale/{th_name}`"
+    except (ValueError, OSError, TypeError):
+        th_ref = f"copia externa `{th_name}` (exacta en `thresholds-used.json`)"
     lines = [
         "# Batería de escala — corrida",
         "",
         f"- Huella de entorno: Python `{env['python'].split()[0]}` sobre "
         f"`{env['platform']}` ({env['machine']}), SQLite {env['sqlite']}, "
         f"FTS5={env['fts5']}, git `{env['git_head'][:12]}`.",
-        f"- Umbrales: `benchmarks/scale/{th_name}` (copia exacta en "
-        "`thresholds-used.json`). v1 aprobados por el maintainer (sesión "
+        f"- Umbrales: {th_ref}. v1 aprobados por el maintainer (sesión "
         "2026-10-14); v2 (#167) pendientes de aprobación para corrida oficial.",
         "",
         "| Escenario | ok | wall s | Nota |",
