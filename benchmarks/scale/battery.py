@@ -84,7 +84,7 @@ SMOKE_OVERRIDES: dict[str, dict[str, Any]] = {
         "preload_records": 30,
         "preload_batch": 30,
     },
-    "compaction-large": {"target_revisions": 12},
+    "compaction-large": {"target_revisions": 12, "probe_delay_s": 0.3},
 }
 
 

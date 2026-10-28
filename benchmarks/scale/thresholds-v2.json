@@ -71,7 +71,7 @@
   },
   "compaction_large": {
     "target_revisions": 20000,
-    "probe_delay_s": 0.05,
+    "probe_delay_s": 0.5,
     "probe_lock_deadline_s": 10,
     "probe_budget_s": 60
   }
