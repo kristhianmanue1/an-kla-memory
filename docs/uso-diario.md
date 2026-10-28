@@ -163,6 +163,24 @@ de integración en ejes separados. Declara lo que no puede verificar:
 filesystem-access/unverified`; no promete privacidad ni distingue perfiles
 en v1 (`observed_profile: unspecified` hasta que G2 exista).
 
+### Códigos de salida del CLI
+
+Para consumidores programáticos, la superficie es estable y está publicada
+en `capabilities` (`cli_error_surface`):
+
+- **rc 0** — comando terminado en su estado terminal firme.
+- **rc 1** — error del motor: `an-kla error: <código>` en stderr, payload
+  en stdout cuando existe; nunca traceback salvo `AN_KLA_DEBUG`.
+- **rc 2** — uso inválido (argumentos o flags).
+- **rc 3** — comando **ejecutado sin estado terminal firme**: el payload
+  completo sale por stdout y **stderr queda vacío por contrato** (asumido
+  por consumidores que tratan rc≠0 como ruido). No es un fallo del store:
+  significa que el outcome todavía no es el terminal (p. ej.
+  `transaction inspect` con `outcome_unknown`, `compact commit` sin
+  `state: committed`). Un consumidor que filtra por exit code **debe leer
+  también el stdout** cuando rc=3; la matriz de casos vive en
+  `an_kla.__main__.pending_outcome_reason` y en `capabilities`.
+
 ### Verificación no bloqueante de versiones
 
 Al iniciar, el CLI consulta la release más reciente publicada en GitHub

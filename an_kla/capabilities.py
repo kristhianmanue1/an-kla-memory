@@ -322,6 +322,23 @@ def capabilities() -> dict[str, Any]:
                 "debug_stderr_traceback_env": "AN_KLA_DEBUG",
                 "disable_local_log_env": "AN_KLA_NO_CLI_ERROR_LOG",
             },
+            "pending_outcome": {
+                "exit_code": 3,
+                "meaning": "comando ejecutado sin estado terminal firme: rc 0 queda reservado al estado terminal; consumir stdout junto al exit code (issue #188)",
+                "stdout": "result_payload_complete",
+                "stderr": "empty_by_contract",
+                "stderr_note": "pinned by the frozen subject-namespace exit-code tests; the case is named in docs and capabilities, not on stderr",
+                "source_of_truth": "an_kla.__main__.pending_outcome_reason",
+                "cases": {
+                    "transaction inspect": "committed is not true y estado distinto de transaction_archived_by_compaction (incluye outcome_unknown)",
+                    "compact commit": "state != committed",
+                    "export restore": "state != published",
+                    "refute commit": "outcome.committed is not true",
+                    "init": "outcome.committed is not true",
+                    "commit-write-plan": "outcome.committed is not true",
+                    "subject namespace": "result == namespace_unavailable",
+                },
+            },
         },
         "schemas": schema_catalog()["schemas"],
         "mcp": {
