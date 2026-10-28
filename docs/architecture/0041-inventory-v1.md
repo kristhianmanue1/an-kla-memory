@@ -116,10 +116,12 @@ para G-VIEW sin un consumidor que lo pida.
    payload; 8. límites default/máx; 9. CLI e2e exit 0 con store ausente
    → error reader gate (nunca traceback); 10. suite completa + CI local.
 
-## Enmienda 1 — vigencia no canónica (#179, 2026-10-16)
+## Enmienda 1 — vigencia no canónica (#179, 2026-10-16; ampliada por #181, 2026-10-28)
 
 Los lotes `write-proposal-v2` de b31/b32 pudieron persistir records cuyo campo
-de vigencia (`status`, o `nu` si falta `status`) no es cadena ni `null`. El
+de vigencia (`status`, o `nu` si falta `status`) no es cadena ni `null`; desde
+#181, la cadena vacía también cuenta: `is_active` la trataba como no vigente
+y llamarla canónica hacía que el inventory la contara como `vigente`. El
 inventory los cuenta en el bucket extra `no_canonica` (ya admitido por
 `additionalProperties`) con `physical_status = status = "no_canonica"`, en vez
 de `vigente` o del repr del valor. `status_source` es `physical` salvo que el
