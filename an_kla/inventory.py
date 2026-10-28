@@ -53,7 +53,9 @@ NONCANONICAL_STATUS = "no_canonica"
 
 def _physical_status(raw: dict[str, Any]) -> str:
     # #179: un status/nu no escalar (lotes de b31/b32) no es "vigente" ni un
-    # bucket con su repr: se cuenta aparte como no canónico.
+    # bucket con su repr: se cuenta aparte como no canónico. #181: la cadena
+    # vacía tampoco es canónica (is_active la trata como no vigente): cae en
+    # el mismo bucket en vez de heredar el default "vigente".
     if not is_canonical_vigency(raw):
         return NONCANONICAL_STATUS
     value = raw.get("status", raw.get("nu", _PHYSICAL_DEFAULT))

@@ -30,9 +30,9 @@ from an_kla.vigency import is_canonical_vigency
 ROOT = Path(__file__).resolve().parents[1]
 POISONED = {"f-nu": {"nu": ["x"]}, "f-st": {"status": 7}, "f-sd": {"status": {"a": 1}}}
 # Canónicos que el inventory de b33 contaba mal: status válido con nu no
-# escalar (decide status), status None y status "" (escribibles en v1).
-CANONICAL_EDGE = {"f-mix": {"status": "vigente", "nu": [1]}, "f-none": {"status": None},
-                  "f-empty": {"status": ""}}
+# escalar (decide status) y status None (escribibles en v1). #181: status ""
+# dejó de ser canónico; su coherencia vive en test_issue181_status_vacio.
+CANONICAL_EDGE = {"f-mix": {"status": "vigente", "nu": [1]}, "f-none": {"status": None}}
 
 
 class NonScalarVigencyTests(unittest.TestCase):
