@@ -21,6 +21,7 @@ import unittest
 from pathlib import Path
 
 from an_kla.canonical import digest_json
+from an_kla.compaction_projection import project_snapshot
 from an_kla.inventory import NONCANONICAL_STATUS, inventory
 from an_kla.retrieval import retrieve
 from an_kla.store import MemoryStore
@@ -117,11 +118,27 @@ class EmptyVigencyTests(unittest.TestCase):
             self.assertNotIn("noncanonical_vigency", clean.verify())
 
     def test_retrieve_excludes_empty_vigency(self) -> None:
-        result = retrieve(self.store, "texto raro f-empty-status", 4096)
-        self.assertNotIn("f-empty-status",
-                         [item["id"] for item in result["selected"]])
+        for rid in EMPTY_VIGENCY:
+            result = retrieve(self.store, f"texto raro {rid}", 4096)
+            with self.subTest(record=rid):
+                self.assertNotIn(rid, [item["id"] for item in result["selected"]])
         healthy = retrieve(self.store, "registro sano", 4096)
         self.assertIn("f-ok", [item["id"] for item in healthy["selected"]])
+
+    def test_compaction_projection_tombstones_empty_vigency(self) -> None:
+        projection = project_snapshot(self.store.snapshot())
+        text = json.dumps(projection, default=str)
+        self.assertIn("inactive", text)
+        for rid in EMPTY_VIGENCY:
+            with self.subTest(record=rid):
+                self.assertIn(digest_json(self._raw(rid)), text)
+
+    def test_cli_inventory_reports_noncanonical_bucket(self) -> None:
+        result = self._cli(["inventory", "--revision", self.store.read_current()])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        doc = json.loads(result.stdout)
+        self.assertEqual(doc["counts"]["facts"][NONCANONICAL_STATUS], 2)
+        self.assertNotIn('""', json.dumps(doc["counts"]))
 
     def test_refute_inspect_classifies_inactive(self) -> None:
         for rid in EMPTY_VIGENCY:
