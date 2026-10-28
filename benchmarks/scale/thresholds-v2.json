@@ -1,6 +1,6 @@
 {
   "schema": "an-kla/scale-battery-thresholds/v2",
-  "approved_by": "pendiente de aprobación maintainer para corrida oficial; batería v2 (issue #167). Secciones v1 copiadas verbatim de thresholds-v1.json (aprobadas sesión 2026-10-14).",
+  "approved_by": "maintainer, sesión 2026-10-28 (batería v2, issue #167). Secciones v1 copiadas verbatim de thresholds-v1.json (aprobadas sesión 2026-10-14).",
   "ingest_governed": {
     "n_target": 600,
     "abort_sustained_latency_s": 2.0,
