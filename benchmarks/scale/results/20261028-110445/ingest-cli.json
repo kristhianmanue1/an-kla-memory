@@ -1,0 +1,42 @@
+{
+  "abort": null,
+  "battery_phase": "v2-#167",
+  "cli_baseline_status_s": 0.10219066699937684,
+  "commit_latency_s": {
+    "count": 120,
+    "max": 0.19080395799937833,
+    "mean": 0.13076142294997528,
+    "min": 0.09986229199967056,
+    "p50": 0.12459937500170781,
+    "p95": 0.17387545900055557
+  },
+  "internal_commit_diagnostic": false,
+  "method": "cada escritura atraviesa el CLI p\u00fablico (plan-write + commit-write-plan) con umbral de aborto pre-corrido",
+  "n_written": 120,
+  "ok": true,
+  "params": {
+    "abort_sustained_latency_s": 2.0,
+    "n_target": 120,
+    "sustained_window": 10
+  },
+  "plan_latency_s": {
+    "count": 120,
+    "max": 0.21625329199923726,
+    "mean": 0.10480615034169508,
+    "min": 0.09317570799976238,
+    "p50": 0.1007310420009162,
+    "p95": 0.12332249999963096
+  },
+  "scenario": "ingest_cli",
+  "schema": "an-kla/scale-battery-scenario/v1",
+  "store_bytes": 1989106,
+  "wall_s": 28.440343750000466,
+  "write_latency_s": {
+    "count": 120,
+    "max": 0.4070572499986156,
+    "mean": 0.23556757329167036,
+    "min": 0.19417329199859523,
+    "p50": 0.22340629199970863,
+    "p95": 0.2942159999984142
+  }
+}
