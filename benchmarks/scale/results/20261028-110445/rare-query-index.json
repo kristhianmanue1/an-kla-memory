@@ -1,0 +1,58 @@
+{
+  "battery_phase": "v2-#167",
+  "build_s": 0.1379069159993378,
+  "internal_commit_diagnostic": true,
+  "label": "siembra interna (MemoryStore.commit) etiquetada; consulta t\u00e9rmino raro \u00edndice s\u00ed/no con rebuild-index por CLI",
+  "ok": true,
+  "params": {
+    "batch": 1000,
+    "budget": 4096,
+    "fts5": true,
+    "rare_every": 500,
+    "records": 5000,
+    "subjects": 200
+  },
+  "phases": [
+    {
+      "phase": "sin_indice",
+      "rare_degradation": "index_unavailable",
+      "rare_profile": "scan-fallback/v1",
+      "rare_selected": 10,
+      "retrieve_index_rare_s": 0.04015520900065894,
+      "retrieve_scan_rare_s": 0.03588925000076415,
+      "scan_profile": "scan-fallback/v1",
+      "scan_selected": 10
+    },
+    {
+      "phase": "con_indice",
+      "rare_degradation": "none",
+      "rare_profile": "sqlite-fts5/v1",
+      "rare_selected": 10,
+      "rebuild_index_s": 0.2077000000008411,
+      "rebuild_ok": true,
+      "retrieve_index_rare_s": 0.03496108400031517,
+      "retrieve_scan_rare_s": 0.035966958001154126,
+      "scan_profile": "scan-fallback/v1",
+      "scan_selected": 10,
+      "speedup_index_vs_scan": 1.028771247505652
+    }
+  ],
+  "rebuild_index": {
+    "index": "indexes/2f486245eeff334a8c824e1db61e1d450b6ad048d675566ecf22f99d02695ddb/sqlite-fts5-v1/5d6e410d0dfa0c9dfab9c6afe129bf459ce91c58cc701b1954f258d7b98a31ed.sqlite",
+    "index_hash": "sha256:5d6e410d0dfa0c9dfab9c6afe129bf459ce91c58cc701b1954f258d7b98a31ed",
+    "index_reference": "indexes/2f486245eeff334a8c824e1db61e1d450b6ad048d675566ecf22f99d02695ddb/sqlite-fts5-v1/CURRENT",
+    "index_version": "2",
+    "indexed_per_stream": {
+      "episodes": 0,
+      "events": 0,
+      "facts": 5000
+    },
+    "ok": true,
+    "profile": "sqlite-fts5/v1",
+    "revision": "sha256:2f486245eeff334a8c824e1db61e1d450b6ad048d675566ecf22f99d02695ddb",
+    "skipped_no_text": 0
+  },
+  "scenario": "rare_query_index",
+  "schema": "an-kla/scale-battery-scenario/v1",
+  "wall_s": 0.5143112910009222
+}
