@@ -1,0 +1,79 @@
+{
+  "schema": "an-kla/scale-battery-thresholds/v2",
+  "approved_by": "pendiente de aprobación maintainer para corrida oficial; batería v2 (issue #167). Secciones v1 copiadas verbatim de thresholds-v1.json (aprobadas sesión 2026-10-14).",
+  "ingest_governed": {
+    "n_target": 600,
+    "abort_sustained_latency_s": 2.0,
+    "sustained_window": 20,
+    "cell_max_wall_s": 1800,
+    "cells": [
+      {"subjects": 1, "supersede_ratio": 0.0},
+      {"subjects": 200, "supersede_ratio": 0.0},
+      {"subjects": 1, "supersede_ratio": 0.1}
+    ],
+    "read_points": [50, 100, 200, 400, 600]
+  },
+  "reads_diagnostic": {
+    "records_points": [1000, 5000, 20000],
+    "subjects": 200,
+    "batch": 1000,
+    "internal_commit_diagnostic": true
+  },
+  "concurrency": {
+    "writers": 4,
+    "readers": 8,
+    "duration_s": 60,
+    "preload_records": 2000,
+    "lock_deadline_s": 10
+  },
+  "crash": {
+    "attempts": 10,
+    "kill_signal": "SIGKILL",
+    "kill_delay_min_s": 0.3,
+    "kill_delay_max_s": 2.0,
+    "preload_records": 200
+  },
+  "compaction": {
+    "target_revisions": 400,
+    "issue_target_revisions": 20000,
+    "deviation_declared": "compactación al máximo alcanzable pre-P1; 20k queda como criterio post-P1"
+  },
+  "battery": {
+    "total_budget_wall_s": 14400,
+    "disk_ceiling_per_store_bytes": 2147483648
+  },
+  "ingest_cli": {
+    "n_target": 120,
+    "abort_sustained_latency_s": 2.0,
+    "sustained_window": 10,
+    "cell_max_wall_s": 3600
+  },
+  "concurrency_v2": {
+    "writers": 4,
+    "readers": 8,
+    "duration_s": 60,
+    "preload_records": 2000,
+    "lock_deadline_s": 10
+  },
+  "rare_query": {
+    "records": 5000,
+    "subjects": 200,
+    "batch": 1000,
+    "rare_every": 500,
+    "budget": 4096
+  },
+  "crash_mid_commit": {
+    "attempts": 5,
+    "preload_records": 5000,
+    "preload_batch": 500,
+    "kill_delay_fraction_of_commit": 0.5,
+    "marker_timeout_s": 60
+  },
+  "compaction_large": {
+    "target_revisions": 20000,
+    "probe_delay_s": 0.5,
+    "probe_lock_deadline_s": 10,
+    "probe_budget_s": 3600,
+    "cli_timeout_s": 14400
+  }
+}

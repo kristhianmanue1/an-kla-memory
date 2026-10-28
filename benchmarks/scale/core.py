@@ -63,9 +63,17 @@ def env_fingerprint() -> dict[str, Any]:
     }
 
 
+THRESHOLD_SCHEMAS = frozenset(
+    {
+        "an-kla/scale-battery-thresholds/v1",
+        "an-kla/scale-battery-thresholds/v2",
+    }
+)
+
+
 def load_thresholds(path: Path) -> dict[str, Any]:
     data = json.loads(path.read_text(encoding="utf-8"))
-    if data.get("schema") != "an-kla/scale-battery-thresholds/v1":
+    if data.get("schema") not in THRESHOLD_SCHEMAS:
         raise ValueError(f"umbrales con schema inesperado: {data.get('schema')}")
     return data
 

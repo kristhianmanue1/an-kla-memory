@@ -1,0 +1,81 @@
+{
+  "battery_phase": "v2-#167",
+  "bytes": {
+    "after": 7480873,
+    "before": 5029990
+  },
+  "commit_ok": true,
+  "commit_result": {
+    "candidate_revision": "sha256:7fa051b4e2a8a2027e4cad74f29533b72bbaf74b2701d2c95428a292c2ada272",
+    "cleanup_remaining": 0,
+    "committed": true,
+    "current_after": "sha256:7fa051b4e2a8a2027e4cad74f29533b72bbaf74b2701d2c95428a292c2ada272",
+    "epoch_id": "afefbe44-60b3-4b6b-84ee-4eb51c2389a7",
+    "ok": true,
+    "outcome": {
+      "audit_state": "complete",
+      "authority_state": "candidate_authoritative",
+      "candidate_relation": "current",
+      "candidate_revision": "sha256:7fa051b4e2a8a2027e4cad74f29533b72bbaf74b2701d2c95428a292c2ada272",
+      "committed": true,
+      "current_observed": "sha256:7fa051b4e2a8a2027e4cad74f29533b72bbaf74b2701d2c95428a292c2ada272",
+      "durability_state": "complete",
+      "operation_error_code": null,
+      "parent_revision": "sha256:1e4f447bb35263cb675c446fb63c5bcbb0b080f1dc015485c2868c0125a00348",
+      "recorded": true,
+      "schema": "an-kla/commit-outcome-v2",
+      "state": "committed",
+      "transaction_id": "c64d5101-d852-48ac-bcd2-9bd8717a28a8",
+      "warnings": []
+    },
+    "plan_fingerprint": "sha256:2da9b16d9fecd5bb5f19993ea28dd4c8434e253d86a49d5983997fef3046a339",
+    "schema": "an-kla/compaction-result-v1",
+    "state": "committed",
+    "warnings": []
+  },
+  "export_ok": true,
+  "internal_commit_diagnostic": "s\u00f3lo la construcci\u00f3n (revisiones por commit interno); la compactaci\u00f3n es la ceremonia CLI completa",
+  "limitations": [
+    "La sonda de indisponibilidad arranca a probe_delay_s del lanzamiento de `compact commit`: si dispara antes de que el subproceso tome el lock, el commit aborta con compaction_base_changed (carrera registrada, no silenciada); si dispara tras la liberaci\u00f3n, la ventana se subestima. A escala completa el commit tarda segundos o minutos y la sonda aterriza dentro de la ventana con alta probabilidad."
+  ],
+  "ok": true,
+  "params": {
+    "probe_delay_s": 0.5,
+    "target_revisions": 300
+  },
+  "plan_ok": true,
+  "probe": {
+    "blocked_s": 52.29818037500081,
+    "cas_retries": 0,
+    "committed": true,
+    "epoch_archived_events": 1,
+    "lock_busy_errors": 0
+  },
+  "revision_number_after": 302,
+  "scenario": "compaction_large",
+  "schema": "an-kla/scale-battery-scenario/v1",
+  "snapshot_s": {
+    "after": 0.00127749999955995,
+    "before": 0.01416045799942367
+  },
+  "timings_s": {
+    "build": 30.474111958999856,
+    "compact_commit": 52.80569595799989,
+    "compact_plan": 48.442703208999774,
+    "export_create": 3.0413895840001715
+  },
+  "unavailability_window_s": 52.29818037500081,
+  "verify_after": {
+    "counts": {
+      "episodes": 0,
+      "events": 1,
+      "facts": 301
+    },
+    "durability_profile": "posix-fsync-dir/v1",
+    "identity_status": "complete",
+    "ok": true,
+    "revision": "sha256:5360d80093b1d3f62d4ff758c4e21ee0643dbc1e3b3423e1eac0d129c473dd9c",
+    "revision_number": 302,
+    "root_relocated": false
+  }
+}

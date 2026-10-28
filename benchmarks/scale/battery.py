@@ -1,14 +1,21 @@
-"""Batería P0 de escala del store (issue #149, Fase 0) — CLI.
+"""Batería de escala del store — CLI.
+
+Fase 0 (#149): `SCENARIOS` (columna gobernada, columna diagnóstica interna,
+operaciones). Fase v2 (#167): `SCENARIOS_V2` (ingesta por CLI, concurrencia
+4×8 con tasa de LockBusyError, término raro índice sí/no, crash mid-commit
+en store grande, compactación a ~20k revisiones).
 
 Uso (desde la raíz del repo, Python 3.12+):
 
     python -m benchmarks.scale.battery --scenario all
+    python -m benchmarks.scale.battery --scenario all-v2
     python -m benchmarks.scale.battery --scenario ingest-governed --smoke
 
-Umbrales normativos: `benchmarks/scale/thresholds-v1.json`, commiteado antes
-de cualquier corrida oficial. Los abortos por umbral son resultados, no
-fallos: la batería termina `ok` si se ejecutó y registró, aunque una celda
-aborte. El presupuesto total detiene el lanzamiento de escenarios restantes.
+Umbrales normativos: `benchmarks/scale/thresholds-v2.json` (incluye las
+secciones v1 verbatim), commiteado antes de cualquier corrida oficial. Los
+abortos por umbral son resultados, no fallos: la batería termina `ok` si se
+ejecutó y registró, aunque una celda aborte. El presupuesto total detiene el
+lanzamiento de escenarios restantes.
 """
 from __future__ import annotations
 
@@ -37,6 +44,16 @@ SCENARIOS = (
     "compaction",
 )
 
+SCENARIOS_V2 = (
+    "ingest-cli",
+    "concurrency-v2",
+    "rare-query-index",
+    "crash-mid-commit",
+    "compaction-large",
+)
+
+SCENARIO_CHOICES = (*SCENARIOS, *SCENARIOS_V2, "all", "all-v2", "fingerprint")
+
 SMOKE_OVERRIDES: dict[str, dict[str, Any]] = {
     "ingest-governed": {"n_target": 6, "read_points": [3, 6]},
     "ingest-batch": {"n_target": 6, "batch_size": 2},
@@ -54,6 +71,20 @@ SMOKE_OVERRIDES: dict[str, dict[str, Any]] = {
         "kill_delay_max_s": 0.6,
     },
     "compaction": {"target_revisions": 12},
+    "ingest-cli": {"n_target": 4},
+    "concurrency-v2": {
+        "writers": 2,
+        "readers": 2,
+        "duration_s": 3,
+        "preload_records": 40,
+    },
+    "rare-query-index": {"records": 250, "batch": 125, "rare_every": 50},
+    "crash-mid-commit": {
+        "attempts": 2,
+        "preload_records": 30,
+        "preload_batch": 30,
+    },
+    "compaction-large": {"target_revisions": 12, "probe_delay_s": 0.3},
 }
 
 
@@ -84,20 +115,50 @@ def _run_one(
         from benchmarks.scale.scenarios_ops import run_compaction
 
         return run_compaction(ws, th, overrides)
+    if name == "ingest-cli":
+        from benchmarks.scale.scenarios_ingest_cli import run_ingest_cli
+
+        return run_ingest_cli(ws, th, overrides)
+    if name == "concurrency-v2":
+        from benchmarks.scale.scenarios_concurrency import run_concurrency_v2
+
+        return run_concurrency_v2(ws, th, overrides)
+    if name == "rare-query-index":
+        from benchmarks.scale.scenarios_concurrency import run_rare_query_index
+
+        return run_rare_query_index(ws, th, overrides)
+    if name == "crash-mid-commit":
+        from benchmarks.scale.scenarios_durability import run_crash_mid_commit
+
+        return run_crash_mid_commit(ws, th, overrides)
+    if name == "compaction-large":
+        from benchmarks.scale.scenarios_durability import run_compaction_large
+
+        return run_compaction_large(ws, th, overrides)
     raise ValueError(f"escenario desconocido: {name}")
 
 
 def _summary_md(
-    results: dict[str, dict[str, Any]], env: dict[str, Any]
+    results: dict[str, dict[str, Any]],
+    env: dict[str, Any],
+    thresholds_path: Path | None = None,
 ) -> str:
+    th_name = (
+        thresholds_path.name if thresholds_path is not None else "thresholds-v1.json"
+    )
+    try:
+        thresholds_path.resolve().relative_to(REPO_ROOT)
+        th_ref = f"`benchmarks/scale/{th_name}`"
+    except (ValueError, OSError, TypeError):
+        th_ref = f"copia externa `{th_name}` (exacta en `thresholds-used.json`)"
     lines = [
-        "# Batería P0 de escala — corrida (issue #149)",
+        "# Batería de escala — corrida",
         "",
         f"- Huella de entorno: Python `{env['python'].split()[0]}` sobre "
         f"`{env['platform']}` ({env['machine']}), SQLite {env['sqlite']}, "
         f"FTS5={env['fts5']}, git `{env['git_head'][:12]}`.",
-        "- Umbrales: `benchmarks/scale/thresholds-v1.json` (aprobados por el "
-        "maintainer antes de correr; copia exacta en `thresholds-used.json`).",
+        f"- Umbrales: {th_ref}. v1 aprobados por el maintainer (sesión "
+        "2026-10-14); v2 (#167) pendientes de aprobación para corrida oficial.",
         "",
         "| Escenario | ok | wall s | Nota |",
         "|---|---|---:|---|",
@@ -113,6 +174,49 @@ def _summary_md(
             note = "; ".join(aborts) or "sin abortos"
         elif name == "reads-diagnostic":
             note = "columna interna (commit), etiquetada"
+        elif name == "ingest-cli":
+            abort = payload.get("abort")
+            note = (
+                f"abort {abort['abort_reason']}@{abort['at_n']}"
+                if abort
+                else f"n={payload.get('n_written')} por CLI público"
+            )
+        elif name == "concurrency-v2":
+            totals = payload.get("totals", {})
+            rate = totals.get("lock_busy_rate")
+            note = (
+                "tasa LockBusyError "
+                + (f"{rate:.4f}" if isinstance(rate, (int, float)) else "n/d")
+                + f", deadline {payload.get('params', {}).get('lock_deadline_s')} s"
+            )
+        elif name == "rare-query-index":
+            phases = {
+                p.get("phase"): p for p in payload.get("phases", [])
+            }
+            con = phases.get("con_indice", {})
+            note = (
+                f"índice sí/no: sin={phases.get('sin_indice', {}).get('rare_profile')} "
+                f"con={con.get('rare_profile')}"
+            )
+        elif name == "crash-mid-commit":
+            kills = payload.get("attempts", [])
+            mid = sum(1 for k in kills if k.get("mid_commit_evidence"))
+            note = (
+                f"{len(kills)} kills, {mid} con evidencia mid-commit, "
+                f"post-crash ok={payload.get('post_crash', {}).get('committed')}"
+            )
+        elif name == "compaction-large":
+            timings = payload.get("timings_s", {})
+            window = payload.get("unavailability_window_s")
+            note = (
+                f"revs={payload.get('params', {}).get('target_revisions')}, "
+                f"commit {timings.get('compact_commit', 0):.1f} s, "
+                + (
+                    f"ventana {window:.1f} s"
+                    if isinstance(window, (int, float))
+                    else "ventana n/d"
+                )
+            )
         lines.append(
             f"| {name} | {payload.get('ok')} | "
             f"{float(payload.get('wall_s', 0) or 0):.1f} | {note} |"
@@ -127,13 +231,13 @@ def _summary_md(
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Batería P0 de escala (#149).")
-    parser.add_argument(
-        "--scenario", default="all", choices=[*SCENARIOS, "all", "fingerprint"]
+    parser = argparse.ArgumentParser(
+        description="Batería de escala (#149 Fase 0 + #167 v2)."
     )
+    parser.add_argument("--scenario", default="all", choices=SCENARIO_CHOICES)
     parser.add_argument(
         "--thresholds",
-        default=str(REPO_ROOT / "benchmarks/scale/thresholds-v1.json"),
+        default=str(REPO_ROOT / "benchmarks/scale/thresholds-v2.json"),
     )
     parser.add_argument(
         "--workspace", default=None, help="dir de trabajo (temporal si se omite)"
@@ -169,7 +273,13 @@ def main(argv: list[str] | None = None) -> int:
         out = REPO_ROOT / "benchmarks/scale/results" / stamp
     out.mkdir(parents=True, exist_ok=True)
 
-    names = list(SCENARIOS) if args.scenario == "all" else [args.scenario]
+    names: list[str]
+    if args.scenario == "all":
+        names = [*SCENARIOS, *SCENARIOS_V2]
+    elif args.scenario == "all-v2":
+        names = list(SCENARIOS_V2)
+    else:
+        names = [args.scenario]
     results: dict[str, dict[str, Any]] = {}
     t_all = time.perf_counter()
     budget = th["battery"]["total_budget_wall_s"]
@@ -209,7 +319,7 @@ def main(argv: list[str] | None = None) -> int:
         write_result(out, "summary", merged)
         shutil.copyfile(args.thresholds, out / "thresholds-used.json")
         (out / "battery-report.md").write_text(
-            _summary_md(merged, env), encoding="utf-8"
+            _summary_md(merged, env, Path(args.thresholds)), encoding="utf-8"
         )
         if ws_own:
             shutil.rmtree(ws, ignore_errors=True)
