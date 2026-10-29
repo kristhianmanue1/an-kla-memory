@@ -1,0 +1,50 @@
+{
+  "source": "/private/tmp/adr0061-baseline-source",
+  "package_path": "/private/tmp/adr0061-baseline-source/an_kla/__init__.py",
+  "python": "3.12.12 (main, Oct  9 2025, 11:07:00) [Clang 17.0.0 (clang-1700.4.4.1)]",
+  "platform": "macOS-27.2-arm64-arm-64bit",
+  "acknowledged_commits": 386,
+  "reason": "hard_wall_deadline",
+  "wall_s": 90.029829082996,
+  "rows": [
+    {
+      "n": 100,
+      "elapsed_s": 6.114442207996035,
+      "block_commit_mean_s": 0.06055235579944565,
+      "block_commit_median_s": 0.05701104149920866,
+      "snapshot_samples_s": [
+        0.01152354200166883,
+        0.011505583999678493,
+        0.010745583000243641,
+        0.01269720900018001,
+        0.012499958000262268
+      ]
+    },
+    {
+      "n": 200,
+      "elapsed_s": 24.33694616599678,
+      "block_commit_mean_s": 0.18114857549022417,
+      "block_commit_median_s": 0.17936808349986677,
+      "snapshot_samples_s": [
+        0.02045104099670425,
+        0.020183916996757034,
+        0.022894333997101057,
+        0.021330875002604444,
+        0.02189929199812468
+      ]
+    },
+    {
+      "n": 300,
+      "elapsed_s": 57.12936404100037,
+      "block_commit_mean_s": 0.3263331078705232,
+      "block_commit_median_s": 0.2927392290002899,
+      "snapshot_samples_s": [
+        0.03331245799927274,
+        0.029816209003911354,
+        0.0305620409999392,
+        0.03337137500056997,
+        0.031215875002089888
+      ]
+    }
+  ]
+}

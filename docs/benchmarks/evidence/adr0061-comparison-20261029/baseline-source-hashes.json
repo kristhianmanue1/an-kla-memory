@@ -1,0 +1,12 @@
+{
+  "base": "14b69f5",
+  "files": {
+    "identity.py": "3e830c443036673d4447bbd3dd004b0c33367c0e1c4f62118df4c877584698fa",
+    "identity_evidence.py": "1a1c5cf04287f405a9b890b4c0bb69eace04a29096626be7e7015cfb012e8dfb",
+    "store.py": "8ae8c092d1819723ade046f07d0b6c1497fc3eca937dc10546c878de67bb8256",
+    "transactions.py": "1c3fbd9cf3277137ada9862609a3b032bb4c9fd06c26e4a99cbe3880be0ce4b9",
+    "write_commit.py": "f5cf25b599632c61ff87fc9f24a728d32f67a28ecee4b7b93a5be2d0c44595e1",
+    "checkpoints.py": "83a4126a22f071dd72ca8f7db347b7c7d797b8d35460c9787cd864145a332103",
+    "refutations.py": "53cfa59cab7a20a2d40915acc117aaa41e2384e4b6cc5d8d9f65860937bd5eff"
+  }
+}

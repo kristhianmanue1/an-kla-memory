@@ -1,0 +1,19 @@
+{
+  "source": "/private/tmp/adr0061-baseline-source",
+  "store": "/private/tmp/adr0061-comparison/baseline-2/store",
+  "head": "sha256:9227e8d3770b613bb1306e050ac8a2f04303920e83481074285a7bd46d1d5cd2",
+  "verify": {
+    "ok": true,
+    "revision": "sha256:9227e8d3770b613bb1306e050ac8a2f04303920e83481074285a7bd46d1d5cd2",
+    "revision_number": 422,
+    "counts": {
+      "facts": 422,
+      "events": 0,
+      "episodes": 0
+    },
+    "durability_profile": "posix-fsync-dir/v1",
+    "identity_status": "complete",
+    "root_relocated": false
+  },
+  "verify_s": 1.2889801659985096
+}

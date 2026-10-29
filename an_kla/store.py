@@ -6,6 +6,8 @@ only commit authority; ref-log entries are diagnostic objects only.
 
 from __future__ import annotations
 
+from .revision_walk import _OperationContext
+
 from copy import deepcopy
 from dataclasses import dataclass
 import json
@@ -28,7 +30,7 @@ from .identity import (
     assert_unchanged,
     bootstrap_initialize,
     identity_status,
-    mutation_preflight,
+    _mutation_preflight_with_context,
     read_binding,
     verify_current_binding,
     verify_manifest_link,
@@ -374,7 +376,8 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         """
         if checkpoint_patch:
             raise StoreError("governed_checkpoint_update_required")
-        binding = mutation_preflight(self)
+        preflight = _mutation_preflight_with_context(self)
+        binding = preflight.binding
         self._make_layout()
         pending = {
             "facts": [dict(row) for row in facts],
@@ -393,6 +396,7 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
                 checkpoint_patch=checkpoint_patch,
                 pending=pending,
                 store_identity=store_identity,
+                _context=preflight.context,
             )
             if outcome["committed"] is not True:
                 raise StoreError(f"commit_failed:{outcome['state']}")
@@ -494,6 +498,7 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         supersedes: list[dict[str, str]] | None = None,
         refute_objects: Mapping[str, Any] | None = None,
         store_identity: str | None = None,
+        _context: _OperationContext | None = None,
     ) -> tuple[str, dict[str, Any]]:
         """Write a child revision while the caller holds ``write_lock``."""
 
@@ -522,6 +527,7 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
             supersedes=supersedes,
             refute_objects=refute_objects,
             store_identity=store_identity,
+            _context=_context,
         )
 
     def verify(self) -> dict[str, Any]:

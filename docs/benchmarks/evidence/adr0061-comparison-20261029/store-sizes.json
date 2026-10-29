@@ -1,0 +1,30 @@
+{
+  "baseline-1": {
+    "logical_bytes": 7697624,
+    "files": 3107
+  },
+  "baseline-2": {
+    "logical_bytes": 8976884,
+    "files": 3395
+  },
+  "baseline-3": {
+    "logical_bytes": 8539808,
+    "files": 3299
+  },
+  "phase-a-1": {
+    "logical_bytes": 12077614,
+    "files": 4019
+  },
+  "phase-b-1": {
+    "logical_bytes": 12077614,
+    "files": 4019
+  },
+  "phase-b-2": {
+    "logical_bytes": 12077614,
+    "files": 4019
+  },
+  "phase-b-3": {
+    "logical_bytes": 12077614,
+    "files": 4019
+  }
+}

@@ -13,7 +13,7 @@ from copy import deepcopy
 from typing import Any, Mapping
 
 from . import attest as attest_module
-from .identity import assert_unchanged, mutation_preflight
+from .identity import assert_unchanged, _mutation_preflight_with_context
 from .record_text import record_text
 from .subject_binding import check_subject_ref_binding
 from .supersede import resolve_supersede_targets
@@ -39,7 +39,8 @@ def commit_write_plan(
 ) -> dict[str, Any]:
     """Revalidate and commit one exact write plan under the store lock."""
 
-    binding = mutation_preflight(store)
+    preflight = _mutation_preflight_with_context(store)
+    binding = preflight.binding
     store._make_layout()
     with store.write_lock() as lock_result:
         observed = store.read_current()
@@ -66,6 +67,7 @@ def commit_write_plan(
                 pending=deepcopy(_EMPTY_PENDING),
                 attempt=attempt,
                 store_identity=assert_unchanged(store, binding, observed),
+                _context=preflight.context,
             )
             outcome = _post_lock_outcome(outcome, lock_result.release_error)
             return {
@@ -135,7 +137,7 @@ def commit_write_plan(
         # ADR-0033 §Decisión 5 (issue #59 Fase B): validate subject_ref
         # namespaces against the bound project identity, still under the
         # write lock and before any object/journal is written. ``binding``
-        # is the snapshot captured by mutation_preflight and revalidated by
+        # is the snapshot captured by _mutation_preflight_with_context and revalidated by
         # assert_unchanged; the guard never re-reads project identity.
         check_subject_ref_binding(checked_plan, binding)
 
@@ -183,6 +185,7 @@ def commit_write_plan(
             policy_metadata=policy_metadata,
             supersedes=pending_supersedes or None,
             store_identity=store_identity,
+            _context=preflight.context,
         )
     if lock_result.release_error is not None:
         outcome = deepcopy(outcome)

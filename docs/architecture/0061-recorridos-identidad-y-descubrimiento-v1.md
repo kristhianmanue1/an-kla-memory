@@ -1,7 +1,7 @@
 # ADR-0061: Consolidar linaje y reutilizar proyecciones verificadas por operación
 
 - **Estado:** Aceptada
-- **Implementación:** No iniciada
+- **Implementación:** Parcial (A/B verificadas, ronda proceed y CI local 1304 OK; aceptación integrada a 20k pendiente por presupuesto de disco)
 - **Fecha:** 2026-10-29
 - **Decide sobre:** reducir trabajo repetido en la construcción de revisiones sin omitir evidencia de identidad ni candidatos transaccionales.
 
@@ -41,8 +41,11 @@ con esta optimización: manifiestos acumulativos y enumeración permanecen.
 1. Capturar un CURRENT concreto y el binding de identidad; mantener las
    comprobaciones de custodia y symlinks existentes. Las lecturas de identidad
    antes del lock y su comparación byte a byte bajo lock (ADR-0022) permanecen.
-2. Validar primero forma, hash, intent, paths protegidos y demás evidencia
-   independiente de ascendencia de cada recibo. Conservar todos los candidatos,
+2. Antes de evaluar o aceptar cada recibo, validar forma, hash, intent, paths
+   protegidos y demás evidencia independiente de ascendencia. El resumen de
+   cadena puede precalcularse para resolver la raíz incluso sin recibo válido;
+   ese cálculo no acepta ni eleva recibos. No se exige identidad de trazas u
+   orden de I/O bajo toda intercalación concurrente. Conservar todos los candidatos,
    el orden determinista y la selección final actual; no aceptar el primero
    ni convertir un recibo malformado en evidencia de identidad completa.
 3. Recorrer la cadena una vez para resolver pertenencia de cada revisión
@@ -110,6 +113,14 @@ el fallo cerrado ante corrupción. Cadena conforme de más de 10k debe producir
 observable deliberado para linaje válido antes fuera del horizonte, no una
 promesa de igualdad con el corte arbitrario legado. Los demás contratos se
 comparan con/sin proyección sobre el MISMO algoritmo sin ese techo.
+
+Refinamiento de la ronda sobre código: antes de devolver `ancestor` u
+`orphan`, la clasificación histórica ejecuta la validación canónica completa
+de la cadena, sin watermark, incluyendo la prueba de raíz v3; no puede salir
+antes por haber encontrado el candidato. La igualdad `candidate == current`
+sigue siendo clasificación posicional `current`, no prueba de integridad.
+La auditoría histórica puede costar más; no está en el camino común del
+commit nuevo (`candidate == current`) ni se promete acelerarla con la proyección.
 
 La proyección se pasa explícitamente de preflight al commit y no puede alterar
 el binding ni el gate. Bajo lock se conservan CAS y revalidación de identidad.
@@ -188,5 +199,6 @@ por separado antes de ampliar diseño. #169 conserva su disparador.
 ## Referencias
 
 ADR-0001, ADR-0022, ADR-0024, ADR-0028, ADR-0053, ADR-0057, ADR-0059/0060;
-issues #149 (histórico), #169 (condicional). [Evidencia](../benchmarks/construction-profile-2026-10-29.md).
+issues #149 (histórico), #169 (condicional).
+Límite de aceptación: [cota de disco a 20k](../benchmarks/construction-manifest-bound-2026-10-29.md). [Evidencia](../benchmarks/construction-profile-2026-10-29.md).
 La aceptación autoriza implementación; no publica release ni acredita pruebas futuras.

@@ -1,0 +1,19 @@
+{
+  "source": "/private/tmp/adr0061-phase-b-source",
+  "store": "/private/tmp/adr0061-comparison/phase-b-3/store",
+  "head": "sha256:941d1a5426c7b6c0a31b9e8de5bbd41f262ea75d5ecbe94064888cbc5920d0c4",
+  "verify": {
+    "ok": true,
+    "revision": "sha256:941d1a5426c7b6c0a31b9e8de5bbd41f262ea75d5ecbe94064888cbc5920d0c4",
+    "revision_number": 500,
+    "counts": {
+      "facts": 500,
+      "events": 0,
+      "episodes": 0
+    },
+    "durability_profile": "posix-fsync-dir/v1",
+    "identity_status": "complete",
+    "root_relocated": false
+  },
+  "verify_s": 1.3290688339984627
+}

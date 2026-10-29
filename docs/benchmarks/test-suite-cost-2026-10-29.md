@@ -98,3 +98,15 @@ y eliminar duplicados manteniendo la misma cobertura. Esta nota no autoriza
 retirar filas ni saltar gates: durante ADR-0061 se mantienen las condiciones
 adoptadas. Cualquier rediseño de CI deberá medir duración/cobertura y tener
 su propio cambio revisado.
+
+
+## Actualización tras ADR-0061
+
+El CI final de implementación, con Python3.12.12, contó **1304 tests**,
+74 skips y1493,463s (24,89min), con resultado ci_local: OK. Incluye las cinco
+pruebas del harness y catorce de traversal/proyecciones; sus casos virtuales
+20k no son una construcción de20k revisiones en disco. El código de pruebas
+sigue siendo pequeño frente a la multiplicación de ejecuciones: los conteos
+y tiempos anteriores son cortes históricos distintos, no pruebas de que la
+versión de Python o este cambio expliquen por sí solos toda la diferencia.
+El log final está en evidence/adr0061-comparison-20261029/implementation-ci.txt.

@@ -14,7 +14,7 @@ from .checkpoint_policy import (
     validate_working_state,
     verify_plan,
 )
-from .identity import assert_unchanged, mutation_preflight
+from .identity import assert_unchanged, _mutation_preflight_with_context
 from .transactions import begin_transaction
 
 
@@ -143,7 +143,8 @@ def commit_checkpoint(
     if decision.get("decision") == "write" and transaction_id is None:
         raise CheckpointPolicyError(
             "checkpoint_transaction_id_required", "transaction_id")
-    binding = mutation_preflight(store)
+    preflight = _mutation_preflight_with_context(store)
+    binding = preflight.binding
     snapshot = store.snapshot(expected_current)
     if proposal.get("base_revision") != expected_current:
         raise CheckpointPolicyError(
@@ -198,6 +199,7 @@ def commit_checkpoint(
                 pending={"facts": [], "events": [], "episodes": []},
                 attempt=attempt,
                 store_identity=identity_digest,
+                _context=preflight.context,
             )
         elif decision["decision"] == "skip":
             return {
@@ -215,6 +217,7 @@ def commit_checkpoint(
                 pending={"facts": [], "events": [], "episodes": []},
                 attempt=attempt,
                 store_identity=identity_digest,
+                _context=preflight.context,
             )
     if lock_result.release_error is not None:
         outcome = deepcopy(outcome)

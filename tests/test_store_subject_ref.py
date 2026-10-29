@@ -249,7 +249,9 @@ class SubjectRefBindingTests(unittest.TestCase):
             b'"project_uuid":"00000000-0000-0000-0000-000000000000",'
             b'"created_by_version":"drift"}'
         )
-        with patch("an_kla.write_commit.mutation_preflight", return_value=drifted):
+        from an_kla.identity import _Preflight
+        with patch("an_kla.write_commit._mutation_preflight_with_context",
+                   return_value=_Preflight(drifted, None)):
             with self.assertRaises(IdentityError) as caught:
                 self._commit(candidate, auth, planning)
         self.assertEqual(str(caught.exception), "store_identity_changed")
