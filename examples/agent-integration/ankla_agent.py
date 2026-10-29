@@ -60,6 +60,10 @@ class WriteVerificationError(RuntimeError):
     """La escritura se comprometió pero la lectura post-escritura falló."""
 
 
+class PlanRetryableError(RuntimeError):
+    """plan-write falló con causa reintentable (ADR-0059: writer_gate_busy)."""
+
+
 class AnKlaAgent:
     def __init__(self, project_root: Path, python: str = sys.executable) -> None:
         self.project_root = Path(project_root)
@@ -147,6 +151,13 @@ class AnKlaAgent:
             "--authority", str(authority_path),
         ])
         if completed.returncode != 0:
+            # ADR-0059: el gate del escritor sólo puede vencer aquí (la
+            # planificación es quien espera LOCK_SH); es reintentable, no
+            # terminal.
+            if "writer_gate_busy" in completed.stderr:
+                raise PlanRetryableError(
+                    f"plan-write ocupado: {completed.stderr.strip()}"
+                )
             raise RuntimeError(
                 f"plan-write exit {completed.returncode}: {completed.stderr.strip()}"
             )
@@ -169,7 +180,12 @@ class AnKlaAgent:
             revision = self.current_revision()
             proposal, authority = self._objects_for_revision(record, revision)
             with tempfile.TemporaryDirectory(prefix="ankla-agent-") as tmp:
-                paths, plan = self._plan(proposal, authority, Path(tmp))
+                try:
+                    paths, plan = self._plan(proposal, authority, Path(tmp))
+                except PlanRetryableError as exc:
+                    step(f"intento {attempt}: {exc}; re-plan tras backoff")
+                    time.sleep(0.5 * attempt)
+                    continue
                 if plan.get("decision") == "skip":
                     step(f"plan-write -> skip {plan.get('reason_codes')}")
                     return plan
