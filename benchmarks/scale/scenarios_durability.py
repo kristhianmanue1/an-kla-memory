@@ -328,8 +328,13 @@ def _probe_writer(store: Any, refs: list[str], deadline_s: float) -> dict[str, A
         authority = build_authority(proposal)
         try:
             planning = store.plan_write(proposal, authority)
-        except WritePolicyError:
+        except WritePolicyError as exc:
+            if exc.code != "write_plan_base_changed":
+                raise
             cas += 1
+            continue
+        except LockBusyError:
+            lock_busy += 1
             continue
         except IntegrityError as exc:
             # Hallazgo observado en carrera: la revisión leída por la sonda
@@ -348,12 +353,18 @@ def _probe_writer(store: Any, refs: list[str], deadline_s: float) -> dict[str, A
                 decision=planning["decision"],
                 plan=planning["plan"],
             )
-            if result.get("committed"):
+            if result.get("committed") is True:
                 committed = True
                 break
-            cas += 1
+            # A returned uncertain outcome is not a CAS rejection. Do not
+            # repeat an operation whose persistent effect is unconfirmed.
+            raise RuntimeError("probe_commit_not_confirmed")
         except LockBusyError:
             lock_busy += 1
+        except WritePolicyError as exc:
+            if exc.code != "write_plan_base_changed":
+                raise
+            cas += 1
     return {
         "committed": committed,
         "blocked_s": time.perf_counter() - t0,
@@ -361,6 +372,34 @@ def _probe_writer(store: Any, refs: list[str], deadline_s: float) -> dict[str, A
         "lock_busy_errors": lock_busy,
         "epoch_archived_events": epoch_archived,
     }
+
+
+def _probe_and_collect(
+    proc: subprocess.Popen, store: Any, refs: list[str], probe_delay: float,
+    probe_budget: float, cli_timeout: float,
+) -> tuple[dict[str, Any], str, str]:
+    """Reap the owned child even when the probe or collection fails."""
+    try:
+        time.sleep(probe_delay)
+        probe = _probe_writer(store, refs, probe_budget)
+        if not probe["committed"]:
+            # Observación censurada: el presupuesto de la sonda venció antes de
+            # la liberación del lock (compact commit más largo que el presupuesto).
+            probe["censored"] = (
+                "presupuesto de sonda agotado sin commit; la ventana registrada "
+                "es una cota inferior de la indisponibilidad real"
+            )
+        stdout, stderr = proc.communicate(timeout=max(cli_timeout, 300))
+        return probe, stdout, stderr
+    except BaseException:
+        if proc.poll() is None:
+            proc.terminate()
+        try:
+            proc.communicate(timeout=10)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.communicate()
+        raise
 
 
 def run_compaction_large(
@@ -434,16 +473,9 @@ def run_compaction_large(
         "--planning-result", str(plan_path), "--expected-current", cur,
         "--bundle", str(bundle),
     )
-    time.sleep(probe_delay)
-    probe = _probe_writer(store, refs, probe_budget)
-    if not probe["committed"]:
-        # Observación censurada: el presupuesto de la sonda venció antes de
-        # la liberación del lock (compact commit más largo que el presupuesto).
-        probe["censored"] = (
-            "presupuesto de sonda agotado sin commit; la ventana registrada "
-            "es una cota inferior de la indisponibilidad real"
-        )
-    stdout, stderr = proc.communicate(timeout=max(cli_timeout, 300))
+    probe, stdout, stderr = _probe_and_collect(
+        proc, store, refs, probe_delay, probe_budget, cli_timeout
+    )
     commit_s = time.perf_counter() - t0
     if proc.returncode != 0:
         commit: dict[str, Any] = {
