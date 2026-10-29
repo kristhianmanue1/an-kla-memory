@@ -32,18 +32,32 @@ pinnean comportamientos que no deben moverse.
 
 ## Decisión
 
-**El camino de escritura adquiere el reader gate con deadline** (el mismo
-10 s del lock de escritura: una sola constante para toda espera de
-escritor):
+**Toda adquisición del reader gate por el camino de escritura es acotada**
+— tanto en planificación (`plan_write`, cuyo `snapshot` es la espera
+desprotegida real) como en commit (`commit_write_plan` y equivalentes de
+refute/supersede)— con el deadline de **una sola constante con nombre**:
 
 1. Nueva adquisición acotada en `reader_gate` (mismo patrón de sondeo
    `LOCK_SH | LOCK_NB` + deadline que ya usa `exclusive_reader_gate`),
-   usada **sólo por el camino de escritura gobernada**
-   (`commit_write_plan` y equivalentes de refute/supersede).
-2. Al vencer el deadline, el store levanta `LockBusyError` con detalle
+   usada por **todo el camino de escritura**: `plan_write` y los commits
+   gobernados.
+2. La constante canónica es **una sola con nombre** — la existente
+   `WRITE_LOCK_DEADLINE_SECONDS` (`store_locks.py`) pasa a consumirse
+   también por el gate acotado, `exclusive_reader_gate`, la ventana de
+   `relocate` y el drenaje de `compaction.py` (hoy hay cuatro 10 s
+   independientes: `store_locks.py`, el default de `exclusive_reader_gate`,
+   `relocate._GATE_TIMEOUT` y `compaction.py`); el valor sigue siendo 10 s,
+   pero con una única fuente de verdad.
+3. Al vencer el deadline, el store levanta `LockBusyError` con detalle
    estable **`writer_gate_busy`**: misma clase reintentable que ya manejan
    los callers, código que lo distingue de la espera del lock de escritura.
-3. **Los lectores comunes no cambian**: siguen bloqueando en `LOCK_SH`
+4. **Declaración del código nuevo (ronda externa 2026-10-29, hallazgo
+   alto)**: `writer_gate_busy` se registra en la superficie de errores de
+   `capabilities`, en el **conjunto de reintentos del agente de ejemplo**
+   (`examples/agent-integration/ankla_agent.py` hoy sólo reintentan ante
+   `"write_lock_busy"`; con el código sin declarar el reintento caería a
+   fallo terminal) y en la documentación de escritura si lista códigos.
+5. **Los lectores comunes no cambian**: siguen bloqueando en `LOCK_SH`
    hasta que la compactación libere. Esperar es el comportamiento correcto
    para lecturas; fallarlas degradaría el caso común para ahorrar en el
    raro.
@@ -67,11 +81,15 @@ escritor):
   backoff. La compactación no cambia.
 - La batería queda en condiciones de medir la tasa post-fix (el issue
   #186 pedía exactamente esa tasa).
-- `writer_gate_busy` se documenta en la superficie de errores
-  (`capabilities`) y, si la referencia de agentes lista códigos de
-  escritura, ahí también.
+- `writer_gate_busy` se declara en `capabilities`, en el conjunto de
+  reintentos del agente de ejemplo y en la documentación de escritura
+  (hallazgo alto de la ronda externa: sin esa declaración el reintento del
+  agente caería a fallo terminal).
+- La constante única con nombre elimina las cuatro definiciones
+  independientes de 10 s que hoy existen (`store_locks.py`, default de
+  `exclusive_reader_gate`, `relocate._GATE_TIMEOUT`, `compaction.py`).
 - El valor 10 s pasa a significar «toda espera de escritor» (lock de
-  escritura y gate): una sola constante, un solo contrato.
+  escritura, gate y planificación): una sola constante, un solo contrato.
 
 ## Test de regresión
 
@@ -79,12 +97,19 @@ escritor):
   simulada) y un `commit_write_plan` concurrente recibe
   `LockBusyError("writer_gate_busy")` al vencer el deadline (con deadline
   inyectable corto para el test).
+- Mismo aserto para `plan_write` (la espera desprotegida real detectada
+  por la ronda externa: su `snapshot` adquiere `LOCK_SH` sin deadline).
 - Lector concurrente en la misma ventana sigue bloqueando y tiene éxito
   al liberarse (comportamiento de lector preservado).
 - Sin compactación: camino feliz de escritura idéntico (el gate acotado
   adquiere al primer intento).
+- El agente de ejemplo reintenta ante `writer_gate_busy` (su conjunto de
+  códigos reintentables incluye el nuevo).
 - Ronda adversarial obligatoria antes de implementar: toca el camino de
-  escritura del store y `reader_gate.py`.
+  escritura del store y `reader_gate.py`. Ronda pre-code ejecutada
+  2026-10-29 (externa, otra familia): `fix-and-retry` con tres hallazgos,
+  absorbidos en esta versión (alcance plan_write+commit, declaración del
+  código en el agente de ejemplo, constante única con nombre).
 
 ## Referencias
 

@@ -36,19 +36,33 @@ el caller no puede distinguir «re-planifica» de «escala el problema».
 
 ## Decisión
 
-**Coherencia por construcción en la planificación**: `plan_write` (y en
-general todo par `read_current` + `snapshot` que deba ser coherente) se
-ejecuta bajo **una sola adquisición** del reader gate compartido:
+**Coherencia por construcción en toda la planificación**: el par
+`read_current` + `snapshot` se ejecuta bajo **una sola adquisición** del
+reader gate compartido en **todos los caminos que lo forman hoy** — no sólo
+`plan_write`:
 
-1. `plan_write` abre `shared_reader_gate` y dentro resuelve `read_current`,
-   la guardia temprana (`guard_plan_against_snapshot`) y el snapshot que
-   necesite. El gate es reentrante por hilo: las adquisiciones internas de
+1. `plan_write` (`store.py`): abre `shared_reader_gate` y dentro resuelve
+   `read_current`, la guardia temprana (`guard_plan_against_snapshot`) y el
+   snapshot que necesite.
+2. `plan_refute` (`refutations.py`): mismo par no atómico detectado por la
+   ronda externa (`read_current()` seguido de `snapshot(observed)`) —
+   mismo tratamiento.
+3. `evaluation_strategies.py` (ambas funciones de evaluación): mismo par
+   para el corpus de evaluación — mismo tratamiento.
+4. El gate es reentrante por hilo: las adquisiciones internas de
    `read_current`/`snapshot` incrementan profundidad, no compiten.
-2. Con el gate sostenido, la compactación no puede tomar `LOCK_EX` a medio
-   plan: la revisión base permanece legible durante toda la planificación
-   (planificar es lectura corta; retrasar la compactación unos
-   milisegundos es el coste aceptado).
-3. **Sin código nuevo de error**: si la base se mueve después de
+5. Con el gate sostenido, la compactación no puede tomar `LOCK_EX` a medio
+   plan: la revisión base permanece legible durante toda la planificación.
+6. **Interacción con el drenaje de la compactación (hallazgo medio de la
+   ronda)**: la compactación espera drenaje con su propio presupuesto
+   (`compaction.py`: `gate_deadline` +10 s → `compaction_readers_active`
+   fail-closed). Las retenciones de planificación son cortas y de sólo
+   lectura; con planificación frecuente, el fail-closed existente + reintento
+   de la compactación es la mitigación aceptada, y ADR-0059 acota además
+   toda espera de escritor. Se deja anotado: si la hambruna del compactador
+   se midiera real, la escalación es un indicador de peso (`yield` del gate
+   entre fases de planificación), no un cambio de esta decisión.
+7. **Sin código nuevo de error**: si la base se mueve después de
    planificar, el caller recibe el CAS ya existente `write_plan_base_changed`
    en el commit — única señal necesaria, ya documentada. La invariante que
    deja fijada esta ADR: *todo par `read_current`+`snapshot` coherente vive
@@ -90,6 +104,8 @@ ejecuta bajo **una sola adquisición** del reader gate compartido:
   resultante es coherente con la revisión devuelta.
 - La carrera sembrada (archivado de la base entre `read_current` y
   `snapshot`) deja de ser alcanzable: con el gate sostenido no hay ventana.
+- Mismo aserto de coherencia para `plan_refute` y para las funciones de
+  `evaluation_strategies` (pares detectados por la ronda externa).
 - El commit ante base movida sigue respondiendo exactamente
   `write_plan_base_changed` (sin cambios — pinneo el comportamiento).
 - `inventory`/`snapshot` explícito de revisión archivada siguen levantando
