@@ -1,0 +1,40 @@
+[
+  {
+    "name": "plain",
+    "current": "sha256:0e42f6cb9e500dc5c2468038d37fc3b293c2a0dc5e16861ac8fdc6dfabad1b3b",
+    "revision_number": 566,
+    "verify": {
+      "ok": true,
+      "revision": "sha256:0e42f6cb9e500dc5c2468038d37fc3b293c2a0dc5e16861ac8fdc6dfabad1b3b",
+      "revision_number": 566,
+      "counts": {
+        "facts": 566,
+        "events": 0,
+        "episodes": 0
+      },
+      "durability_profile": "posix-fsync-dir/v1",
+      "identity_status": "complete",
+      "root_relocated": false
+    },
+    "verify_s": 1.112997333999374
+  },
+  {
+    "name": "profiled",
+    "current": "sha256:eb147ba0baccc26a65ddf4616e72197e76767b4e16e8a3f10bddc1d484150b0a",
+    "revision_number": 506,
+    "verify": {
+      "ok": true,
+      "revision": "sha256:eb147ba0baccc26a65ddf4616e72197e76767b4e16e8a3f10bddc1d484150b0a",
+      "revision_number": 506,
+      "counts": {
+        "facts": 506,
+        "events": 0,
+        "episodes": 0
+      },
+      "durability_profile": "posix-fsync-dir/v1",
+      "identity_status": "complete",
+      "root_relocated": false
+    },
+    "verify_s": 0.9042951660012477
+  }
+]

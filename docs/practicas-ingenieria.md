@@ -90,6 +90,26 @@ crea cuando todas las fases están en `main`**, y se declara explícitamente que
 
 ## §5 CI local con `--simulate-ci`
 
+**Intérprete de trabajo (orden del Operador, 2026-10-29): Python 3.12 o
+superior**, dentro del rango soportado por el proyecto. Resolverlo
+explícitamente y comprobar `--version`; en este checkout usar
+`.venv/bin/python` (3.12.12 observado). No usar `python3` desnudo como
+selección de intérprete: en este host puede resolver a CLT 3.9.6. Cuando
+AGENTS.md u otras recetas escriban `python3`, ejecutar el equivalente con
+el intérprete explícito verificado ≥3.12.
+
+La regla aplica a desarrollo, gates, sondas, pruebas principales y revisión.
+No cambia por sí sola `requires-python` del paquete ni elimina las piernas
+de compatibilidad existentes: la matriz puede lanzar CLT 3.9.6 por diseño;
+reportar esos resultados como compatibilidad y separarlos del gate principal
+con ≥3.12. La suite previa ejecutada con 3.9.6 en esta sesión se conserva
+como evidencia de compatibilidad (1285 OK, cinco skips), no como elección
+canónica de desarrollo. Cambiar el rango soportado o la matriz exige su
+propio alcance y validación.
+
+**Coste observado de la matriz:** [análisis de ejecución 2026-10-29](benchmarks/test-suite-cost-2026-10-29.md).
+
+
 `scripts/ci_local.py` replica `.github/workflows/test.yml` sin gastar minutos de
 GitHub Actions. La bandera `--simulate-ci` exporta `GITHUB_ACTIONS=true` y
 `CI=true` antes de los tests para atrapar **no determinismos** que sólo aparecen

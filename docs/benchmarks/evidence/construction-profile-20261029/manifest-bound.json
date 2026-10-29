@@ -1,0 +1,12 @@
+{
+  "source_store": "/private/tmp/ankla-profile-20261029/plain/.an-kla/memory",
+  "current": "sha256:0e42f6cb9e500dc5c2468038d37fc3b293c2a0dc5e16861ac8fdc6dfabad1b3b",
+  "revision": 566,
+  "manifest_path": "/private/tmp/ankla-profile-20261029/plain/.an-kla/memory/revisions/sha256/0e42f6cb9e500dc5c2468038d37fc3b293c2a0dc5e16861ac8fdc6dfabad1b3b.json",
+  "manifest_bytes": 42410,
+  "facts_segments_count": 566,
+  "all_segment_ids_71_ascii": true,
+  "target_revisions": 20000,
+  "segment_strings_lower_bound_bytes": 14600730000,
+  "approved_ceiling_bytes": 2147483648
+}
