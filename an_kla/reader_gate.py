@@ -10,6 +10,9 @@ import threading
 import time
 from typing import Any, BinaryIO, Iterator
 
+from .store_errors import LockBusyError
+from .store_locks import WRITE_LOCK_DEADLINE_SECONDS
+
 
 class ReaderGateError(RuntimeError):
     pass
@@ -97,7 +100,61 @@ def shared_reader_gate(store: Any) -> Iterator[None]:
 
 
 @contextmanager
-def exclusive_reader_gate(store: Any, *, timeout: float = 10.0) -> Iterator[None]:
+def shared_reader_gate_bounded(
+    store: Any, *, timeout: float | None = None
+) -> Iterator[None]:
+    """ADR-0059: shared lease con deadline para el camino de escritura.
+
+    Misma reentrancia y semántica que ``shared_reader_gate``, pero la
+    espera por ``LOCK_SH`` (p. ej. mientras la compactación sostiene
+    ``LOCK_EX``) vence a ``timeout`` — por defecto la constante única
+    ``WRITE_LOCK_DEADLINE_SECONDS`` — levantando
+    ``LockBusyError("writer_gate_busy")``: reintentable, distinto de la
+    espera del lock de escritura sólo por el código.
+    """
+
+    key = _key(store.root)
+    states = _states()
+    existing = states.get(key)
+    if existing is not None:
+        if existing["mode"] != "shared":
+            raise ReaderGateError("reader_gate_mode_reentry")
+        existing["depth"] += 1
+        try:
+            yield
+        finally:
+            existing["depth"] -= 1
+        return
+    try:
+        import fcntl  # type: ignore
+    except ImportError:
+        # Sin gate de plataforma no hay espera que acotar.
+        yield
+        return
+    if timeout is None:
+        timeout = WRITE_LOCK_DEADLINE_SECONDS
+    path = store.root / ".reader-gate"
+    with _open_gate(path) as handle:
+        deadline = time.monotonic() + timeout
+        while True:
+            try:
+                fcntl.flock(handle.fileno(), fcntl.LOCK_SH | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() >= deadline:
+                    raise LockBusyError("writer_gate_busy") from None
+                time.sleep(0.01)
+        states[key] = {"mode": "shared", "depth": 1}
+        try:
+            yield
+        finally:
+            states.pop(key, None)
+
+
+@contextmanager
+def exclusive_reader_gate(
+    store: Any, *, timeout: float | None = None
+) -> Iterator[None]:
     """Wait for all local-process readers, then exclude new ones."""
 
     key = _key(store.root)
@@ -108,6 +165,8 @@ def exclusive_reader_gate(store: Any, *, timeout: float = 10.0) -> Iterator[None
     except ImportError as exc:
         raise ReaderGateError("compaction_platform_unsupported") from exc
     path = store.root / ".reader-gate"
+    if timeout is None:
+        timeout = WRITE_LOCK_DEADLINE_SECONDS
     with _open_gate(path) as handle:
         deadline = time.monotonic() + timeout
         while True:

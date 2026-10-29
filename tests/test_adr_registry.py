@@ -41,9 +41,12 @@ class AdrRegistryTests(unittest.TestCase):
         # context_view en el origen, #149 P2b/#165) propuesta 2026-10-15
         # tras spike pre-implementación; aceptada e implementada el mismo
         # día por orden del maintainer ("ADELANTE CON PENDIENTES") tras
-        # absorber la ronda adversarial fix-and-retry.
+        # absorber la ronda adversarial fix-and-retry. 0059/0060 (gate del
+        # escritor acotado y planificación coherente, #186/#187) propuestas
+        # 2026-10-29 con ronda externa fix-and-retry→proceed; aceptadas e
+        # implementadas por orden del maintainer ("aceptada").
         self.assertEqual(states["Propuesta"], 5)
-        self.assertEqual(states["Aceptada"], 53)
+        self.assertEqual(states["Aceptada"], 55)
 
     def test_detects_gap_and_state_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

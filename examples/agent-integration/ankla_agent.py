@@ -7,8 +7,10 @@ en la ronda adversarial externa del 2026-09-02:
 (a) lectura post-escritura obligatoria: un commit sin texto indexable tiene
     éxito pero el registro queda invisible a retrieval (`no_text`); el
     wrapper re-lee con `retrieve` y falla si el registro no se sirve;
-(b) retry con re-plan ante CAS perdido (`current_changed:expected=`) o lock
-    ocupado (`write_lock_busy`): relee `status`, reconstruye proposal y
+(b) retry con re-plan ante CAS perdido (`current_changed:expected=`), lock
+    ocupado (`write_lock_busy`) o gate ocupado (`writer_gate_busy`,
+    ADR-0059: el escritor esperó `LOCK_SH` durante `compact commit` y
+    venció el deadline): relee `status`, reconstruye proposal y
     authority contra la revisión nueva y reintenta (los planes no se
     reutilizan ni se fuerzan);
 (c) salida ambigua: si el commit muere sin JSON de outcome, el wrapper se
@@ -56,6 +58,10 @@ CLI_TIMEOUT_SECONDS = 180
 
 class WriteVerificationError(RuntimeError):
     """La escritura se comprometió pero la lectura post-escritura falló."""
+
+
+class PlanRetryableError(RuntimeError):
+    """plan-write falló con causa reintentable (ADR-0059: writer_gate_busy)."""
 
 
 class AnKlaAgent:
@@ -145,6 +151,13 @@ class AnKlaAgent:
             "--authority", str(authority_path),
         ])
         if completed.returncode != 0:
+            # ADR-0059: el gate del escritor sólo puede vencer aquí (la
+            # planificación es quien espera LOCK_SH); es reintentable, no
+            # terminal.
+            if "writer_gate_busy" in completed.stderr:
+                raise PlanRetryableError(
+                    f"plan-write ocupado: {completed.stderr.strip()}"
+                )
             raise RuntimeError(
                 f"plan-write exit {completed.returncode}: {completed.stderr.strip()}"
             )
@@ -167,7 +180,12 @@ class AnKlaAgent:
             revision = self.current_revision()
             proposal, authority = self._objects_for_revision(record, revision)
             with tempfile.TemporaryDirectory(prefix="ankla-agent-") as tmp:
-                paths, plan = self._plan(proposal, authority, Path(tmp))
+                try:
+                    paths, plan = self._plan(proposal, authority, Path(tmp))
+                except PlanRetryableError as exc:
+                    step(f"intento {attempt}: {exc}; re-plan tras backoff")
+                    time.sleep(0.5 * attempt)
+                    continue
                 if plan.get("decision") == "skip":
                     step(f"plan-write -> skip {plan.get('reason_codes')}")
                     return plan
@@ -185,8 +203,8 @@ class AnKlaAgent:
             if "current_changed:expected=" in err or "write_plan_base_changed" in err:
                 step(f"intento {attempt}: CAS perdido (CURRENT avanzó); re-plan")
                 continue
-            if "write_lock_busy" in err:
-                step(f"intento {attempt}: lock ocupado; re-plan tras backoff")
+            if "write_lock_busy" in err or "writer_gate_busy" in err:
+                step(f"intento {attempt}: lock/gate ocupado; re-plan tras backoff")
                 time.sleep(0.5 * attempt)
                 continue
             if not commit.stdout.strip():

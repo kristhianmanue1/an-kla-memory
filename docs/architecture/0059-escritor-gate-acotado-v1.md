@@ -1,6 +1,7 @@
 # ADR-0059: Espera acotada del escritor en el reader gate durante `compact commit`
 
-- **Estado:** Propuesta
+- **Estado:** Aceptada (implementada)
+- **Implementación:** Implementada (`reader_gate::shared_reader_gate_bounded` + `store::writer_gate` en `plan_write`; constante única `WRITE_LOCK_DEADLINE_SECONDS`; código `writer_gate_busy` en capabilities y agente de ejemplo)
 - **Fecha:** 2026-10-29
 - **Decide sobre:** acotar la espera del camino de escritura sobre el reader gate compartido mientras la compactación mantiene la exclusión, con error estable reintentable; los lectores comunes no cambian.
 

@@ -28,6 +28,7 @@ from .export_io import ExportIOError, normalize_and_sync_tree, rename_noreplace,
 from .export_restore import _allowed, _files
 from .identity import identity_lock, mutation_preflight, read_binding
 from .reader_gate import ReaderGateError, exclusive_reader_gate
+from .store_locks import WRITE_LOCK_DEADLINE_SECONDS as _GATE_TIMEOUT
 from .relocation_receipts import _read_regular, write_relocation_receipt
 from .storage_primitives import atomic_write, fsync_directory
 from .store_errors import StoreError
@@ -61,7 +62,8 @@ _CORE_KEYS = frozenset({
 # runs, as with a killed process.
 _fault: Callable[[str], None] | None = None
 # Wait for local readers before deleting the origin (reader-gate budget).
-_GATE_TIMEOUT = 10.0
+# ADR-0059: presupuesto único — _GATE_TIMEOUT es WRITE_LOCK_DEADLINE_SECONDS
+# (import en cabecera).
 
 
 class RelocateError(StoreError):

@@ -22,6 +22,7 @@ from .evaluation_v2 import (
     external_corpus,
 )
 from .retrieval import TOKEN
+from .reader_gate import shared_reader_gate
 from .store import MemoryStore
 
 
@@ -282,8 +283,10 @@ def evaluate_strategy(
     checked_queries = _validate_queries_v2(queries)
     checked_budgets = _integer_list(budgets, "invalid_evaluation_budget")
     checked_k = _integer_list(k_values, "invalid_evaluation_k")
-    revision = store.read_current()
-    snapshot = store.snapshot(revision)
+    # ADR-0060: par read_current+snapshot coherente bajo un solo gate.
+    with shared_reader_gate(store):
+        revision = store.read_current()
+        snapshot = store.snapshot(revision)
     corpus_value = (
         external_corpus(snapshot, checked_queries)
         if corpus is None
@@ -305,8 +308,10 @@ def evaluate_all_strategies(
     checked_queries = _validate_queries_v2(queries)
     checked_budgets = _integer_list(budgets, "invalid_evaluation_budget")
     checked_k = _integer_list(k_values, "invalid_evaluation_k")
-    revision = store.read_current()
-    snapshot = store.snapshot(revision)
+    # ADR-0060: par read_current+snapshot coherente bajo un solo gate.
+    with shared_reader_gate(store):
+        revision = store.read_current()
+        snapshot = store.snapshot(revision)
     corpus_value = (
         external_corpus(snapshot, checked_queries)
         if corpus is None

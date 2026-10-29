@@ -302,6 +302,11 @@ plataformas (issue #111/P2):
   directorio (`.write.lock-dir`) con `mkdir` atómico: el segundo writer
   falla de inmediato con el mismo código.
 - El archivo del lock vive en `.an-kla/memory/.write.lock`.
+- **ADR-0059**: la misma constante acota la espera del **gate compartido**
+  en el camino de escritura (p. ej. `plan-write` mientras `compact commit`
+  excluye lectores); al vencer, el CLI termina con
+  `an-kla error: writer_gate_busy`, reintentable igual que
+  `write_lock_busy`.
 
 Contrato del agente ante un lock ocupado o un commit que no retorna: no
 fuerces, no borres `.an-kla/memory/.write.lock` ni reinicies el store.

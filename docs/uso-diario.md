@@ -222,6 +222,17 @@ contenido de `context-package/v1`. Consulta la
 
 ### Recuperación y escritura
 
+Al escribir, dos esperas comparten el mismo presupuesto (la constante única
+`WRITE_LOCK_DEADLINE_SECONDS`, 10 s) y fallan reintentables con
+`an-kla error: write_lock_busy` (lock de escritura ocupado) o
+`an-kla error: writer_gate_busy` (ADR-0059: el escritor esperó el gate
+compartido mientras `compact commit` lo excluye). Ante cualquiera de las
+dos: relee `status`, reconstruye proposal/authority sobre la revisión nueva
+y reintenta; los planes no se reutilizan. La planificación (`plan-write`,
+`refute plan`) y el commit comparten el trato; una compactación concurrente
+no produce errores de integridad en la planificación (ADR-0060: el par
+`read_current`+`snapshot` es coherente bajo el gate).
+
 ```bash
 .venv/bin/python -m an_kla --project-root . status
 .venv/bin/python -m an_kla --project-root . verify

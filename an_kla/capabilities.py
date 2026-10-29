@@ -259,6 +259,10 @@ def capabilities() -> dict[str, Any]:
                 "plan_supersede_target_missing",
                 "plan_supersede_target_not_vigente",
             ],
+            "lock_error_codes": {
+                "write_lock_busy": "lock de escritura ocupado al vencer WRITE_LOCK_DEADLINE_SECONDS",
+                "writer_gate_busy": "gate compartido ocupado al vencer el mismo deadline (ADR-0059: escritor esperando LOCK_SH durante compact commit); reintentable igual que write_lock_busy",
+            },
             "attest": {
                 "profile": "attest/v1",
                 "decision": "ADR-0046",
