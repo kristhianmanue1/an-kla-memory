@@ -1,0 +1,13 @@
+{
+  "base": "888504c",
+  "files": {
+    "identity.py": "c204d691fafef19208d6b90b7f272c2114db4b0d08a89f2e8cb24a33eb089601",
+    "identity_evidence.py": "6a4ebeac28f8c7d1e9217fe985254cc8bc7d22684022002b1b3d68ac92ab0090",
+    "revision_walk.py": "ee5a58c3511db1a6483116d36de1b4e7c96426759fef077f7dd1e185a2a4a330",
+    "store.py": "45a2f1137a58305ea07e360941326c8a87e9f9b415003705e2636072e53dc0da",
+    "transactions.py": "2502a2c5a0618fe2b73f92523b1c8730b863065e2e7482399f4b6b6634eb41cf",
+    "write_commit.py": "55d19c91268f75b0f77a46d3a11158747a63f233214ab7e426321c0a01f42cc9",
+    "checkpoints.py": "fdf5736ec01beea62d0b75e5f53ef48d1f4c054bd4becab57ebe0e374bcf4b0b",
+    "refutations.py": "9d96f324f1aa675e4db9ef01551f24e0b6d9d1c0e27ba83560efeb0f2ab30600"
+  }
+}

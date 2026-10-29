@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 import time
 import uuid
-from typing import Any, Iterator, Mapping
+from typing import Any, Iterator, Mapping, NamedTuple
 
 from .canonical import bare_digest, canonical_json, digest_bytes, digest_json
 from .identity_evidence import (
@@ -27,6 +27,7 @@ from .relocation_receipts import (
 from .storage_primitives import atomic_write, fsync_directory, write_immutable
 from .transaction_attempts import is_canonical_uuid
 from .version import VERSION
+from .revision_walk import _LineageSummary, _OperationContext
 
 
 PROJECT_SCHEMA = "an-kla/project-identity-v1"
@@ -650,8 +651,8 @@ def _completed_adoption_matches(store: Any, parent: str) -> bool:
     )
 
 
-def mutation_preflight(store: Any) -> dict[str, Any]:
-    status = identity_status(store)["identity_status"]
+def _preflight_binding(store: Any, context: _OperationContext | None = None) -> dict[str, Any]:
+    status = _identity_status(store, _context=context)["identity_status"]
     if status == "legacy_unadopted":
         raise IdentityError("legacy_store_identity_adoption_required")
     if status != "complete":
@@ -661,7 +662,27 @@ def mutation_preflight(store: Any) -> dict[str, Any]:
     return binding
 
 
+class _Preflight(NamedTuple):
+    binding: dict[str, Any]
+    context: _OperationContext
+
+
+def _mutation_preflight_with_context(store: Any) -> _Preflight:
+    context = _OperationContext()
+    return _Preflight(_preflight_binding(store, context), context)
+
+
+def mutation_preflight(store: Any) -> dict[str, Any]:
+    return _preflight_binding(store)
+
+
 def identity_status(store: Any, include_ids: bool = False) -> dict[str, Any]:
+    return _identity_status(store, include_ids)
+
+
+def _identity_status(
+    store: Any, include_ids: bool = False, *, _context: _OperationContext | None = None,
+) -> dict[str, Any]:
     paths = _paths(store)
     current_exists = store.current_path.exists()
     project_exists = paths["project"].exists()
@@ -683,8 +704,15 @@ def identity_status(store: Any, include_ids: bool = False) -> dict[str, Any]:
             binding = read_binding(store)
             intent = _read_intent(store)
             current = store.read_current() if current_exists else None
+            lineage = None
+            if current is not None:
+                identity_digest = digest_json(intent["store_identity"]) if intent else binding["store_identity"]
+                try:
+                    lineage = _LineageSummary(store, current, identity_digest, context=_context)
+                except Exception as exc:
+                    raise IdentityError("store_identity_lineage_mismatch") from exc
             receipt = (
-                valid_identity_receipt(store, intent, current)
+                valid_identity_receipt(store, intent, current, _lineage=lineage)
                 if current is not None and intent is not None
                 else None
             )
@@ -701,40 +729,15 @@ def identity_status(store: Any, include_ids: bool = False) -> dict[str, Any]:
                 if linked != binding["store_identity"] and not adopted_legacy_current:
                     raise IdentityError("store_identity_lineage_mismatch")
                 compacted_identity = False
-                if (
-                    linked == binding["store_identity"]
-                    and current_manifest.get("schema") == "an-kla/revision-v3"
+                if linked == binding["store_identity"] and (
+                    current_manifest.get("schema") == "an-kla/revision-v3"
+                    or (lineage is not None and lineage.root_schema == "an-kla/revision-v3")
                 ):
                     try:
-                        from .revision_validation import (
-                            validate_manifest, validate_revision_chain,
-                        )
-
+                        from .revision_validation import validate_manifest, validate_revision_chain
                         validate_manifest(current_manifest, IdentityError)
-                        validate_revision_chain(
-                            store, current, current_manifest, IdentityError
-                        )
+                        validate_revision_chain(store, current, current_manifest, IdentityError)
                         compacted_identity = True
-                    except Exception as exc:
-                        raise IdentityError("store_identity_lineage_mismatch") from exc
-                elif linked == binding["store_identity"]:
-                    # A v3 descendant reaches its root through the normal chain.
-                    try:
-                        cursor_manifest = current_manifest
-                        cursor = current
-                        while cursor_manifest.get("parent") is not None:
-                            cursor = str(cursor_manifest["parent"])
-                            cursor_manifest = store._read_json_object("revisions", cursor)
-                        if cursor_manifest.get("schema") == "an-kla/revision-v3":
-                            from .revision_validation import (
-                                validate_manifest, validate_revision_chain,
-                            )
-
-                            validate_manifest(current_manifest, IdentityError)
-                            validate_revision_chain(
-                                store, current, current_manifest, IdentityError
-                            )
-                            compacted_identity = True
                     except Exception as exc:
                         raise IdentityError("store_identity_lineage_mismatch") from exc
             else:

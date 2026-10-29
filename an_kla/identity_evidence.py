@@ -8,6 +8,7 @@ from typing import Any, Mapping
 
 from .canonical import canonical_json, digest_bytes, digest_json
 from .storage_primitives import fsync_directory, sync_protected, write_immutable
+from .revision_walk import _LineageSummary, walk_revisions
 
 
 RECEIPT_SCHEMA = "an-kla/identity-durability-receipt-v1"
@@ -65,66 +66,33 @@ def _read_canonical(path: Path) -> tuple[dict[str, Any], bytes]:
 
 
 def _is_ancestor(store: Any, candidate: str, current: str) -> bool:
-    cursor = current
-    seen: set[str] = set()
-    for _ in range(10000):
-        if cursor == candidate:
-            return True
-        if cursor in seen:
-            return False
-        seen.add(cursor)
-        try:
-            parent = store._read_json_object("revisions", cursor).get("parent")
-        except Exception:
-            return False
-        if not isinstance(parent, str):
-            return False
-        cursor = parent
-    return False
+    try:
+        return any(identifier == candidate for identifier, _ in walk_revisions(store, current))
+    except Exception:
+        return False
 
 
 def validate_bound_descendants(
-    store: Any,
-    current: str,
-    captured: str,
-    identity_digest: str,
-    *,
-    allow_captured_legacy: bool = False,
+    store: Any, current: str, captured: str, identity_digest: str,
+    *, allow_captured_legacy: bool = False,
 ) -> None:
-    cursor = current
-    seen: set[str] = set()
-    for _ in range(10000):
-        if cursor == captured:
-            try:
-                manifest = store._read_json_object("revisions", captured)
-            except Exception as exc:
-                raise IdentityEvidenceError(
-                    "store_identity_lineage_mismatch"
-                ) from exc
-            if (
-                not allow_captured_legacy
-                and manifest.get("store_identity") != identity_digest
-            ):
-                raise IdentityEvidenceError("store_identity_lineage_mismatch")
-            return
-        if cursor in seen:
-            break
-        seen.add(cursor)
-        try:
-            manifest = store._read_json_object("revisions", cursor)
-        except Exception:
-            break
-        if manifest.get("store_identity") != identity_digest:
-            break
-        parent = manifest.get("parent")
-        if not isinstance(parent, str):
-            break
-        cursor = parent
+    try:
+        for identifier, manifest in walk_revisions(store, current):
+            linked = manifest.get("store_identity")
+            if identifier == captured:
+                if linked == identity_digest or (allow_captured_legacy and linked is None):
+                    return
+                break
+            if linked != identity_digest:
+                break
+    except Exception as exc:
+        raise IdentityEvidenceError("store_identity_lineage_mismatch") from exc
     raise IdentityEvidenceError("store_identity_lineage_mismatch")
 
 
 def valid_identity_receipt(
-    store: Any, intent: Mapping[str, Any], current: str
+    store: Any, intent: Mapping[str, Any], current: str,
+    *, _lineage: _LineageSummary | None = None,
 ) -> str | None:
     identity_digest = digest_json(intent["store_identity"])
     required = {
@@ -138,7 +106,7 @@ def valid_identity_receipt(
         + ".json",
         ".an-kla/memory/refs/CURRENT",
     }
-    matches: list[str] = []
+    prepared: list[tuple[str, str]] = []
     for path in sorted(_receipts(store).glob("*.json")):
         try:
             _reject_symlink(path, store.custody_walk_root)
@@ -157,20 +125,10 @@ def valid_identity_receipt(
             ):
                 continue
             receipt_current = value["current_observed"]
-            if not isinstance(receipt_current, str) or not _is_ancestor(
-                store, receipt_current, current
-            ):
+            if not isinstance(receipt_current, str):
                 continue
-            validate_bound_descendants(
-                store,
-                current,
-                receipt_current,
-                identity_digest,
-                allow_captured_legacy=(
-                    intent["operation"] == "adopt"
-                    and receipt_current == intent["current_observed"]
-                ),
-            )
+            from .canonical import bare_digest
+            bare_digest(receipt_current)
             files: set[str] = set()
             directories: set[str] = set()
             normalized: list[tuple[str, str]] = []
@@ -192,9 +150,7 @@ def valid_identity_receipt(
                 if item["operation"] == "file_fsync":
                     if relative == ".an-kla/memory/refs/CURRENT":
                         expected = digest_bytes((receipt_current + "\n").encode("ascii"))
-                        if item["content_sha256"] != expected or not _is_ancestor(
-                            store, receipt_current, store.read_current()
-                        ):
+                        if item["content_sha256"] != expected:
                             raise IdentityEvidenceError("identity_receipt_invalid")
                     elif digest_bytes(target.read_bytes()) != item["content_sha256"]:
                         raise IdentityEvidenceError("identity_receipt_invalid")
@@ -212,7 +168,29 @@ def valid_identity_receipt(
                 continue
             if any(item.rsplit("/", 1)[0] not in directories for item in files):
                 continue
-            matches.append(identifier)
+            prepared.append((identifier, receipt_current))
+        except Exception:
+            continue
+    if not prepared:
+        return None
+    try:
+        lineage = _lineage
+        if lineage is None or lineage.current != current or lineage.identity != identity_digest:
+            lineage = _LineageSummary(store, current, identity_digest)
+    except Exception:
+        return None
+    matches: list[str] = []
+    for identifier, captured in prepared:
+        allow_legacy = intent["operation"] == "adopt" and captured == intent["current_observed"]
+        if not lineage.bound(captured, allow_legacy=allow_legacy):
+            continue
+        # Observe protected CURRENT again, as before. A changed head requires
+        # independent ancestry evidence; the old summary cannot certify it.
+        try:
+            latest = store.read_current()
+            ancestor = lineage.contains(captured) if latest == current else _is_ancestor(store, captured, latest)
+            if ancestor:
+                matches.append(identifier)
         except Exception:
             continue
     return matches[-1] if matches else None

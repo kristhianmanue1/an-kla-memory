@@ -13,6 +13,7 @@ from .audit_validation import observed_log_complete
 from .receipt_validation import validate_receipt_evidence
 from .revision_builder import build_child_manifest
 from .storage_primitives import storage_error, sync_protected
+from .revision_walk import _OperationContext, walk_revisions, RevisionWalkError
 from .transaction_attempts import (
     ATTEMPT_SCHEMA,
     TransactionError,
@@ -183,7 +184,9 @@ def _journal(store: Any, txid: str) -> Mapping[str, Any] | None:
     return value if isinstance(value, dict) else {"corrupt": True}
 
 
-def _manifest_candidates(store: Any, txid: str) -> list[str]:
+def _manifest_candidates(
+    store: Any, txid: str, *, _context: _OperationContext | None = None,
+) -> list[str]:
     result: list[str] = []
     directory = store.root / "revisions" / "sha256"
     for path in sorted(directory.glob("*.json")):
@@ -192,18 +195,21 @@ def _manifest_candidates(store: Any, txid: str) -> list[str]:
             identifier = "sha256:" + path.stem
             if digest_bytes(payload) != identifier:
                 continue
-            value = json.loads(payload)
-            if canonical_json(value) != payload:
-                continue
+            projection = _context._candidate(identifier) if type(_context) is _OperationContext else None
+            if projection is None:
+                value = json.loads(payload)
+                if canonical_json(value) != payload:
+                    continue
+                if not isinstance(value, dict):
+                    continue
+                schema, candidate_txid = value.get("schema"), value.get("transaction_id")
+            else:
+                schema, candidate_txid = projection
         except (OSError, json.JSONDecodeError, UnicodeDecodeError):
             continue
-        if (
-            isinstance(value, dict)
-            and value.get("schema") in {
-                "an-kla/revision-v1", "an-kla/revision-v2", "an-kla/revision-v3"
-            }
-            and value.get("transaction_id") == txid
-        ):
+        if schema in {
+            "an-kla/revision-v1", "an-kla/revision-v2", "an-kla/revision-v3"
+        } and candidate_txid == txid:
             result.append(identifier)
     return result
 
@@ -282,25 +288,25 @@ def _valid_receipt(
 def candidate_relation(store: Any, candidate: str | None, current: str | None) -> str:
     if candidate is None or current is None:
         return "unknown"
-    cursor = current
-    seen: set[str] = set()
-    for _ in range(10000):
-        if cursor == candidate:
-            return "current" if cursor == current else "ancestor"
-        if cursor in seen:
+    if candidate == current:
+        return "current"
+    try:
+        from .revision_validation import validate_manifest, validate_revision_chain
+        head = store._read_json_object("revisions", current)
+        validate_manifest(head, RevisionWalkError)
+        # Historical membership is not an integrity shortcut: audit the
+        # complete chain, including the v3 root proof, before classification.
+        validate_revision_chain(store, current, head, RevisionWalkError)
+        found = False
+        root_schema = None
+        for identifier, manifest in walk_revisions(store, current):
+            found = found or identifier == candidate
+            root_schema = manifest["schema"]
+        if head["schema"] == "an-kla/revision-v3" and root_schema != "an-kla/revision-v3":
             return "unknown"
-        seen.add(cursor)
-        try:
-            manifest = store._read_json_object("revisions", cursor)
-        except Exception:
-            return "unknown"
-        parent = manifest.get("parent")
-        if parent is None:
-            return "orphan"
-        if not isinstance(parent, str):
-            return "unknown"
-        cursor = parent
-    return "unknown"
+        return "ancestor" if found else "orphan"
+    except Exception:
+        return "unknown"
 
 
 def inspect_transaction(store: Any, transaction_id: str) -> dict[str, Any]:
@@ -467,6 +473,7 @@ def commit_locked(
     supersedes: list[dict[str, str]] | None = None,
     refute_objects: Mapping[str, Any] | None = None,
     store_identity: str | None = None,
+    _context: _OperationContext | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """Write/reconcile one candidate while the caller owns the store lock."""
 
@@ -480,7 +487,7 @@ def commit_locked(
         raise TransactionError("invalid_refute_objects")
     txid = checked["transaction_id"]
     existing = _journal(store, txid)
-    candidates = _manifest_candidates(store, txid)
+    candidates = _manifest_candidates(store, txid, _context=_context)
     if len(candidates) > 1:
         raise TransactionError("transaction_candidate_ambiguous")
     evidence_attempts = _stage_attempts(store, txid)

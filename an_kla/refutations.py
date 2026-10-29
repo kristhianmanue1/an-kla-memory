@@ -6,7 +6,7 @@ from copy import deepcopy
 from typing import Any, Mapping
 
 from .canonical import digest_json
-from .identity import assert_unchanged, mutation_preflight
+from .identity import assert_unchanged, _mutation_preflight_with_context
 from .refute_contracts import (
     RefutePolicyError,
     digest,
@@ -261,7 +261,8 @@ def commit_refute(
         )
         if decision["decision"] == "refute" else None
     )
-    binding = mutation_preflight(store)
+    preflight = _mutation_preflight_with_context(store)
+    binding = preflight.binding
     with store.write_lock() as lock_result:
         observed = store.read_current()
         identity_digest = assert_unchanged(store, binding, observed)
@@ -333,6 +334,7 @@ def commit_refute(
                 "refutation": refutation,
             },
             store_identity=identity_digest,
+            _context=preflight.context,
         )
     if lock_result.release_error is not None:
         outcome = deepcopy(outcome)
