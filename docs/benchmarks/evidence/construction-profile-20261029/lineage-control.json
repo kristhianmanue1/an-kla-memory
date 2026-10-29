@@ -1,0 +1,20 @@
+{
+  "method": "synthetic in-memory ancestry, no disk store; positive 9999 vs negative 10000/20000",
+  "results": [
+    {
+      "edges": 9999,
+      "ancestor": true,
+      "bound_descendants": "accepted"
+    },
+    {
+      "edges": 10000,
+      "ancestor": false,
+      "bound_descendants": "store_identity_lineage_mismatch"
+    },
+    {
+      "edges": 20000,
+      "ancestor": false,
+      "bound_descendants": "store_identity_lineage_mismatch"
+    }
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "name": "plain",
+  "profiled_commits": false,
+  "budget_s": 90,
+  "target_revisions": 20000,
+  "completed_commits_acknowledged": 566,
+  "stop_reason": "hard_wall_deadline",
+  "wall_s": 90.00308366699755,
+  "rows": [
+    {
+      "completed_commits": 100,
+      "revision_number": 100,
+      "elapsed_s": 1.9317803750018356,
+      "block_commit_mean_s": 0.01913915710989386,
+      "block_commit_median_s": 0.01910939600202255,
+      "snapshot_samples_s": [
+        0.0037779170015710406,
+        0.0035475000040605664,
+        0.0035394170045037754,
+        0.003478624996205326,
+        0.003472166004939936
+      ],
+      "snapshot_median_s": 0.0035394170045037754
+    },
+    {
+      "completed_commits": 200,
+      "revision_number": 200,
+      "elapsed_s": 7.732258333999198,
+      "block_commit_mean_s": 0.057656145830042076,
+      "block_commit_median_s": 0.057155854497978,
+      "snapshot_samples_s": [
+        0.0073149590025423095,
+        0.0068488339966279455,
+        0.006907791997946333,
+        0.006742582998413127,
+        0.00674004200118361
+      ],
+      "snapshot_median_s": 0.0068488339966279455
+    },
+    {
+      "completed_commits": 300,
+      "revision_number": 300,
+      "elapsed_s": 19.4445932919989,
+      "block_commit_mean_s": 0.11659917962031613,
+      "block_commit_median_s": 0.10932268699980341,
+      "snapshot_samples_s": [
+        0.010710374997870531,
+        0.010344374997657724,
+        0.010739749995991588,
+        0.010214333000476472,
+        0.010167832995648496
+      ],
+      "snapshot_median_s": 0.010344374997657724
+    },
+    {
+      "completed_commits": 400,
+      "revision_number": 400,
+      "elapsed_s": 38.386141916998895,
+      "block_commit_mean_s": 0.1886409700396325,
+      "block_commit_median_s": 0.18456377050097217,
+      "snapshot_samples_s": [
+        0.014385624999704305,
+        0.015106833998288494,
+        0.015884041000390425,
+        0.017020916995534208,
+        0.014635708001151215
+      ],
+      "snapshot_median_s": 0.015106833998288494
+    },
+    {
+      "completed_commits": 500,
+      "revision_number": 500,
+      "elapsed_s": 66.11068637500284,
+      "block_commit_mean_s": 0.2763743245801743,
+      "block_commit_median_s": 0.27585741649818374,
+      "snapshot_samples_s": [
+        0.017460750001191627,
+        0.01719545900414232,
+        0.01709095800470095,
+        0.01732237500254996,
+        0.017564499998115934
+      ],
+      "snapshot_median_s": 0.01732237500254996
+    }
+  ],
+  "python": "3.12.12 (main, Oct  9 2025, 11:07:00) [Clang 17.0.0 (clang-1700.4.4.1)]",
+  "platform": "macOS-27.2-arm64-arm-64bit",
+  "interrupted_commit_may_have_effects": true
+}

@@ -1,0 +1,96 @@
+         159212205 function calls (159049705 primitive calls) in 89.734 seconds
+
+   Ordered by: cumulative time
+   List reduced from 252 to 50 due to restriction <50>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+      507    0.001    0.000   89.727    0.177 core.py:163(internal_commit)
+      507    0.005    0.000   89.726    0.177 store.py:359(commit)
+      507    0.005    0.000   63.222    0.125 identity.py:653(mutation_preflight)
+      507    0.218    0.000   62.911    0.124 identity.py:664(identity_status)
+   516129    0.841    0.000   60.990    0.000 store.py:594(_read_json_object)
+      507    0.036    0.000   47.093    0.093 identity_evidence.py:126(valid_identity_receipt)
+     1013    0.451    0.000   30.928    0.031 identity_evidence.py:67(_is_ancestor)
+   661611    0.320    0.000   26.637    0.000 canonical.py:10(canonical_json)
+   661611    0.519    0.000   26.021    0.000 __init__.py:183(dumps)
+      506    0.018    0.000   25.712    0.051 store.py:486(_commit_locked)
+      506    0.021    0.000   25.667    0.051 transactions.py:459(commit_locked)
+   661611    0.458    0.000   25.385    0.000 encoder.py:183(encode)
+   661611   24.727    0.000   24.727    0.000 encoder.py:205(iterencode)
+   783807    0.483    0.000   23.001    0.000 pathlib.py:1015(read_bytes)
+   786844    0.175    0.000   19.447    0.000 pathlib.py:1005(open)
+   787856   11.975    0.000   19.276    0.000 {built-in method _io.open}
+      507    0.258    0.001   15.433    0.030 identity_evidence.py:86(validate_bound_descendants)
+   776722    0.600    0.000   13.549    0.000 __init__.py:299(loads)
+      506    0.431    0.001   13.116    0.026 transactions.py:186(_manifest_candidates)
+   776722    0.671    0.000   11.599    0.000 decoder.py:333(decode)
+   776722   10.426    0.000   10.426    0.000 decoder.py:344(raw_decode)
+   520684    0.389    0.000    9.198    0.000 store.py:585(_path_for)
+      506    0.002    0.000    8.957    0.018 store.py:268(snapshot)
+      506    0.151    0.000    8.873    0.018 store.py:278(_snapshot_under_gate)
+   916909    0.258    0.000    7.649    0.000 pathlib.py:447(__fspath__)
+  1302540    0.776    0.000    7.507    0.000 pathlib.py:437(__str__)
+   127765    0.283    0.000    7.407    0.000 store.py:617(_read_segment)
+   927763    0.505    0.000    7.324    0.000 canonical.py:48(bare_digest)
+   942943    3.073    0.000    6.690    0.000 {built-in method builtins.any}
+   915408    0.387    0.000    6.401    0.000 pathlib.py:551(drive)
+  2143478    0.426    0.000    6.225    0.000 pathlib.py:719(__truediv__)
+   697036    0.515    0.000    6.013    0.000 pathlib.py:407(_load_parts)
+  2154610    0.680    0.000    5.846    0.000 pathlib.py:711(joinpath)
+  2419049    1.032    0.000    5.655    0.000 pathlib.py:380(with_segments)
+   791906    0.325    0.000    4.149    0.000 canonical.py:40(digest_bytes)
+  2430687    0.816    0.000    3.931    0.000 pathlib.py:1157(__init__)
+ 60304595    3.573    0.000    3.573    0.000 canonical.py:52(<genexpr>)
+   791906    3.561    0.000    3.561    0.000 {built-in method _hashlib.openssl_sha256}
+  2430687    1.891    0.000    3.115    0.000 pathlib.py:358(__init__)
+   698555    1.574    0.000    2.938    0.000 pathlib.py:387(_parse_path)
+   703108    1.418    0.000    2.474    0.000 <frozen posixpath>:71(join)
+   785325    2.415    0.000    2.415    0.000 {method 'read' of '_io.BufferedReader' objects}
+     1012    0.002    0.000    1.998    0.002 store.py:686(_validate_manifest)
+     1012    0.052    0.000    1.995    0.002 revision_validation.py:15(validate_manifest)
+     3543    0.081    0.000    1.332    0.000 {built-in method builtins.sorted}
+     3542    0.004    0.000    1.015    0.000 store.py:656(_atomic_write)
+13125964/13123942    1.010    0.000    1.013    0.000 {built-in method builtins.isinstance}
+     3542    0.021    0.000    1.011    0.000 storage_primitives.py:81(atomic_write)
+     2530    0.004    0.000    0.819    0.000 store.py:633(_write_transaction)
+  6337814    0.810    0.000    0.810    0.000 {built-in method sys.intern}
+
+
+         159212205 function calls (159049705 primitive calls) in 89.734 seconds
+
+   Ordered by: internal time
+   List reduced from 252 to 30 due to restriction <30>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+   661611   24.727    0.000   24.727    0.000 encoder.py:205(iterencode)
+   787856   11.975    0.000   19.276    0.000 {built-in method _io.open}
+   776722   10.426    0.000   10.426    0.000 decoder.py:344(raw_decode)
+ 60304595    3.573    0.000    3.573    0.000 canonical.py:52(<genexpr>)
+   791906    3.561    0.000    3.561    0.000 {built-in method _hashlib.openssl_sha256}
+   942943    3.073    0.000    6.690    0.000 {built-in method builtins.any}
+   785325    2.415    0.000    2.415    0.000 {method 'read' of '_io.BufferedReader' objects}
+  2430687    1.891    0.000    3.115    0.000 pathlib.py:358(__init__)
+   698555    1.574    0.000    2.938    0.000 pathlib.py:387(_parse_path)
+   703108    1.418    0.000    2.474    0.000 <frozen posixpath>:71(join)
+  2419049    1.032    0.000    5.655    0.000 pathlib.py:380(with_segments)
+13125964/13123942    1.010    0.000    1.013    0.000 {built-in method builtins.isinstance}
+   516129    0.841    0.000   60.990    0.000 store.py:594(_read_json_object)
+  2430687    0.816    0.000    3.931    0.000 pathlib.py:1157(__init__)
+  6337814    0.810    0.000    0.810    0.000 {built-in method sys.intern}
+  1302540    0.776    0.000    7.507    0.000 pathlib.py:437(__str__)
+   786843    0.756    0.000    0.756    0.000 {method '__exit__' of '_io._IOBase' objects}
+  2154610    0.680    0.000    5.846    0.000 pathlib.py:711(joinpath)
+   776722    0.671    0.000   11.599    0.000 decoder.py:333(decode)
+   776722    0.600    0.000   13.549    0.000 __init__.py:299(loads)
+    21758    0.589    0.000    0.677    0.000 {built-in method posix.open}
+  4608232    0.584    0.000    0.584    0.000 {method 'startswith' of 'str' objects}
+   779253    0.536    0.000    0.536    0.000 {method 'decode' of 'bytes' objects}
+   661611    0.519    0.000   26.021    0.000 __init__.py:183(dumps)
+   697036    0.515    0.000    6.013    0.000 pathlib.py:407(_load_parts)
+   927763    0.505    0.000    7.324    0.000 canonical.py:48(bare_digest)
+   783807    0.483    0.000   23.001    0.000 pathlib.py:1015(read_bytes)
+   661611    0.458    0.000   25.385    0.000 encoder.py:183(encode)
+     1013    0.451    0.000   30.928    0.031 identity_evidence.py:67(_is_ancestor)
+      506    0.431    0.001   13.116    0.026 transactions.py:186(_manifest_candidates)
+
+

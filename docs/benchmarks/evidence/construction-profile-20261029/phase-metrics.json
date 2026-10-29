@@ -1,0 +1,50 @@
+{
+  "total_profile_s": 89.73360321800003,
+  "functions": {
+    "/Users/krisnova/www/an-kla-memory/an_kla/store.py:268:snapshot": {
+      "calls": 506,
+      "self_s": 0.0017966820000000002,
+      "cumulative_s": 8.957453048000001
+    },
+    "~:0:<built-in method posix.fsync>": {
+      "calls": 20240,
+      "self_s": 0.27258058,
+      "cumulative_s": 0.27258058
+    },
+    "/Users/krisnova/www/an-kla-memory/an_kla/identity.py:653:mutation_preflight": {
+      "calls": 507,
+      "self_s": 0.005177605,
+      "cumulative_s": 63.221803951000005
+    },
+    "/Users/krisnova/www/an-kla-memory/an_kla/storage_primitives.py:81:atomic_write": {
+      "calls": 3542,
+      "self_s": 0.020957676,
+      "cumulative_s": 1.0111902590000001
+    },
+    "/Users/krisnova/www/an-kla-memory/an_kla/store.py:617:_read_segment": {
+      "calls": 127765,
+      "self_s": 0.28337149100000003,
+      "cumulative_s": 7.407069922000001
+    },
+    "/Users/krisnova/www/an-kla-memory/an_kla/transactions.py:186:_manifest_candidates": {
+      "calls": 506,
+      "self_s": 0.430710908,
+      "cumulative_s": 13.115759553
+    },
+    "/Users/krisnova/www/an-kla-memory/an_kla/identity.py:664:identity_status": {
+      "calls": 507,
+      "self_s": 0.21785553400000002,
+      "cumulative_s": 62.911034034000004
+    },
+    "/Users/krisnova/www/an-kla-memory/an_kla/storage_primitives.py:153:write_immutable": {
+      "calls": 3542,
+      "self_s": 0.013785706,
+      "cumulative_s": 0.7304631030000001
+    },
+    "/Users/krisnova/www/an-kla-memory/an_kla/revision_validation.py:195:validate_revision_chain": {
+      "calls": 506,
+      "self_s": 0.0014764440000000002,
+      "cumulative_s": 0.005230361
+    }
+  }
+}
