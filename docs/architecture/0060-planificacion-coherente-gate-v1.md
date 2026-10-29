@@ -1,6 +1,7 @@
 # ADR-0060: Planificación coherente bajo un solo gate (elimina el TOCTOU de `plan_write` con compactación)
 
-- **Estado:** Propuesta
+- **Estado:** Aceptada (implementada)
+- **Implementación:** Implementada (`store::plan_write`, `refutations::plan_refute` y `evaluation_strategies` bajo un solo gate; commit CAS sin cambios)
 - **Fecha:** 2026-10-29
 - **Decide sobre:** eliminar la carrera de `plan_write` con la compactación sosteniendo el par `read_current` + `snapshot` bajo una sola adquisición del reader gate; el CAS benigno del commit queda como única señal que necesita el caller.
 

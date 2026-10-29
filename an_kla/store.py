@@ -36,7 +36,7 @@ from .identity import (
 from .initialization import existing_initialization
 from .storage_primitives import atomic_write, fsync_directory, write_immutable
 from .refute_store_mixin import RefuteStoreMixin
-from .reader_gate import shared_reader_gate
+from .reader_gate import shared_reader_gate, shared_reader_gate_bounded
 from .record_text import record_text
 from .plan_guard import guard_plan_against_snapshot
 from .store_errors import (
@@ -399,21 +399,38 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         self._maybe_reindex(observed, candidate)
         return candidate
 
+    def writer_gate(self) -> Iterator[None]:
+        """ADR-0059: gate compartido acotado para el camino de escritura.
+
+        Espera ``LOCK_SH`` con la constante única
+        ``WRITE_LOCK_DEADLINE_SECONDS``; al vencer levanta
+        ``LockBusyError("writer_gate_busy")`` (reintentable).
+        """
+
+        return shared_reader_gate_bounded(self)
+
     def plan_write(
         self,
         proposal: Mapping[str, Any],
         authority: Mapping[str, Any],
     ) -> dict[str, Any]:
-        """Build a policy decision and exact plan without mutating the store."""
+        """Build a policy decision and exact plan without mutating the store.
 
-        observed = self.read_current()
-        decision = evaluate_write(proposal, authority)
-        if proposal["base_revision"] != observed:
-            raise WritePolicyError("write_plan_base_changed")
-        if decision["decision"] != "skip":
-            # Issue #103 (H1): fail-closed temprano (TOCTOU cerrado en commit).
-            guard_plan_against_snapshot(self.snapshot(observed).records, proposal)
-        plan = build_write_plan(proposal, authority, decision)
+        ADR-0060: el par ``read_current``+``snapshot`` es coherente bajo
+        una sola adquisición del gate (acotada por ADR-0059).
+        """
+
+        with self.writer_gate():
+            observed = self.read_current()
+            decision = evaluate_write(proposal, authority)
+            if proposal["base_revision"] != observed:
+                raise WritePolicyError("write_plan_base_changed")
+            if decision["decision"] != "skip":
+                # Issue #103 (H1): fail-closed temprano (TOCTOU cerrado en
+                # commit). Bajo el gate sostenido la base no puede ser
+                # archivada a mitad de planificación (ADR-0060).
+                guard_plan_against_snapshot(self.snapshot(observed).records, proposal)
+            plan = build_write_plan(proposal, authority, decision)
         return {
             "schema": "an-kla/write-planning-result-v1",
             "current_revision": observed,

@@ -102,12 +102,15 @@ def plan_refute(
 ) -> dict[str, Any]:
     checked_proposal = validate_proposal(proposal)
     checked_claim = validate_claim(authority_claim)
-    observed = store.read_current()
-    if checked_proposal["base_revision"] != observed:
-        raise RefutePolicyError("refute_plan_base_changed")
-    snapshot = store.snapshot(observed)
-    observations = build_observations(store, snapshot, checked_claim)
-    _resolver_descriptor(store)
+    # ADR-0060: par read_current+snapshot coherente bajo el gate del
+    # escritor (acotado por ADR-0059).
+    with store.writer_gate():
+        observed = store.read_current()
+        if checked_proposal["base_revision"] != observed:
+            raise RefutePolicyError("refute_plan_base_changed")
+        snapshot = store.snapshot(observed)
+        observations = build_observations(store, snapshot, checked_claim)
+        _resolver_descriptor(store)
     decision, attestation = evaluate(
         checked_proposal, checked_claim, observations,
         store.refute_authority_resolver,

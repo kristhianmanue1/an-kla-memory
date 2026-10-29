@@ -23,6 +23,7 @@ from .compaction_projection import project_snapshot
 from .export_restore import _validated, restore_export
 from .identity import assert_unchanged, identity_lock, read_binding
 from .reader_gate import ReaderGateError, exclusive_reader_gate, shared_reader_gate
+from .store_locks import WRITE_LOCK_DEADLINE_SECONDS
 from .store_errors import LockBusyError
 from .receipt_validation import validate_receipt_evidence
 from .revision_validation import validate_manifest
@@ -528,8 +529,8 @@ def commit_compaction(
     # los locks liberados entre intentos: los escritores y la identidad
     # avanzan mientras drenan los lectores, y el gate EX nunca se sostiene
     # mientras se espera un lock (sin deadlocks: export toma identity->gate
-    # SH — F-C3-1). Presupuesto total: 10 s (constante P2).
-    gate_deadline = time.monotonic() + 10.0
+    # SH — F-C3-1). Presupuesto total: la constante única (ADR-0059).
+    gate_deadline = time.monotonic() + WRITE_LOCK_DEADLINE_SECONDS
     while True:
         completed = False
         retry = False
