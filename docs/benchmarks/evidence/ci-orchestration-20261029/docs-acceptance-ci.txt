@@ -1,0 +1,65 @@
+==> [1/7] importabilidad de an_kla
+    OK
+==> [2/7] unittest discover (simulate-ci)
+........................................................................................................................................................................................................................................................................................................s.....................................................................................................usage: python -m unittest export create [-h] --bundle BUNDLE
+                                        [--seal {sealed-export/v1}]
+                                        [--key-adapter KEY_ADAPTER]
+                                        [--key-adapter-arg KEY_ADAPTER_ARG]
+                                        [--key-adapter-env KEY_ADAPTER_ENV]
+python -m unittest export create: error: argument --seal: invalid choice: 'sealed-export/v99' (choose from sealed-export/v1)
+..............sss...........................................................................................................................................................................................................................................................................................................................................................==> ingest-governed
+resultados: /var/folders/q1/k3y040sd0rv9cbxcdskwr_zw0000gp/T/ankla-p0-out-u2evayqe
+==> ingest-batch
+resultados: /var/folders/q1/k3y040sd0rv9cbxcdskwr_zw0000gp/T/ankla-p0-out-_g9zwhfs
+==> reads-diagnostic
+resultados: /var/folders/q1/k3y040sd0rv9cbxcdskwr_zw0000gp/T/ankla-p0-out-ilbd6dl4
+==> concurrency
+resultados: /var/folders/q1/k3y040sd0rv9cbxcdskwr_zw0000gp/T/ankla-p0-out-tl1df6ad
+==> crash
+resultados: /var/folders/q1/k3y040sd0rv9cbxcdskwr_zw0000gp/T/ankla-p0-out-ca8a7t7_
+==> compaction
+.resultados: /var/folders/q1/k3y040sd0rv9cbxcdskwr_zw0000gp/T/ankla-p0-out-ihs6ee_o
+==> ingest-cli
+resultados: /var/folders/q1/k3y040sd0rv9cbxcdskwr_zw0000gp/T/ankla-p0-out-91xhie_j
+==> concurrency-v2
+resultados: /var/folders/q1/k3y040sd0rv9cbxcdskwr_zw0000gp/T/ankla-p0-out-phd9m530
+==> rare-query-index
+resultados: /var/folders/q1/k3y040sd0rv9cbxcdskwr_zw0000gp/T/ankla-p0-out-ij3k2ez7
+==> crash-mid-commit
+resultados: /var/folders/q1/k3y040sd0rv9cbxcdskwr_zw0000gp/T/ankla-p0-out-0aaf4vkg
+==> compaction-large
+................ssssssssssssssssssssssssss...................ssssssssssssssssssssssss.sssss........s.sssssss.........................................................................................ssss.s.....ss....................................................................................resultados: /var/folders/q1/k3y040sd0rv9cbxcdskwr_zw0000gp/T/ankla-p0-out-ht05em6g
+............................................................................................................................verificar_anclaje: refs/ sin archivos: /var/folders/q1/k3y040sd0rv9cbxcdskwr_zw0000gp/T/ankla-anclaje-a7e7jxzz/refs vacío
+..verificar_anclaje: store sin refs/: /var/folders/q1/k3y040sd0rv9cbxcdskwr_zw0000gp/T/ankla-anclaje-a0f6po1v/no-existe
+.........................................................................................................................
+----------------------------------------------------------------------
+Ran 1304 tests in 712.498s
+
+OK (skipped=74)
+    OK
+==> [3/7] selftest G-3 (redteam_consistent_rewrite)
+    OK
+==> [4/7] matriz de intérpretes soportados
+    python3.9: SKIP (intérprete no disponible en PATH)
+    python3.12: OK (python3.12: cubierto por el paso unittest)
+    python3.13: SKIP (intérprete no disponible en PATH)
+==> [5/7] check_sizes
+OK — 643 archivos de texto dentro de límites; estructura y hogares canónicos verificados
+    OK
+==> [6/7] check_plans
+OK — 4 plan(es) verificados (estructura E1-E5)
+    OK
+==> [7/7] check_adr_registry
+check_adr_registry: OK — 62 ADRs (aceptada=57, propuesta=5)
+    OK
+
+Resumen:
+  importabilidad: OK
+  unittest: OK
+  redteam_selftest: OK
+  matriz_interpretes: OK
+  check_sizes: OK
+  check_plans: OK
+  check_adr_registry: OK
+
+ci_local: OK

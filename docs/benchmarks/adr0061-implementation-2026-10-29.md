@@ -117,3 +117,14 @@ observado antes del cambio. No se escribió checkpoint ni memoria.
 
 El CI valida A/B bajo esos perfiles y condiciones; no sustituye la aceptación
 integrada de escala20k pendiente. El paquete conserva su versión: no release.
+
+## Decisión posterior del Operador — 2026-10-29
+
+El Operador pospuso expresamente la prueba integrada de **20.000 revisiones**
+por espacio. Sale del alcance activo; no bloquea el cierre de A/B ni equivale
+a aceptación de esa escala. Se conserva el criterio de 20.000 revisiones,
+sin sustituirlo por lotes de registros ni compactaciones intermedias.
+Retomarla requiere una nueva orden y resolver el presupuesto de disco; no se
+autoriza superar el ceiling vigente. La cota de 14.600.730.000 bytes sólo
+para referencias permanece documentada arriba. Las menciones previas a
+«pendiente» describen el estado al ejecutar el CI, antes de esta decisión.

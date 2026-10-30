@@ -1,0 +1,54 @@
+{
+  "equal_gate_results": true,
+  "executable": "/Users/krisnova/www/an-kla-memory/.venv/bin/python",
+  "observations": {
+    "normal": {
+      "control_child_environment": {
+        "CI": null,
+        "GITHUB_ACTIONS": null
+      },
+      "gates": {
+        "check_adr_registry.py": {
+          "rc": 0,
+          "stderr": "",
+          "stdout": "check_adr_registry: OK — 62 ADRs (aceptada=56, propuesta=6)\n"
+        },
+        "check_plans.py": {
+          "rc": 0,
+          "stderr": "",
+          "stdout": "OK — 4 plan(es) verificados (estructura E1-E5)\n"
+        },
+        "check_sizes.py": {
+          "rc": 0,
+          "stderr": "",
+          "stdout": "OK — 642 archivos de texto dentro de límites; estructura y hogares canónicos verificados\n"
+        }
+      }
+    },
+    "simulated": {
+      "control_child_environment": {
+        "CI": "true",
+        "GITHUB_ACTIONS": "true"
+      },
+      "gates": {
+        "check_adr_registry.py": {
+          "rc": 0,
+          "stderr": "",
+          "stdout": "check_adr_registry: OK — 62 ADRs (aceptada=56, propuesta=6)\n"
+        },
+        "check_plans.py": {
+          "rc": 0,
+          "stderr": "",
+          "stdout": "OK — 4 plan(es) verificados (estructura E1-E5)\n"
+        },
+        "check_sizes.py": {
+          "rc": 0,
+          "stderr": "",
+          "stdout": "OK — 642 archivos de texto dentro de límites; estructura y hogares canónicos verificados\n"
+        }
+      }
+    }
+  },
+  "python_version": "3.12.12 (main, Oct  9 2025, 11:07:00) [Clang 17.0.0 (clang-1700.4.4.1)]",
+  "scope": "same local tree/interpreter; CI/GITHUB_ACTIONS only"
+}
