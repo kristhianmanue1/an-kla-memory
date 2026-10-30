@@ -5,6 +5,7 @@ copia del archivo de origen para mantener cada archivo autocontenido.
 """
 
 from __future__ import annotations
+from scripts.ci_fixture_registry import register_script, reference_adapter_path
 
 import base64
 import json
@@ -31,7 +32,7 @@ from an_kla.sealed.key_adapter import (
 
 TESTS_DIR = Path(__file__).resolve().parent
 ADAPTERS_DIR = TESTS_DIR / "adapters"
-REFERENCE_ADAPTER = ADAPTERS_DIR / "file_key_adapter.py"
+REFERENCE_ADAPTER = reference_adapter_path(ADAPTERS_DIR / "file_key_adapter.py")
 
 ENV_KEY_FILE = "ANKLA_TEST_ADAPTER_KEY_FILE"
 ENV_VERBOSE = "ANKLA_TEST_ADAPTER_VERBOSE"
@@ -68,7 +69,7 @@ def _reference_runner(key_file: Path, **kwargs) -> SealingAdapterRunner:
 class _AdHocAdapter:
     """Escribe un adaptador Python de un solo archivo en un tmp dir."""
 
-    def __init__(self, testcase, body: str, *, argv_prefix=None):
+    def __init__(self, testcase, body: str, *, argv_prefix=None, member_token=None):
         # TestCase.enterContext llegó en 3.11; el CLT python3 de la matriz
         # es 3.9 — compatibilidad explícita con addCleanup.
         tmp = tempfile.TemporaryDirectory()
@@ -76,6 +77,7 @@ class _AdHocAdapter:
         base = tmp.name
         self.path = Path(base) / "adhoc_adapter.py"
         self.path.write_text(textwrap.dedent(body), encoding="utf-8")
+        register_script(self.path, testcase, member_token=member_token)
         self.argv = list(argv_prefix or [sys.executable, str(self.path)])
         # hereda env del runner: none needed
         self.env_allowlist = []
@@ -349,17 +351,19 @@ class TestTimeout(unittest.TestCase):
 
     def test_tree_termination_kills_children(self):
         """TERM al GRUPO mata también al hijo (árbol, no solo el padre)."""
+        member_token = secrets.token_hex(20)
         adapter = _AdHocAdapter(
             self,
-            """
+            f"""
             import subprocess, sys, time
             # Hijo que sobrevive al padre y escribe en stdout (bloquea el
             # pipe abierto): la señal al GRUPO debe alcanzarlo.
             subprocess.Popen([sys.executable, "-c",
-                "import time; time.sleep(120)"])
+                "import time; time.sleep(120)", {member_token!r}])
             sys.stdin.read(65536)
             time.sleep(120)
             """,
+            member_token=member_token,
         )
         runner = adapter.runner(timeout_seconds=1.5)
         start = time.monotonic()

@@ -1,0 +1,44 @@
+[
+  {
+    "archive": "adr0062-legacy-observed-2.tar.gz",
+    "sha256": "1c425a005198828ddb3308ae7e4eed24f6f203f2f863b04a8486856f4755e389",
+    "bytes": 835274,
+    "files": 251,
+    "scope": "Observer records or audit summary/cells and task stdout/stderr only; excludes fixture registries, fixture scripts and stores."
+  },
+  {
+    "archive": "adr0062-legacy-observed-3.tar.gz",
+    "sha256": "efbf3ee9bd7c66b6fcaedd3e819c0ef5917bfa4ef91cd8a55199b9dae825362a",
+    "bytes": 831464,
+    "files": 251,
+    "scope": "Observer records or audit summary/cells and task stdout/stderr only; excludes fixture registries, fixture scripts and stores."
+  },
+  {
+    "archive": "adr0062-audit-diagnostic-1.tar.gz",
+    "sha256": "3ae5936b577c5086df8f8a4d9b9b8d500680584d917a968abaf8063a84c5f774",
+    "bytes": 364610,
+    "files": 7,
+    "scope": "Observer records or audit summary/cells and task stdout/stderr only; excludes fixture registries, fixture scripts and stores."
+  },
+  {
+    "archive": "adr0062-audit-diagnostic-2.tar.gz",
+    "sha256": "1eb1d972a4be1f5eddbf1bb2a2e4d82c192b4cc53367f9cc1084e5979a240676",
+    "bytes": 364831,
+    "files": 7,
+    "scope": "Observer records or audit summary/cells and task stdout/stderr only; excludes fixture registries, fixture scripts and stores."
+  },
+  {
+    "archive": "adr0062-audit-diagnostic-3.tar.gz",
+    "sha256": "c7abd621efc4f300373f22709bc316623dfb21093a412fed2d20419259cff596",
+    "bytes": 487405,
+    "files": 9,
+    "scope": "Observer records or audit summary/cells and task stdout/stderr only; excludes fixture registries, fixture scripts and stores."
+  },
+  {
+    "archive": "execution-task-logs.tar.gz",
+    "sha256": "25266f1ffc4d7d0069260db4312ec6ba855779a7dfd9f3f0019760400ef575a8",
+    "bytes": 11537,
+    "files": 132,
+    "scope": "Task stdout/stderr only; no fixture registries, scripts or stores."
+  }
+]

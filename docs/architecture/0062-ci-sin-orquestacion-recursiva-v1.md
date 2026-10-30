@@ -1,7 +1,7 @@
 # ADR-0062: Ejecutar CI mediante un plan sin orquestación recursiva
 
 - **Estado:** Aceptada
-- **Implementación:** No iniciada
+- **Implementación:** Parcial (runner optativo en verificación; CI vigente y activación separados)
 - **Fecha:** 2026-10-29
 - **Decide sobre:** eliminar ciclos de orquestación y ejecuciones redundantes del CI conservando sus obligaciones.
 
