@@ -46,8 +46,9 @@ class AdrRegistryTests(unittest.TestCase):
         # 2026-10-29 con ronda externa fix-and-retry→proceed; aceptadas e
         # implementadas por orden del maintainer ("aceptada").
         # 0061 aceptada por el Operador el 2026-10-29; implementación autorizada.
+        # 0062 aceptada por el Operador tras afinar sus tres puntos.
         self.assertEqual(states["Propuesta"], 5)
-        self.assertEqual(states["Aceptada"], 56)
+        self.assertEqual(states["Aceptada"], 57)
 
     def test_detects_gap_and_state_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

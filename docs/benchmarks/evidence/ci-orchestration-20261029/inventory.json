@@ -1,0 +1,162 @@
+{
+  "declared_rows": 14,
+  "identical_top_level_definitions": [
+    [
+      {
+        "line": 121,
+        "name": "_cryptography_importable",
+        "path": "tests/test_sealed_matrix.py"
+      },
+      {
+        "line": 56,
+        "name": "_cryptography_importable",
+        "path": "tests/test_sealed_matrix_rows.py"
+      }
+    ],
+    [
+      {
+        "line": 129,
+        "name": "_clt_python",
+        "path": "tests/test_sealed_matrix.py"
+      },
+      {
+        "line": 64,
+        "name": "_clt_python",
+        "path": "tests/test_sealed_matrix_rows.py"
+      }
+    ],
+    [
+      {
+        "line": 137,
+        "name": "_make_store",
+        "path": "tests/test_sealed_matrix.py"
+      },
+      {
+        "line": 72,
+        "name": "_make_store",
+        "path": "tests/test_sealed_matrix_rows.py"
+      }
+    ],
+    [
+      {
+        "line": 150,
+        "name": "FakeAdapterB64",
+        "path": "tests/test_sealed_matrix.py"
+      },
+      {
+        "line": 95,
+        "name": "FakeAdapterB64",
+        "path": "tests/test_sealed_matrix_rows.py"
+      }
+    ],
+    [
+      {
+        "line": 193,
+        "name": "_create_sealed",
+        "path": "tests/test_sealed_matrix.py"
+      },
+      {
+        "line": 138,
+        "name": "_create_sealed",
+        "path": "tests/test_sealed_matrix_rows.py"
+      }
+    ]
+  ],
+  "scope": "static syntax only; no dynamic reachability or runtime count",
+  "sources": [
+    {
+      "path": "scripts/ci_local.py",
+      "sha256": "643bbbf97ff2743be2c127b4c62be1c891a9f6211337c5de0759da26b08dd9cf",
+      "subprocess_sites": [
+        {
+          "call": "subprocess.run([PYTHON, '-c', 'import an_kla'], cwd=ROOT, capture_output=True, text=True)",
+          "line": 50
+        },
+        {
+          "call": "subprocess.run([PYTHON, '-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_*.py'], cwd=ROOT, env=env)",
+          "line": 76
+        },
+        {
+          "call": "subprocess.run([PYTHON, str(REDTEAM), '--selftest'], cwd=ROOT, capture_output=True, text=True)",
+          "line": 97
+        },
+        {
+          "call": "subprocess.run([interprete, '-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_*.py'], cwd=ROOT, env=env)",
+          "line": 141
+        },
+        {
+          "call": "subprocess.run([PYTHON, str(CHECK_SIZES)], cwd=ROOT)",
+          "line": 160
+        },
+        {
+          "call": "subprocess.run([PYTHON, str(CHECK_PLANS)], cwd=ROOT)",
+          "line": 171
+        },
+        {
+          "call": "subprocess.run([PYTHON, str(CHECK_ADRS)], cwd=ROOT)",
+          "line": 179
+        }
+      ]
+    },
+    {
+      "path": "tests/test_sealed_matrix.py",
+      "sha256": "fb88aa89408cfd30a5b597802f5d5a6a54cb066672000a9d157515c7fac9d893",
+      "subprocess_sites": [
+        {
+          "call": "subprocess.run([interpreter, '-m', 'unittest', module, '-v'], cwd=str(ROOT), capture_output=True, text=True, env={**os.environ, 'AN_KLA_NO_UPDATE_CHECK': '1', _ROW15_ENV: '1'})",
+          "line": 248
+        }
+      ]
+    },
+    {
+      "path": "tests/test_sealed_matrix_rows.py",
+      "sha256": "356dd0968fadbfc2f353564d7808f8ea79c8bb89be5fbd4ee61f539cf37b22a8",
+      "subprocess_sites": [
+        {
+          "call": "subprocess.run([sys.executable, '-m', 'unittest', module], cwd=str(ROOT), capture_output=True, text=True, env={**os.environ, 'AN_KLA_NO_UPDATE_CHECK': '1', _ROW15_ENV: '1'})",
+          "line": 184
+        },
+        {
+          "call": "subprocess.run([sys.executable, '-c', code], cwd=str(ROOT), capture_output=True, text=True)",
+          "line": 224
+        },
+        {
+          "call": "subprocess.run([interpreter, '-m', 'unittest', 'discover', '-s', 'tests', '-p', 'test_*.py'], cwd=str(ROOT), capture_output=True, text=True, env={**os.environ, 'AN_KLA_NO_UPDATE_CHECK': '1', _ROW15_ENV: '1'})",
+          "line": 410
+        },
+        {
+          "call": "subprocess.run([interpreter, '-m', 'unittest', 'tests.test_sealed_bundle', '-v'], cwd=str(ROOT), capture_output=True, text=True, env={**os.environ, 'AN_KLA_NO_UPDATE_CHECK': '1'})",
+          "line": 440
+        },
+        {
+          "call": "subprocess.run([sys.executable, 'scripts/ci_local.py', *mode], cwd=str(ROOT), capture_output=True, text=True, env={**os.environ, 'AN_KLA_NO_UPDATE_CHECK': '1', _ROW15_ENV: '1', 'AN_KLA_CI_LOCAL_MATRIX': '0'})",
+          "line": 458
+        },
+        {
+          "call": "subprocess.run([sys.executable, '-m', 'an_kla', '--no-update-check', *arguments], cwd=str(cwd or ROOT), capture_output=True, text=True, env={**os.environ, **(env or {})})",
+          "line": 502
+        }
+      ]
+    },
+    {
+      "path": "tests/test_ci_local_matriz.py",
+      "sha256": "2ebc57ba74cd2ffe29f6140e25c2f4e0440ff6724a72980f2be6ede8073a9149",
+      "subprocess_sites": []
+    },
+    {
+      "path": "tests/test_ci_metadata.py",
+      "sha256": "7152dfa80b9d56bdbba2017d494a7c407556c119c07c576d331d604c85f098ec",
+      "subprocess_sites": []
+    }
+  ],
+  "unique_rerun_modules": [
+    "tests.test_export_sealed_cli",
+    "tests.test_sealed_availability",
+    "tests.test_sealed_bundle",
+    "tests.test_sealed_bundle_units",
+    "tests.test_sealed_key_adapter",
+    "tests.test_sealed_key_adapter_behavior",
+    "tests.test_sealed_key_adapter_errors",
+    "tests.test_sealed_key_adapter_output"
+  ]
+}

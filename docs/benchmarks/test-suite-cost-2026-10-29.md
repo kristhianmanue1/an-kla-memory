@@ -99,6 +99,10 @@ retirar filas ni saltar gates: durante ADR-0061 se mantienen las condiciones
 adoptadas. Cualquier rediseño de CI deberá medir duración/cobertura y tener
 su propio cambio revisado.
 
+El [mapa y propuesta de perfiles](../planning/ci-profiles-design-2026-10-29.md)
+desarrolla esa mejora como diseño documental no adoptado, con obligaciones,
+dimensiones de cobertura y criterios para retirar ejecuciones redundantes.
+
 
 ## Actualización tras ADR-0061
 

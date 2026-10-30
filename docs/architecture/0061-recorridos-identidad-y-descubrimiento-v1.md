@@ -1,7 +1,7 @@
 # ADR-0061: Consolidar linaje y reutilizar proyecciones verificadas por operación
 
 - **Estado:** Aceptada
-- **Implementación:** Parcial (A/B verificadas, ronda proceed y CI local 1304 OK; aceptación integrada a 20k pendiente por presupuesto de disco)
+- **Implementación:** A/B verificadas, ronda proceed y CI local 1304 OK; prueba integrada de 20.000 revisiones pospuesta por espacio por decisión del Operador (2026-10-29), fuera del alcance activo y sin validación de esa escala.
 - **Fecha:** 2026-10-29
 - **Decide sobre:** reducir trabajo repetido en la construcción de revisiones sin omitir evidencia de identidad ni candidatos transaccionales.
 
