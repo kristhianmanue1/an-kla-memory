@@ -5,6 +5,7 @@ copia del archivo de origen para mantener cada archivo autocontenido.
 """
 
 from __future__ import annotations
+from scripts.ci_fixture_registry import register_script, reference_adapter_path
 
 import base64
 import json
@@ -31,7 +32,7 @@ from an_kla.sealed.key_adapter import (
 
 TESTS_DIR = Path(__file__).resolve().parent
 ADAPTERS_DIR = TESTS_DIR / "adapters"
-REFERENCE_ADAPTER = ADAPTERS_DIR / "file_key_adapter.py"
+REFERENCE_ADAPTER = reference_adapter_path(ADAPTERS_DIR / "file_key_adapter.py")
 
 ENV_KEY_FILE = "ANKLA_TEST_ADAPTER_KEY_FILE"
 ENV_VERBOSE = "ANKLA_TEST_ADAPTER_VERBOSE"
@@ -76,6 +77,7 @@ class _AdHocAdapter:
         base = tmp.name
         self.path = Path(base) / "adhoc_adapter.py"
         self.path.write_text(textwrap.dedent(body), encoding="utf-8")
+        register_script(self.path, testcase)
         self.argv = list(argv_prefix or [sys.executable, str(self.path)])
         # hereda env del runner: none needed
         self.env_allowlist = []
@@ -181,22 +183,41 @@ class TestSetsidEscapeeBoundedTimeout(unittest.TestCase):
     (TERM 2 s + margen), NO cuando el escapee muera (300 s).
     """
 
+    def _escapee_command(self, temporary):
+        from scripts.ci_process import registered_cleanup
+        registry = Path(os.environ.get("AN_KLA_CI_SPAWN_REGISTRY", str(Path(temporary) / "registered")))
+        registry.mkdir(mode=0o700, parents=True, exist_ok=True)
+        token = secrets.token_hex(20)
+        self._escapee_record = registry / (token + ".json")
+
+        def cleanup():
+            self.assertEqual(registered_cleanup(registry, time.monotonic() + 2), [])
+        self.addCleanup(cleanup)
+        return [sys.executable, str(TESTS_DIR / "fixtures" / "registered_escapee.py"), str(registry), token]
+
+    def _assert_escapee_running(self):
+        self.assertTrue(self._escapee_record.is_file(), "escapee never registered")
+        record = json.loads(self._escapee_record.read_text())
+        os.kill(record["pid"], 0)  # Positive control: the bounded error did not wait for its exit.
+        self.assertEqual(os.getpgid(record["pid"]), record["pid"], "escapee did not create its session")
+
     def test_escapee_does_not_block_timeout_error(self):
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
+        escapee_command = self._escapee_command(tmp.name)
         adapter_path = Path(tmp.name) / "escapee.py"
         adapter_path.write_text(
             textwrap.dedent(
-                """
+                f"""
                 import os, subprocess, sys, time
-                subprocess.Popen([sys.executable, "-c",
-                    "import os, time; os.setsid(); time.sleep(300)"])
+                subprocess.Popen({escapee_command!r})
                 sys.stdin.read(65536)
                 time.sleep(300)
                 """
             ),
             encoding="utf-8",
         )
+        register_script(adapter_path, self)
         runner = SealingAdapterRunner(
             [sys.executable, str(adapter_path)], timeout_seconds=2.0
         )
@@ -208,24 +229,26 @@ class TestSetsidEscapeeBoundedTimeout(unittest.TestCase):
         # si el escapee retuviera el pipe, esto sería >= 60 s.
         self.assertLessEqual(elapsed, 6.0)
         self.assertIn("timed out", str(ctx.exception))
+        self._assert_escapee_running()
 
     def test_escapee_with_parent_exiting_also_bounded(self):
         """Variante: el padre muere rápido y SOLO el escapee sostiene stdout."""
         tmp = tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
+        escapee_command = self._escapee_command(tmp.name)
         adapter_path = Path(tmp.name) / "escapee_exit.py"
         adapter_path.write_text(
             textwrap.dedent(
-                """
+                f"""
                 import os, subprocess, sys
-                subprocess.Popen([sys.executable, "-c",
-                    "import os, time; os.setsid(); time.sleep(300)"])
+                subprocess.Popen({escapee_command!r})
                 sys.stdin.read(65536)
                 # padre sale YA; el escapee mantiene stdout sin EOF
                 """
             ),
             encoding="utf-8",
         )
+        register_script(adapter_path, self)
         runner = SealingAdapterRunner(
             [sys.executable, str(adapter_path)], timeout_seconds=2.0
         )
@@ -234,6 +257,7 @@ class TestSetsidEscapeeBoundedTimeout(unittest.TestCase):
             runner.wrap_cek(b"k" * 32)
         elapsed = time.monotonic() - start
         self.assertLessEqual(elapsed, 6.0)
+        self._assert_escapee_running()
 
 
 class TestPartialOverflowImmediateDetection(unittest.TestCase):
@@ -266,6 +290,7 @@ class TestPartialOverflowImmediateDetection(unittest.TestCase):
             ),
             encoding="utf-8",
         )
+        register_script(adapter_path, self)
         runner = SealingAdapterRunner(
             [sys.executable, str(adapter_path)], timeout_seconds=30.0
         )
@@ -299,6 +324,7 @@ class TestPartialOverflowImmediateDetection(unittest.TestCase):
             ),
             encoding="utf-8",
         )
+        register_script(adapter_path, self)
         runner = SealingAdapterRunner(
             [sys.executable, str(adapter_path)], timeout_seconds=30.0
         )

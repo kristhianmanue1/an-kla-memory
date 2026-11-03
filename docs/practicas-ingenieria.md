@@ -110,15 +110,21 @@ propio alcance y validación.
 **Coste observado de la matriz:** [análisis de ejecución 2026-10-29](benchmarks/test-suite-cost-2026-10-29.md).
 
 
-`scripts/ci_local.py` replica `.github/workflows/test.yml` sin gastar minutos de
-GitHub Actions. La bandera `--simulate-ci` exporta `GITHUB_ACTIONS=true` y
+`scripts/ci_local.py` es el gate local vigente; este repo no tiene workflows
+remotos de PR (`tests/test_ci_metadata.py`). La bandera `--simulate-ci`
+exporta `GITHUB_ACTIONS=true` y
 `CI=true` antes de los tests para atrapar **no determinismos** que sólo aparecen
 en el runner.
 
 - Correr antes de pushear y siempre que un test dependa del entorno.
-- No reemplaza el CI remoto (que valida 3 SO × 2 Python reales).
+- Simular CI aquí no acredita ejecución en otros SO/intérpretes.
 - **Ejemplo**: reveló y ayudó a fixar `test_skip_when_opt_out_env_set` (PR #25),
   que pasaba local pero fallaba en CI por `GITHUB_ACTIONS` inyectado.
+
+ADR-0062 añade un [runner optativo](benchmarks/adr0062-implementation-2026-10-29.md)
+para comparar perfiles y evitar ciclos. Hasta aceptar su transición, el
+comando anterior conserva el gate previo a push/merge; el perfil de desarrollo
+nuevo no lo sustituye. No confundir CI en verde con activación de otro gate.
 
 ## §6 Reporte RAG con evidencia
 

@@ -59,6 +59,7 @@ from .integration import (
     integration_status, integration_status_v2, integration_status_v3,
 )
 from .attest import AttestError
+from .custody import CustodyError
 from .hook_runs import HookRunError, mint_hook_run
 from .identity import IdentityError
 from .host_hooks import load_declaration as _load_hook_declaration
@@ -172,7 +173,7 @@ def _mint_hook_run(
             exit_code=0,
             subject=subject,
         )
-    except (AttestError, IdentityError, HookRunError) as exc:
+    except (AttestError, IdentityError, HookRunError, CustodyError) as exc:
         sys.stderr.write(f"an-kla warning: hook_run_mint_skipped ({exc})\n")
     except OSError:
         # _write_exclusive puede fallar por OSError (mkdir/open/fsync);

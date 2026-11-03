@@ -1,0 +1,30 @@
+{
+  "same_clock_positive_control": {
+    "object_count": 1,
+    "run_ids": [
+      "same-run"
+    ],
+    "observed_at": [
+      "2026-10-29T00:00:00Z"
+    ],
+    "digests": [
+      "sha256:f366f521379340efc6b555310a6193027a6d85dfc5ba79fa24492ea5334b24b7",
+      "sha256:f366f521379340efc6b555310a6193027a6d85dfc5ba79fa24492ea5334b24b7"
+    ]
+  },
+  "clock_advanced_identical_public_arguments": {
+    "object_count": 2,
+    "run_ids": [
+      "same-run",
+      "same-run"
+    ],
+    "observed_at": [
+      "2026-10-29T00:00:00Z",
+      "2026-10-29T00:00:01Z"
+    ],
+    "digests": [
+      "sha256:1c60e0d007f9f41c3243181ae3c0dad6c2316a6920d2e0954a6f37ee0803af05",
+      "sha256:b5d732deca0d3d2f44c0108bb3ee8ae861648561d37a6b751b7bbb7b5486094b"
+    ]
+  }
+}

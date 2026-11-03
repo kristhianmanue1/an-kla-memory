@@ -5,6 +5,7 @@ copia del archivo de origen para mantener cada archivo autocontenido.
 """
 
 from __future__ import annotations
+from scripts.ci_fixture_registry import register_script, reference_adapter_path
 
 import base64
 import json
@@ -31,7 +32,7 @@ from an_kla.sealed.key_adapter import (
 
 TESTS_DIR = Path(__file__).resolve().parent
 ADAPTERS_DIR = TESTS_DIR / "adapters"
-REFERENCE_ADAPTER = ADAPTERS_DIR / "file_key_adapter.py"
+REFERENCE_ADAPTER = reference_adapter_path(ADAPTERS_DIR / "file_key_adapter.py")
 
 ENV_KEY_FILE = "ANKLA_TEST_ADAPTER_KEY_FILE"
 ENV_VERBOSE = "ANKLA_TEST_ADAPTER_VERBOSE"
@@ -76,6 +77,7 @@ class _AdHocAdapter:
         base = tmp.name
         self.path = Path(base) / "adhoc_adapter.py"
         self.path.write_text(textwrap.dedent(body), encoding="utf-8")
+        register_script(self.path, testcase)
         self.argv = list(argv_prefix or [sys.executable, str(self.path)])
         # hereda env del runner: none needed
         self.env_allowlist = []

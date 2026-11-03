@@ -1,0 +1,293 @@
+{
+  "schema": "ankla-ci/obligations-v1",
+  "external_rows": ["15"],
+  "conditional_subtest_skips": [{"id": "test_sealed_availability.TestSealedFailClosed.test_commands_fail_closed_without_extra", "when": "crypto", "reason": "extra [sealed] presente: el fail-closed por ausencia no es observable en este intérprete", "subtest_suffixes": [" (command='sealed_export')", " (command='sealed_restore')"]}],
+  "rows": [
+    {
+      "row": "1",
+      "cases": [
+        {"id": "test_sealed_bundle_units.TestNonceCounterF1.test_100000_distinct_nonces_all_exactly_12_bytes", "when": "always"},
+        {"id": "test_sealed_bundle_units.TestNonceCounterF1.test_construction_is_the_adr_literal", "when": "always"},
+        {"id": "test_sealed_bundle_units.TestNonceCounterF1.test_index_out_of_domain_rejected", "when": "always"},
+        {"id": "test_sealed_kdf.TestDeriveSubkeys.test_different_ceks_different_subkeys", "when": "crypto"},
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_row5_entry_moved_between_bundles_fails_by_aad", "when": "crypto_export"}
+      ]
+    },
+    {
+      "row": "2",
+      "cases": [
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_row2_tamper_last_byte_tag", "when": "crypto_export"},
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_row2_tamper_one_byte_fails_closed_no_partial_restore", "when": "crypto_export"}
+      ]
+    },
+    {
+      "row": "3",
+      "cases": [
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_row3_wrong_cek_indistinguishable", "when": "crypto_export"}
+      ]
+    },
+    {
+      "row": "4",
+      "cases": [
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_row4_manifest_mac_altered_fails_closed", "when": "crypto_export"}
+      ]
+    },
+    {
+      "row": "5",
+      "cases": [
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_row5_entry_moved_between_bundles_fails_by_aad", "when": "crypto_export"}
+      ]
+    },
+    {
+      "row": "7",
+      "cases": [
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_row7_roundtrip_byte_identical", "when": "crypto_export"},
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_row7_roundtrip_via_runner", "when": "crypto_export"},
+        {"id": "test_export_sealed_cli.SealedCliCryptoTests.test_roundtrip_via_subprocess_cli_real", "when": "crypto_export"}
+      ]
+    },
+    {
+      "row": "10b",
+      "cases": [
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_row10b_boundary_exact_limit_encrypts", "when": "crypto_export"},
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_row10b_entry_too_large_before_encrypting_no_partial_bundle", "when": "crypto_export"},
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_row10b_real_oversize_constant_is_512mib", "when": "crypto_export"}
+      ]
+    },
+    {
+      "row": "10c",
+      "cases": [
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_row10c_physical_size_off_by_one_both_sides", "when": "crypto_export"},
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_row10c_unkeyed_detects_missing_and_extra_entries", "when": "crypto_export"},
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_row10c_unkeyed_never_verified_true", "when": "crypto_export"},
+        {"id": "test_export_sealed_cli.UnkeyedDiagnosticsTests.test_entry_size_mismatch_physical_size", "when": "export"}
+      ]
+    },
+    {
+      "row": "13",
+      "cases": [
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_row13_bundle_id_in_manifest_never_trusted", "when": "crypto_export"},
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_row13_reseal_different_cek_different_bundle_id", "when": "crypto_export"}
+      ]
+    },
+    {
+      "row": "16",
+      "cases": [
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_row16_f7_no_leak_in_errors", "when": "crypto_export"},
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_row16_f7_no_secret_material_leak", "when": "crypto_export"},
+        {"id": "test_sealed_cek.TestWrappedCekF7.test_json_has_no_material", "when": "crypto"},
+        {"id": "test_sealed_cek.TestWrappedCekF7.test_no_dict_introspection", "when": "crypto"},
+        {"id": "test_sealed_cek.TestWrappedCekF7.test_pickle_refused", "when": "crypto"},
+        {"id": "test_sealed_cek.TestWrappedCekF7.test_repr_str_redacted", "when": "crypto"},
+        {"id": "test_sealed_kdf.TestSealedSubkeysF7.test_json_serialization_has_no_material", "when": "crypto"},
+        {"id": "test_sealed_kdf.TestSealedSubkeysF7.test_no_dict_introspection", "when": "crypto"},
+        {"id": "test_sealed_kdf.TestSealedSubkeysF7.test_pickle_refused", "when": "crypto"},
+        {"id": "test_sealed_kdf.TestSealedSubkeysF7.test_repr_str_redacted", "when": "crypto"}
+      ]
+    },
+    {
+      "row": "6",
+      "cases": [
+        {"id": "test_sealed_key_adapter.TestRoundtripReferenceAdapter.test_crypto_roundtrip_with_cryptography_cek", "when": "crypto"},
+        {"id": "test_sealed_key_adapter.TestRoundtripReferenceAdapter.test_roundtrip_byte_exact", "when": "always"},
+        {"id": "test_sealed_key_adapter.TestRoundtripReferenceAdapter.test_roundtrip_fixed_cek", "when": "always"},
+        {"id": "test_sealed_key_adapter.TestRoundtripReferenceAdapter.test_roundtrip_works_without_cryptography", "when": "always"},
+        {"id": "test_sealed_key_adapter.TestRoundtripReferenceAdapter.test_two_wraps_differ_but_both_unwrap", "when": "always"},
+        {"id": "test_sealed_key_adapter.TestRoundtripReferenceAdapter.test_wrong_key_file_fails_closed", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestAdapterRequired.test_empty_list_raises_required", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestAdapterRequired.test_non_string_elements_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestAdapterRequired.test_none_command_raises_required", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestAdapterRequired.test_nonexistent_executable_is_adapter_error", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestAdapterRequired.test_required_error_code_canonical", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestAdapterRequired.test_string_command_rejected_not_shell", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestEnvironmentAllowlist.test_allowlisted_missing_in_parent_is_absent", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestEnvironmentAllowlist.test_allowlisted_variable_reaches_adapter", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestEnvironmentAllowlist.test_no_allowlist_means_no_extra_vars", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestEnvironmentAllowlist.test_parent_secret_does_not_reach_adapter", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestEnvironmentAllowlist.test_reference_adapter_requires_key_file_env", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestNoCryptographyIndependence.test_key_adapter_importable_without_extra", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestNoCryptographyIndependence.test_no_cryptography_import_in_key_adapter", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestNoCryptographyIndependence.test_runner_errors_independent_of_availability_flag", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestNoCryptographyIndependence.test_sealed_package_importable_without_extra", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestNoShellExecution.test_arguments_passed_verbatim", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestNoShellExecution.test_no_shell_metacharacter_interpretation", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestNoShellExecution.test_reference_adapter_documented_not_production", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestStderrNeverPropagated.test_error_messages_are_closed_enum", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestStderrNeverPropagated.test_reference_adapter_verbose_mode_clean", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestStderrNeverPropagated.test_stderr_canary_absent_from_all_error_messages", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestWrappedCekOpacity.test_input_cek_must_be_32_bytes", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestWrappedCekOpacity.test_pre_flight_max_chars_enforced", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestWrappedCekOpacity.test_runner_does_not_interpret_blob", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestWrappedCekOpacity.test_wrap_output_above_ceiling_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestAdapterIdGrammar.test_dot_and_dotdot_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestAdapterIdGrammar.test_empty_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestAdapterIdGrammar.test_leading_punctuation_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestAdapterIdGrammar.test_out_of_alphabet_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestAdapterIdGrammar.test_too_long_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestAdapterIdGrammar.test_valid_ids_accepted", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestCanonicalErrorCodes.test_codes_exact", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestCanonicalErrorCodes.test_exported_from_package", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestPartialOverflowImmediateDetection.test_stderr_overflow_partial_detected_immediately", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestPartialOverflowImmediateDetection.test_stdout_overflow_nonmultiple_detected_immediately", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestSetsidEscapeeBoundedTimeout.test_escapee_does_not_block_timeout_error", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestSetsidEscapeeBoundedTimeout.test_escapee_with_parent_exiting_also_bounded", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestWrappedCekCanonicalB64.test_missing_padding_blob_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestWrappedCekCanonicalB64.test_non_b64_blob_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestWrappedCekCanonicalB64.test_reference_adapter_blob_is_canonical_b64", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestWrappedCekCanonicalB64.test_unwrap_input_non_b64_rejected_before_exec", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestWrappedCekCanonicalB64.test_urlsafe_alphabet_blob_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestWrappedCekCanonicalB64.test_valid_canonical_blob_accepted", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestCekLengthContract.test_cek_31_bytes_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestCekLengthContract.test_cek_33_bytes_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestCekLengthContract.test_cek_empty_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestCekLengthContract.test_cek_extra_padding_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestCekLengthContract.test_cek_missing_padding_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestCekLengthContract.test_cek_urlsafe_alphabet_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestCekLengthContract.test_cek_valid_32_bytes_accepted", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestExitStatusSemantics.test_crashing_adapter_is_error", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestExitStatusSemantics.test_exit_nonzero_with_valid_json_is_error", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestExitStatusSemantics.test_exit_zero_with_valid_json_succeeds", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestIOLimits.test_limits_match_adr", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestIOLimits.test_stderr_above_limit_is_error", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestIOLimits.test_stdout_above_limit_is_error", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestIOLimits.test_stdout_just_under_limit_succeeds", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestIOLimits.test_verbose_stderr_within_limit_is_discarded", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestOutputContractClosed.test_extra_key_in_wrap_output", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestOutputContractClosed.test_missing_adapter_id_in_wrap_output", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestOutputContractClosed.test_missing_key_in_wrap_output", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestOutputContractClosed.test_stdout_binary_garbage", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestOutputContractClosed.test_stdout_garbage_not_json", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestOutputContractClosed.test_stdout_valid_json_but_truncated", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestOutputContractClosed.test_unwrap_output_missing_key", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestOutputContractClosed.test_unwrap_output_not_an_object", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestOutputContractClosed.test_unwrap_output_with_extra_key", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestOutputContractClosed.test_unwrap_output_wrong_type", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestOutputContractClosed.test_wrong_type_adapter_id", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestOutputContractClosed.test_wrong_type_wrapped_cek", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestTimeout.test_default_timeout_is_30_seconds", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestTimeout.test_sleeping_adapter_times_out", "when": "always"},
+        {"id": "test_sealed_key_adapter_output.TestTimeout.test_tree_termination_kills_children", "when": "always"}
+      ]
+    },
+    {
+      "row": "8",
+      "cases": [
+        {"id": "test_sealed_matrix.Row8UnkeyedNeverVerifiedTests.test_clean_structure_false_but_never_true", "when": "export"},
+        {"id": "test_sealed_matrix.Row8UnkeyedNeverVerifiedTests.test_every_diagnostic_path_still_false", "when": "export"},
+        {"id": "test_sealed_matrix.Row8UnkeyedNeverVerifiedTests.test_missing_and_extra_files_never_true", "when": "export"},
+        {"id": "test_export_sealed_cli.UnkeyedDiagnosticsTests.test_count_mismatch_entry_count", "when": "export"},
+        {"id": "test_export_sealed_cli.UnkeyedDiagnosticsTests.test_count_mismatch_totals", "when": "export"},
+        {"id": "test_export_sealed_cli.UnkeyedDiagnosticsTests.test_diagnostics_enum_closed_and_never_verified_true", "when": "export"},
+        {"id": "test_export_sealed_cli.UnkeyedDiagnosticsTests.test_entry_missing_listed_file_absent", "when": "export"},
+        {"id": "test_export_sealed_cli.UnkeyedDiagnosticsTests.test_entry_size_mismatch_physical_size", "when": "export"},
+        {"id": "test_export_sealed_cli.UnkeyedDiagnosticsTests.test_entry_unexpected_extra_file", "when": "export"},
+        {"id": "test_export_sealed_cli.UnkeyedDiagnosticsTests.test_manifest_invalid_manifest_sha256_mismatch", "when": "export"},
+        {"id": "test_export_sealed_cli.UnkeyedDiagnosticsTests.test_manifest_invalid_non_canonical_bytes", "when": "export"},
+        {"id": "test_export_sealed_cli.UnkeyedDiagnosticsTests.test_manifest_invalid_shape", "when": "export"},
+        {"id": "test_export_sealed_cli.UnkeyedDiagnosticsTests.test_unsafe_path_disallowed_path_in_manifest", "when": "export"},
+        {"id": "test_export_sealed_cli.UnkeyedDiagnosticsTests.test_unsafe_path_symlink_in_entries", "when": "export"}
+      ]
+    },
+    {
+      "row": "9",
+      "cases": [
+        {"id": "test_sealed_matrix.Row9FullBundleRewriteTests.test_full_rewrite_detected_by_keyed_verify", "when": "crypto_export"}
+      ]
+    },
+    {
+      "row": "10",
+      "cases": [
+        {"id": "test_sealed_matrix.Row10DowngradeTests.test_beta17_v1_reader_rejects_sealed_bundle", "when": "export"},
+        {"id": "test_sealed_matrix.Row10DowngradeTests.test_dispatcher_sealed_asking_v1_unsupported", "when": "export"},
+        {"id": "test_sealed_matrix.Row10DowngradeTests.test_dispatcher_unknown_profile_unsupported", "when": "export"},
+        {"id": "test_sealed_matrix.Row10DowngradeTests.test_sealed_without_adapter_fail_closed_never_cleartext", "when": "export"},
+        {"id": "test_export_sealed_cli.DispatcherDualTests.test_create_with_unknown_seal_enum_rejected_by_parser", "when": "export"},
+        {"id": "test_export_sealed_cli.DispatcherDualTests.test_downgrade_sealed_bundle_asking_v1_unsupported_profile", "when": "export"},
+        {"id": "test_export_sealed_cli.DispatcherDualTests.test_illegible_manifest_falls_to_v1_canonical_error", "when": "export"},
+        {"id": "test_export_sealed_cli.DispatcherDualTests.test_restore_sealed_without_adapter_fails_closed", "when": "export"},
+        {"id": "test_export_sealed_cli.DispatcherDualTests.test_unknown_profile_unsupported", "when": "export"},
+        {"id": "test_export_sealed_cli.DispatcherDualTests.test_v1_bundle_path_is_exact_v1", "when": "export"},
+        {"id": "test_export_sealed_cli.DispatcherDualTests.test_v1_bundle_with_seal_flag_unsupported_profile", "when": "export"},
+        {"id": "test_export_sealed_cli.DispatcherDualTests.test_verify_without_key_on_valid_structure_never_verified_true", "when": "export"}
+      ]
+    },
+    {
+      "row": "10d",
+      "cases": [
+        {"id": "test_sealed_key_adapter_behavior.TestEnvironmentAllowlist.test_allowlisted_missing_in_parent_is_absent", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestEnvironmentAllowlist.test_allowlisted_variable_reaches_adapter", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestEnvironmentAllowlist.test_no_allowlist_means_no_extra_vars", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestEnvironmentAllowlist.test_parent_secret_does_not_reach_adapter", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestEnvironmentAllowlist.test_reference_adapter_requires_key_file_env", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestStderrNeverPropagated.test_error_messages_are_closed_enum", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestStderrNeverPropagated.test_reference_adapter_verbose_mode_clean", "when": "always"},
+        {"id": "test_sealed_key_adapter_behavior.TestStderrNeverPropagated.test_stderr_canary_absent_from_all_error_messages", "when": "always"}
+      ]
+    },
+    {
+      "row": "10e",
+      "cases": [
+        {"id": "test_sealed_key_adapter_errors.TestAdapterIdGrammar.test_dot_and_dotdot_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestAdapterIdGrammar.test_empty_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestAdapterIdGrammar.test_leading_punctuation_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestAdapterIdGrammar.test_out_of_alphabet_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestAdapterIdGrammar.test_too_long_rejected", "when": "always"},
+        {"id": "test_sealed_key_adapter_errors.TestAdapterIdGrammar.test_valid_ids_accepted", "when": "always"},
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_adapter_id_grammar_edges_accepted", "when": "crypto_export"},
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_adapter_id_grammar_edges_accepted_is_hash_seed_independent", "when": "crypto_export"},
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_adapter_id_invalid_rejected_at_manifest_write", "when": "crypto_export"}
+      ]
+    },
+    {
+      "row": "11",
+      "cases": [
+        {"id": "test_sealed_matrix_rows.Row11V1BundlesUnchangedTests.test_v1_path_does_not_touch_sealed_crypto", "when": "export"},
+        {"id": "test_sealed_matrix_rows.Row11V1BundlesUnchangedTests.test_v1_roundtrip_works_without_extra", "when": "export"},
+        {"id": "test_export_restore.ExportRestoreTests.test_bundle_inside_source_and_symlink_directory_are_rejected", "when": "export"},
+        {"id": "test_export_restore.ExportRestoreTests.test_existing_anchor_and_extra_bundle_file_fail", "when": "export"},
+        {"id": "test_export_restore.ExportRestoreTests.test_export_with_host_managed_artifacts_issue119", "when": "export"},
+        {"id": "test_export_restore.ExportRestoreTests.test_restore_outcomes_race_and_permissions", "when": "export"},
+        {"id": "test_export_restore.ExportRestoreTests.test_restore_same_canonical_root_does_not_warn_relocated", "when": "export"},
+        {"id": "test_export_restore.ExportRestoreTests.test_roundtrip_and_tamper_fail_closed", "when": "export"},
+        {"id": "test_export_restore.ExportRestoreTests.test_semantically_invalid_but_rehashed_bundle_is_rejected", "when": "export"},
+        {"id": "test_export_restore.ExportRestoreTests.test_staged_bytes_are_rehashed_and_cli_degraded_restore_exits_three", "when": "export"},
+        {"id": "test_compaction.CompactionTests.test_altered_cleanup_target_fails_closed_after_authority_moves", "when": "export"},
+        {"id": "test_compaction.CompactionTests.test_cleanup_retry_uses_same_candidate_without_bundle", "when": "export"},
+        {"id": "test_compaction.CompactionTests.test_cli_plan_commit_and_historical_verify", "when": "export"},
+        {"id": "test_compaction.CompactionTests.test_compaction_namespace_symlink_cannot_escape_store", "when": "export"},
+        {"id": "test_compaction.CompactionTests.test_current_drift_creates_no_compaction_objects", "when": "export"},
+        {"id": "test_compaction.CompactionTests.test_f5_writer_progresses_while_compaction_drains_readers", "when": "export"},
+        {"id": "test_compaction.CompactionTests.test_first_epoch_projects_active_and_archives_source", "when": "export"},
+        {"id": "test_compaction.CompactionTests.test_historical_policy_survives_installed_policy_drift", "when": "export"},
+        {"id": "test_compaction.CompactionTests.test_inventory_rejects_symlink_and_hardlink_targets", "when": "export"},
+        {"id": "test_compaction.CompactionTests.test_missing_candidate_receipt_blocks_cleanup", "when": "export"},
+        {"id": "test_compaction.CompactionTests.test_missing_current_receipt_cannot_be_rebuilt_to_authorize_cleanup", "when": "export"},
+        {"id": "test_compaction.CompactionTests.test_post_current_error_never_invents_cleanup_authority", "when": "export"},
+        {"id": "test_compaction.CompactionTests.test_unknown_publication_outcome_is_not_reported_false", "when": "export"}
+      ]
+    },
+    {
+      "row": "12",
+      "cases": [
+        {"id": "test_sealed_matrix_rows.Row12CompactionRejectsSealedTests.test_plan_compaction_with_sealed_bundle_rejected", "when": "export"}
+      ]
+    },
+    {
+      "row": "12b",
+      "cases": [
+        {"id": "test_sealed_bundle.SealedBundleCryptoTests.test_row12b_extra_not_installed_exact_code", "when": "crypto_export"},
+        {"id": "test_sealed_availability.TestSealedAvailability.test_sealed_available_false_without_extra", "when": "plain"},
+        {"id": "test_sealed_availability.TestSealedFailClosed.test_commands_fail_closed_without_extra", "when": "plain"},
+        {"id": "test_sealed_availability.TestSealedFailClosed.test_error_message_names_extra", "when": "plain"},
+        {"id": "test_sealed_matrix_rows.H1CanonicalCodesOnCLITests.test_seal_without_extra_canonical_code_and_hint", "when": "plain"}
+      ]
+    },
+    {
+      "row": "14",
+      "cases": [
+        {"id": "test_sealed_matrix_rows.Row14WarningTaxonomyTests.test_h2_no_staging_residue_after_sealed_restore", "when": "crypto_export"},
+        {"id": "test_sealed_matrix_rows.Row14WarningTaxonomyTests.test_taxonomy_exact_per_profile", "when": "crypto_export"}
+      ]
+    }
+  ]
+}

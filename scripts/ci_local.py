@@ -1,9 +1,8 @@
-"""ci_local.py — replica local de .github/workflows/test.yml.
+"""ci_local.py — gate local vigente; no hay workflow remoto de PR.
 
-Ejecuta los mismos pasos que el CI remoto (importabilidad + unittest +
-check_sizes + check_plans + registro ADR) sin gastar minutos de GitHub
-Actions. Portable a los 3 SO de la matriz del workflow. Determinista: sin
-red, sin reloj real.
+Ejecuta importabilidad + unittest +
+check_sizes + check_plans + registro ADR sin consumir GitHub Actions.
+La simulación local no acredita ejecución en otros sistemas operativos.
 
 Bandera --simulate-ci: exporta GITHUB_ACTIONS=true y CI=true antes de los tests
 para reproducir el entorno del runner y atrapar tests no deterministas (categoría
@@ -22,8 +21,8 @@ Desde beta.22 añade dos pasos locales (issue #112 e issue #111/P5):
   con varios intérpretes en PATH puede tardar 10-15 min. Define
   AN_KLA_CI_LOCAL_MATRIX=0 para saltar la matriz (SKIP declarado).
 
-Complementa, no reemplaza, el CI remoto: éste valida 3 SO x 2 Python reales,
-cosa que el CI local no hace.
+ADR-0062 incorpora scripts/ci_audit.py como perfil optativo en verificación;
+no sustituye este gate hasta aceptación explícita de la transición.
 """
 
 from __future__ import annotations
