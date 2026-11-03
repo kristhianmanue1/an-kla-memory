@@ -50,3 +50,21 @@ La recomendación es autorizar esta reparación como alcance separado. ADR-0062
 declara que no cambia storage: los permisos Git de la sesión no deciden por
 sí solos esta ampliación. Mientras tanto puede completarse el diagnóstico
 independiente del CI; no publicar ni activar el gate con el bloqueo vigente.
+
+## Actualización 2026-11-02 — reparación implementada localmente
+
+El encargo fue ejecutado (H0–H4) según
+`docs/plans/2026-11-02-hook-run-idempotency.md`: diseño revisado con
+proceed (`hook-run-idempotency-design-review-2026-11-02.md`), delta de
+locks con proceed (`hook-idempotency-lock-delta-review-2026-11-02.md`),
+implementación con revisión fresca final proceed
+(`hook-run-idempotency-implementation-review-2026-11-02.md`) y reporte
+completo en `hook-run-idempotency-repair-report-2026-11-02.md`. El
+contraejemplo determinista de este documento quedó cubierto por pruebas
+deterministas (reloj avanzado, reinicio de proceso, carrera con barrera)
+en `tests/test_hook_run_retry.py`; el test que fallaba en la captura
+legacy (`test_mint_is_idempotent_by_run_id`) pasa dentro de las piernas
+del gate. Los cambios siguen sin commitear: ni commit/push ni publicación;
+la aceptación del Operador y cualquier ronda pre-release siguen siendo
+pasos separados. El estado de la transición ADR-0062 no cambia aquí: sin
+activación de gates ni escritura de memoria canónica en esta ejecución.
