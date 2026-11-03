@@ -10,6 +10,20 @@ El formato de cada entrada sigue [Keep a Changelog](https://keepachangelog.com/e
 por intención, y el proyecto usa [versionado semántico](https://semver.org/lang/es/)
 en fase de pre-release `0.1.0`.
 
+## [v0.1.0-beta.35]
+
+**Idempotencia de hook-runs, vigencia coherente y runner de CI optativo**: el
+reintento de un hook con el mismo `run_id` devuelve la evidencia original
+(bytes, digest y hora) bajo lock de custodia; la cadena vacía de vigencia
+deja de ser canónica (#181); el escritor espera el reader gate con deadline
+(`writer_gate_busy`) y la planificación elimina su TOCTOU con compactación
+(#186/#187); el contrato rc=3 queda descubierto para consumidores
+programáticos (#188); linaje consolidado y proyecciones verificadas
+(ADR-0061); runner de auditoría optativo (ADR-0062) sin activar el gate.
+No cambia la plantilla gestionada (`0.1.0-beta.33`) ni el
+`policy_fingerprint`. Detalle en
+[`docs/releases/v0.1.0-beta.35.md`](docs/releases/v0.1.0-beta.35.md).
+
 ## [v0.1.0-beta.34]
 
 **Lectores tolerantes a records de lotes antiguos** (#179): los records con
