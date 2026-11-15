@@ -295,3 +295,45 @@ Revisor: Gemini vía `agy --mode plan`, contexto fresco, sólo lectura, sobre
 **Estado:** correcciones absorbidas, **sin ronda que las verifique**: el
 mandato 4 autoriza una sola ronda sobre D1. D1 sigue en Propuesta y este PR
 no se fusiona; va al orquestador con el dictamen.
+
+
+## Ronda de cierre (orquestador) — `fix-and-retry` y corrección
+
+Revisor: DeepSeek por OpenCode, sesión nueva, sólo lectura, sobre
+`3c310ad..2be22e2` contra el código; la corrió el orquestador. H-02 a H-05
+cerrados, H-01 parcial; cuatro hallazgos nuevos. Dictamen íntegro fuera del
+repo: `/var/tmp/orquestador-memoria/ronda-cierre/dictamen-ankla-d1-deepseek.md`.
+
+**N-02 se decidió con evidencia.** El prototipo (`spike/e1a-recuperacion`,
+`3e0502d`) ya cerraba el journal enlazando `observed_log` (escribe los
+ref-logs `intent` y `observed_commit`), pero tras `repair_durability` no
+comprobaba nada: borraba entradas y marcador sin predicado. El texto
+(«`committed` completa») no correspondía a ningún estado de
+`commit-outcome-v2`. En `8561b80` se añadió al prototipo el predicado que
+ahora dice el ADR (`committed is True` y `durability_state == "complete"`,
+auditoría incompleta tolerada con aviso) y un control G cuyo cierre no
+enlaza `observed_log`. 20 `kill -9` por punto, en los 8 puntos:
+
+| Config. | Punto | Tras el cierre | Tras reparar | Final del paso 0 | Abortos | Perdidos / dupl. | `verify` |
+|---|---|---|---|---|---|---|---|
+| F | (iii-a) `post_replace_current` | `durability_incomplete` | `committed` | `committed`, durab. y audit. `complete` (20) | 0 | 0 / 0 | ok |
+| F | (iii-b) `pre_committed_journal` | `committed` | — | ídem (20) | 0 | 0 / 0 | ok |
+| F | `post_journal`, `mid_delete`, `post_entries_deleted` | ya `committed` | — | ídem (60) | 0 | 0 / 0 | ok |
+| F | demás puntos | sin rama `True` | — | — | 0 | 0 / 0 | ok |
+| G | (iii-a) y (iii-b) | — | — | `committed_audit_incomplete` (40), aviso `inbox_audit_incomplete` | 0 | 0 / 0 | ok |
+
+Lectura: el escenario del revisor es real si el cierre no enlaza
+`observed_log` (G: 40 de 40 cortes en `committed_audit_incomplete`, que el
+predicado anterior habría abortado en cada `drain`, bloqueando la custodia).
+Con el cierre del texto (F) no aparece, y con el predicado nuevo tampoco
+bloquearía si apareciera. En F y G: 0 marcadores y `pending/` vacío tras la
+tercera invocación, que queda `idle`. Salida cruda y sha256 fuera del repo:
+`/var/tmp/orquestador-memoria/capitanes/ankla/faseA/datos-B2/n02/` y
+`…/datos-B2/n02.sha256`. Stores en `/var/tmp/ankla-spike-b2`, borrados.
+
+| ID | Sev | Hallazgo | Disposición |
+|---|---|---|---|
+| N-01 | MED | «Cifras globales» daba 0,064 s sin bisección ni el 0,203 s | Corregido: lote limpio, bisección (≈ 0,086 s), máximo 0,203 s con paso 0 bajo `kill -9`; también en Consecuencias |
+| N-02 | MED | Predicado «`committed` completa» inexistente | Corregido con la evidencia de arriba: predicado de `commit-outcome-v2`, `observed_log` enlazado explícito, código `transaction_<state>` |
+| N-03 | LOW | Último recurso sin marcador | Elegido marcador por commit: `transaction_id` propio y marcador antes de cada commit; orden entrada → marcador |
+| N-04 | LOW | «`pending/` vacío» sin definir frente a ignorados | Definido en «Directorios» (sin nombres de entrada / de marcador); custodia e `inbox status` (`ignored`) lo citan |

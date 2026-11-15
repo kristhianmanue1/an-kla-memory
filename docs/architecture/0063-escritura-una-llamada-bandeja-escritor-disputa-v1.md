@@ -182,7 +182,12 @@ encolado), `pending/` (entradas completas), `inflight/` (marcadores de
 lotes en vuelo, paso 0), `rejected/` (evidencia). Sólo
 cuenta como entrada un archivo de `pending/` cuyo nombre case
 `^[0-9]+-[0-9]+-[0-9a-f]{16}-[0-9a-f]{8}\.json$`; el vaciado ignora sin
-tocar todo lo demás de `pending/`.
+tocar todo lo demás de `pending/`. Sólo cuenta como marcador un archivo de
+`inflight/` cuyo nombre sea `<transaction_id>.json`. En todo este ADR,
+«`pending/` vacío» significa «sin nombres que casen el patrón de entrada»
+e «`inflight/` vacío», «sin nombres de marcador»: un directorio u otro
+nombre ignorado no bloquea la custodia ni impide que `inbox drain`
+termine, e `inbox status` lo informa aparte (`ignored`).
 
 **Orden total de candados:** bandeja (`memory/inbox/.lock`) → identidad
 (`identity_lock`) → `write_lock` → gate de lectores. Nadie pide un candado
@@ -241,9 +246,15 @@ Con `write_lock` tomado:
    `transactions.py:312-313`) y tres ramas:
    - `committed is True` → **cierra el journal** («Cierre del journal»).
      Si el resultado es `durability_incomplete`, llama a
-     `repair_durability(txid)` y vuelve a inspeccionar; si la reparación
-     falla o la transacción no queda `committed` completa, aborta sin
-     borrar marcador ni entradas. Después borra de
+     `repair_durability(txid)`. Después vuelve a inspeccionar y exige
+     `committed is True` y `durability_state == "complete"`; si la
+     reparación lanza o el predicado no se cumple, aborta sin borrar
+     marcador ni entradas e informa `drain_error: transaction_<state>`
+     (`state` de `commit-outcome-v2`). Una auditoría incompleta
+     (`audit_state != "complete"`) no aborta: las entradas ya están en
+     `CURRENT` con durabilidad completa, así que se borran y se informa
+     el aviso `inbox_audit_incomplete`. Con el cierre de abajo no se
+     observó nunca (spike, configuración F). Después borra de
      `pending/` las entradas del marcador (fsync de `pending/`) y, al
      final, el marcador (fsync de `inflight/`). El orden journal → entradas
      → marcador es obligatorio;
@@ -267,8 +278,10 @@ Con `write_lock` tomado:
    - conserva `parent`, `candidate`, `attempt`, `stage_object` y
      `write_policy` del journal existente; si falta o está corrupto, los
      reconstruye del objeto inmutable de `stages/`;
-   - escribe `intent` y `observed_commit` si faltan; los objetos están
-     direccionados por contenido, así que es idempotente;
+   - si `observed_log` no es una cadena, escribe los ref-logs `intent` y
+     `observed_commit` y **enlaza `observed_log`** al segundo; así
+     `audit_state` pasa a `complete` (`audit_validation.py`). Los objetos
+     están direccionados por contenido, así que es idempotente;
    - enlaza **sólo los recibos que existen y validan** y nunca fabrica uno
      (patrón de `compaction.py:437-440`).
 
@@ -281,8 +294,9 @@ Con `write_lock` tomado:
    Un corte entre `_replace_current` (`:687`) y el recibo `current-durable`
    deja el journal `committed`, con `inspect_transaction` en
    `durability_incomplete`, que no es un `stage` sino un resultado derivado
-   de los recibos. `repair_durability` escribe el recibo `repair` y deja la
-   transacción en `committed` completa.
+   de los recibos. `repair_durability` escribe el recibo `repair`
+   (`transaction_repair.py:90-99`): resuelve la durabilidad, no la
+   auditoría, que ya completó el cierre. El estado final es `committed`.
 1. lee `CURRENT` y el snapshot;
 2. para cada nombre de `pending/` que casa el patrón de entrada, `lstat`:
    un directorio se ignora sin tocarlo (como todo nombre que no casa); si
@@ -338,8 +352,13 @@ Con `write_lock` tomado:
      Sólo si ese lote vuelve a fallar con un error que la bisección pura no
      predijo (`duplicate_<stream>_id`, que nace en `_assign_records`), se
      compromete entrada por entrada, releyendo `CURRENT` y replanificando
-     cada commit, y cada entrada comprometida se borra de `pending/` en el
-     acto. Este último recurso cuesta un commit por entrada y se reporta;
+     cada commit. Cada uno sigue la misma regla que cualquier lote: su
+     `transaction_id` (uuid5 de su base y del digest de su única entrada)
+     y su marcador en `inflight/`, con fsync, antes del commit; con
+     `committed: true`, borra la entrada de `pending/` y después el
+     marcador. Así un corte en cualquiera de esos commits lo resuelve el
+     paso 0 como cualquier otro. Este último recurso cuesta un commit y dos
+     fsync de marcador por entrada, y se reporta;
    - `committed: false` sin decisión `skip`, o un error de infraestructura
      o concurrencia con resultado conocido (E/S como `storage_io_failed`,
      `write_lock_busy`, `store_root_divergence`, `store_identity_changed`,
@@ -370,7 +389,8 @@ y el mismo id, y el paso 4 deduplica, así que reintentar tras `queued`,
 hasta dejar `pending/` vacío o agotar un presupuesto de tiempo, soltando el
 candado entre lotes. Las lecturas no vacían ni informan de la bandeja.
 `inbox status` (sólo lectura) informa `pending`, `inflight`, `rejected`
-(con motivo por entrada) y `tmp`; las respuestas de `remember` e `inbox drain` incluyen los
+(con motivo por entrada), `tmp` e `ignored` (nombres de `pending/` e
+`inflight/` que no son entrada ni marcador); las respuestas de `remember` e `inbox drain` incluyen los
 rechazos que produjeron. `rejected/` no se borra sola: es evidencia, y se
 declara. La bandeja no tiene cuota total: un `pending/` que crece sin vaciar
 es un límite declarado (cada entrada ≤ 64 KiB de texto).
@@ -389,7 +409,8 @@ se suma la deduplicación del paso 4, también bajo el candado.
 2. `export create`, `--seal sealed-export/v1` y `relocate commit` (ida y
    `--back`) toman el candado de bandeja en **exclusivo** al principio de la
    orden (antes del `mkdir` del bundle, `export_restore.py:121`, y antes de
-   `identity_lock`) y exigen `pending/` e `inflight/` vacíos; si no, fallan
+   `identity_lock`) y exigen `pending/` e `inflight/` vacíos (sin entradas
+   ni marcadores, en el sentido de «Directorios»); si no, fallan
    con `inbox_pending` o `inbox_inflight` (pista: `inbox drain`) sin crear
    nada. Con el orden journal → entradas → marcador no es alcanzable un
    marcador con `pending/` vacío y journal abierto; exigir `inflight/`
@@ -664,11 +685,19 @@ Cifras globales, con la configuración del texto:
 - **Cortes:** 160 `kill -9` reales (8 puntos × 20), con 0 perdidos, 0 duplicados y `verify` ok.
 - **Concurrencia:** 8 clientes con 200 encolados, 0 conflictos CAS, 0 `write_lock_busy` con un vaciador y p95 de encolado de 10,7 ms.
 - **Con `kill -9` aleatorio:** 2000 encolados, 0 perdidos y 0 duplicados.
-- **Candado:** como máximo 0,064 s con `write_lock` tomado por lote de 250.
+- **Candado:** entre 0,041 y 0,064 s con `write_lock` tomado por lote
+  **limpio** de 250. La bisección por prefijos añade 21,7 ms sobre 250 sin
+  soltar el candado (≈ 0,086 s en un lote que bisecciona). El máximo
+  observado en toda la campaña fue 0,203 s, en el escenario de `kill -9`
+  aleatorio, donde cada vaciado tras una muerte ejecuta además el paso 0
+  (cierre, reparación y borrado). El último recurso uno a uno no se
+  midió.
 
 **Sin ejercitar en el spike.** La implementación debe probarlo:
 
-- el último recurso uno a uno;
+- el último recurso uno a uno, con su marcador por commit y un corte en
+  cada uno;
+- el aviso `inbox_audit_incomplete` y `ignored` de `inbox status`;
 - el movimiento real a `rejected/` y `remember_id_collision`;
 - D3 de extremo a extremo;
 - el orden de candados, con prueba negativa;
@@ -721,7 +750,8 @@ Cifras globales, con la configuración del texto:
   además de los módulos nuevos; el vaciado retiene el candado de los demás
   durante su lote (≤ 0,2 s medidos con 250 entradas sobre 20.000 records
   sin prevalidación; el spike midió entre 0,041 y 0,064 s por lote limpio
-  de 250 y, aparte, 21,7 ms de bisección por prefijos sobre 250; el último
+  de 250 y, aparte, 21,7 ms de bisección por prefijos sobre 250, y un
+  máximo de 0,203 s con el paso 0 bajo `kill -9` aleatorio; el último
   recurso uno a uno queda fuera de esas cifras).
 - Neutras: la receta del bloque gestionado no cambia en E1.a (llega en
   E1.c, con el MCP escribible); la anotación de disputas en la recuperación
