@@ -96,3 +96,87 @@ class InboxCase(unittest.TestCase):
             child.stdin.close()
             child.wait(timeout=10)
         child.stdout.close()
+
+
+class EntryFactory:
+    """Fabrica entradas ``inbox-entry-v1`` válidas sin invocar ``git`` por entrada.
+
+    La identidad C0 se construye una vez; cada entrada lleva su sobre, su clave y su
+    ``payload_sha256`` como las escribe ``enqueue``. Los nombres crecen con el contador, así
+    que el orden de vaciado es el de creación. Sirve para los 1000 pendientes del criterio 8,
+    para entradas rotas y para los vaciados que no prueban el encolado.
+    """
+
+    def __init__(self, store: MemoryStore, env: dict[str, str] | None = None, start_ns: int = 10**18) -> None:
+        from an_kla import identity_c0
+
+        self.store = store
+        self.identity_c0 = identity_c0
+        self.env = dict(AGENT_ENV if env is None else env)
+        self.identity = identity_c0.build_identity(store.project_root, self.env)
+        self.counter = start_ns
+        self.pending = Path(store.root) / "inbox" / "pending"
+
+    def other_writer(self, **env: str) -> "EntryFactory":
+        clone = EntryFactory.__new__(EntryFactory)
+        clone.__dict__.update(self.__dict__)
+        clone.env = {**self.env, **env}
+        clone.identity = self.identity_c0.build_identity(self.store.project_root, clone.env)
+        return clone
+
+    def entry(
+        self, text: str, *, kind: str = "fact", target_id: str | None = None, kind_explicit: bool | None = None,
+        key: str | None = None,
+    ) -> dict[str, Any]:
+        from an_kla import inbox
+
+        key = key or self.identity_c0.derive_idempotency_key(self.identity, kind, text, target_id)
+        envelope = self.identity_c0.build_envelope(self.identity, kind, key)
+        data: dict[str, Any] = {
+            "schema": inbox.ENTRY_SCHEMA, "text": text, "kind": kind,
+            "kind_explicit": bool(kind_explicit),
+            "envelope": envelope, "idempotency_key": key,
+            "payload_sha256": inbox.payload_digest(text, kind, target_id),
+        }
+        if target_id is not None:
+            data["target_id"] = target_id
+        return data
+
+    def name_for(self, data: dict[str, Any]) -> str:
+        self.counter += 1000
+        return f"{self.counter}-{os.getpid()}-{data['idempotency_key'][7:23]}-{self.counter % 0xFFFFFFFF:08x}.json"
+
+    def write(self, text: str, **options: Any) -> str:
+        """Escribe una entrada válida en ``pending/`` y devuelve su nombre."""
+
+        from an_kla.canonical import canonical_json
+
+        data = self.entry(text, **options)
+        name = self.name_for(data)
+        self.pending.mkdir(parents=True, exist_ok=True)
+        (self.pending / name).write_bytes(canonical_json(data))
+        return name
+
+    def write_raw(self, payload: bytes, key_hint: str = "0" * 16) -> str:
+        """Escribe bytes arbitrarios con un nombre de entrada válido (entrada corrupta)."""
+
+        self.counter += 1000
+        name = f"{self.counter}-{os.getpid()}-{key_hint}-{self.counter % 0xFFFFFFFF:08x}.json"
+        self.pending.mkdir(parents=True, exist_ok=True)
+        (self.pending / name).write_bytes(payload)
+        return name
+
+    def fresh_name(self) -> str:
+        self.counter += 1000
+        return f"{self.counter}-{os.getpid()}-{'0' * 16}-{self.counter % 0xFFFFFFFF:08x}.json"
+
+
+def hold_flock(path: Path, mode: str = "ex") -> subprocess.Popen:
+    """Un proceso ajeno toma un ``flock`` sobre ``path`` hasta cerrar su stdin (ver ``InboxCase.release``)."""
+
+    child = subprocess.Popen(
+        [sys.executable, "-I", "-c", HOLDER, str(path), mode],
+        stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
+    )
+    assert child.stdout.readline().strip() == "ready"
+    return child
