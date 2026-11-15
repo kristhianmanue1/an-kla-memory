@@ -139,7 +139,9 @@ contra `CURRENT`, replay por `transaction_id` de ADR-0024, supersede,
 armado en el replay y en `skip`, o el `(revision, outcome)` de
 `_commit_locked` más lo que el post-proceso necesita. Exige que el testigo
 sea el candado activo del store (si no, falla cerrado con
-`write_lock_required`). La envoltura y cualquier
+`write_lock_required`). El único testigo válido es el que registra
+`MemoryStore.write_lock`, no el `write_lock` de `store_locks`; el plazo
+corto de D1 irá en ese método. La envoltura y cualquier
 llamante futuro que ya tenga el candado comparten el post-proceso tras
 soltarlo (`_post_lock_outcome`, `_maybe_reindex`, `_context_diagnostics`,
 aviso `record_without_indexable_text`), en el orden de hoy. Es la técnica de

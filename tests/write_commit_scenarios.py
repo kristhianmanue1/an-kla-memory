@@ -15,7 +15,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import shutil
 import sys
 import tempfile
 import uuid
@@ -326,8 +325,6 @@ def run_scenario(name: str, base_dir: Path) -> dict[str, Any]:
     """
 
     project = base_dir / name
-    if project.exists():
-        shutil.rmtree(project)
     project.mkdir(parents=True)
     with patch("uuid.uuid4", _counter_uuid4()):
         store = MemoryStore(project)

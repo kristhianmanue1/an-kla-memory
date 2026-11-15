@@ -8,7 +8,11 @@ deterministas. Cada archivo guarda el resultado (o el código de error) y el
 (`an_kla/write_commit.py` sin `_commit_write_plan_locked`), en un worktree
 temporal de `main` al que sólo se copió `tests/write_commit_scenarios.py`;
 nunca con el código de la extracción. Se comprobó que dos corridas, y una con
-otro `TMPDIR`, producen archivos idénticos.
+otro `TMPDIR`, producen archivos idénticos. El commit `1bff411` los reescribió
+después de la extracción, con este procedimiento. Para verificarlo sin fiarse
+del historial: extrae `5c5750a` (`git archive`) en un directorio temporal,
+copia el arnés de HEAD, regenera en otro directorio y compara con `diff -r`
+contra este; sólo debe diferir este `README.md`.
 
 **Regenerar** (sólo si el comportamiento cambia a propósito; la fase A exige
 que no cambie). Crea un worktree desechable de `main`, copia allí
@@ -28,7 +32,9 @@ registra sólo por presencia y tamaño (es aleatoria por diseño); el proyecto
 usa una raíz testigo inexistente (`/an-kla-golden-root`, `<ROOT>` en la
 salida) porque `canonical_project_root_at_init` entra en los digests, y la
 ruta temporal real se normaliza a `<TMP>`. Por eso la prueba corre en
-cualquier plataforma, con un `TemporaryDirectory` propio, sin omisiones.
+cualquier plataforma POSIX, con un `TemporaryDirectory` propio, sin
+omisiones. En Windows no aplica: allí el candado escribe `b"0"` en
+`memory/.write.lock` y el escenario de fallo al soltar usa `fcntl`.
 
 **Límite conocido.** Con la raíz testigo, `context_diagnostics` sale
 degradado (`context_status_unavailable`) en todos los goldens: se fija el
