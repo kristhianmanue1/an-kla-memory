@@ -8,14 +8,15 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import unittest
+from argparse import Namespace
+from unittest import mock
 
 from an_kla import inbox
 from an_kla.schemas import schema_document
 from tests.inbox_support import AGENT_ENV, InboxCase, make_project
 from tests.legacy_store_goldens import ROOT
-
-import tempfile
 
 
 def cli(project: Path, *args: str) -> subprocess.CompletedProcess:
@@ -156,8 +157,27 @@ class StatusCliTests(unittest.TestCase):
         self.assertLessEqual({"inbox-entry-v1", "inbox-status-v1"}, names)
         storage = json.loads(cli(ROOT, "capabilities").stdout)["storage"]
         self.assertEqual(storage["inbox"]["command"], "inbox status")
-        self.assertFalse((ROOT / "docs/schemas/inbox-entry-v1.schema.json").read_bytes()
-                         != (ROOT / "an_kla/schemas/inbox-entry-v1.schema.json").read_bytes())
+        for name in ("inbox-entry-v1", "inbox-status-v1"):
+            self.assertEqual(
+                (ROOT / f"docs/schemas/{name}.schema.json").read_bytes(),
+                (ROOT / f"an_kla/schemas/{name}.schema.json").read_bytes(),
+            )
+
+    def test_unknown_inbox_subcommand_is_a_usage_error_not_a_silent_status(self) -> None:
+        """R1-06: `inbox drain` (B2) no puede imprimir `status` por olvidar su rama."""
+
+        from an_kla import __main__ as entry
+
+        with tempfile.TemporaryDirectory(prefix="inbox-uso-") as temp:
+            args = Namespace(
+                command="inbox", inbox_command="drain", project_root=temp, store_root=None, no_update_check=True,
+            )
+            parser = mock.Mock()
+            parser.parse_args.return_value = args
+            with mock.patch.object(entry, "build_parser", return_value=parser):
+                with self.assertRaises(entry.CliUsageError) as caught:
+                    entry._run()
+            self.assertEqual(str(caught.exception), "inbox_command_unknown")
 
 
 class ReadsArePureTests(InboxCase):

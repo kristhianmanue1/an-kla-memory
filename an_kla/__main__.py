@@ -447,7 +447,10 @@ def _run() -> None:
                 args.relocation_receipt,
             )
     elif args.command == "inbox":
-        result = inbox_status(store)
+        if args.inbox_command == "status":
+            result = inbox_status(store)
+        else:
+            raise CliUsageError("inbox_command_unknown")
     elif args.command == "subject":
         result = resolve_namespace(store)
     elif args.command == "view":
