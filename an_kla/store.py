@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from .revision_walk import _OperationContext
 
+from contextlib import contextmanager
 from copy import deepcopy
 from dataclasses import dataclass
 import json
@@ -130,6 +131,7 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         self.custody_walk_root = self.store_root.parent
         self._opened_under_pointer = self.store_external and self._pointer_names_root()
         self.root = self.store_root / "memory"
+        self._active_write_lock: LockResult | None = None
         self.refute_authority_resolver = refute_authority_resolver
         self._refute_resolver_descriptor: Mapping[str, Any] | None = None
         if refute_authority_resolver is not None:
@@ -564,10 +566,20 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         with shared_reader_gate(self):
             return doctor_report(self)
 
+    @contextmanager
     def write_lock(self) -> Iterator[LockResult]:
-        """Adquiere el lock de escritura (deadline 10s; issue #111/P2)."""
+        """Adquiere el lock de escritura (deadline 10s; issue #111/P2).
+
+        Mientras se tiene, ``_active_write_lock`` es su ``LockResult``: es el
+        testigo que ``write_commit._commit_write_plan_locked`` exige.
+        """
         self._make_layout()
-        return _write_lock_under_root(self.root)
+        with _write_lock_under_root(self.root) as lock_result:
+            self._active_write_lock = lock_result
+            try:
+                yield lock_result
+            finally:
+                self._active_write_lock = None
 
     def _make_layout(self) -> None:
         for relative in (

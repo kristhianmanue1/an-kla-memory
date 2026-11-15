@@ -13,6 +13,7 @@ from unittest.mock import patch
 
 from an_kla.identity import _mutation_preflight_with_context
 from an_kla.store import MemoryStore
+from an_kla.store_locks import LockResult
 from an_kla.write_commit import _commit_write_plan_locked, _finish_locked_commit
 from tests import write_commit_scenarios as scenarios
 
@@ -84,6 +85,55 @@ class LockedBodyTests(unittest.TestCase):
             self.assertEqual(locked.observed, root)
             self.assertTrue(locked.outcome["committed"])
             self.assertEqual(locked.revision, store.read_current())
+
+    def _body_args(self, store, root):
+        candidate = scenarios.proposal_v1(root, "f-testigo")
+        auth = scenarios.authority_for(candidate)
+        planning = store.plan_write(candidate, auth)
+        return {
+            "expected_current_hash": root,
+            "plan": planning["plan"],
+            "proposal": candidate,
+            "authority": auth,
+            "decision": planning["decision"],
+            "preflight": _mutation_preflight_with_context(store),
+        }
+
+    def test_locked_body_demands_the_active_lock_witness(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            store = MemoryStore(temp)
+            root = store.initialize()
+            args = self._body_args(store, root)
+            with store.write_lock() as held:
+                pass
+            forged = LockResult()
+            cases = {
+                "sin candado (None)": None,
+                "testigo fabricado": forged,
+                "testigo ya liberado": held,
+            }
+            for label, witness in cases.items():
+                with self.subTest(case=label):
+                    with self.assertRaisesRegex(RuntimeError, "write_lock_required"):
+                        _commit_write_plan_locked(store, witness, **args)
+                    self.assertEqual(store.read_current(), root)
+            with store.write_lock():
+                with self.assertRaisesRegex(RuntimeError, "write_lock_required"):
+                    _commit_write_plan_locked(store, forged, **args)
+            self.assertEqual(store.read_current(), root)
+
+    def test_active_witness_is_cleared_when_the_lock_is_released(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            store = MemoryStore(temp)
+            store.initialize()
+            self.assertIsNone(store._active_write_lock)
+            with store.write_lock() as held:
+                self.assertIs(store._active_write_lock, held)
+            self.assertIsNone(store._active_write_lock)
+            with self.assertRaises(ValueError):
+                with store.write_lock():
+                    raise ValueError("boom")
+            self.assertIsNone(store._active_write_lock)
 
 
 if __name__ == "__main__":

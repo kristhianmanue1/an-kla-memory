@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from typing import Any, Mapping
 
 from . import attest as attest_module
-from .identity import assert_unchanged, _mutation_preflight_with_context
+from .identity import _Preflight, assert_unchanged, _mutation_preflight_with_context
 from .record_text import record_text
 from .store_locks import LockResult
 from .subject_binding import check_subject_ref_binding
@@ -38,20 +38,20 @@ _EMPTY_PENDING: dict[str, list[dict[str, Any]]] = {
 
 @dataclass(frozen=True)
 class _LockedCommit:
-    """Retorno de ``_commit_write_plan_locked``.
+    """Return value of ``_commit_write_plan_locked``.
 
-    Dos formas, según ``final``:
+    Two shapes, told apart by ``final``:
 
-    * ``final`` no es ``None``: ramas que hoy devuelven el resultado sin
-      post-proceso (replay de ADR-0024 y ``skip``). ``final`` es el dict
-      ``an-kla/write-commit-result-v1`` completo, con ``context_diagnostics``
-      calculado todavía bajo el candado (como hoy). ``revision`` y ``outcome``
-      quedan en ``None``; en ``skip`` no existe ``outcome``.
-    * ``final`` es ``None``: hubo ``_commit_locked``. ``revision`` y
-      ``outcome`` son su ``(revision, outcome)``; ``observed`` es el CURRENT
-      leído bajo el candado, y ``proposal``/``decision``/``plan_fingerprint``
-      son las copias aisladas tras la verificación, que es todo lo que
-      ``_finish_locked_commit`` necesita tras soltar el candado.
+    * ``final`` is not ``None``: the branches that return their result
+      without post-processing (ADR-0024 replay and ``skip``). ``final`` is the
+      complete ``an-kla/write-commit-result-v1`` dict, with
+      ``context_diagnostics`` computed while the lock is still held. The
+      other fields stay ``None``; ``skip`` has no ``outcome``.
+    * ``final`` is ``None``: ``_commit_locked`` ran. ``revision`` and
+      ``outcome`` are its ``(revision, outcome)``; ``observed`` is the
+      ``CURRENT`` read under the lock; ``proposal``, ``decision`` and
+      ``plan_fingerprint`` are the detached copies taken after verification,
+      which is all ``_finish_locked_commit`` needs once the lock is released.
     """
 
     final: dict[str, Any] | None = None
@@ -102,23 +102,35 @@ def _commit_write_plan_locked(
     authority: Mapping[str, Any],
     decision: Mapping[str, Any],
     transaction_id: str | None = None,
-    preflight: Any,
+    preflight: _Preflight,
 ) -> _LockedCommit:
-    """Revalidate and commit one exact write plan; caller holds ``write_lock``.
+    """Revalidate and commit one exact write plan; the caller holds ``write_lock``.
 
-    ``lock_result`` es el testigo del candado ya tomado (el candado no es
-    reentrante: este cuerpo nunca lo toma). ``preflight`` es el
-    ``_mutation_preflight_with_context`` calculado ANTES de tomarlo
-    (``binding`` y ``context``). Hace toda la revalidación: CAS contra
-    ``CURRENT``, replay por ``transaction_id`` (ADR-0024), ``verify_write_plan``,
-    ``base_revision`` triple, ``attest`` para ``tool_observed``, ``skip``,
-    supersede y ``subject_ref``. Los errores se propagan como excepción.
+    ``lock_result`` is the witness of the lock already taken (the lock is not
+    reentrant: this body never acquires it). It must be the ``LockResult`` the
+    store is holding right now (``store._active_write_lock``); anything else
+    -- no lock, a forged or an already released witness -- fails closed with
+    ``RuntimeError("write_lock_required")`` before any read or write.
+    ``preflight`` is ``_mutation_preflight_with_context`` computed BEFORE the
+    lock was taken (``binding`` and ``context``).
 
-    Retorno: ver ``_LockedCommit`` (``final`` para replay y ``skip``; si no,
-    ``(revision, outcome)`` más lo que usa el post-proceso). El llamante debe
-    pasarlo a ``_finish_locked_commit`` tras soltar el candado.
+    Does all the revalidation: CAS against ``CURRENT``, ADR-0024 replay by
+    ``transaction_id``, ``verify_write_plan``, the triple ``base_revision``
+    check, ``attest`` for ``tool_observed``, ``skip``, supersede and
+    ``subject_ref``. Errors propagate as exceptions. Return shape: see
+    ``_LockedCommit``; pass it to ``_finish_locked_commit`` after releasing
+    the lock.
+
+    Asymmetry kept on purpose (byte-neutral with the pre-extraction code): the
+    replay branch evaluates ``_post_lock_outcome`` HERE, while the lock is
+    still held, so ``lock_result.release_error`` is always ``None`` then and an
+    unlock failure never shows in a replayed outcome; ``skip`` has no
+    ``outcome`` at all. Only the committed branch applies ``release_error``
+    (in ``_finish_locked_commit``, after the release).
     """
 
+    if lock_result is None or getattr(store, "_active_write_lock", None) is not lock_result:
+        raise RuntimeError("write_lock_required")
     binding = preflight.binding
     observed = store.read_current()
     if observed != expected_current_hash:
@@ -281,12 +293,13 @@ def _commit_write_plan_locked(
 def _finish_locked_commit(
     store: Any, lock_result: LockResult, locked: _LockedCommit
 ) -> dict[str, Any]:
-    """Post-proceso común, DESPUÉS de soltar el candado.
+    """Common post-processing, AFTER the lock is released.
 
-    Orden de hoy: ``release_error`` (``audit_state``/``warnings``/
-    ``lock_release_incomplete``), ``_maybe_reindex``, aviso
-    ``record_without_indexable_text``, ``_context_diagnostics``. Las ramas con
-    ``locked.final`` (replay y ``skip``) ya traen el resultado y no se tocan.
+    Current order: ``release_error`` (``audit_state``/``warnings``/
+    ``lock_release_incomplete``), ``_maybe_reindex``, the
+    ``record_without_indexable_text`` warning, ``_context_diagnostics``. The
+    ``locked.final`` branches (replay and ``skip``) already carry their result
+    and are returned untouched.
     """
 
     if locked.final is not None:
