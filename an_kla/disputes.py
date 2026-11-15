@@ -171,8 +171,14 @@ def resolve_supersede_target(
 
 
 def record_id(stream: str, idempotency_key: str) -> str:
-    """``<prefix>-r-<24 hex of the key>`` (D1 "Idempotencia")."""
+    """``<prefix>-r-<24 hex of the key>`` (D1 "Idempotencia").
 
+    ``idempotency_key`` must be ``sha256:`` plus 64 hex; anything else raises
+    ``ValueError("invalid_idempotency_key")`` instead of collapsing ids.
+    """
+
+    if not isinstance(idempotency_key, str) or not _DIGEST.fullmatch(idempotency_key):
+        raise ValueError("invalid_idempotency_key")
     return f"{PREFIXES[stream]}-r-{idempotency_key[len('sha256:'):][:24]}"
 
 
@@ -337,9 +343,12 @@ def list_disputes(snapshot: Any, *, target: str | None = None) -> dict[str, Any]
     A dispute is a vigent record with a well-formed ``disputes`` object; ``target`` keeps
     those aimed at that id.  ``target.active`` is ``None`` when the target is
     not in the snapshot.  ``writer`` is the envelope writer when the envelope is
-    valid, else ``None``.  Everything is untrusted memory data.
+    valid, else ``None``.  Everything is untrusted memory data.  An empty ``target``
+    raises ``ValueError("invalid_disputes_target")`` (the schema requires ``minLength: 1``).
     """
 
+    if target == "":
+        raise ValueError("invalid_disputes_target")
     items: list[dict[str, Any]] = []
     for stream in STREAMS:
         for row in snapshot.records[stream]:

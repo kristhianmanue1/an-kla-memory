@@ -663,5 +663,82 @@ class Round1FixesTests(DisputeBase):
         self.assertEqual(schema_bytes("disputes-list-v1"), mirror)
 
 
+class Round2FixesTests(DisputeBase):
+    """Arreglos de la ronda 2 (R2-01 a R2-04)."""
+
+    def validator(self):
+        try:
+            from jsonschema import Draft202012Validator
+            from referencing import Registry, Resource
+        except ImportError:
+            self.skipTest("jsonschema unavailable")
+        from an_kla.schemas import schema_document
+
+        envelope_doc = schema_document("record-envelope-v1")
+        registry = Registry().with_resource(envelope_doc["$id"], Resource.from_contents(envelope_doc))
+        return Draft202012Validator(schema_document("disputes-list-v1"), registry=registry)
+
+    def test_r2_01_target_superseded_by_its_owner_is_active_false(self) -> None:
+        a, b = writer("agente-a"), writer("agente-b")
+        target = self.remember(b, "uno")
+        dispute = self.remember(a, "no uno", target=target.record["id"])
+        self.remember(b, "uno, corregido", target=target.record["id"])
+        result = disputes.list_disputes(self.store.snapshot(), target=target.record["id"])
+        (item,) = result["disputes"]
+        self.assertEqual(item["id"], dispute.record["id"])
+        self.assertIs(item["target"]["active"], False)
+        self.validator().validate(result)
+
+    def test_r2_01_absent_target_is_active_null(self) -> None:
+        base = self.store.read_current()
+        self.commit({
+            "schema": "an-kla/write-proposal-v1", "base_revision": base, "stream": "facts",
+            "operation": "add", "requested_representation": "summary",
+            "record": {"id": "f-huerfano", "text": "x", "disputes": {
+                "stream": "facts", "target_id": "f-no-existe",
+                "target_record_sha256": "sha256:" + "b" * 64}},
+            "lineage": {"derived_from_retrieval": False, "refs": []},
+        })
+        result = disputes.list_disputes(self.store.snapshot())
+        (item,) = result["disputes"]
+        self.assertIsNone(item["target"]["active"])
+        self.validator().validate(result)
+
+    def test_r2_02_invalid_or_missing_envelope_gives_null_writer(self) -> None:
+        self.legacy_add("f-1")
+        base = self.store.read_current()
+        digest = digest_json(self.raw("f-1"))
+        for n, envelope_value in enumerate(({"schema": "basura"}, None)):
+            record = {"id": f"f-sobre-{n}", "text": "x", "disputes": {
+                "stream": "facts", "target_id": "f-1", "target_record_sha256": digest}}
+            if envelope_value is not None:
+                record["an_kla_envelope"] = envelope_value
+            self.commit({
+                "schema": "an-kla/write-proposal-v1", "base_revision": self.store.read_current(),
+                "stream": "facts", "operation": "add", "requested_representation": "summary",
+                "record": record, "lineage": {"derived_from_retrieval": False, "refs": []},
+            })
+        result = disputes.list_disputes(self.store.snapshot(), target="f-1")
+        self.assertEqual(len(result["disputes"]), 2)
+        for item in result["disputes"]:
+            self.assertIsNone(item["writer"])
+            self.assertIsNone(item["enqueued_at"])
+        self.validator().validate(result)
+
+    def test_r2_03_api_rejects_an_empty_target(self) -> None:
+        with self.assertRaises(ValueError) as caught:
+            disputes.list_disputes(self.store.snapshot(), target="")
+        self.assertEqual(str(caught.exception), "invalid_disputes_target")
+
+    def test_r2_04_record_id_requires_a_full_sha256_key(self) -> None:
+        good = "sha256:" + "ab" * 32
+        self.assertEqual(disputes.record_id("facts", good), "f-r-" + "ab" * 12)
+        for bad in ("no-sha", "sha256:abc", "sha256:" + "g" * 64, "", None, "sha256:" + "a" * 65):
+            with self.subTest(bad=bad):
+                with self.assertRaises(ValueError) as caught:
+                    disputes.record_id("facts", bad)
+                self.assertEqual(str(caught.exception), "invalid_idempotency_key")
+
+
 if __name__ == "__main__":
     unittest.main()
