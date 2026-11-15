@@ -29,7 +29,9 @@ from typing import Any, Callable, Iterator, Mapping, NamedTuple
 from . import identity_c0, lock_order
 from .canonical import canonical_json, digest_json
 from .identity import _mutation_preflight_with_context
+from .reader_gate import ReaderGateError
 from .storage_primitives import fsync_directory
+from .store import PREFIXES
 from .store_errors import StoreError
 from .vigency import is_active
 
@@ -63,10 +65,9 @@ _NAME_ATTEMPTS = 16
 MAX_LISTED = 1000
 _MAX_REASON_BYTES = 4096
 
-# stream por kind (D1 «Orden») y prefijo de id por stream (`store.py:67`)
+# stream por kind (D1 «Orden»); el prefijo de id por stream es `store.PREFIXES`
 _KIND_STREAM = {"fact": "facts", "decision": "facts", "state": "episodes"}
 _STREAM_DEFAULT_KIND = {"facts": "fact", "episodes": "state"}
-_ID_PREFIX = {"facts": "f", "events": "e", "episodes": "ep"}
 
 # Sin `fcntl` no hay candado compartido: se pide siempre exclusivo (más lento, igual de correcto).
 SHARED_SUPPORTED = fcntl is not None
@@ -108,9 +109,9 @@ def is_marker_name(name: str) -> bool:
 def record_id(stream: str, idempotency_key: str) -> str:
     """``<prefijo>-r-<24 hex de la clave>`` (D1 «Idempotencia»)."""
 
-    if stream not in _ID_PREFIX or not _DIGEST.fullmatch(idempotency_key):
+    if stream not in PREFIXES or not _DIGEST.fullmatch(idempotency_key):
         raise InboxError("inbox_record_id_invalid")
-    return f"{_ID_PREFIX[stream]}-r-{idempotency_key[7:31]}"
+    return f"{PREFIXES[stream]}-r-{idempotency_key[7:31]}"
 
 
 def stream_for_kind(kind: str) -> str:
@@ -203,12 +204,40 @@ def _ensure_layout(store: Any) -> None:
         if state == "unsafe":
             raise InboxError("inbox_unsafe_path")
         if state == "absent":
-            directory.mkdir(parents=directory is paths.root)
+            # Otro proceso pudo crearlo entre el lstat y el mkdir: se tolera y se re-inspecciona.
+            directory.mkdir(parents=directory is paths.root, exist_ok=True)
+            if _dir_state(directory) != "present":
+                raise InboxError("inbox_unsafe_path")
             created = True
     if created:
         for directory in (paths.root, paths.tmp, paths.pending, paths.inflight, paths.rejected):
             fsync_directory(directory)
         fsync_directory(paths.root.parent)
+
+
+def _open_lock_file(path: Path, flags: int) -> int:
+    """Abre ``.lock`` como ``reader_gate._open_gate``: archivo regular, no enlace, ``st_nlink == 1``.
+
+    Cualquier otra cosa es ``inbox_unsafe_path``; ningún ``OSError`` crudo (con ruta) sale de aquí.
+    """
+
+    try:
+        fd = os.open(path, flags, 0o600)
+    except FileNotFoundError:
+        raise InboxError("inbox_absent") from None
+    except OSError as exc:
+        if exc.errno in (errno.ELOOP, errno.EISDIR, errno.ENOTDIR, errno.EMLINK):
+            raise InboxError("inbox_unsafe_path") from None
+        raise InboxError("inbox_lock_unavailable") from None
+    try:
+        info = os.fstat(fd)
+    except OSError:
+        os.close(fd)
+        raise InboxError("inbox_lock_unavailable") from None
+    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+        os.close(fd)
+        raise InboxError("inbox_unsafe_path")
+    return fd
 
 
 @contextlib.contextmanager
@@ -231,10 +260,7 @@ def inbox_lock(
         raise InboxError("inbox_absent")
     effective_exclusive = exclusive or not SHARED_SUPPORTED
     flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
-    try:
-        fd = os.open(paths.lock, flags if create else flags & ~os.O_CREAT, 0o600)
-    except FileNotFoundError:
-        raise InboxError("inbox_absent") from None
+    fd = _open_lock_file(paths.lock, flags if create else flags & ~os.O_CREAT)
     try:
         if os.fstat(fd).st_size == 0 and msvcrt is not None:  # pragma: no cover - sólo Windows
             os.write(fd, b"0")
@@ -309,9 +335,9 @@ def resolve_kind(store: Any, kind: str | None, target_id: str | None) -> tuple[s
     ``CURRENT``: si el target está en un solo stream y vigente, toma su
     ``an_kla_envelope.kind`` o, si es legado, el de su stream (``facts`` -> ``fact``,
     ``episodes`` -> ``state``); si no, ``fact``, y el vaciado lo rechaza con
-    ``invalid_supersede_target``. La lectura usa el gate de lectores (el último del
-    orden, pedido antes de cualquier candado de bandeja); cualquier fallo de lectura
-    cae en ``fact``.
+    ``invalid_supersede_target``. La lectura toma el gate de lectores compartido (el
+    último del orden, pedido antes de cualquier candado de bandeja); cualquier fallo de
+    lectura, incluido el del gate, cae en ``fact``.
     """
 
     if kind is not None:
@@ -328,7 +354,7 @@ def resolve_kind(store: Any, kind: str | None, target_id: str | None) -> tuple[s
             for record in snapshot.records.get(stream, [])
             if isinstance(record, Mapping) and str(record.get("id", "")) == target_id
         ]
-    except (StoreError, OSError, ValueError, KeyError, AttributeError):
+    except (StoreError, ReaderGateError, OSError, ValueError, KeyError, AttributeError):
         return "fact", False
     if len(found) != 1 or not is_active(found[0][1]):
         return "fact", False

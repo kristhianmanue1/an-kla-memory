@@ -8,11 +8,13 @@ import json
 import os
 import stat
 import unittest
+from unittest import mock
 from datetime import datetime, timezone
 
 from an_kla import identity_c0 as c0
 from an_kla import inbox
 from an_kla.identity import IdentityError
+from an_kla.reader_gate import ReaderGateError
 from an_kla.schemas import schema_document
 from tests.inbox_support import AGENT_ENV, InboxCase
 
@@ -97,6 +99,37 @@ class EnqueueTests(InboxCase):
                 self.assertEqual(inbox.entry_names(self.store), [])
                 self.assertEqual(os.listdir(self.inbox / "pending"), [])
         self.assertEqual(len(os.listdir(self.inbox / "tmp")), 3)
+
+    def test_durability_order_is_file_fsync_then_replace_then_pending_fsync(self) -> None:
+        """R1-05: quitar o reordenar cualquiera de los dos fsync cambia esta secuencia."""
+
+        enqueue(self.store, text="calienta el layout")  # el layout ya existe: sólo se observa la publicación
+        events: list = []
+        real_fsync, real_dir, real_replace = os.fsync, inbox.fsync_directory, os.replace
+
+        inside_dir = []
+
+        def fsync(fd):
+            if not inside_dir:  # `fsync_directory` llama a `os.fsync` por dentro
+                events.append(("fsync_file", os.fstat(fd).st_ino))
+            return real_fsync(fd)
+
+        def fsync_directory(path):
+            events.append(("fsync_dir", path.name))
+            inside_dir.append(True)
+            try:
+                return real_dir(path)
+            finally:
+                inside_dir.pop()
+
+        def replace(src, dst):
+            events.append(("replace", os.lstat(src).st_ino))
+            return real_replace(src, dst)
+
+        with mock.patch.object(inbox.os, "fsync", fsync), mock.patch.object(inbox, "fsync_directory", fsync_directory):
+            name = enqueue(self.store, text="orden de durabilidad", replace=replace)["entry"]
+        inode = os.lstat(self.inbox / "pending" / name).st_ino
+        self.assertEqual(events, [("fsync_file", inode), ("replace", inode), ("fsync_dir", "pending")])
 
     def test_failing_preflight_does_not_create_the_inbox(self) -> None:
         def refuse(_store):
@@ -250,6 +283,12 @@ class KindResolutionTests(InboxCase):
             with self.subTest(target=target):
                 result = enqueue(self.store, target_id=target)
                 self.assertEqual((result["kind"], result["kind_explicit"]), ("fact", False))
+
+    def test_reader_gate_failure_falls_back_to_fact(self) -> None:
+        """R1-07: el docstring promete que cualquier fallo de lectura cae en `fact`."""
+
+        with mock.patch.object(self.store, "snapshot", side_effect=ReaderGateError("reader_gate_mode_reentry")):
+            self.assertEqual(inbox.resolve_kind(self.store, None, "f-x"), ("fact", False))
 
     def test_unreadable_snapshot_falls_back_to_fact_without_writing(self) -> None:
         self.store.current_path.write_bytes(b"basura\n")

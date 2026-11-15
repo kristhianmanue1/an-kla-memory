@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
 import unittest
 from unittest import mock
 
 from an_kla import inbox, lock_order
 from an_kla.identity import identity_lock
 from tests.inbox_support import AGENT_ENV, InboxCase
+from tests.legacy_store_goldens import ROOT
 
 HAS_FLOCK = inbox.fcntl is not None
 
@@ -78,6 +84,96 @@ class InboxLockTests(InboxCase):
         (paths.inflight / marker).write_bytes(b"{}")
         self.assertEqual(inbox.marker_names(self.store), [marker])
         self.assertFalse(inbox.inflight_is_empty(self.store))
+
+
+# Cada hijo espera a que exista `go` y entonces pide el candado sobre una bandeja que aún no existe.
+RACER = (
+    "import os, sys\n"
+    "sys.path.insert(0, sys.argv[1])\n"
+    "from an_kla import inbox\n"
+    "from an_kla.store import MemoryStore\n"
+    "store = MemoryStore(sys.argv[2])\n"
+    "print('listo', flush=True)\n"
+    "while not os.path.exists(sys.argv[3]):\n"
+    "    pass\n"
+    "with inbox.inbox_lock(store, exclusive=False, wait_seconds=10.0):\n"
+    "    pass\n"
+)
+
+
+class LayoutRaceTests(unittest.TestCase):
+    """R1-02: 12 procesos crean a la vez la bandeja de un store que no la tiene."""
+
+    ROUNDS, PROCESSES = 6, 12
+
+    def test_concurrent_first_creation_never_fails(self) -> None:
+        failures: list[str] = []
+        with tempfile.TemporaryDirectory(prefix="inbox-carrera-") as temp:
+            base = Path(temp)
+            project = base / "proyecto"
+            (project / ".an-kla" / "memory").mkdir(parents=True)
+            for round_number in range(self.ROUNDS):
+                shutil.rmtree(project / ".an-kla" / "memory" / "inbox", ignore_errors=True)
+                go = base / f"go-{round_number}"
+                children = [
+                    subprocess.Popen(
+                        [sys.executable, "-c", RACER, str(ROOT), str(project), str(go)],
+                        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                    )
+                    for _ in range(self.PROCESSES)
+                ]
+                for child in children:  # nadie arranca hasta que todos están importados y listos
+                    self.assertEqual(child.stdout.readline().strip(), "listo")
+                go.write_bytes(b"")
+                for child in children:
+                    _out, err = child.communicate(timeout=60)
+                    if child.returncode != 0:
+                        failures.append(err.strip().splitlines()[-1] if err.strip() else "sin stderr")
+        self.assertEqual(failures, [])
+
+
+class LockFileSafetyTests(InboxCase):
+    """R1-04: `.lock` se inspecciona como `reader_gate._open_gate` (regular, no enlace, un solo enlace)."""
+
+    def assert_unsafe(self) -> None:
+        for create in (True, False):
+            with self.subTest(create=create):
+                with self.assertRaises(inbox.InboxError) as caught:
+                    with inbox.inbox_lock(self.store, exclusive=False, create=create):
+                        pass
+                self.assertEqual(caught.exception.code, "inbox_unsafe_path")
+                self.assertNotIn(str(self.project), str(caught.exception))
+                self.assertNotIn(str(self.project), repr(caught.exception.hint))
+
+    def prepare(self) -> Path:
+        with inbox.inbox_lock(self.store, exclusive=False):
+            pass
+        lock = self.inbox / ".lock"
+        lock.unlink()
+        return lock
+
+    def test_symlinked_lock_is_unsafe(self) -> None:
+        lock = self.prepare()
+        target = self.project / "otro"
+        target.write_bytes(b"")
+        os.symlink(target, lock)
+        self.assert_unsafe()
+
+    def test_directory_lock_is_unsafe(self) -> None:
+        self.prepare().mkdir()
+        self.assert_unsafe()
+
+    def test_hardlinked_lock_is_unsafe(self) -> None:
+        lock = self.prepare()
+        lock.write_bytes(b"")
+        os.link(lock, self.project / "otro-nombre")
+        self.assert_unsafe()
+
+    def test_collect_tmp_also_refuses_an_unsafe_lock(self) -> None:
+        self.prepare().mkdir()
+        with self.assertRaises(inbox.InboxError) as caught:
+            inbox.collect_tmp(self.store)
+        self.assertEqual(caught.exception.code, "inbox_unsafe_path")
 
 
 class CollectTmpTests(InboxCase):
