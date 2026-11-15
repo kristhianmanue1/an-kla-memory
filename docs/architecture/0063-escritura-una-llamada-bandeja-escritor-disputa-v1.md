@@ -1,11 +1,10 @@
 # ADR-0063: Escribir en una llamada con bandeja, escritor declarado y disputa
 
-- **Estado:** Aceptada parcialmente (2026-11-14, decisión del orquestador
-  en el mandato 4, bajo la delegación del esfuerzo de memoria agéntica):
-  aceptadas D2, D3 y «Commit con el candado tomado»; **D1 (bandeja y
-  vaciado) sigue en Propuesta**; su texto ya incorpora la evidencia del
-  spike de recuperación y espera ronda y decisión. Ver
-  «Partición del estado».
+- **Estado:** Aceptada (2026-11-15, decisión del orquestador bajo la
+  delegación del esfuerzo de memoria agéntica). D2, D3 y «Commit con el
+  candado tomado» se aceptaron el 2026-11-14 (mandato 4); D1 el 2026-11-15
+  (mandato 5), con la evidencia del spike de recuperación y la ronda de
+  cierre `proceed`. Ver «Partición del estado».
 - **Implementación:** No iniciada
 - **Fecha:** 2026-11-14
 - **Decide sobre:** la orden aditiva de CLI `remember`, que guarda un
@@ -96,16 +95,17 @@ tomado tiene sección propia porque se acepta aparte.
 
 Las rondas r1 a r4 convergieron en todo salvo en la recuperación tras un
 corte durante el vaciado (pasos 0 y 7 de D1), que ya no se puede cerrar en
-el papel. Por eso el estado se parte:
+el papel. Por eso el estado se partió, y D1 se aceptó después con la
+evidencia del spike:
 
 | Parte | Estado | Qué autoriza | Criterios |
 |---|---|---|---|
 | «Commit con el candado tomado» | Aceptada | Extracción neutra en `write_commit.py`, sin llamante nuevo | 10 |
 | D2: formato del sobre, validador C0, derivación de `repo.id`, construcción desde el entorno | Aceptada | Módulo y schema `record-envelope-v1` sin llamante: ninguna orden escribe sobres | 5 y las pruebas de C0 |
 | D3: regla propia/ajena, record de disputa, selector `raw_records` | Aceptada | Nada en `main` todavía: su único camino es `remember` | 4 (al implementarse) |
-| D1: `remember`, bandeja, vaciado, órdenes `inbox`, `disputes list`, cambios de custodia en `export`/`relocate` | **Propuesta**, corregida con la evidencia del spike; pendiente de ronda y decisión | Nada | 1–3, 6–9 |
+| D1: `remember`, bandeja, vaciado, órdenes `inbox`, `disputes list`, cambios de custodia en `export`/`relocate` | Aceptada (2026-11-15), con la evidencia del spike | La fase B, con mandato propio | 1–3, 6–9 |
 
-**Regla de cierre.** Mientras D1 no esté aceptada, no entra en `main`
+**Regla de cierre** (cumplida el 2026-11-15). Mientras D1 no esté aceptada, no entra en `main`
 código de la bandeja, `remember`, `inbox drain`, `inbox status`,
 `disputes list`, los cambios de custodia de D1 ni el camino de D3 (la fase
 B y la C). D1 se acepta sólo con un PR `docs/` que reescriba sus pasos 0 y 7
@@ -157,8 +157,9 @@ y `context`).
 
 ### D1 — Bandeja de entrada y vaciado en lote bajo candado, sin demonio
 
-> **Estado de D1: Propuesta**, corregida con la evidencia del spike. Ver
-> «Partición del estado». Nada de esta sección se implementa todavía.
+> **Estado de D1: Aceptada** (2026-11-15), con la evidencia del spike. Ver
+> «Partición del estado». Su implementación es la fase B, con mandato
+> propio.
 
 **Orden.** `remember (--text <t> | --text-file <ruta|->) [--kind
 fact|decision|state] [--supersedes <id>] [--idempotency-key <k>]`. Único

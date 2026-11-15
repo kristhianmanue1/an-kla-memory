@@ -337,3 +337,14 @@ tercera invocación, que queda `idle`. Salida cruda y sha256 fuera del repo:
 | N-02 | MED | Predicado «`committed` completa» inexistente | Corregido con la evidencia de arriba: predicado de `commit-outcome-v2`, `observed_log` enlazado explícito, código `transaction_<state>` |
 | N-03 | LOW | Último recurso sin marcador | Elegido marcador por commit: `transaction_id` propio y marcador antes de cada commit; orden entrada → marcador |
 | N-04 | LOW | «`pending/` vacío» sin definir frente a ignorados | Definido en «Directorios» (sin nombres de entrada / de marcador); custodia e `inbox status` (`ignored`) lo citan |
+
+**Verificación de la corrección — `proceed`.** Revisor: Gemini vía
+`agy --mode plan`, contexto fresco, sólo lectura, sobre `2be22e2..4b92876`
+con el código del store y del prototipo a la vista. Pregunta única: ¿N-01 a
+N-04 cerrados sin contradicción nueva? Respuesta: los cuatro `cerrado`, sin
+hallazgos nuevos ni contradicción con D1, D2, D3, la extracción o la
+partición. Dictamen íntegro fuera del repo:
+`/var/tmp/orquestador-memoria/capitanes/ankla/ronda-adr0063/dictamen-cierre-d1-gemini.md`.
+
+**Estado:** D1 aceptada por el orquestador (mandato 5, 2026-11-15) con esta
+ronda `proceed`; el ADR pasa a Aceptada.

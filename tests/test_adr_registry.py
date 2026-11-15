@@ -47,8 +47,8 @@ class AdrRegistryTests(unittest.TestCase):
         # implementadas por orden del maintainer ("aceptada").
         # 0061 aceptada por el Operador el 2026-10-29; implementación autorizada.
         # 0062 aceptada por el Operador tras afinar sus tres puntos.
-        # 0063 aceptada parcialmente (D2, D3 y extracción; D1 pendiente de
-        # spike) por el orquestador bajo la delegación, mandato 4.
+        # 0063 aceptada por el orquestador bajo la delegación: D2, D3 y
+        # extracción en el mandato 4; D1 tras el spike, mandato 5.
         self.assertEqual(states["Propuesta"], 5)
         self.assertEqual(states["Aceptada"], 58)
 
