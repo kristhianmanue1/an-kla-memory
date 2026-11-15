@@ -467,12 +467,20 @@ def build_parser() -> argparse.ArgumentParser:
         help="Incluir rutas (sólo para un artefacto efímero del operador).",
     )
     inbox_cmd = sub.add_parser(
-        "inbox", help="Inspeccionar la bandeja de entrada de memoria (sólo lectura)."
+        "inbox", help="Inspeccionar o vaciar la bandeja de entrada de memoria."
     )
     inbox_sub = inbox_cmd.add_subparsers(dest="inbox_command", required=True)
     inbox_sub.add_parser(
         "status",
         help="Entradas pendientes, lotes en vuelo, rechazos y temporales; no crea nada.",
+    )
+    inbox_drain_cmd = inbox_sub.add_parser(
+        "drain",
+        help="Vacía la bandeja en lotes bajo write_lock (ADR-0063 D1); escribe en el store.",
+    )
+    inbox_drain_cmd.add_argument(
+        "--budget-seconds", type=float, default=None,
+        help="Presupuesto de tiempo entre lotes (por defecto 30 s); el lote en curso no se interrumpe.",
     )
     identity_cmd = sub.add_parser("identity", help="Inspeccionar o adoptar identidad local.")
     identity_sub = identity_cmd.add_subparsers(dest="identity_command", required=True)

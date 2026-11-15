@@ -260,6 +260,12 @@ def _ensure_layout(store: Any) -> None:
         fsync_directory(paths.root.parent)
 
 
+def ensure_layout(store: Any) -> None:
+    """Crea (si faltan) ``tmp/``, ``pending/``, ``inflight/`` y ``rejected/``; nunca detrás de un enlace."""
+
+    _ensure_layout(store)
+
+
 def _open_lock_file(path: Path, flags: int) -> int:
     """Abre ``.lock`` como ``reader_gate._open_gate``: archivo regular, no enlace, ``st_nlink == 1``.
 
@@ -675,7 +681,7 @@ def read_status(store: Any) -> dict[str, Any]:
 
 __all__ = [
     "ENTRY_SCHEMA", "InboxError", "InboxPaths", "KINDS", "MAX_TEXT_BYTES", "STATUS_SCHEMA",
-    "collect_tmp", "enqueue", "entry_names", "inbox_lock", "inbox_paths", "inflight_is_empty",
+    "collect_tmp", "ensure_layout", "enqueue", "entry_names", "inbox_lock", "inbox_paths", "inflight_is_empty",
     "is_entry_name", "is_marker_name", "marker_names", "payload_digest", "pending_is_empty",
     "read_status", "record_id", "resolve_kind", "root_state", "stream_for_kind",
 ]

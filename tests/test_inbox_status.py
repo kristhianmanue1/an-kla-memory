@@ -181,11 +181,11 @@ class StatusCliTests(unittest.TestCase):
             self.assertEqual((body["schema"], body["inbox"]), ("an-kla/inbox-status-v1", "absent"))
             self.assertEqual(list(project.iterdir()), [])
 
-    def test_help_lists_the_command_and_it_has_no_other_subcommands(self) -> None:
+    def test_help_lists_status_and_drain_but_not_remember(self) -> None:
         text = cli(ROOT, "inbox", "--help").stdout
         self.assertIn("status", text)
-        for forbidden in ("drain", "remember"):
-            self.assertNotIn(forbidden, text)
+        self.assertIn("drain", text)  # B2
+        self.assertNotIn("remember", text)
         self.assertIn("inbox", cli(ROOT, "--help").stdout)
 
     def test_registered_in_schema_list_and_capabilities(self) -> None:
@@ -200,13 +200,13 @@ class StatusCliTests(unittest.TestCase):
             )
 
     def test_unknown_inbox_subcommand_is_a_usage_error_not_a_silent_status(self) -> None:
-        """R1-06: `inbox drain` (B2) no puede imprimir `status` por olvidar su rama."""
+        """R1-06: un subcomando sin rama no puede imprimir `status` (`drain` ya tiene la suya, B2)."""
 
         from an_kla import __main__ as entry
 
         with tempfile.TemporaryDirectory(prefix="inbox-uso-") as temp:
             args = Namespace(
-                command="inbox", inbox_command="drain", project_root=temp, store_root=None, no_update_check=True,
+                command="inbox", inbox_command="otro", project_root=temp, store_root=None, no_update_check=True,
             )
             parser = mock.Mock()
             parser.parse_args.return_value = args

@@ -100,6 +100,12 @@ def capabilities() -> dict[str, Any]:
                 "creates_nothing": True,
                 "mcp": False,
                 "decision": "ADR-0063 D1",
+                "drain": {
+                    "command": "inbox drain [--budget-seconds N]",
+                    "schema": "an-kla/inbox-drain-result-v1",
+                    "read_only": False,
+                    "mcp": False,
+                },
             },
             "disputes": {
                 "command": "disputes list [--target <id>]",

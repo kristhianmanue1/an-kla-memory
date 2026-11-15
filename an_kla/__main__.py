@@ -53,6 +53,8 @@ from .identity import (
 from .identity_relocation import record_project_relocation
 from .disputes import list_disputes
 from .inbox import read_status as inbox_status
+from .inbox_drain import DEFAULT_BUDGET_SECONDS as INBOX_DRAIN_BUDGET_SECONDS
+from .inbox_drain import drain as inbox_drain
 from .inventory import DEFAULT_LIMIT as INVENTORY_DEFAULT_LIMIT
 from .inventory import MAX_LIMIT as INVENTORY_MAX_LIMIT
 from .inventory import STREAMS as INVENTORY_STREAMS
@@ -454,6 +456,11 @@ def _run() -> None:
     elif args.command == "inbox":
         if args.inbox_command == "status":
             result = inbox_status(store)
+        elif args.inbox_command == "drain":
+            budget = INBOX_DRAIN_BUDGET_SECONDS if args.budget_seconds is None else args.budget_seconds
+            if not 0 < budget <= 3600:
+                raise CliUsageError("invalid_budget_seconds")
+            result = inbox_drain(store, budget_seconds=budget)
         else:
             raise CliUsageError("inbox_command_unknown")
     elif args.command == "subject":
