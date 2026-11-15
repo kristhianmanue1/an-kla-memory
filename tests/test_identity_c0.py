@@ -1,7 +1,8 @@
 """Writer identity C0 and record envelope (ADR-0063 D2).
 
-The conformance vectors are the frozen C0 `8fccbcc` ones, copied under
-`tests/fixtures/identidad-v1` and checked by digest before use.  The derivation
+The conformance vectors are the frozen C0 `8fccbcc` ones plus those of its
+errata 1 (`4c0fc1e`), copied under `tests/fixtures/identidad-v1` and checked by
+digest before use.  The derivation
 cases of `repo.id` that static vectors cannot cover run on temporary repos.
 """
 
@@ -26,6 +27,8 @@ from an_kla.schemas import schema_bytes, schema_catalog, schema_document, schema
 ROOT = Path(__file__).resolve().parents[1]
 VECTORS = ROOT / "tests" / "fixtures" / "identidad-v1" / "vectores.json"
 VECTORS_SHA256 = "a169a7f93728f327f2f47282b339ff8a2b4fc1f0e9cd383a6afe7f6441a92643"
+ERRATA_1 = VECTORS.parent / "vectores-errata-1.json"
+ERRATA_1_SHA256 = "bd6abbae0b135ac6b64910ee0e967d2d9a929763399de6f286d13c126a36654d"
 GIT_OK = c0.git_is_usable()
 # Isolates repo-building commands from the developer's global Git config.
 GIT_ENV = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
@@ -39,11 +42,11 @@ VALID_ENV = {
 }
 
 
-def load_vectors(path: Path = VECTORS) -> dict:
+def load_vectors(path: Path = VECTORS, expected_sha256: str = VECTORS_SHA256) -> dict:
     payload = path.read_bytes()
     digest = hashlib.sha256(payload).hexdigest()
-    if digest != VECTORS_SHA256:
-        raise AssertionError(f"vectores.json digest {digest} != {VECTORS_SHA256}")
+    if digest != expected_sha256:
+        raise AssertionError(f"{path.name} digest {digest} != {expected_sha256}")
     return json.loads(payload)
 
 
@@ -56,17 +59,17 @@ def vector_failures(data: dict) -> list[str]:
         if expected != actual:
             failures.append(f"{label}: expected {expected!r}, got {actual!r}")
 
-    for case in data["validos"]:
+    for case in data.get("validos", []):
         check(f"valido {case['nombre']}", [], c0.validate(case["objeto"]))
-    for case in data["invalidos"]:
+    for case in data.get("invalidos", []):
         reasons = c0.validate(case["objeto"])
         check(f"invalido {case['nombre']} ({case['motivo']} in {reasons})", True, case["motivo"] in reasons)
-    for case in data["normalizacion"]:
+    for case in data.get("normalizacion", []):
         check(f"normalizacion {case['url']!r}", case["repo_id"], c0.normalize_remote(case["url"]))
-    for case in data["remoto_no_normalizable"]:
+    for case in data.get("remoto_no_normalizable", []):
         check(f"remoto {case['url']!r} base={case.get('base')!r}", case["repo_id"],
               c0.repo_id_from_remote(case["url"], case.get("base")))
-    for case in data["local"]:
+    for case in data.get("local", []):
         check(f"local {case['ruta_comun']!r}", case["repo_id"], c0.repo_id_from_common_dir(case["ruta_comun"]))
     return failures
 
@@ -99,6 +102,27 @@ class VectorTests(unittest.TestCase):
 
     def test_all_76_vectors_pass(self) -> None:
         self.assertEqual(vector_failures(load_vectors()), [])
+
+    def test_errata_1_file_is_the_copy_from_coordination(self) -> None:
+        self.assertEqual(hashlib.sha256(ERRATA_1.read_bytes()).hexdigest(), ERRATA_1_SHA256)
+        origin = (VECTORS.parent / "ORIGEN.md").read_text(encoding="utf-8")
+        self.assertIn(ERRATA_1_SHA256, origin)
+        self.assertIn("4c0fc1e", origin)
+        self.assertIn("ERRATAS.md", origin)
+
+    def test_all_11_errata_1_vectors_pass(self) -> None:
+        data = load_vectors(ERRATA_1, ERRATA_1_SHA256)
+        self.assertEqual((data["schema"], data["errata"]), ("memoria/identidad/v1", 1))
+        groups = ("validos", "invalidos", "normalizacion", "remoto_no_normalizable", "local")
+        self.assertEqual(sum(len(data.get(group, [])) for group in groups), 11)
+        self.assertEqual(vector_failures(data), [])
+
+    def test_tampered_errata_1_file_is_detected_by_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tampered = Path(tmp) / "vectores-errata-1.json"
+            tampered.write_bytes(ERRATA_1.read_bytes() + b" ")
+            with self.assertRaises(AssertionError):
+                load_vectors(tampered, ERRATA_1_SHA256)
 
     def test_negative_control_an_altered_vector_fails(self) -> None:
         for label, mutate in (
@@ -135,16 +159,14 @@ class VectorTests(unittest.TestCase):
                 self.assertNotEqual(c0.validate(candidate), [])
 
     def test_a_newline_inside_the_input_changes_the_case_not_just_the_verdict(self) -> None:
-        # R1-03; documented in tests/fixtures/identidad-v1/ORIGEN.md.  The reference's `$`
-        # lets these through as canonical ids that contain the newline; fullmatch does not.
+        # R1-03, now C0 errata 1 (ERRATAS.md in coordination).  The `8fccbcc` reference's
+        # `$` let these through as canonical ids that contain the newline; fullmatch does not.
         self.assertIsNone(c0.normalize_remote("OM\n:eU3"))
         self.assertEqual(c0.repo_id_from_remote("GwXYo\n:Vu", "/base"), "remoto:e720d808474ba2b6")
         self.assertEqual(c0.repo_id_from_remote("GwXYo\n:Vu", "/base"), "remoto:" + hash16("GwXYo\n:Vu"))
         self.assertFalse(c0.is_valid_branch("rama\n"))
         self.assertFalse(c0.is_valid_branch("ra\nma"))
         self.assertFalse(c0.is_canonical_repo_id("om\n/eu3"))
-        origin = (VECTORS.parent / "ORIGEN.md").read_text(encoding="utf-8")
-        self.assertIn("Divergencia conocida", origin)
 
     def test_trailing_newline_is_not_a_valid_branch_or_id(self) -> None:
         # `$` would accept it; the contract says no whitespace.

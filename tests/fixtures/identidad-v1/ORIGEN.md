@@ -16,25 +16,25 @@ El archivo (935 líneas) supera el límite por defecto del gate de tamaños; en
 `skevi-gate.json` tiene un límite propio de 935 (`limits`), no una exención:
 si crece, el gate lo detecta.
 
-## Divergencia conocida con el validador de referencia
+## Errata 1 de C0 (`vectores-errata-1.json`)
 
-`an_kla/identity_c0.py` usa `fullmatch` donde `scripts/validate_identidad.py`
-(`8fccbcc`) usa `re.match(...$)`, y en Python `$` también casa antes de un
-salto de línea final. Con un `\n` en la entrada los dos dan resultados
-distintos, y no sólo «aceptar o rechazar»: el `repo.id` puede cambiar de caso.
+El dueño de C0 corrigió el validador de referencia: anclaba con
+`re.match(...$)`, y en Python `$` también casa antes de un salto de línea
+final, así que aceptaba lo que el contrato rechaza («sin espacios»). El texto
+del contrato y `vectores.json` no cambian. Detalle, tabla de efectos y límite
+conocido: `cc/memoria/contratos/identidad-v1/ERRATAS.md` en el mismo repo.
 
-| entrada | referencia | an-kla |
-|---|---|---|
-| `normalize_remote("OM\n:eU3")` | `"om\n/eu3"` (id canónico con el salto) | `None` |
-| `repo_id_from_remote("GwXYo\n:Vu", "/base")` | `"gwxyo\n/vu"` (caso 1) | `"remoto:e720d808474ba2b6"` (caso 2) |
-| `is_valid_branch("rama\n")` | válida | no válida |
+- Commit: `4c0fc1e` en `main` (el archivo entró en `4df5fb4` y no cambió
+  después).
+- Ruta de origen: `cc/memoria/contratos/identidad-v1/vectores-errata-1.json`.
+- sha256: `bd6abbae0b135ac6b64910ee0e967d2d9a929763399de6f286d13c126a36654d`.
+- Contenido: 11 casos (1 `validos`, 6 `invalidos`, 3 `normalizacion`,
+  1 `remoto_no_normalizable`), mismo formato y mismo ejecutor.
 
-Los 76 vectores no incluyen ningún `\n`, así que ambos los pasan. an-kla sigue
-la lectura del contrato («sin espacios»); la prueba
-`test_a_newline_inside_the_input_changes_the_case_not_just_the_verdict` lo fija.
-Es un defecto del validador de referencia, no del contrato: queda para que el
-dueño de C0 decida una errata. Hasta entonces, dos implementaciones pueden dar
-identidades distintas para un remoto con salto de línea interno.
+`an_kla/identity_c0.py` ya usaba `fullmatch` y pasa los 11 sin cambios; la
+prueba comprueba el digest y ejecuta el archivo. Los caracteres invisibles de
+formato (`U+200B`, `U+200C`, `U+FEFF`) siguen aceptándose donde C0 los acepta:
+prohibirlos sería `identidad-v2`.
 
 Espacio en blanco: el validador y el schema usan una clase enumerada que es
 exactamente el `\s` de Python sobre `str` (lo que usa la referencia), de modo
