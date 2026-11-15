@@ -1,0 +1,29 @@
+{
+  "goldens": {
+    "cli.assemble_context": "ef39e86c2be0823957aa8d0068bdb4c63d85a05de59b6b5e27b03581294c787b",
+    "cli.inventory": "c1268a95e0b11000b86e9405a5e9bfd0caece1971b53a3cd8a25cae66344a6b9",
+    "cli.plan_write_authority_template": "e9369ce993b74cba4e7542433dc3514501a8bb9113a3fecef93371138682574a",
+    "cli.resume": "3a660e5d32f92c0666b88098b9f1c1a6c9aa13d99f499d78273156a6438c1dbe",
+    "cli.retrieve": "7a69efc86e1385eef5e0bb896e0413da486c2f7e032eedde0bd80ba3ddc506ab",
+    "cli.retrieve_fresh": "db052d71631908049fcc3c2c9fd564f5361c1ef41eed13d499d79bc1673bd420",
+    "cli.retrieve_streams": "706bfbdf9d6cb4c10fd8f3338c2715374d9a7c2507fb48fe28eb96c4d8617008",
+    "cli.status": "32fba2619554bbcfea9369c223b622e015c1750f632eeca1c530c52dda74cd7c",
+    "cli.verify": "f2ad8a5d80652ede490febd4bcdc823c2cff3d419c1065feb09c6eacb76fb4df",
+    "export.entries_count": "58",
+    "export.entries_sha256": "9613ccc8a220b7255d7a4c9fb252a46c00bdf78cd465f85d55aebc6bc8db7123",
+    "export.manifest_file_sha256": "11cf9af914430421e1cf2060c731827126216d305087aece7f0068226d0eb70f",
+    "export.manifest_sha256": "sha256:6f10cac471336f7a1cc35e70c869f6a9301a4cd5811a6630c9ac63efe60295ce",
+    "mcp.an_kla_assemble_context": "2ede2769dfa5cace59fbe109365fdcf9c4ed6d2c712670f12b5cc5330e8afe9b",
+    "mcp.an_kla_doctor": "784d2fe902d517bd18e94a072e3e6a9ba54a99484782d692f701470b5f3d6384",
+    "mcp.an_kla_get_checkpoint": "6de559c6dfc7254c4c824098416eb2dc5840746f07a1aa6b94c84f1fa0eee492",
+    "mcp.an_kla_retrieve": "71000c202a1a0090d21a05712cc6199ec89374b704020240587c4834e049603c",
+    "mcp.an_kla_status": "05e5fa3037b16df5d8b3e3adb3cb7da4c8ed644979621febcc5b978b5f47d9f1",
+    "mcp.an_kla_verify": "a5ee2bc9995f950d76bbe25edf74d8f888047d8a9e6d0ffd63c4beca2c68d62d",
+    "mcp.an_kla_view_context": "1c194bd2e8662b522c29f6931bf1bc733e6984c6cea4a8324aaaf11eb7e1a0ae",
+    "mcp.initialize": "dc070a4c8da57c839d87c0ad5cbf974e51c05d199b0767a6f15b0566d9c2e2d1",
+    "mcp.tools_list": "5526f07f9905687b7da65b5d4fbd7f2b744e44ee2ed1d9e41c6b0d9a2d1677d1",
+    "policy_fingerprint": "sha256:4c5b287374d8a809fd2d73daa46f4de1c297605b94a0c1814d8c6d9178028027",
+    "store.revision": "sha256:b9a688747975cfa4453dea8d32fd112bf6c3d481e8a8311502086ec84f3b9b9c"
+  },
+  "store_tar_sha256": "7ace15d6eb58b3f9374959c0e1ce2aa173796f7e8f5abb93e53a3d8b9857cdb9"
+}
