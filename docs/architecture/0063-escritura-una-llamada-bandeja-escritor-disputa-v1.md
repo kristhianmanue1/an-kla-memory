@@ -3,7 +3,8 @@
 - **Estado:** Aceptada parcialmente (2026-11-14, decisión del orquestador
   en el mandato 4, bajo la delegación del esfuerzo de memoria agéntica):
   aceptadas D2, D3 y «Commit con el candado tomado»; **D1 (bandeja y
-  vaciado) sigue en Propuesta**, pendiente del spike de recuperación. Ver
+  vaciado) sigue en Propuesta**; su texto ya incorpora la evidencia del
+  spike de recuperación y espera ronda y decisión. Ver
   «Partición del estado».
 - **Implementación:** No iniciada
 - **Fecha:** 2026-11-14
@@ -102,16 +103,16 @@ el papel. Por eso el estado se parte:
 | «Commit con el candado tomado» | Aceptada | Extracción neutra en `write_commit.py`, sin llamante nuevo | 10 |
 | D2: formato del sobre, validador C0, derivación de `repo.id`, construcción desde el entorno | Aceptada | Módulo y schema `record-envelope-v1` sin llamante: ninguna orden escribe sobres | 5 y las pruebas de C0 |
 | D3: regla propia/ajena, record de disputa, selector `raw_records` | Aceptada | Nada en `main` todavía: su único camino es `remember` | 4 (al implementarse) |
-| D1: `remember`, bandeja, vaciado, órdenes `inbox`, `disputes list`, cambios de custodia en `export`/`relocate` | **Propuesta, pendiente del spike de recuperación** | Nada | 1–3, 6–9 |
+| D1: `remember`, bandeja, vaciado, órdenes `inbox`, `disputes list`, cambios de custodia en `export`/`relocate` | **Propuesta**, corregida con la evidencia del spike; pendiente de ronda y decisión | Nada | 1–3, 6–9 |
 
 **Regla de cierre.** Mientras D1 no esté aceptada, no entra en `main`
 código de la bandeja, `remember`, `inbox drain`, `inbox status`,
 `disputes list`, los cambios de custodia de D1 ni el camino de D3 (la fase
 B y la C). D1 se acepta sólo con un PR `docs/` que reescriba sus pasos 0 y 7
-con la evidencia del spike (`kill -9` en los cuatro puntos del criterio 3,
-8 clientes concurrentes) y resuelva la «Deuda abierta tras la ronda r4»,
-con ronda adversarial `proceed` y decisión de quien acepta. Ese PR cambia
-esta tabla.
+con la evidencia del spike (`kill -9` en los puntos del criterio 3,
+8 clientes concurrentes) y resuelva la deuda de r4 («Deuda de r4 y spike de
+recuperación»), con ronda adversarial `proceed` y decisión de quien acepta.
+Ese PR cambia esta tabla.
 
 **Independencia.** Lo aceptado no depende de la forma de D1:
 
@@ -147,15 +148,16 @@ así que planificar bajo él cubre el TOCTOU que ADR-0060 cierra para
 duplicados es `_assign_records` (`duplicate_<stream>_id`), bajo el candado;
 `plan_duplicate_id` (`plan_guard.py`) sólo actúa en `plan_write`.
 
-Orden de trabajo, no dependencia: la extracción se programa después del
-spike de recuperación, porque el cierre del journal (deuda H5) podría
-aconsejar que el cuerpo bloqueado devuelva más información. Si el spike
-muestra que la extracción no puede ser neutra, no se hace y esta sección
-vuelve a Propuesta.
+Orden de trabajo, no dependencia: la extracción se programó después del
+spike de recuperación, por si el cierre del journal (deuda H5) pedía más
+del cuerpo bloqueado. El spike concluyó que sigue siendo neutra: el paso 0
+y el cierre no llaman al cuerpo, y el marcador se escribe antes de
+invocarlo. El cuerpo recibe además el `preflight` ya calculado (`binding`
+y `context`).
 
 ### D1 — Bandeja de entrada y vaciado en lote bajo candado, sin demonio
 
-> **Estado de D1: Propuesta, pendiente del spike de recuperación.** Ver
+> **Estado de D1: Propuesta**, corregida con la evidencia del spike. Ver
 > «Partición del estado». Nada de esta sección se implementa todavía.
 
 **Orden.** `remember (--text <t> | --text-file <ruta|->) [--kind
@@ -200,11 +202,17 @@ lento, igual de correcto); hay prueba por plataforma.
 3. Con él, repite el preflight; si la custodia cambió, falla con su código
    (`store_root_divergence` o `store_identity_changed`) y no deja entrada.
 4. Escribe la entrada `an-kla/inbox-entry-v1` en `memory/inbox/tmp/`
-   (fsync del archivo) y la publica en `pending/` con `os.replace` (mismo
+   (`O_EXCL`, fsync del archivo). Antes de publicar hace `lstat` del
+   destino en `pending/`: si el nombre existe, regenera `<aleatorio8>` y
+   reintenta; nunca publica sobre un nombre existente (`os.replace`
+   sobrescribe en silencio, medido). Publica con `os.replace` (mismo
    sistema de archivos, el inodo nunca tiene dos nombres, `st_nlink` sigue
-   en 1) y fsync de `pending/`. Nombre:
-   `<tiempo_ns>-<pid>-<clave16>-<aleatorio8>.json`; la colisión exige mismo
-   nanosegundo, mismo pid, misma clave y los mismos 32 bits aleatorios. La entrada guarda texto,
+   en 1) y hace fsync de `pending/`. Si `os.replace` falla (EXDEV, ENOSPC,
+   E/S), el encolado falla con ese error, sin entrada en `pending/`, y el
+   temporal queda en `tmp/` para el recolector. No se usa `os.link` +
+   `unlink`: entre ambos el inodo tiene `st_nlink == 2` y el paso 2 del
+   vaciado rechazaría una entrada legítima (medido: 12 de 166 796
+   lecturas). Nombre: `<tiempo_ns>-<pid>-<clave16>-<aleatorio8>.json`. La entrada guarda texto,
    `kind`, sobre (D2), clave, `payload_sha256` (de texto, `kind` y target) y,
    si lo hay, sólo el `target_id` pedido: la resolución propia/ajena ocurre
    al vaciar.
@@ -212,21 +220,67 @@ lento, igual de correcto); hay prueba por plataforma.
 
 **Vaciar.** Intenta `write_lock` con un plazo corto (parámetro opcional
 nuevo de `write_lock`; la constante de 10 s no cambia). Si está ocupado →
-`{"state": "queued"}`. Con el candado:
+`{"state": "queued"}`.
+
+**Recolección de `tmp/`.** Antes de pedir `write_lock`, el vaciado intenta
+el candado de bandeja en **exclusivo y sin esperar**. Si lo obtiene, no hay
+encolador vivo: cada uno tiene el compartido durante todo el encolado y el
+sistema operativo lo suelta al morir el proceso, también con `SIGKILL`. Por
+tanto todo lo que haya en `tmp/` es huérfano y se borra. Si el candado está
+ocupado, no recolecta. No hay umbral de antigüedad: uno de 60 s pierde el
+temporal de un encolado demorado. Un temporal nunca es una entrada
+confirmada.
+
+Con `write_lock` tomado:
 
 0. **Reconcilia** los lotes en vuelo. Antes de comprometer un lote, el
    vaciado escribe con fsync `memory/inbox/inflight/<transaction_id>.json`
-   con los nombres de sus entradas; así la bandeja sabe qué journals son
-   suyos sin depender del espacio UUIDv5. En el paso 0, por cada marcador:
+   con `{txid, base_revision, entries}`; así la bandeja sabe qué journals
+   son suyos sin depender del espacio UUIDv5. Por cada marcador, en orden,
    `store.inspect_transaction(txid)` (sólo lectura,
-   `transactions.py:312-313`); si el candidato es `CURRENT` o ancestro
-   suyo, cierra el journal escribiendo el registro `committed` por la misma
-   ruta de reconciliación de `_commit_locked` que usa el replay de
-   `write_commit.py:52-83` (si esa ruta no escribe hoy el journal final, la
-   implementación la completa y lo prueba), borra de `pending/` las entradas
-   del marcador y el marcador; si el candidato no llegó a `CURRENT`, borra
-   sólo el marcador y las entradas siguen pendientes. Los journals de otras
-   órdenes no se tocan.
+   `transactions.py:312-313`) y tres ramas:
+   - `committed is True` → **cierra el journal** («Cierre del journal»).
+     Si el resultado es `durability_incomplete`, llama a
+     `repair_durability(txid)` y vuelve a inspeccionar. Después borra de
+     `pending/` las entradas del marcador (fsync de `pending/`) y, al
+     final, el marcador (fsync de `inflight/`). El orden journal → entradas
+     → marcador es obligatorio;
+   - `committed is False` → borra sólo el marcador. Las entradas siguen
+     pendientes; si el lote siguiente reconstruye el mismo `txid`,
+     `commit_locked` reanuda desde el journal existente;
+   - `committed is None` no significa «no llegó». Se borra el marcador
+     sólo si la transacción **no dejó rastro**: no existe
+     `transactions/<txid>.json`, ningún manifiesto lleva ese
+     `transaction_id` y no existe `transactions/<txid>/`. El journal
+     `prepared` es lo primero que escribe `commit_locked`
+     (`transactions.py:532`), así que su ausencia prueba que no se escribió
+     nada. En cualquier otro caso (journal ilegible, candidato ambiguo,
+     `CURRENT` ilegible) el vaciado **conserva marcador y entradas, aborta**
+     e informa `transaction_<código>`; nunca a `rejected/`.
+
+   Los journals de otras órdenes no se tocan.
+
+   **Cierre del journal.** Reescribe `transactions/<txid>.json` con
+   `stage: "committed"` y los campos de `transactions.py:712-725`:
+   - conserva `parent`, `candidate`, `attempt`, `stage_object` y
+     `write_policy` del journal existente; si falta o está corrupto, los
+     reconstruye del objeto inmutable de `stages/`;
+   - escribe `intent` y `observed_commit` si faltan; los objetos están
+     direccionados por contenido, así que es idempotente;
+   - enlaza **sólo los recibos que existen y validan** y nunca fabrica uno
+     (patrón de `compaction.py:437-440`).
+
+   Un segundo cierre es un no-op. No sirven la ruta de replay de
+   `_commit_locked` (`transactions.py:505-508`, retorna sin escribir:
+   medido, el journal queda byte a byte igual) ni
+   `_reconcile_committed_journal` (privada de compaction, exige un
+   `planning`).
+
+   Un corte entre `_replace_current` (`:687`) y el recibo `current-durable`
+   deja el journal `committed`, con `inspect_transaction` en
+   `durability_incomplete`, que no es un `stage` sino un resultado derivado
+   de los recibos. `repair_durability` escribe el recibo `repair` y deja la
+   transacción en `committed` completa.
 1. lee `CURRENT` y el snapshot;
 2. para cada entrada candidata, `lstat`: si no es archivo regular con
    `st_nlink == 1` → `rejected/` con `inbox_entry_unsafe`, sin abrirla
@@ -238,7 +292,10 @@ nuevo de `write_lock`; la constante de 10 s no cambia). Si está ocupado →
    `payload_sha256` coinciden conserva la más antigua y borra las demás; si
    el id coincide con otro `payload_sha256` → `rejected/` con
    `remember_id_collision`. Contra el snapshot, igual comparando con la
-   clave y el texto del record existente;
+   clave y el texto del record existente. Además, si dos entradas
+   sustituyen al mismo target, conserva la más antigua y la otra va a
+   `rejected/` con `supersedes:duplicate_target`: es el único error de lote
+   que ninguna entrada produce sola (prefiltro O(n), 0,018 ms con 250);
 5. **evalúa cada entrada sola** con las funciones puras de política
    (`evaluate_write` y construcción del plan de un record, sin escribir
    nada), con el candado tomado: `skip` → `rejected/` con
@@ -251,18 +308,23 @@ nuevo de `write_lock`; la constante de 10 s no cambia). Si está ocupado →
    política, y compromete por `_commit_write_plan_locked` con
    `transaction_id = uuid5(NS_AN_KLA_INBOX, base_revision + sorted(digests
    de las entradas del lote))`;
-7. según el resultado:
-   - `committed: true` → borra las entradas del lote de `pending/`;
-   - `decision: skip` o error terminal de política del lote ya
-     prevalidado (`invalid_*`, `plan_*`, `invalid_supersede_target`,
-     `duplicate_<stream>_id`) → **aislamiento sin soltar `write_lock`**, en
-     dos tiempos:
-     1. **bisección en memoria**: contra la misma base, con las funciones
-        puras (`evaluate_write`, construcción del plan) y la validación de
-        lote de `write_batch` sobre sub-lotes, parte el lote por mitades
-        hasta aislar las entradas que hacen fallar a su sub-lote (como mucho
-        ⌈log₂ 250⌉ = 8 niveles por entrada mala; nada se escribe). Esas
-        entradas van a `rejected/` con su código;
+7. el marcador del paso 0 se escribe antes del commit. Según el resultado:
+   - `committed: true` → borra las entradas del lote de `pending/` (fsync)
+     y **después** el marcador (fsync). `commit_locked` ya escribió el
+     journal `committed` (`transactions.py:725`): un corte en cualquier
+     punto de este paso lo resuelve el paso 0 por la rama `True`;
+   - `decision: skip` o error terminal de política antes de que
+     `commit_locked` escriba nada (`invalid_*`, `plan_*`,
+     `invalid_supersede_target`, `duplicate_<stream>_id`) → borra el
+     marcador y **aísla sin soltar `write_lock`**, en dos tiempos:
+     1. **bisección por prefijos en memoria**: contra la misma base, con
+        las funciones puras (`evaluate_write`, construcción del plan) y la
+        validación de lote de `write_batch`, acumula las entradas aceptadas
+        y busca el prefijo más corto que falla. Su última entrada es la
+        culpable y va a `rejected/` con su código; se repite con el resto
+        (⌈log₂ 250⌉ = 8 evaluaciones por entrada mala; nada se escribe).
+        La bisección por mitades no sirve: no atribuye los fallos de par
+        (medido con `duplicate_target`: las dos mitades pasan solas);
      2. los supervivientes se comprometen en **un** lote nuevo: se relee
         `CURRENT` bajo el candado, se replanifica con esa `base_revision` y
         se recalcula su `transaction_id`. Como nadie más puede mover
@@ -273,22 +335,37 @@ nuevo de `write_lock`; la constante de 10 s no cambia). Si está ocupado →
      compromete entrada por entrada, releyendo `CURRENT` y replanificando
      cada commit, y cada entrada comprometida se borra de `pending/` en el
      acto. Este último recurso cuesta un commit por entrada y se reporta;
-   - `committed: false` sin decisión `skip`, `committed: null` /
-     `outcome_unknown`, o un error de infraestructura o concurrencia (E/S,
+   - `committed: false` sin decisión `skip`, o un error de infraestructura
+     o concurrencia con resultado conocido (E/S como `storage_io_failed`,
      `write_lock_busy`, `store_root_divergence`, `store_identity_changed`,
-     `write_plan_base_changed`, `transaction_*`) → aborta el vaciado, deja
-     `pending/` intacto y lo informa. Estos códigos **nunca** van a
-     `rejected/`.
+     `write_plan_base_changed`, `transaction_*`) → borra el marcador, deja
+     `pending/` intacto, aborta e informa `drain_error`;
+   - `committed: null` / `outcome_unknown` (p. ej. `current_reread_failed`)
+     → **conserva marcador y `pending/`**, aborta e informa
+     `outcome: "unknown"`; lo resuelve el paso 0 del vaciado siguiente
+     (medido: cierra `committed` y deja un solo record).
+   Ninguno de estos códigos va a `rejected/`.
 
 `remember` vacía como máximo un lote, y ese lote incluye su propia entrada
-(se arma primero el lote de su stream y operación con ella dentro); si su
-entrada no se comprometió en esta invocación (candado ocupado, entrada
-rechazada o vaciado abortado), responde `queued` o el rechazo, con el nombre
-de su entrada. `inbox drain` vacía lotes sucesivos
+(se arma primero el lote de su stream y operación con ella dentro).
+`remember-result-v1` cubre todos los desenlaces, con el nombre de la
+entrada:
+
+| Desenlace de su entrada | Respuesta |
+|---|---|
+| comprometida | `committed` y revisión |
+| rechazada | `rejected`, código (`inbox_entry_unsafe`, `remember_policy_skip` con `reason_codes`, `remember_id_collision`, `supersedes:duplicate_target`, `invalid_supersede_target`, …) |
+| `write_lock` ocupado | `queued` |
+| vaciado abortado con resultado conocido | `queued` + `drain_error: <código>` |
+| resultado desconocido | `queued` + `outcome: "unknown"` |
+
+Reintentar es idempotente: mismo texto, `kind` y target dan la misma clave
+y el mismo id, y el paso 4 deduplica, así que reintentar tras `queued`,
+`drain_error` u `outcome: "unknown"` nunca duplica. `inbox drain` vacía lotes sucesivos
 hasta dejar `pending/` vacío o agotar un presupuesto de tiempo, soltando el
 candado entre lotes. Las lecturas no vacían ni informan de la bandeja.
-`inbox status` (sólo lectura) informa `pending`, `rejected` (con motivo por
-entrada) y `tmp`; las respuestas de `remember` e `inbox drain` incluyen los
+`inbox status` (sólo lectura) informa `pending`, `inflight`, `rejected`
+(con motivo por entrada) y `tmp`; las respuestas de `remember` e `inbox drain` incluyen los
 rechazos que produjeron. `rejected/` no se borra sola: es evidencia, y se
 declara. La bandeja no tiene cuota total: un `pending/` que crece sin vaciar
 es un límite declarado (cada entrada ≤ 64 KiB de texto).
@@ -307,8 +384,11 @@ se suma la deduplicación del paso 4, también bajo el candado.
 2. `export create`, `--seal sealed-export/v1` y `relocate commit` (ida y
    `--back`) toman el candado de bandeja en **exclusivo** al principio de la
    orden (antes del `mkdir` del bundle, `export_restore.py:121`, y antes de
-   `identity_lock`) y exigen `pending/` vacío; si no, fallan con
-   `inbox_pending` (pista: `inbox drain`) sin crear nada. `relocate plan`
+   `identity_lock`) y exigen `pending/` e `inflight/` vacíos; si no, fallan
+   con `inbox_pending` o `inbox_inflight` (pista: `inbox drain`) sin crear
+   nada. Con el orden journal → entradas → marcador no es alcanzable un
+   marcador con `pending/` vacío y journal abierto; exigir `inflight/`
+   vacío es defensa en profundidad. `relocate plan`
    no lo exige: el plan ya excluye la bandeja y `commit` revalida. El
    exclusivo cierra la carrera con un encolado concurrente.
 3. `memory/inbox/` se añade a `_KEPT_PREFIXES` de
@@ -468,16 +548,30 @@ abierto. Respecto de #197 no cierra G1 (firma), G5 (CAS por objeto) ni G6
    final: 200 records distintos, 0 perdidos, 0 duplicados, `pending/`,
    `rejected/` y `tmp/` vacíos, `verify` ok, **0 conflictos CAS**
    (`write_plan_base_changed`) en el camino nuevo, 0 `write_lock_busy` en
-   `inbox drain`, 0 errores de encolado; se reportan el p95 de `remember` y
-   el número de respuestas `queued`.
-3. **Corte brusco.** `kill -9` en cuatro puntos: tras el fsync en `tmp/` y
-   antes de publicar en `pending/`; tras escribir objetos y antes de
-   `_replace_current`; entre `_replace_current` (`transactions.py:687`) y la
-   escritura del journal `committed` (`:725`); tras el journal y antes de
-   borrar `pending/`. Tras la **siguiente invocación de escritura**
-   (`remember` o `inbox drain`): 0 perdidos, 0 duplicados, `verify` ok, y
-   todo journal de la bandeja con `stage != committed` cuyo candidato sea
-   `CURRENT` o ancestro suyo queda cerrado por el paso 0.
+   `inbox drain` con un solo vaciador (con dos, la respuesta `queued` del
+   que encuentra el candado ocupado es correcta), 0 errores de encolado; se
+   reportan el p95 de `remember` y el número de respuestas `queued`.
+3. **Corte brusco.** `kill -9` real, al menos 20 repeticiones por punto, en
+   ocho puntos:
+   1. tras el fsync en `tmp/` y antes de publicar en `pending/`;
+   2. tras escribir el marcador y antes del journal `prepared`;
+   3. tras escribir objetos y antes de `_replace_current`;
+   4. tras `_replace_current` (`transactions.py:687`) y antes del recibo
+      `current-durable`;
+   5. con los recibos escritos y antes del journal `committed` (`:725`);
+   6. tras el journal y antes de borrar `pending/`;
+   7. a medio borrar `pending/`;
+   8. con las entradas borradas y el marcador vivo.
+
+   Tras la **siguiente invocación de escritura** (`remember` o `inbox
+   drain`) se exige:
+   - 0 perdidos sobre entradas confirmadas (`queued`) y 0 duplicados;
+   - `verify` ok;
+   - 0 journals de la bandeja con `stage != committed` cuyo candidato sea
+     `CURRENT` o ancestro suyo;
+   - 0 `durability_incomplete` residuales (el paso 0 repara);
+   - 0 marcadores, `pending/` y `tmp/` vacíos;
+   - y una tercera invocación que no se atasca.
 4. **Disputa.** Con variables de lanzador distintas, A disputa un hecho de B:
    el de B sigue vigente (`is_active`); el record de disputa lleva el
    `target_record_sha256` de `raw_records` y aparece en la respuesta de
@@ -521,7 +615,11 @@ abierto. Respecto de #197 no cierra G1 (firma), G5 (CAS por objeto) ni G6
    a `rejected/` con `remember_id_collision`, la del target con
    `invalid_supersede_target`, la del `skip` con `remember_policy_skip`, y
    las demás se comprometen; se reporta el tiempo máximo con `write_lock`
-   tomado en un intento.
+   tomado en un intento. Además, dos entradas `--supersedes` sobre el mismo
+   target: la más antigua se compromete y la otra va a `rejected/` con
+   `supersedes:duplicate_target`. Y un lote de 250 con un fallo de par que
+   el prefiltro no ve: la bisección por prefijos usa ≤ 8 evaluaciones y los
+   demás se comprometen en un solo lote.
 9. **Orden de candados.** Prueba negativa: ningún camino pide el candado de
    bandeja teniendo `identity_lock` o `write_lock` (instrumentación del
    orden en test).
@@ -539,24 +637,42 @@ Los criterios 1–4 y 6–9 se exigen al implementar D1 y D3, y pueden
 cambiar con el PR que acepte D1. En la fase A sólo se exigen el 5
 (goldens, sin bandeja), el 10 y las pruebas del validador C0.
 
-## Deuda abierta tras la ronda r4
+## Deuda de r4 y spike de recuperación
 
-La ronda r4 (acotada al delta de r3) dejó estos hallazgos MEDIUM y LOW sin
-corregir en el texto. Todos son de D1. Entran en el spike de recuperación y
-D1 no se acepta sin resolverlos con su evidencia. No afectan a lo aceptado
-(validador C0, sobre, goldens y extracción de `_commit_write_plan_locked`).
-H5 condiciona sólo el orden de trabajo de la extracción
-(«Commit con el candado tomado»):
+La deuda que dejó la ronda r4 se resolvió con el spike de recuperación
+(rama `spike/e1a-recuperacion`, que no se fusiona; acta en
+`docs/planning/adr-0063-d1-spike-recuperacion-2026-11-14.md`). El texto de
+D1 y los criterios 2, 3 y 8 ya la incorporan.
 
-| ID r4 | Sev | Deuda | Corrección prescrita por el revisor |
-|---|---|---|---|
-| H3 | MED | Ningún criterio ejerce el aislamiento del paso 7 | Añadir al criterio 8 dos entradas con `--supersedes` sobre el mismo target (`supersedes:duplicate_target`, `write_batch.py:88-93`): una se compromete, la otra va a `rejected/` |
-| H4 | MED | El paso 0 trata `committed: None` de `inspect_transaction` como «no llegó» | Tres ramas: `True` cierra; `False` borra sólo el marcador; `None` conserva el marcador y aborta con `transaction_*` |
-| H5 | MED | La ruta de cierre del journal no existe en `_commit_locked` (`transactions.py:505-508` retorna sin escribir) | Cerrar con `stage="committed"` y los campos de `transactions.py:712-725` siguiendo `_reconcile_committed_journal` (`compaction.py:424-466`), sin fabricar receipts; si el corte fue entre `_replace_current` y `write_receipt`, el estado honesto es `durability_incomplete` |
-| H6 | MED | `remember-result-v1` no mapea todos los desenlaces | `committed`; `rejected` con código y entrada; `queued`; `queued` + `drain_error`; `queued` + `outcome: "unknown"`; reintento idempotente por el paso 4 |
-| H7 | LOW | `os.replace` puede sobrescribir un nombre plantado o repetido | `lstat` del destino antes de publicar; si existe, regenerar el sufijo o fallar sin publicar; EXDEV/ENOSPC dejan el temporal en `tmp/` y fallan el encolado |
-| H8 | LOW | `inflight/` no viaja con la custodia y nadie lo exige vacío | Exigir `inflight/` vacío junto a `pending/` en `export`, sellado y `relocate commit`; borrar el marcador en la rama de éxito del paso 7; `inbox status` informa `inflight` |
-| — | heredada | Nada recoge los temporales de `tmp/` de un proceso muerto antes de publicar | Recolector de `tmp/` en el vaciado, con antigüedad mínima; el criterio 3 sólo sostiene «0 perdidos» sobre entradas publicadas |
+| ID r4 | Resolución en D1 | Evidencia del spike |
+|---|---|---|
+| H3 | Prefiltro de target repetido en el paso 4 y bisección por prefijos en el paso 7 | Por mitades: `unattributable_pairwise` en 3 evaluaciones; por prefijos: 8 evaluaciones, 21,7 ms con 250, y 249 comprometidas en un lote |
+| H4 | Paso 0 con tres ramas; `None` sin rastro borra el marcador y cualquier otro `None` aborta | `None` aparece en el corte más simple, marcador sin journal. La regla de r4 atasca el vaciado 20 veces de 20; la del texto, 0 |
+| H5 | «Cierre del journal» propio y `repair_durability` | La ruta de replay deja el journal intacto, byte a byte. Con ella quedan journals abiertos con candidato `CURRENT` en 40 de 40 cortes; con el cierre, 0 de 160 |
+| H6 | Tabla de `remember-result-v1` | Siete desenlaces provocados; el reintento tras `outcome_unknown` deja un solo record |
+| H7 | `lstat` previo, sufijo regenerado, sin `os.link` | `os.replace` sobrescribe en silencio; `lstat` cuesta lo mismo (0,244 ms frente a 0,236 de p50); `link` muestra `st_nlink == 2` |
+| H8 | `inflight/` vacío exigido (`inbox_inflight`) e informado | El escenario de r4 no es alcanzable con el orden journal → entradas → marcador |
+| `tmp/` | Recolector por candado exclusivo, sin reloj | 20 huérfanos de 20 recogidos; con un encolador vivo, 0 borrados |
+
+Cifras globales, con la configuración del texto:
+
+- **Cortes:** 160 `kill -9` reales (8 puntos × 20), con 0 perdidos, 0 duplicados y `verify` ok.
+- **Concurrencia:** 8 clientes con 200 encolados, 0 conflictos CAS, 0 `write_lock_busy` con un vaciador y p95 de encolado de 10,7 ms.
+- **Con `kill -9` aleatorio:** 2000 encolados, 0 perdidos y 0 duplicados.
+- **Candado:** como máximo 0,064 s con `write_lock` tomado por lote de 250.
+
+**Sin ejercitar en el spike.** La implementación debe probarlo:
+
+- el último recurso uno a uno;
+- el movimiento real a `rejected/` y `remember_id_collision`;
+- D3 de extremo a extremo;
+- el orden de candados, con prueba negativa;
+- plataformas sin `flock`;
+- `export`/`relocate` reales con la regla de `inflight/`;
+- `lock_result.release_error`;
+- EXDEV y ENOSPC reales, que sólo se inyectaron;
+- un corte de energía (`kill -9` no descarta la caché de páginas);
+- el coste del paso 0 con miles de revisiones.
 
 ## Por qué no
 
@@ -598,9 +714,9 @@ H5 condiciona sólo el orden de trabajo de la extracción
   código toca `export_restore.py`, `relocate.py`, `relocate_back.py`,
   sellado y `write_commit.py` (extracción sin cambio de comportamiento)
   además de los módulos nuevos; el vaciado retiene el candado de los demás
-  durante su lote (≤ 0,2 s medidos con 250 entradas sobre 20.000 records,
-  sin la prevalidación del paso 5 ni el aislamiento del paso 7; ambos deben
-  medirse en la implementación, y el último recurso uno a uno queda fuera de
+  durante su lote (≤ 0,2 s medidos con 250 entradas sobre 20.000 records
+  sin prevalidación; el spike midió entre 0,041 y 0,064 s por lote de 250
+  con la bisección incluida. El último recurso uno a uno queda fuera de
   esa cifra).
 - Neutras: la receta del bloque gestionado no cambia en E1.a (llega en
   E1.c, con el MCP escribible); la anotación de disputas en la recuperación
