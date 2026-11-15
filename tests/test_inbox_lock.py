@@ -11,7 +11,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from an_kla import inbox, lock_order
+from an_kla import inbox, lock_order, store_locks
 from an_kla.identity import identity_lock
 from tests.inbox_support import AGENT_ENV, InboxCase
 from tests.legacy_store_goldens import ROOT
@@ -176,6 +176,118 @@ class LockFileSafetyTests(InboxCase):
         self.assertEqual(caught.exception.code, "inbox_unsafe_path")
 
 
+class RootSafetyTests(InboxCase):
+    """R2-01, R2-02, R2-05: una sola inspección de la raíz y de sus padres para todo lo que B2/B4 reutilizan."""
+
+    def outside(self, with_entry: bool = True) -> Path:
+        """Un directorio fuera del ancla con una bandeja completa (y una entrada ajena)."""
+
+        outside = self.project.parent / (self.project.name + "-fuera")
+        self.addCleanup(shutil.rmtree, outside, True)
+        (outside / "pending").mkdir(parents=True)
+        for name in ("tmp", "inflight", "rejected"):
+            (outside / name).mkdir()
+        if with_entry:
+            (outside / "pending" / "1-1-0123456789abcdef-01234567.json").write_bytes(b"ajeno")
+        return outside
+
+    def link_root_to_dir(self) -> Path:
+        outside = self.outside()
+        os.symlink(outside, self.inbox)
+        return outside
+
+    def root_is_file(self) -> None:
+        self.inbox.write_bytes(b"no soy un directorio")
+
+    def root_links_to_file(self) -> None:
+        target = self.project / "archivo"
+        target.write_bytes(b"x")
+        os.symlink(target, self.inbox)
+
+    def memory_is_a_link(self) -> Path:
+        outside = self.project.parent / (self.project.name + "-memoria")
+        self.addCleanup(shutil.rmtree, outside, True)
+        os.rename(self.store.root, outside)
+        os.symlink(outside, self.store.root)
+        return outside
+
+    def anchor_is_a_link(self) -> Path:
+        outside = self.project.parent / (self.project.name + "-ancla")
+        self.addCleanup(shutil.rmtree, outside, True)
+        os.rename(self.store.store_root, outside)
+        os.symlink(outside, self.store.store_root)
+        return outside
+
+    def unsafe_setups(self):
+        return {
+            "raiz_enlace_a_directorio": self.link_root_to_dir,
+            "raiz_archivo": self.root_is_file,
+            "raiz_enlace_a_archivo": self.root_links_to_file,
+            "memory_enlazado": self.memory_is_a_link,
+            "ancla_enlazada": self.anchor_is_a_link,
+        }
+
+    def each_unsafe(self):
+        """Prepara cada escenario en un store limpio (se rehace el proyecto entre casos)."""
+
+        for name, setup in self.unsafe_setups().items():
+            self.setUp()
+            with self.subTest(setup=name):
+                setup()
+                yield name
+
+    def test_definitions_of_empty_never_claim_empty_behind_a_link(self) -> None:
+        for _ in self.each_unsafe():
+            for call in (inbox.pending_is_empty, inbox.inflight_is_empty, inbox.entry_names, inbox.marker_names):
+                with self.assertRaises(inbox.InboxError) as caught:
+                    call(self.store)
+                self.assertEqual(caught.exception.code, "inbox_unsafe_path")
+                self.assertNotIn(str(self.project), str(caught.exception))
+
+    def test_absent_root_is_still_empty(self) -> None:
+        self.assertEqual(inbox.root_state(self.store), "absent")
+        self.assertTrue(inbox.pending_is_empty(self.store))
+        self.assertTrue(inbox.inflight_is_empty(self.store))
+
+    def test_collect_and_lock_distinguish_unsafe_from_absent(self) -> None:
+        for _ in self.each_unsafe():
+            with self.assertRaises(inbox.InboxError) as caught:
+                inbox.collect_tmp(self.store)
+            self.assertEqual(caught.exception.code, "inbox_unsafe_path")
+            for create in (True, False):
+                with self.assertRaises(inbox.InboxError) as caught:
+                    with inbox.inbox_lock(self.store, exclusive=False, create=create):
+                        pass
+                self.assertEqual(caught.exception.code, "inbox_unsafe_path")
+        self.setUp()
+        with self.assertRaises(inbox.InboxError) as caught:
+            with inbox.inbox_lock(self.store, exclusive=False, create=False):
+                pass
+        self.assertEqual(caught.exception.code, "inbox_absent")
+
+    def test_nothing_is_created_outside_the_anchor_through_a_linked_component(self) -> None:
+        outside = self.memory_is_a_link()
+        with self.assertRaises(inbox.InboxError):
+            with inbox.inbox_lock(self.store, exclusive=False):
+                pass
+        self.assertFalse((outside / "inbox").exists())
+        self.setUp()
+        outside = self.anchor_is_a_link()
+        with self.assertRaises(inbox.InboxError):
+            # el preflight de identidad ya rechaza un ancla enlazada; aquí se prueba la capa de bandeja sola
+            inbox.enqueue(self.store, "x", env=AGENT_ENV, preflight=lambda _store: None)
+        self.assertFalse((outside / "memory" / "inbox").exists())
+
+    def test_lock_file_is_normalized_to_0600(self) -> None:
+        """R2-07: como `reader_gate._open_gate`, un `.lock` preexistente más permisivo se estrecha."""
+
+        with inbox.inbox_lock(self.store, exclusive=False):
+            pass
+        os.chmod(self.inbox / ".lock", 0o666)
+        with inbox.inbox_lock(self.store, exclusive=False):
+            self.assertEqual(os.stat(self.inbox / ".lock").st_mode & 0o777, 0o600)
+
+
 class CollectTmpTests(InboxCase):
     def orphans(self, count: int = 2) -> list[str]:
         """Temporales huérfanos reales: un encolado que falla al publicar los deja en ``tmp/``."""
@@ -244,12 +356,22 @@ class LockOrderTests(InboxCase):
             with self.subTest(path=name), self.store.write_lock():
                 self.assert_refused(call)
 
+    def test_every_inbox_path_refuses_while_holding_the_module_level_write_lock(self) -> None:
+        """R2-03: `hook_runs` usa `store_locks.write_lock(root)` sin pasar por `MemoryStore.write_lock`."""
+
+        for name, call in self.paths().items():
+            with self.subTest(path=name), store_locks.write_lock(self.store.root):
+                self.assertIsNone(self.store._active_write_lock)
+                self.assertIn(lock_order.WRITE, lock_order.held())
+                self.assert_refused(call)
+        self.assertEqual(lock_order.held(), ())
+
     def test_allowed_order_inbox_then_identity_then_write(self) -> None:
         with inbox.inbox_lock(self.store, exclusive=True):
             self.assertEqual(lock_order.held(), (lock_order.INBOX,))
             with identity_lock(self.store):
                 with self.store.write_lock():
-                    self.assertEqual(lock_order.held(), (lock_order.INBOX, lock_order.IDENTITY))
+                    self.assertEqual(lock_order.held(), (lock_order.INBOX, lock_order.IDENTITY, lock_order.WRITE))
         self.assertEqual(lock_order.held(), ())
 
     def test_registry_is_restored_after_an_error_inside_the_lock(self) -> None:

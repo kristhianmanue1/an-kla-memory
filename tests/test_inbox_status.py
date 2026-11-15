@@ -6,6 +6,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -107,6 +108,41 @@ class StatusReadTests(InboxCase):
         status = inbox.read_status(self.store)
         self.assertEqual(status["rejected"]["entries"][0]["reason"], None)
         self.assertEqual(status["pending"]["count"], 2)  # el enlace casa el patrón: el vaciado lo rechazará
+
+    def test_unsafe_root_is_reported_without_descending_or_leaking_a_path(self) -> None:
+        """R2-01: raíz archivo o enlazada (a archivo o a directorio con entradas ajenas)."""
+
+        cases = {}
+        outside = self.project.parent / (self.project.name + "-fuera")
+        self.addCleanup(shutil.rmtree, outside, True)
+        (outside / "pending").mkdir(parents=True)
+        (outside / "pending" / "1-1-0123456789abcdef-01234567.json").write_bytes(b"ajeno")
+        target = self.project / "archivo"
+        target.write_bytes(b"x")
+        cases["archivo"] = lambda: self.inbox.write_bytes(b"x")
+        cases["enlace_a_archivo"] = lambda: os.symlink(target, self.inbox)
+        cases["enlace_a_directorio"] = lambda: os.symlink(outside, self.inbox)
+        try:
+            from jsonschema import Draft202012Validator
+            validator = Draft202012Validator(schema_document("inbox-status-v1"))
+        except ImportError:
+            validator = None
+        for name, setup in cases.items():
+            with self.subTest(root=name):
+                if self.inbox.is_symlink() or self.inbox.exists():
+                    self.inbox.unlink()
+                setup()
+                status = inbox.read_status(self.store)
+                self.assertEqual(status["inbox"], "unsafe")
+                self.assertEqual(set(status["directories"].values()), {"unsafe"})
+                self.assertEqual((status["pending"]["count"], status["tmp"]["count"]), (0, 0))
+                if validator is not None:
+                    self.assertEqual(list(validator.iter_errors(status)), [])
+                done = cli(self.project, "inbox", "status")
+                self.assertEqual(done.returncode, 0, done.stderr)
+                self.assertEqual(json.loads(done.stdout)["inbox"], "unsafe")
+                self.assertNotIn(str(self.project), done.stderr + done.stdout)
+                self.assertEqual(done.stderr, "")
 
     def test_symlinked_subdirectory_is_reported_unsafe(self) -> None:
         paths = inbox.inbox_paths(self.store)

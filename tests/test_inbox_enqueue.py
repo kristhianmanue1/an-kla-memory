@@ -131,6 +131,39 @@ class EnqueueTests(InboxCase):
         inode = os.lstat(self.inbox / "pending" / name).st_ino
         self.assertEqual(events, [("fsync_file", inode), ("replace", inode), ("fsync_dir", "pending")])
 
+    def test_a_temporary_with_two_names_is_never_published(self) -> None:
+        """R2-04: publicarlo daría un `queued` que el vaciado rechazaría como `inbox_entry_unsafe`."""
+
+        calls = []
+
+        def token():
+            calls.append(1)
+            if len(calls) == 2:  # entre escribir el temporal y publicarlo, un tercero lo enlaza
+                (temporary,) = os.listdir(self.inbox / "tmp")
+                os.link(self.inbox / "tmp" / temporary, self.project / "otro-nombre")
+            return f"{len(calls):08x}"
+
+        with self.assertRaises(inbox.InboxError) as caught:
+            enqueue(self.store, token=token)
+        self.assertEqual(caught.exception.code, "inbox_unsafe_path")
+        self.assertEqual(os.listdir(self.inbox / "pending"), [])
+        self.assertEqual(len(os.listdir(self.inbox / "tmp")), 1)
+
+    def test_busy_hint_reaches_the_cli_error_surface(self) -> None:
+        """R2-06: `main()` imprime `detail`; la pista de `InboxError` viaja por ese mismo campo."""
+
+        self.hold_lock("ex")
+        with self.assertRaises(inbox.InboxError) as caught:
+            enqueue(self.store)
+        self.assertEqual(caught.exception.detail, caught.exception.hint)
+        self.assertTrue(caught.exception.detail)
+        from an_kla import __main__ as entry
+
+        with mock.patch.object(entry, "_run", side_effect=caught.exception):
+            with self.assertRaises(SystemExit) as exited:
+                entry.main()
+        self.assertEqual(str(exited.exception), f"an-kla error: inbox_busy ({caught.exception.hint})")
+
     def test_failing_preflight_does_not_create_the_inbox(self) -> None:
         def refuse(_store):
             raise IdentityError("store_root_divergence")

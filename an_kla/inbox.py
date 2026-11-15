@@ -80,6 +80,7 @@ class InboxError(ValueError):
         super().__init__(code)
         self.code = code
         self.hint = hint
+        self.detail = hint  # el CLI (`main`) imprime `detail` entre paréntesis
 
 
 class InboxPaths(NamedTuple):
@@ -122,13 +123,41 @@ def stream_for_kind(kind: str) -> str:
 
 
 def _dir_state(path: Path) -> str:
-    """``absent``, ``present`` (directorio real) o ``unsafe`` (enlace u otro tipo)."""
+    """``absent``, ``present`` (directorio real) o ``unsafe`` (enlace, no-directorio o un padre que no lo es)."""
 
     try:
         mode = os.lstat(path).st_mode
     except FileNotFoundError:
         return "absent"
+    except (NotADirectoryError, OSError) as exc:
+        if isinstance(exc, NotADirectoryError) or exc.errno in (errno.ELOOP, errno.ENOTDIR):
+            return "unsafe"
+        raise InboxError("inbox_unavailable") from None
     return "present" if stat.S_ISDIR(mode) else "unsafe"
+
+
+def root_state(store: Any) -> str:
+    """Inspección única de la raíz de la bandeja y de sus padres (R2-01, R2-02, R2-05).
+
+    Recorre de arriba abajo los componentes bajo ``store.custody_walk_root`` (el ancla del
+    store, ``memory/`` e ``inbox/``; el mismo tramo que ``identity_lock``): el primero que
+    falta da ``absent``; el primero que es enlace o no-directorio da ``unsafe``; si todos son
+    directorios reales, ``present``. La usan ``read_status``, las definiciones de «vacío»,
+    ``collect_tmp`` e ``inbox_lock``: nadie afirma «vacío» ni crea nada detrás de un enlace.
+    """
+
+    root = inbox_paths(store).root
+    walk = Path(store.custody_walk_root)
+    try:
+        parts = root.relative_to(walk).parts
+        chain = [walk.joinpath(*parts[: index + 1]) for index in range(len(parts))]
+    except ValueError:  # ancla fuera de la raíz de custodia: sólo se puede juzgar `memory/` e `inbox/`
+        chain = [Path(store.root), root]
+    for component in chain:
+        state = _dir_state(component)
+        if state != "present":
+            return state
+    return "present"
 
 
 def _names(path: Path) -> list[str]:
@@ -139,18 +168,32 @@ def _names(path: Path) -> list[str]:
         return []
     if state == "unsafe":
         raise InboxError("inbox_unsafe_path")
-    with os.scandir(path) as entries:
-        return sorted(entry.name for entry in entries)
+    try:
+        with os.scandir(path) as entries:
+            return sorted(entry.name for entry in entries)
+    except OSError:
+        raise InboxError("inbox_unavailable") from None
+
+
+def _subdir_names(store: Any, subdir: str) -> list[str]:
+    """Nombres de un subdirectorio vistos a través de ``root_state``: raíz ausente = vacío, insegura = error."""
+
+    state = root_state(store)
+    if state == "absent":
+        return []
+    if state == "unsafe":
+        raise InboxError("inbox_unsafe_path")
+    return _names(getattr(inbox_paths(store), subdir))
 
 
 def entry_names(store: Any) -> list[str]:
     """Nombres de ``pending/`` que casan el patrón de entrada, orden de nombre."""
 
-    return [name for name in _names(inbox_paths(store).pending) if is_entry_name(name)]
+    return [name for name in _subdir_names(store, PENDING_DIR) if is_entry_name(name)]
 
 
 def marker_names(store: Any) -> list[str]:
-    return [name for name in _names(inbox_paths(store).inflight) if is_marker_name(name)]
+    return [name for name in _subdir_names(store, INFLIGHT_DIR) if is_marker_name(name)]
 
 
 def pending_is_empty(store: Any) -> bool:
@@ -198,6 +241,8 @@ def _unlock(fd: int) -> None:
 
 def _ensure_layout(store: Any) -> None:
     paths = inbox_paths(store)
+    if root_state(store) == "unsafe":  # un componente enlazado: no se crea nada, ni fuera del ancla
+        raise InboxError("inbox_unsafe_path")
     created = False
     for directory in (paths.root, paths.tmp, paths.pending, paths.inflight, paths.rejected):
         state = _dir_state(directory)
@@ -206,7 +251,7 @@ def _ensure_layout(store: Any) -> None:
         if state == "absent":
             # Otro proceso pudo crearlo entre el lstat y el mkdir: se tolera y se re-inspecciona.
             directory.mkdir(parents=directory is paths.root, exist_ok=True)
-            if _dir_state(directory) != "present":
+            if _dir_state(directory) != "present" or (directory is paths.root and root_state(store) != "present"):
                 raise InboxError("inbox_unsafe_path")
             created = True
     if created:
@@ -237,6 +282,12 @@ def _open_lock_file(path: Path, flags: int) -> int:
     if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
         os.close(fd)
         raise InboxError("inbox_unsafe_path")
+    if hasattr(os, "fchmod"):  # un `.lock` preexistente más permisivo se normaliza, como `reader_gate`
+        try:
+            os.fchmod(fd, 0o600)
+        except OSError:
+            os.close(fd)
+            raise InboxError("inbox_lock_unavailable") from None
     return fd
 
 
@@ -256,8 +307,10 @@ def inbox_lock(
     paths = inbox_paths(store)
     if create:
         _ensure_layout(store)
-    elif _dir_state(paths.root) != "present":
-        raise InboxError("inbox_absent")
+    else:
+        state = root_state(store)
+        if state != "present":
+            raise InboxError("inbox_unsafe_path" if state == "unsafe" else "inbox_absent")
     effective_exclusive = exclusive or not SHARED_SUPPORTED
     flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
     fd = _open_lock_file(paths.lock, flags if create else flags & ~os.O_CREAT)
@@ -292,8 +345,11 @@ def collect_tmp(store: Any) -> dict[str, Any]:
 
     lock_order.require_inbox_allowed(store)  # antes de cualquier salida anticipada
     paths = inbox_paths(store)
-    if _dir_state(paths.root) == "absent":
+    state = root_state(store)
+    if state == "absent":
         return {"state": "absent", "removed": 0, "errors": 0}
+    if state == "unsafe":
+        raise InboxError("inbox_unsafe_path")
     try:
         with inbox_lock(store, exclusive=True, wait_seconds=0.0, create=False):
             return _remove_tmp_contents(paths.tmp)
@@ -468,6 +524,21 @@ def _validated_text(text: Any) -> str:
     return text
 
 
+def _require_private_temporary(path: Path) -> None:
+    """El temporal debe ser un archivo regular con un solo nombre justo antes de publicarlo.
+
+    Un ``st_nlink != 1`` se publicaría como ``queued`` y el vaciado (paso 2) lo rechazaría
+    como ``inbox_entry_unsafe``; si no, el temporal queda en ``tmp/`` para el recolector.
+    """
+
+    try:
+        info = os.lstat(path)
+    except OSError:
+        raise InboxError("inbox_unsafe_path") from None
+    if not stat.S_ISREG(info.st_mode) or info.st_nlink != 1:
+        raise InboxError("inbox_unsafe_path")
+
+
 def _publish(
     paths: InboxPaths,
     payload: bytes,
@@ -502,6 +573,7 @@ def _publish(
         try:
             os.lstat(destination)
         except FileNotFoundError:
+            _require_private_temporary(tmp_path)
             replace(tmp_path, destination)
             fsync_directory(paths.pending)
             return name
@@ -556,16 +628,19 @@ def read_status(store: Any) -> dict[str, Any]:
     """
 
     paths = inbox_paths(store)
-    root_state = _dir_state(paths.root)
+    top = root_state(store)
     dirs = {"tmp": paths.tmp, "pending": paths.pending, "inflight": paths.inflight, "rejected": paths.rejected}
     states: dict[str, str] = {}
     names: dict[str, list[str]] = {}
     for label, directory in dirs.items():
-        state = "absent" if root_state == "absent" else _dir_state(directory)
-        if root_state == "unsafe":
-            state = "unsafe"
+        state = top if top != "present" else _dir_state(directory)  # raíz ausente o insegura: no se desciende
+        names[label] = []
+        if state == "present":
+            try:
+                names[label] = _names(directory)
+            except InboxError:
+                state = "unsafe"
         states[label] = state
-        names[label] = _names(directory) if state == "present" else []
     rejected = []
     for name in names["rejected"]:
         if name.endswith(REASON_SUFFIX):
@@ -576,7 +651,7 @@ def read_status(store: Any) -> dict[str, Any]:
     return {
         "schema": STATUS_SCHEMA,
         "untrusted_memory_data": True,
-        "inbox": root_state,
+        "inbox": top,
         "directories": states,
         "pending": _listing(pending_entries),
         "inflight": _listing(inflight_markers),
@@ -597,5 +672,5 @@ __all__ = [
     "ENTRY_SCHEMA", "InboxError", "InboxPaths", "KINDS", "MAX_TEXT_BYTES", "STATUS_SCHEMA",
     "collect_tmp", "enqueue", "entry_names", "inbox_lock", "inbox_paths", "inflight_is_empty",
     "is_entry_name", "is_marker_name", "marker_names", "payload_digest", "pending_is_empty",
-    "read_status", "record_id", "resolve_kind", "stream_for_kind",
+    "read_status", "record_id", "resolve_kind", "root_state", "stream_for_kind",
 ]
