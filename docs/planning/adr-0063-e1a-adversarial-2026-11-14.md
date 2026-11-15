@@ -51,3 +51,32 @@ revisor): `/var/tmp/orquestador-memoria/capitanes/ankla/ronda-adr0063/dictamen-r
 | L4 | LOW | `compact` es seguro por `_RULES`, no por la precondición | Aceptado |
 | L5 | LOW | Testigo del candado y post-proceso | Aceptado: `lock_result` al cuerpo y post-proceso común |
 | L6 | LOW | Referencias de #197 incoherentes | Aceptado |
+
+## Ronda r2 — `fix-and-retry`
+
+Mismo revisor (DeepSeek), contexto fresco. Cierre de r1: 18 filas cerradas,
+6 parciales (H3, H5, M4, M8, L2, y B2 reabierto por otra vía), ninguna
+abierta. H3 juzgado «parcial, aceptable, no bloqueante» con dos
+condiciones. Hallazgos nuevos: 8 HIGH, 7 MED, 2 LOW. Dictamen íntegro fuera
+del repo: `/var/tmp/orquestador-memoria/capitanes/ankla/ronda-adr0063/dictamen-r2-deepseek.md`.
+
+| ID | Sev | Hallazgo | Disposición |
+|---|---|---|---|
+| H3 (cond.) | — | Exigir nombres únicos al lanzador y probar «dos sesiones, mismo nombre» | Aceptado: requisito del lanzador y caso en el criterio 4 |
+| N1 | HIGH | El temporal de `atomic_write` vive en `pending/` y el vaciado lo tomaría | Aceptado: temporales en `tmp/`, publicación por `os.link`, patrón exacto de nombre |
+| N2 | HIGH | `assert_unchanged` no detecta divergencia de custodia | Aceptado: preflight completo (`_custody_guard`) antes de crear nada y otra vez con el candado |
+| N3 | HIGH | `decision: skip` no lanza y dejaría entradas para siempre | Aceptado: representación y `lineage` fijadas; `skip` → `remember_policy_skip` |
+| N4 | HIGH | Orden de candados incompleto; el exclusivo quedaría dentro de `write_lock` | Aceptado: orden total bandeja → identidad → `write_lock` → gate; exclusivo al principio; criterio 9 |
+| N5 | HIGH | FIFO, enlace o directorio en `pending/` bloquean el vaciado | Aceptado: `lstat` + `S_ISREG` + `st_nlink == 1`, `inbox_entry_unsafe` |
+| N6 | HIGH | El punto de corte «entre `committed` y `CURRENT`» no existe; el replay nunca corre | Aceptado: paso 0 de reconciliación; criterio 3 con el orden real (`transactions.py:687` antes de `:725`) |
+| N7 | MED | La deduplicación por clave pierde textos distintos con la misma clave | Aceptado: clave **y** `payload_sha256` |
+| N8 | MED | El control «sin variables» es imposible porque `agent.cli` es obligatorio | Aceptado: «sin `AN_KLA_AGENT_NAME`» |
+| N9 | HIGH | Record sin forma fijada: podía no ser recuperable | Aceptado: `{"id","text","an_kla_envelope"}`; criterio 1 exige recuperarlo |
+| N10 | MED | Compatibilidad reclamada más ancha de lo real; ¿cuarto cambio? | Aceptado: criterio 5 acotado a stores sin bandeja; excepción declarada como parte de D1 |
+| N11 | MED | `doctor` vería la bandeja del ancla como residuo tras `relocate` | Aceptado: `memory/inbox/` en `_KEPT_PREFIXES`; residuo 0 en el criterio 7 |
+| N12 | MED | Taxonomía de errores del vaciado no casa con el código | Aceptado: máquina de estados explícita; códigos de aborto nunca van a `rejected/` |
+| N13 | MED | `flock` compartido no es portable | Aceptado: exclusivo como degradación; prueba por plataforma |
+| N14 | MED | Reintento por entrada = N commits bajo un candado | Aceptado: bisección soltando el candado entre intentos; tiempo máximo reportado |
+| N15 | MED | Orden de pasos: el id depende del target | Aceptado: resolver target antes de deduplicar |
+| N16 | LOW | Citas, rechazos invisibles al llamante, `--kind` omitido, `relocate plan` | Aceptado: citas corregidas; rechazos en las respuestas; regla de `--kind`; `plan` no exige bandeja vacía |
+| N17 | LOW | Plazo corto, `inbox_busy`, colisión de nombre, prefijo de sesión, `identity_env_invalid` | Aceptado en los cinco puntos |

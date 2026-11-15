@@ -28,7 +28,7 @@ Guardar un hecho hoy cuesta cuatro invocaciones y ~5 KB de JSON
    (`an_kla/write_policy.py:335-344`) pero `lineage.refs`, `issuer` y la
    atribución por registro no se persisten: el evento
    `write_policy_decision` sólo lleva clase, hashes, decisión y razones
-   (`write_policy.py:655-671`; el booleano `derived_from_retrieval`
+   (`write_policy.py:655-676`; el booleano `derived_from_retrieval`
    sobrevive sólo como razón agregada, `:522-523`), y el manifest de
    revisión no tiene tiempo (`an_kla/revision_builder.py:22-41`). No se sabe
    quién escribió qué.
@@ -42,9 +42,9 @@ Restricciones:
 - **Compatibilidad.** Las órdenes de datos existentes (`status`, `verify`,
   `inventory`, `retrieve`, `resume`, `assemble-context`, `export`,
   `plan-write`, `commit-write-plan`, `refute`) y el MCP devuelven lo mismo
-  para el mismo store y entradas. El `policy_fingerprint` de
+  para el mismo store y entradas si el store no tiene `memory/inbox/` (la única excepción, `export` y `relocate commit` con bandeja, se declara en D1). El `policy_fingerprint` de
   `write-policy/v1` (`digest_json(_POLICY_CONFIGURATION)`,
-  `write_policy.py:153-154`) no cambia. `capabilities`, `schema list` y
+  `write_policy.py:154-155`) no cambia. `capabilities`, `schema list` y
   `--help` sólo cambian de forma aditiva.
 - **MCP de sólo lectura.** ADR-0003 pospone deliberadamente el MCP
   escribible y ADR-0047 lo mantiene read-only en v1 (`an_kla/mcp.py:3,
@@ -56,12 +56,12 @@ Restricciones:
   (`an_kla/refute_policy.py:25, 96-104`) que un agente no tiene.
 - **Records abiertos.** `validate_record_fields` sólo valida `id`,
   `verified_at`, `status`/`nu` y `subject_ref` (`write_policy.py:268-286`);
-  `_SELF_ASSERTED_AUTHORITY_KEYS` (`:34-45`) no incluye claves de
+  `_SELF_ASSERTED_AUTHORITY_KEYS` (`:36-47`) no incluye claves de
   identidad. Un record admite claves adicionales sin cambiar el formato de
   segmento (JSONL canónico direccionado por contenido, `store.py:616-633`),
   cuyo versionado vive en el manifest.
 - **Lote.** `write-proposal-v2` es homogéneo en stream y operación, sin
-  supersede intra-lote (`an_kla/write_batch.py:1-7, 44-75`); su tope
+  supersede intra-lote (`an_kla/write_batch.py:1-7, 44-95`; prohibición intra-lote en `:88-91`); su tope
   declarado es 1000 (`write_policy.py:123`), pero `_MAX_JSON_NODES =
   10_000` (`write_policy.py:49, 185-212`) se aplica a propuesta y plan: con
   un sobre de 21 nodos por record el máximo medido es ≈ 380 (spike E1.a).
@@ -80,7 +80,10 @@ Restricciones:
 ## Decisión
 
 Añadir a la CLI `remember`, `inbox drain`, `inbox status` y
-`disputes list`. Ninguna orden existente ni el MCP cambian. Tres decisiones.
+`disputes list`. El MCP no cambia; de las órdenes existentes sólo cambian
+`export` y `relocate commit` cuando hay bandeja (D1, «La bandeja no es
+estado durable»). Tres decisiones; el trato de la bandeja en la custodia es
+parte de D1, no un cuarto cambio.
 
 ### D1 — Bandeja de entrada y vaciado en lote bajo candado, sin demonio
 
@@ -93,58 +96,98 @@ shell. Máximo 64 KiB de texto en UTF-8. `kind` por defecto `fact`; `fact` y
 `working-state-v2` no se toca). Con `--supersedes`, el stream lo decide el
 target (ver D3).
 
+**Record.** `remember` escribe exactamente `{"id": <id>, "text": <texto>,
+"an_kla_envelope": {…}}` (más `"disputes": {…}` en D3), que `record_text`
+indexa (`record_text.py:15-32`), con `requested_representation: "summary"`
+(techo de `model_derived`) y `lineage: {"derived_from_retrieval": false,
+"refs": []}`. Schemas nuevos: `inbox-entry-v1`, `record-envelope-v1`,
+`remember-result-v1`, `inbox-status-v1`, `disputes-list-v1`.
+
+**Directorios.** `memory/inbox/` contiene `.lock`, `tmp/` (temporales del
+encolado), `pending/` (entradas completas), `rejected/` (evidencia). Sólo
+cuenta como entrada un archivo de `pending/` cuyo nombre case
+`^[0-9]+-[0-9]+-[0-9a-f]{16}-[0-9a-f]{8}\.json$`; el vaciado ignora sin
+tocar todo lo demás de `pending/`.
+
+**Orden total de candados:** bandeja (`memory/inbox/.lock`) → identidad
+(`identity_lock`) → `write_lock` → gate de lectores. Nadie pide un candado
+anterior teniendo uno posterior; las órdenes que usan el de bandeja lo toman
+al principio, antes de crear nada, y lo sueltan al final. En plataformas sin
+`flock` compartido el candado de bandeja se toma siempre en exclusivo (más
+lento, igual de correcto); hay prueba por plataforma.
+
 **Encolar.**
 
-1. Toma `memory/inbox/.lock` en modo **compartido** (`flock LOCK_SH`) y,
-   con él, revalida que la raíz de custodia resuelta sigue siendo la del
-   store (mismo `assert_unchanged` de la escritura gobernada); si cambió,
-   falla con `store_identity_changed`.
-2. Escribe una entrada `an-kla/inbox-entry-v1` con
-   `storage_primitives` (fsync del archivo temporal → `os.replace` → fsync
-   del directorio) en
-   `memory/inbox/pending/<tiempo_ns>-<pid>-<clave16>.json`. La entrada
-   guarda texto, `kind`, sobre (D2), clave y, si lo hay, sólo el
-   `target_id` pedido: la resolución propia/ajena ocurre al vaciar.
-3. Suelta `memory/inbox/.lock` antes de intentar `write_lock`. **Orden de
-   candados:** quien tome los dos toma primero el de bandeja y después
-   `write_lock`; nadie pide el de bandeja teniendo `write_lock`.
+1. Ejecuta el preflight de la escritura gobernada
+   (`_mutation_preflight_with_context`, que incluye `_custody_guard`,
+   `identity.py:60, 670`) **antes de crear nada** en `memory/inbox/`.
+2. Toma el candado de bandeja en compartido con plazo corto; si está
+   ocupado (un `export` o `relocate commit` en curso), falla con
+   `inbox_busy` y pista de reintento, sin escribir.
+3. Con él, repite el preflight; si la custodia cambió, falla con su código
+   (`store_root_divergence` o `store_identity_changed`) y no deja entrada.
+4. Escribe la entrada `an-kla/inbox-entry-v1` en `memory/inbox/tmp/`
+   (fsync del archivo) y la publica en `pending/` con
+   `os.link` + `unlink` del temporal (nunca sobrescribe; un nombre que ya
+   exista es error, no pérdida) y fsync de `pending/`. Nombre:
+   `<tiempo_ns>-<pid>-<clave16>-<aleatorio8>.json`. La entrada guarda texto,
+   `kind`, sobre (D2), clave, `payload_sha256` (de texto, `kind` y target) y,
+   si lo hay, sólo el `target_id` pedido: la resolución propia/ajena ocurre
+   al vaciar.
+5. Suelta el candado de bandeja y pasa a vaciar.
 
-**Vaciar.** Después intenta `write_lock` con un plazo corto (constante del
-perfil, menor que los 10 s). Si está ocupado → `{"state": "queued"}`.
-Con el candado:
+**Vaciar.** Intenta `write_lock` con un plazo corto (parámetro opcional
+nuevo de `write_lock`; la constante de 10 s no cambia). Si está ocupado →
+`{"state": "queued"}`. Con el candado:
 
-1. lee `CURRENT` y el snapshot **dentro** del candado;
-2. lista `pending/` por nombre; una entrada ilegible o que no valide
-   `inbox-entry-v1` va a `memory/inbox/rejected/` con su motivo;
-3. **deduplica dentro de `pending/`** por `record.id`: conserva la más
-   antigua y borra las demás (misma clave = misma intención); y contra el
-   snapshot: si el id ya existe y la `idempotency_key` guardada en su sobre
-   coincide, borra la entrada (`deduplicated`); si no coincide, la mueve a
-   `rejected/` con `remember_id_collision`;
-4. resuelve cada `--supersedes` bajo el candado (D3) y arma lotes
-   homogéneos con presupuesto de nodos (propuesta + plan ≤ 9.000) y como
-   máximo 250 entradas por lote;
-5. construye propuesta, autoridad `model_derived` (la plantilla de
-   `emit_write_authority_template`, `write_policy.py:237-265`) y plan con
-   las funciones puras de política, y compromete por el cuerpo de commit
-   **con el candado ya tomado**, con
+0. **Reconcilia** los journals propios de la bandeja (`transaction_id` del
+   espacio `NS_AN_KLA_INBOX`) con `stage != committed`, por la
+   reconciliación existente (`store.inspect_transaction`, ADR-0024): si el
+   candidato ya es `CURRENT` o ancestro suyo, el journal se cierra; si no,
+   queda y se informa.
+1. lee `CURRENT` y el snapshot;
+2. para cada entrada candidata, `lstat`: si no es archivo regular con
+   `st_nlink == 1` → `rejected/` con `inbox_entry_unsafe`, sin abrirla
+   (un FIFO no bloquea el vaciado); si no se puede leer o no valida
+   `inbox-entry-v1` → `rejected/` con su motivo;
+3. resuelve cada `--supersedes` (D3), con lo que cada entrada tiene stream e
+   id definitivos;
+4. **deduplica**: dentro de `pending/`, por id, si clave **y**
+   `payload_sha256` coinciden conserva la más antigua y borra las demás; si
+   el id coincide con otro `payload_sha256` → `rejected/` con
+   `remember_id_collision`. Contra el snapshot, igual comparando con la
+   clave y el texto del record existente;
+5. arma lotes homogéneos con presupuesto de nodos (propuesta + plan
+   ≤ 9.000) y como máximo 250 entradas;
+6. construye propuesta, autoridad `model_derived` (la plantilla de
+   `emit_write_authority_template`) y plan con las funciones puras de
+   política, y compromete por `_commit_write_plan_locked` con
    `transaction_id = uuid5(NS_AN_KLA_INBOX, base_revision + sorted(digests
-   de las entradas del lote))`: un reintento del mismo lote tras un corte
-   reproduce el resultado por el replay de ADR-0024
-   (`write_commit.py:52-83`) en vez de crear otra transacción;
-6. si un lote falla con un error **terminal de política** (`invalid_*`,
-   `plan_*`, `invalid_supersede_target`, `duplicate_<stream>_id`), lo
-   reintenta entrada por entrada y mueve a `rejected/` con su código las
-   que fallen solas; los errores de infraestructura (E/S,
-   `write_lock_busy`, `store_identity_changed`) abortan el vaciado sin
-   tocar `pending/`;
-7. sólo con `committed: true`, borra las entradas del lote de `pending/`.
+   de las entradas del lote))`;
+7. según el resultado:
+   - `committed: true` → borra las entradas del lote de `pending/`;
+   - `decision: skip` → cada entrada es rechazo de política:
+     `rejected/` con `remember_policy_skip` y sus `reason_codes`;
+   - error terminal de política (`invalid_*`, `plan_*`,
+     `invalid_supersede_target`, `duplicate_<stream>_id`) → **bisección**:
+     parte el lote en mitades y reintenta, soltando y retomando `write_lock`
+     entre intentos, hasta aislar las entradas que fallan solas, que van a
+     `rejected/` con su código;
+   - `committed: false` sin decisión `skip`, `committed: null` /
+     `outcome_unknown`, o un error de infraestructura o concurrencia (E/S,
+     `write_lock_busy`, `store_root_divergence`, `store_identity_changed`,
+     `write_plan_base_changed`, `transaction_*`) → aborta el vaciado, deja
+     `pending/` intacto y lo informa. Estos códigos **nunca** van a
+     `rejected/`.
 
 `remember` vacía como máximo un lote; `inbox drain` vacía lotes sucesivos
 hasta dejar `pending/` vacío o agotar un presupuesto de tiempo, soltando el
 candado entre lotes. Las lecturas no vacían ni informan de la bandeja.
 `inbox status` (sólo lectura) informa `pending`, `rejected` (con motivo por
-entrada) y `tmp`. `rejected/` no se borra sola: es evidencia, y se declara.
+entrada) y `tmp`; las respuestas de `remember` e `inbox drain` incluyen los
+rechazos que produjeron. `rejected/` no se borra sola: es evidencia, y se
+declara. La bandeja no tiene cuota total: un `pending/` que crece sin vaciar
+es un límite declarado (cada entrada ≤ 64 KiB de texto).
 
 **Commit con el candado tomado.** `write_commit.py` se parte, sin cambio de
 comportamiento, en la envoltura pública de hoy (toma el candado; mismos
@@ -152,12 +195,12 @@ bytes y errores) y `_commit_write_plan_locked(store, lock_result, …)`, que
 recibe el testigo del candado, hace la misma revalidación completa
 (`verify_write_plan`, CAS contra `CURRENT`, supersede, `subject_ref`) y
 devuelve `(revision, outcome)`. Envoltura y vaciado comparten el
-post-proceso (`_post_lock_outcome`, `_maybe_reindex`, aviso
+post-proceso tras soltar el candado (`_post_lock_outcome`, `_maybe_reindex`, `_context_diagnostics`, aviso
 `record_without_indexable_text`). Es la técnica de la extracción de
 `supersede.py` (#59 Fase 0). La compactación toma `write_lock`
 (`compaction.py:540`), así que planificar bajo él cubre el TOCTOU que
 ADR-0060 cierra para `plan_write` con el gate de lectores. Defensa contra
-duplicados en este camino: la deduplicación del paso 3 y `_assign_records`
+duplicados en este camino: la deduplicación del paso 4 y `_assign_records`
 (`duplicate_<stream>_id`), ambas bajo el candado; `plan_duplicate_id`
 (`plan_guard.py`) sólo actúa en `plan_write`.
 
@@ -167,18 +210,25 @@ duplicados en este camino: la deduplicación del paso 3 y `_assign_records`
    (`export_restore.py:82-98`) **después** de los chequeos de enlace y de
    archivo especial: su contenido no se exporta, sella ni reubica, pero un
    enlace o hardlink plantado ahí sigue haciendo fallar la orden.
-2. `export create`, `--seal sealed-export/v1` y `relocate plan` y
-   `relocate commit` (ida y `--back`) toman `memory/inbox/.lock` en modo
-   **exclusivo** y exigen `pending/` vacío; si no, fallan con
-   `inbox_pending` (pista: `inbox drain`). En `export create` la
-   comprobación va antes de crear el directorio del bundle
-   (`export_restore.py:117-121`) y se repite con el candado: el destino no
-   se crea. El candado exclusivo cierra la carrera con un encolado
-   concurrente.
-3. `compact` no borra `memory/inbox/` porque sus `_RULES`
+2. `export create`, `--seal sealed-export/v1` y `relocate commit` (ida y
+   `--back`) toman el candado de bandeja en **exclusivo** al principio de la
+   orden (antes del `mkdir` del bundle, `export_restore.py:121`, y antes de
+   `identity_lock`) y exigen `pending/` vacío; si no, fallan con
+   `inbox_pending` (pista: `inbox drain`) sin crear nada. `relocate plan`
+   no lo exige: el plan ya excluye la bandeja y `commit` revalida. El
+   exclusivo cierra la carrera con un encolado concurrente.
+3. `memory/inbox/` se añade a `_KEPT_PREFIXES` de
+   `project_anchor_residue` (`relocate.py:52, 276-286`): tras `relocate commit`
+   el `.lock` y `rejected/` que queden en el ancla de origen no cuentan como
+   residuo de custodia en `doctor`.
+4. `compact` no borra `memory/inbox/` porque sus `_RULES`
    (`compaction_inventory.py:17-30`) no casan esa ruta, no por la
    precondición de export.
-4. Un store sin `memory/inbox/` recorre exactamente el camino de hoy.
+5. Un store sin `memory/inbox/` recorre exactamente el camino de hoy. Para
+   un store que ya tuviera algo en esa ruta antes de esta decisión, `export`
+   y `relocate` pasan de `export_unrecognized_durable_path` a la regla
+   nueva: es la única variación observable de órdenes existentes, forma
+   parte de D1 y se declara.
 
 ### D2 — Escritor C0 y hora de encolado en un sobre dentro del record
 
@@ -215,8 +265,12 @@ Cada record que escribe `remember` lleva una clave reservada:
     `AN_KLA_AGENT_CLI`, `AN_KLA_AGENT_MODEL`, `AN_KLA_AGENT_ROLE`,
     `AN_KLA_SESSION_ID`), con los centinelas de C0: `sin-nombre`,
     `desconocido` (modelo y rol) y `<cli>:sin-sesion`;
+  - `AN_KLA_SESSION_ID` trae sólo el identificador del CLI; la herramienta
+    compone `session.id = <agent.cli>:<identificador>`;
   - `agent.cli` es obligatorio: sin él, `identity_env_missing` y no se
-    encola nada.
+    encola nada. Un valor presente que viola C0 (nombre fuera del patrón,
+    rol fuera del enum, rama inválida) falla con `identity_env_invalid` y
+    el campo culpable; nunca se corrige ni se sustituye por un centinela.
 - **Validación.** an-kla implementa su propio validador C0. Los vectores de
   C0 se copian al repo con su digest en la fase de código, cuando el
   orquestador confirme la versión congelada.
@@ -232,17 +286,20 @@ Cada record que escribe `remember` lleva una clave reservada:
 - **Target.** Se busca el id en los tres streams del snapshot. Ausente o no
   vigente → la entrada va a `rejected/` con `invalid_supersede_target`.
   Presente en más de un stream → `rejected/` con
-  `remember_target_ambiguous`. El record nuevo va al stream del target; un
-  `--kind` incompatible con ese stream → `rejected/` con
-  `remember_kind_mismatch`.
+  `remember_target_ambiguous`. El record nuevo va al stream del target. Si
+  `--kind` se omitió, se toma el del target (o el que corresponde a su
+  stream si es legado); si se dio explícito y su stream no es el del target
+  → `rejected/` con `remember_kind_mismatch`.
 - **Propia** → `supersede` normal (ADR-0019): el anterior queda
   `sustituida`. Es propia si el target tiene `an_kla_envelope` y su
   `writer.repo.id` y `writer.agent.name` coinciden con los del escritor
   actual, y ese nombre no es `sin-nombre`. La unidad de identidad es el
   **nombre de agente**, no la sesión: un agente que reanuda en otra sesión
-  sigue siendo dueño de sus hechos. El lanzador debe dar nombres únicos por
-  agente; dos agentes con el mismo nombre se tratan como el mismo escritor
-  (límite declarado).
+  sigue siendo dueño de sus hechos. **Requisito del lanzador:** dos agentes
+  activos a la vez sobre el mismo repo no comparten `agent.name`. Si se
+  incumple, se tratan como el mismo escritor y uno puede sustituir lo del
+  otro sin disputa; queda auditable por `session.id` en el sobre (límite
+  declarado, verificado por el criterio 4).
 - **Ajena, legada sin sobre o con `sin-nombre`** → `add` de un record nuevo
   con `"disputes": {"stream", "target_id", "target_record_sha256"}`, donde
   `target_record_sha256 = digest_json(snapshot.raw_records[stream][i])`
@@ -279,9 +336,11 @@ sistema; todos los procesos pueden leer y escribir el store.
 | Un agente declara la identidad de otro (suplantación) | **Fuera, declarado** | Sobre y C0 son aserciones guardadas tal cual; no prueban autoría. La memoria sigue siendo no autoritativa |
 | Un sobre falso escrito a mano vía `plan-write` | Fuera, declarado | Igual; endurecer `plan-write` es decisión aparte |
 | Dos escritores honestos se pisan | **Dentro** | D1: planificación y CAS bajo el mismo candado |
-| Corte brusco o de energía al encolar o vaciar | **Dentro** | fsync antes del rename; nada sale de `pending/` sin `committed: true`; `transaction_id` determinista para el replay; deduplicación por clave |
-| Una entrada mala bloquea toda la escritura | **Dentro** | D1 pasos 2, 3 y 6: `rejected/` con motivo; el resto se compromete |
-| Una entrada se pierde en `export`/`relocate` | **Dentro** | Candado exclusivo de bandeja y precondición `inbox_pending` |
+| Corte brusco o de energía al encolar o vaciar | **Dentro** | fsync en `tmp/` antes de publicar; nada sale de `pending/` sin `committed: true`; reconciliación de journals (paso 0); deduplicación por clave y `payload_sha256` |
+| Una entrada mala bloquea toda la escritura (corrupta, no regular, FIFO, `skip`, error terminal) | **Dentro** | D1 pasos 2, 4 y 7: `rejected/` con motivo y bisección; el resto se compromete |
+| El vaciado toma el temporal de un encolado en curso | **Dentro** | Temporales en `tmp/`; sólo cuentan los nombres completos de `pending/` |
+| Una entrada se pierde en `export`/`relocate` o en un ancla abandonada | **Dentro** | Preflight de custodia antes y después del candado de bandeja; exclusivo y `inbox_pending` en `export` y `relocate commit` |
+| `pending/` crece sin vaciar hasta llenar el disco | Dentro, límite declarado | Sin cuota total; ≤ 64 KiB por entrada; `inbox status` lo hace visible |
 | Un agente honesto desactiva por error el hecho de otro | **Dentro** | D3: disputa |
 | Dos agentes sin nombre o con el mismo nombre | Dentro, límite declarado | `sin-nombre` nunca es dueño; nombres repetidos = mismo escritor |
 | Contenido del recuerdo visible en `argv` | Dentro, declarado | `--text-file -` recomendado; `--text` lo expone a `ps` y al historial |
@@ -300,28 +359,36 @@ abierto. Respecto de #197 no cierra G1 (firma), G5 (CAS por objeto) ni G6
 
 1. **Una llamada.** Guardar es una invocación de CLI cuyo único dato
    obligatorio es el texto; el record lleva sobre con `writer` válido según
-   C0 `8fccbcc` y `enqueued_at`.
-2. **Concurrencia.** 8 procesos, 200 `remember` en total con textos únicos y
-   un `inbox drain` final: 200 records distintos, 0 perdidos, 0
-   duplicados, `pending/` y `rejected/` vacíos, `verify` ok, **0 conflictos
-   CAS** (`write_plan_base_changed`) en el camino nuevo, 0
-   `write_lock_busy` en `inbox drain`; se reportan el p95 de `remember` y
+   C0 `8fccbcc` y `enqueued_at`; y `retrieve --query <palabra del texto>`
+   devuelve ese texto.
+2. **Concurrencia.** 8 procesos, 200 `remember` en total con textos únicos,
+   mientras otro proceso ejecuta `inbox drain` en bucle, y un `inbox drain`
+   final: 200 records distintos, 0 perdidos, 0 duplicados, `pending/`,
+   `rejected/` y `tmp/` vacíos, `verify` ok, **0 conflictos CAS**
+   (`write_plan_base_changed`) en el camino nuevo, 0 `write_lock_busy` en
+   `inbox drain`, 0 errores de encolado; se reportan el p95 de `remember` y
    el número de respuestas `queued`.
-3. **Corte brusco.** `kill -9` en cuatro puntos: entre el fsync del temporal
-   y el rename al encolar; tras escribir objetos y antes de `committed`;
-   entre `committed` y mover `CURRENT`; tras mover `CURRENT` y antes de
+3. **Corte brusco.** `kill -9` en cuatro puntos: tras el fsync en `tmp/` y
+   antes de publicar en `pending/`; tras escribir objetos y antes de
+   `_replace_current`; entre `_replace_current` (`transactions.py:687`) y la
+   escritura del journal `committed` (`:725`); tras el journal y antes de
    borrar `pending/`. Tras la **siguiente invocación de escritura**
-   (`remember` o `inbox drain`): 0 perdidos, 0 duplicados, `verify` ok y
-   ningún journal huérfano nuevo en `recover`.
+   (`remember` o `inbox drain`): 0 perdidos, 0 duplicados, `verify` ok, y
+   todo journal de la bandeja con `stage != committed` cuyo candidato sea
+   `CURRENT` o ancestro suyo queda cerrado por el paso 0.
 4. **Disputa.** Con variables de lanzador distintas, A disputa un hecho de B:
    el de B sigue vigente (`is_active`); el record de disputa lleva el
    `target_record_sha256` de `raw_records` y aparece en la respuesta de
    `remember` y en `disputes list --target`. Controles: A sustituye uno suyo
-   y el anterior queda `sustituida`; target legado sin sobre → disputa; sin
-   variables de entorno (`sin-nombre`) → disputa incluso sobre lo propio;
-   mismo texto con dos targets → dos records.
-5. **Compatibilidad.** Un store creado con `v0.1.0-beta.35` (fixture
-   versionado, abierto desde una ruta absoluta fija) da, antes y después, el
+   y el anterior queda `sustituida`; target legado sin sobre → disputa; con
+   `AN_KLA_AGENT_CLI` pero sin `AN_KLA_AGENT_NAME` (`sin-nombre`) → disputa
+   incluso sobre lo propio; dos sesiones distintas con el mismo
+   `agent.name` → se sustituyen sin disputa y el sobre registra las dos
+   `session.id` (límite declarado, verificado); mismo texto con dos targets
+   → dos records.
+5. **Compatibilidad.** Un store **sin `memory/inbox/`** creado con
+   `v0.1.0-beta.35` (fixture versionado, abierto desde una ruta absoluta
+   fija) da, antes y después, el
    mismo `sha256` de salida en `status`, `verify`, `inventory`, `retrieve`,
    `resume`, `assemble-context` y las herramientas MCP; para `export`, el
    mismo `manifest_sha256` y digests de entradas del bundle;
@@ -331,18 +398,31 @@ abierto. Respecto de #197 no cierra G1 (firma), G5 (CAS por objeto) ni G6
    `CURRENT` y el listado recursivo `(ruta, tamaño, mtime_ns, sha256)` de
    `memory/inbox/` son idénticos a los de antes.
 7. **Bandeja y custodia.** Con `pending/` no vacío, `export create`,
-   `--seal sealed-export/v1` y `relocate plan`/`commit` (ida y `--back`)
-   fallan con `inbox_pending` y el destino del bundle no existe; tras
-   `inbox drain` pasan y el bundle no contiene `memory/inbox/`; un enlace
-   simbólico bajo `memory/inbox/` sigue dando `export_unsafe_link`; un
-   `remember` concurrente con `relocate commit` acaba encolado en el store
-   resultante o falla con `store_identity_changed`, nunca se pierde.
+   `--seal sealed-export/v1` y `relocate commit` (ida y `--back`) fallan con
+   `inbox_pending` y el destino del bundle no existe; `relocate plan` pasa;
+   tras `inbox drain` todo pasa y el bundle no contiene `memory/inbox/`; un
+   enlace simbólico bajo `memory/inbox/` sigue dando `export_unsafe_link`;
+   un `remember` concurrente con `relocate commit` acaba en `pending/` del
+   store resultante o falla con `inbox_busy`, `store_root_divergence` o
+   `store_identity_changed`, y nunca deja una entrada en un ancla
+   abandonada; tras `relocate commit`, `doctor` informa
+   `project_local_residue: 0`.
 8. **Lote y entradas malas.** `inbox drain` con 1000 pendientes y sobre C0
    completo termina con `pending/` vacío en varios commits, sin
-   `invalid_write_proposal` ni `invalid_write_plan`; con una entrada
-   corrupta, dos con la misma clave y una con target inexistente: la
-   corrupta y la del target inexistente acaban en `rejected/` con su
-   motivo, la duplicada se compromete una vez y las demás se comprometen.
+   `invalid_write_proposal` ni `invalid_write_plan`. Con, a la vez, una
+   entrada corrupta, un FIFO, un enlace simbólico y un directorio en
+   `pending/`, dos entradas con la misma clave y el mismo payload, dos con
+   la misma clave y payload distinto, una con target inexistente y una que
+   la política rechaza con `skip`: el vaciado no se bloquea; corrupta, FIFO
+   y enlace van a `rejected/` (`inbox_entry_unsafe` o su motivo), el
+   directorio se ignora, la duplicada se compromete una vez, la colisión va
+   a `rejected/` con `remember_id_collision`, la del target con
+   `invalid_supersede_target`, la del `skip` con `remember_policy_skip`, y
+   las demás se comprometen; se reporta el tiempo máximo con `write_lock`
+   tomado en un intento.
+9. **Orden de candados.** Prueba negativa: ningún camino pide el candado de
+   bandeja teniendo `identity_lock` o `write_lock` (instrumentación del
+   orden en test).
 
 ## Por qué no
 
@@ -402,6 +482,8 @@ abierto. Respecto de #197 no cierra G1 (firma), G5 (CAS por objeto) ni G6
 - `tests/test_legacy_store_byte_identity.py`: criterios 5 y 6.
 - `tests/test_inbox_custody.py`: criterio 7.
 - `tests/test_inbox_batch_limits.py`: criterio 8.
+- `tests/test_inbox_lock_order.py`: criterio 9, más la prueba de plataforma
+  del candado de bandeja.
 - Pruebas existentes de `write_commit`, export, sellado y `relocate` sin
   cambios y en verde.
 - Escenario de escala nuevo en `benchmarks/scale/` (8 escritores).
