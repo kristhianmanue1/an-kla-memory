@@ -59,17 +59,17 @@ def vector_failures(data: dict) -> list[str]:
         if expected != actual:
             failures.append(f"{label}: expected {expected!r}, got {actual!r}")
 
-    for case in data.get("validos", []):
+    for case in data["validos"]:
         check(f"valido {case['nombre']}", [], c0.validate(case["objeto"]))
-    for case in data.get("invalidos", []):
+    for case in data["invalidos"]:
         reasons = c0.validate(case["objeto"])
         check(f"invalido {case['nombre']} ({case['motivo']} in {reasons})", True, case["motivo"] in reasons)
-    for case in data.get("normalizacion", []):
+    for case in data["normalizacion"]:
         check(f"normalizacion {case['url']!r}", case["repo_id"], c0.normalize_remote(case["url"]))
-    for case in data.get("remoto_no_normalizable", []):
+    for case in data["remoto_no_normalizable"]:
         check(f"remoto {case['url']!r} base={case.get('base')!r}", case["repo_id"],
               c0.repo_id_from_remote(case["url"], case.get("base")))
-    for case in data.get("local", []):
+    for case in data["local"]:
         check(f"local {case['ruta_comun']!r}", case["repo_id"], c0.repo_id_from_common_dir(case["ruta_comun"]))
     return failures
 
@@ -113,8 +113,10 @@ class VectorTests(unittest.TestCase):
     def test_all_11_errata_1_vectors_pass(self) -> None:
         data = load_vectors(ERRATA_1, ERRATA_1_SHA256)
         self.assertEqual((data["schema"], data["errata"]), ("memoria/identidad/v1", 1))
-        groups = ("validos", "invalidos", "normalizacion", "remoto_no_normalizable", "local")
-        self.assertEqual(sum(len(data.get(group, [])) for group in groups), 11)
+        counts = {k: len(data[k]) for k in ("validos", "invalidos", "normalizacion", "remoto_no_normalizable", "local")}
+        self.assertEqual(counts, {"validos": 1, "invalidos": 6, "normalizacion": 3,
+                                  "remoto_no_normalizable": 1, "local": 0})
+        self.assertEqual(sum(counts.values()), 11)
         self.assertEqual(vector_failures(data), [])
 
     def test_tampered_errata_1_file_is_detected_by_digest(self) -> None:

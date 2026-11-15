@@ -1,4 +1,4 @@
-# Origen de `vectores.json`
+# Origen de los vectores de `memoria/identidad/v1`
 
 Vectores de conformidad del contrato C0 `memoria/identidad/v1`, copiados sin
 modificar (ADR-0063 D2).
@@ -22,10 +22,12 @@ El dueño de C0 corrigió el validador de referencia: anclaba con
 `re.match(...$)`, y en Python `$` también casa antes de un salto de línea
 final, así que aceptaba lo que el contrato rechaza («sin espacios»). El texto
 del contrato y `vectores.json` no cambian. Detalle, tabla de efectos y límite
-conocido: `cc/memoria/contratos/identidad-v1/ERRATAS.md` en el mismo repo.
+conocido: `cc/memoria/contratos/identidad-v1/ERRATAS.md` en
+`aria/coordination`.
 
-- Commit: `4c0fc1e` en `main` (el archivo entró en `4df5fb4` y no cambió
-  después).
+- Commit: el archivo entró en `4df5fb4` y está vigente, sin cambios, en
+  `4c0fc1e` de `main`, que cierra la errata (allí sólo cambió
+  `ERRATAS.md`).
 - Ruta de origen: `cc/memoria/contratos/identidad-v1/vectores-errata-1.json`.
 - sha256: `bd6abbae0b135ac6b64910ee0e967d2d9a929763399de6f286d13c126a36654d`.
 - Contenido: 11 casos (1 `validos`, 6 `invalidos`, 3 `normalizacion`,
