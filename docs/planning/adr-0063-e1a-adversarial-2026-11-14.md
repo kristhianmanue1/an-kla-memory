@@ -129,3 +129,13 @@ un spike de recuperación que prototipe los pasos 0 y 7 contra
 habrá más rondas de papel sobre esos pasos. Condición previa a fusionar: una
 ronda breve por un revisor de otra familia y contexto fresco que responda si
 la partición es limpia.
+
+### Ronda de partición — `proceed`
+
+Revisor: Gemini vía `agy --mode plan`, contexto fresco, sólo lectura, sobre
+el delta `ab76aa3..2c4b3aa`. (a) D2, D3 y la extracción no tienen
+hallazgos abiertos ni parciales de r1 a r4: no. (b) Lo aceptado depende de
+lo pendiente de D1: no; el orden de la extracción tras el spike es orden de
+trabajo, no dependencia. (c) El texto deja empezar la fase B o el código de
+D3 sin cerrar D1: no. Sin hallazgos. Dictamen íntegro fuera del repo:
+`/var/tmp/orquestador-memoria/capitanes/ankla/ronda-adr0063/dictamen-particion-gemini.md`.
