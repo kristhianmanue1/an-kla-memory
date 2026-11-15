@@ -13,7 +13,7 @@ from pathlib import Path
 from an_kla import transactions as tx
 from an_kla.store import MemoryStore
 
-BASE = Path("/var/tmp/ankla-spike-b2/cuts")
+BASE = Path(os.environ.get("SPIKE_BASE", "/var/tmp/ankla-spike-b2")) / "cuts"
 PY = sys.executable
 POINTS = [
     "enq_tmp",               # (i)
@@ -31,6 +31,8 @@ CONFIGS = {
     "C_r4_con_cierre": ("write", "abort"),
     "D_spike": ("write", "smart"),
     "E_spike_repair": ("write+repair", "smart"),
+    "F_predicado_n02": ("write+repair+check", "smart"),
+    "G_control_sin_observed_log": ("nolog+repair+check", "smart"),
 }
 N_ENTRIES = 5
 

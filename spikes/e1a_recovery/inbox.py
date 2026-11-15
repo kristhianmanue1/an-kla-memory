@@ -263,7 +263,7 @@ def _read_journal(store: Any, txid: str) -> dict[str, Any] | None:
     return None if j is None or j.get("corrupt") else dict(j)
 
 
-def close_committed_journal(store: Any, txid: str) -> dict[str, Any]:
+def close_committed_journal(store: Any, txid: str, *, link_observed: bool = True) -> dict[str, Any]:
     """Cierra como ``committed`` un journal cuyo candidato ya es CURRENT/ancestro.
 
     Sigue el patrón de ``compaction._reconcile_committed_journal`` (aislado de
@@ -308,7 +308,7 @@ def close_committed_journal(store: Any, txid: str) -> dict[str, Any]:
                 if tx._valid_receipt(store, txid, ident, attempt, candidate, kind):
                     journal[field] = ident
     journal["stage"] = "committed"
-    if not isinstance(journal.get("observed_log"), str):
+    if link_observed and not isinstance(journal.get("observed_log"), str):
         intent_id = store._write_ref_log({
             "schema": "an-kla/ref-log-v1", "kind": "intent",
             "transaction_id": txid, "parent": parent, "candidate": candidate,
@@ -357,12 +357,26 @@ def reconcile_markers(
         info = tx.inspect_transaction(store, txid)
         committed = info.get("committed")
         if committed is True:
-            if close_mode in ("write", "write+repair"):
-                closed = close_committed_journal(store, txid)
-                if close_mode == "write+repair" and closed.get("durability_state") == "incomplete":
+            if close_mode in ("write", "write+repair", "write+repair+check", "nolog+repair+check"):
+                closed = close_committed_journal(
+                    store, txid, link_observed=not close_mode.startswith("nolog"))
+                if close_mode != "write" and closed.get("durability_state") == "incomplete":
                     from an_kla.transaction_repair import repair_durability
                     fixed = repair_durability(store, txid)  # fsync de CURRENT + recibo `repair`
                     closed["after_repair"] = fixed["state"]
+                if close_mode.endswith("+check"):
+                    # Predicado de N-02 (mandato 5): tras cierre y reparación,
+                    # `committed is True` y `durability_state == "complete"`;
+                    # la auditoría incompleta se tolera y se informa.
+                    final = tx.inspect_transaction(store, txid)
+                    closed["final"] = {k: final[k] for k in
+                                       ("state", "committed", "durability_state", "audit_state")}
+                    if not (final.get("committed") is True
+                            and final.get("durability_state") == "complete"):
+                        raise DrainAbort(f"transaction_{final.get('state')}", txid)
+                    if final.get("audit_state") != "complete":
+                        report.setdefault("warnings", []).append(
+                            {"txid": txid, "code": "inbox_audit_incomplete"})
                 report.setdefault("closed", []).append(closed)
             else:
                 # ruta citada por el ADR: _commit_locked retorna sin escribir
