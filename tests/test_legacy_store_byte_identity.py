@@ -8,13 +8,14 @@ Aquí se recalculan sobre el store versionado y se comparan; un cambio aditivo
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
 from unittest import mock
 
-import legacy_store_goldens
-from legacy_store_goldens import GOLDENS, STORE_TAR, _cli, compute_fresh, extract_store, sha256_hex
+import tests.legacy_store_goldens as legacy_store_goldens
+from tests.legacy_store_goldens import GOLDENS, STORE_TAR, _cli, compute_fresh, extract_store, sha256_hex
 
 
 class LegacyStoreByteIdentityTests(unittest.TestCase):
@@ -41,6 +42,16 @@ class LegacyStoreByteIdentityTests(unittest.TestCase):
             "policy_fingerprint", "mcp.tools_list", "mcp.an_kla_retrieve",
         ):
             self.assertIn(required, names)
+
+    def test_goldens_do_not_inherit_the_developer_store_environment(self) -> None:
+        env = {"AN_KLA_STORE_ROOT": "/var/tmp/no-existe", "AN_KLA_PROJECT_ROOT": "/var/tmp/no-existe",
+               "AN_KLA_AGENT_CLI": "claude-code"}
+        with mock.patch.dict(os.environ, env):
+            leaked = legacy_store_goldens._env()
+            actual = compute_fresh()
+        self.assertEqual(sorted(k for k in leaked if k.startswith("AN_KLA_")),
+                         ["AN_KLA_NO_UPDATE_CHECK"])
+        self.assertEqual(actual, self.actual)
 
     def test_tampered_tar_is_rejected_before_it_is_opened(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:

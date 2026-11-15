@@ -24,7 +24,13 @@ GOLDENS = FIXTURE / "goldens.json"
 PLACEHOLDER = "<PROJECT_ROOT>"
 BUNDLE_PLACEHOLDER = "<BUNDLE>"
 MCP_PROTOCOL = "2025-06-18"
-ENV = {**os.environ, "AN_KLA_NO_UPDATE_CHECK": "1", "PYTHONDONTWRITEBYTECODE": "1"}
+
+
+def _env() -> dict[str, str]:
+    """Entorno del subproceso: sin ninguna `AN_KLA_*` del desarrollador (p. ej. `AN_KLA_STORE_ROOT`
+    cambia la resolución del store), salvo las dos que se fijan aquí."""
+    clean = {k: v for k, v in os.environ.items() if not k.startswith("AN_KLA_")}
+    return {**clean, "AN_KLA_NO_UPDATE_CHECK": "1", "PYTHONDONTWRITEBYTECODE": "1"}
 FRESH_NOW = "2026-06-01T00:00:00Z"
 
 
@@ -65,7 +71,7 @@ def _cli(project: Path, *args: str) -> tuple[bytes, bytes]:
     """(material a hashear con rc y stderr, stdout normalizado)."""
     done = subprocess.run(
         [sys.executable, "-m", "an_kla", "--project-root", str(project), *args],
-        capture_output=True, text=True, env=ENV, cwd=ROOT, timeout=120,
+        capture_output=True, text=True, env=_env(), cwd=ROOT, timeout=120,
     )
     stdout = _normalize(done.stdout, project)
     return _normalize(f"rc={done.returncode}\n", project) + stdout + b"\n--stderr--\n" + \
@@ -85,7 +91,7 @@ def _mcp(project: Path, calls: list[tuple[str, dict]]) -> list[bytes]:
     done = subprocess.run(
         [sys.executable, "-m", "an_kla.mcp", "--project-root", str(project)],
         input="".join(json.dumps(m) + "\n" for m in messages),
-        capture_output=True, text=True, env=ENV, cwd=ROOT, timeout=120, check=True,
+        capture_output=True, text=True, env=_env(), cwd=ROOT, timeout=120, check=True,
     )
     return [_normalize(line, project) for line in done.stdout.splitlines()]
 
@@ -95,7 +101,7 @@ def _export_digests(project: Path, bundle: Path) -> dict[str, str]:
     done = subprocess.run(
         [sys.executable, "-m", "an_kla", "--project-root", str(project), "export", "create",
          "--bundle", str(bundle)],
-        capture_output=True, text=True, env=ENV, cwd=ROOT, timeout=120, check=True,
+        capture_output=True, text=True, env=_env(), cwd=ROOT, timeout=120, check=True,
     )
     result = json.loads(done.stdout)
     manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
