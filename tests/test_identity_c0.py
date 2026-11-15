@@ -1,0 +1,477 @@
+"""Writer identity C0 and record envelope (ADR-0063 D2).
+
+The conformance vectors are the frozen C0 `8fccbcc` ones, copied under
+`tests/fixtures/identidad-v1` and checked by digest before use.  The derivation
+cases of `repo.id` that static vectors cannot cover run on temporary repos.
+"""
+
+from __future__ import annotations
+
+import copy
+from datetime import datetime, timedelta, timezone
+import hashlib
+import json
+import os
+from pathlib import Path
+import subprocess
+import tempfile
+import unittest
+from unittest import mock
+
+from an_kla import identity_c0 as c0
+from an_kla.canonical import digest_json
+from an_kla.schemas import schema_bytes, schema_catalog, schema_document, schema_names
+
+ROOT = Path(__file__).resolve().parents[1]
+VECTORS = ROOT / "tests" / "fixtures" / "identidad-v1" / "vectores.json"
+VECTORS_SHA256 = "a169a7f93728f327f2f47282b339ff8a2b4fc1f0e9cd383a6afe7f6441a92643"
+GIT_OK = c0.git_is_usable()
+# Isolates repo-building commands from the developer's global Git config.
+GIT_ENV = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
+
+VALID_ENV = {
+    "AN_KLA_AGENT_NAME": "ankla-ejecutor-1",
+    "AN_KLA_AGENT_CLI": "claude-code",
+    "AN_KLA_AGENT_MODEL": "claude-sonnet-5-5",
+    "AN_KLA_AGENT_ROLE": "ejecutor",
+    "AN_KLA_SESSION_ID": "0a92bdfb-286a-44b5-8c24-8d7a1332c6b6",
+}
+
+
+def load_vectors() -> dict:
+    payload = VECTORS.read_bytes()
+    digest = hashlib.sha256(payload).hexdigest()
+    if digest != VECTORS_SHA256:
+        raise AssertionError(f"vectores.json digest {digest} != {VECTORS_SHA256}")
+    return json.loads(payload)
+
+
+def vector_failures(data: dict) -> list[str]:
+    """Run the five vector groups; one line per failing case."""
+
+    failures: list[str] = []
+
+    def check(label: str, expected: object, actual: object) -> None:
+        if expected != actual:
+            failures.append(f"{label}: expected {expected!r}, got {actual!r}")
+
+    for case in data["validos"]:
+        check(f"valido {case['nombre']}", [], c0.validate(case["objeto"]))
+    for case in data["invalidos"]:
+        reasons = c0.validate(case["objeto"])
+        check(f"invalido {case['nombre']} ({case['motivo']} in {reasons})", True, case["motivo"] in reasons)
+    for case in data["normalizacion"]:
+        check(f"normalizacion {case['url']!r}", case["repo_id"], c0.normalize_remote(case["url"]))
+    for case in data["remoto_no_normalizable"]:
+        check(f"remoto {case['url']!r} base={case.get('base')!r}", case["repo_id"],
+              c0.repo_id_from_remote(case["url"], case.get("base")))
+    for case in data["local"]:
+        check(f"local {case['ruta_comun']!r}", case["repo_id"], c0.repo_id_from_common_dir(case["ruta_comun"]))
+    return failures
+
+
+def git(cwd: Path, *args: str) -> None:
+    subprocess.run(
+        ["git", "-C", str(cwd), "-c", "user.name=c0", "-c", "user.email=c0@example.invalid",
+         "-c", "commit.gpgsign=false", "-c", "init.defaultBranch=main", *args],
+        check=True, capture_output=True, env={**os.environ, **GIT_ENV},
+    )
+
+
+def hash16(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:16]
+
+
+class VectorTests(unittest.TestCase):
+    def test_vectors_file_is_the_frozen_copy(self) -> None:
+        self.assertEqual(hashlib.sha256(VECTORS.read_bytes()).hexdigest(), VECTORS_SHA256)
+        origin = (VECTORS.parent / "ORIGEN.md").read_text(encoding="utf-8")
+        self.assertIn(VECTORS_SHA256, origin)
+        self.assertIn("8fccbcc", origin)
+
+    def test_the_five_groups_hold_76_cases(self) -> None:
+        data = load_vectors()
+        counts = {k: len(data[k]) for k in ("validos", "invalidos", "normalizacion", "remoto_no_normalizable", "local")}
+        self.assertEqual(counts, {"validos": 9, "invalidos": 33, "normalizacion": 22,
+                                  "remoto_no_normalizable": 10, "local": 2})
+        self.assertEqual(sum(counts.values()), 76)
+
+    def test_all_76_vectors_pass(self) -> None:
+        self.assertEqual(vector_failures(load_vectors()), [])
+
+    def test_negative_control_an_altered_vector_fails(self) -> None:
+        for label, mutate in (
+            ("valid object with a role outside the enum", lambda d: d["validos"][0]["objeto"]["agent"].update(role="jefe")),
+            ("invalid case expecting a reason it does not raise", lambda d: d["invalidos"][0].update(motivo="no_existe")),
+            ("normalization with another id", lambda d: d["normalizacion"][0].update(repo_id="x.example/otro")),
+            ("remote hash with a flipped digit", lambda d: d["remoto_no_normalizable"][0].update(repo_id="remoto:0000000000000000")),
+            ("local hash with a flipped digit", lambda d: d["local"][0].update(repo_id="local:0000000000000000")),
+        ):
+            with self.subTest(label):
+                data = copy.deepcopy(load_vectors())
+                mutate(data)
+                self.assertNotEqual(vector_failures(data), [])
+
+    def test_tampered_vectors_file_is_detected_by_digest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tampered = Path(tmp) / "vectores.json"
+            tampered.write_bytes(VECTORS.read_bytes() + b" ")
+            self.assertNotEqual(hashlib.sha256(tampered.read_bytes()).hexdigest(), VECTORS_SHA256)
+
+    def test_validator_never_raises_on_wrong_types(self) -> None:
+        for value in (None, 1, [], "x", {"schema": 1, "repo": [], "agent": None, "session": 3}):
+            with self.subTest(value=value):
+                self.assertNotEqual(c0.validate(value), [])
+        valid = copy.deepcopy(load_vectors()["validos"][0]["objeto"])
+        for path, wrong in ((("repo", "id"), 5), (("repo", "branch"), None), (("agent", "name"), ["a"]),
+                            (("agent", "model"), 7), (("session", "id"), {"a": 1})):
+            with self.subTest(path=path):
+                candidate = copy.deepcopy(valid)
+                candidate[path[0]][path[1]] = wrong
+                self.assertNotEqual(c0.validate(candidate), [])
+
+    def test_trailing_newline_is_not_a_valid_branch_or_id(self) -> None:
+        # `$` would accept it; the contract says no whitespace.
+        self.assertFalse(c0.is_valid_branch("feat/x\n"))
+        self.assertFalse(c0.is_canonical_repo_id("github.com/a/b\n"))
+        self.assertNotEqual(c0.validate({**copy.deepcopy(load_vectors()["validos"][0]["objeto"]),
+                                         "session": {"id": "claude-code:abc\n"}}), [])
+
+
+@unittest.skipUnless(GIT_OK, f"git >= {c0.GIT_MIN_VERSION} not available: the derivation test needs real repositories")
+class DerivationTests(unittest.TestCase):
+    """Equivalent of the reference `--prueba-derivacion`: 8 checks on temporary repos."""
+
+    def setUp(self) -> None:
+        patcher = mock.patch.dict(os.environ, GIT_ENV)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        tmp = tempfile.TemporaryDirectory(prefix="c0-derivacion-")
+        self.addCleanup(tmp.cleanup)
+        self.base = Path(tmp.name).resolve()
+
+    def make_repo(self, path: Path) -> Path:
+        path.mkdir(parents=True)
+        git(path, "init", "-q")
+        git(path, "commit", "-q", "--allow-empty", "-m", "c0")
+        return path
+
+    def test_local_derivation_and_relative_remote(self) -> None:
+        a = self.make_repo(self.base / "a")
+        b = self.make_repo(self.base / "sub" / "b")
+        worktree = self.base / "wt"
+        git(a, "worktree", "add", "-q", str(worktree))
+        link = self.base / "enlace"
+        link.symlink_to(a, target_is_directory=True)
+        expected = c0.repo_id_from_common_dir(str((a / ".git").resolve()))
+
+        self.assertEqual(c0.repo_id_for(a), expected)                                   # 1 checkout
+        self.assertEqual(c0.repo_id_for(worktree), expected)                            # 2 worktree
+        self.assertEqual(c0.repo_id_for(link), expected)                                # 3 symlink
+        self.assertNotEqual(c0.repo_id_for(a), c0.repo_id_from_common_dir(str(a)))      # 4 not the checkout root
+        self.assertNotEqual(c0.repo_id_for(b), expected)                                # 5 another repo
+        for repo in (a, b):
+            git(repo, "remote", "add", "origin", "./remoto-relativo")
+        self.assertEqual(c0.repo_id_for(a), "remoto:" + hash16(str((a / "remoto-relativo").resolve())))  # 6
+        self.assertNotEqual(c0.repo_id_for(a), c0.repo_id_for(b))                       # 7 no collision
+        self.assertEqual(c0.repo_id_for(worktree),                                      # 8 own root
+                         "remoto:" + hash16(str((worktree / "remoto-relativo").resolve())))
+
+    def test_remote_cases_one_and_two_from_a_real_origin(self) -> None:
+        repo = self.make_repo(self.base / "r")
+        git(repo, "remote", "add", "origin", "git@GitHub.com:Owner/Repo.git")
+        self.assertEqual(c0.repo_id_for(repo), "github.com/owner/repo")
+        git(repo, "remote", "set-url", "origin", "file:///srv/repos/demo.git")
+        self.assertEqual(c0.repo_id_for(repo), "remoto:88b36cf419d13ed6")
+
+    def test_repo_outside_git_is_unavailable(self) -> None:
+        plain = self.base / "plano"
+        plain.mkdir()
+        with mock.patch.dict(os.environ, {"GIT_CEILING_DIRECTORIES": str(self.base)}):
+            with self.assertRaises(c0.IdentityC0Error) as caught:
+                c0.repo_id_for(plain)
+        self.assertEqual(caught.exception.code, "identity_repo_unavailable")
+        self.assertEqual(str(caught.exception), "identity_repo_unavailable")
+
+    def test_branch_is_short_and_absent_when_detached(self) -> None:
+        repo = self.make_repo(self.base / "ramas")
+        git(repo, "checkout", "-q", "-b", "feat/e1a-bandeja")
+        self.assertEqual(c0.branch_for(repo), "feat/e1a-bandeja")
+        git(repo, "tag", "feat/e1a-bandeja", "HEAD")  # a tag sharing the name must not change the answer
+        self.assertEqual(c0.branch_for(repo), "feat/e1a-bandeja")
+        git(repo, "checkout", "-q", "--detach")
+        self.assertIsNone(c0.branch_for(repo))
+
+    def test_identity_from_env_in_a_real_checkout(self) -> None:
+        repo = self.make_repo(self.base / "ident")
+        git(repo, "checkout", "-q", "-b", "feat/x")
+        git(repo, "remote", "add", "origin", "https://github.com/kristhianmanue1/an-kla-memory.git")
+        identity = c0.build_identity(repo, VALID_ENV)
+        self.assertEqual(c0.validate(identity), [])
+        self.assertEqual(identity, {
+            "schema": "memoria/identidad/v1",
+            "repo": {"id": "github.com/kristhianmanue1/an-kla-memory", "branch": "feat/x"},
+            "agent": {"name": "ankla-ejecutor-1", "cli": "claude-code",
+                      "model": "claude-sonnet-5-5", "role": "ejecutor"},
+            "session": {"id": "claude-code:0a92bdfb-286a-44b5-8c24-8d7a1332c6b6"},
+        })
+        git(repo, "checkout", "-q", "--detach")
+        self.assertNotIn("branch", c0.build_identity(repo, VALID_ENV)["repo"])
+
+    def test_branch_that_violates_c0_is_rejected_not_corrected(self) -> None:
+        repo = self.make_repo(self.base / "mala-rama")
+        git(repo, "symbolic-ref", "HEAD", "refs/heads/-mala")
+        with self.assertRaises(c0.IdentityC0Error) as caught:
+            c0.build_identity(repo, VALID_ENV)
+        self.assertEqual((caught.exception.code, caught.exception.field), ("identity_env_invalid", "repo.branch"))
+
+    def test_env_is_checked_before_git_is_asked(self) -> None:
+        plain = self.base / "sin-repo"
+        plain.mkdir()
+        with mock.patch.dict(os.environ, {"GIT_CEILING_DIRECTORIES": str(self.base)}):
+            with self.assertRaises(c0.IdentityC0Error) as caught:
+                c0.build_identity(plain, {"AN_KLA_AGENT_CLI": "Claude Code"})
+            self.assertEqual(caught.exception.code, "identity_env_invalid")
+            with self.assertRaises(c0.IdentityC0Error) as caught:
+                c0.build_identity(plain, VALID_ENV)
+            self.assertEqual(caught.exception.code, "identity_repo_unavailable")
+
+    def test_default_env_is_the_process_environment(self) -> None:
+        repo = self.make_repo(self.base / "proceso")
+        with mock.patch.dict(os.environ, VALID_ENV):
+            identity = c0.build_identity(repo)
+        self.assertEqual(identity["agent"]["name"], "ankla-ejecutor-1")
+        with mock.patch.dict(os.environ, {k: v for k, v in os.environ.items() if k != "AN_KLA_AGENT_CLI"}, clear=True):
+            with self.assertRaises(c0.IdentityC0Error) as caught:
+                c0.build_identity(repo)
+        self.assertEqual(caught.exception.code, "identity_env_missing")
+
+
+class EnvironmentIdentityTests(unittest.TestCase):
+    """Identity construction that needs no repo: the env is validated first, and `git` is stubbed."""
+
+    def setUp(self) -> None:
+        for name, value in (("repo_id_for", "github.com/o/r"), ("branch_for", "main")):
+            patcher = mock.patch.object(c0, name, return_value=value)
+            patcher.start()
+            self.addCleanup(patcher.stop)
+
+    def build(self, **overrides: str | None) -> dict:
+        env = dict(VALID_ENV)
+        for key, value in overrides.items():
+            if value is None:
+                env.pop(key, None)
+            else:
+                env[key] = value
+        return c0.build_identity("/ignored", env)
+
+    def error(self, **overrides: str | None) -> c0.IdentityC0Error:
+        with self.assertRaises(c0.IdentityC0Error) as caught:
+            self.build(**overrides)
+        return caught.exception
+
+    def test_sentinels_when_optional_variables_are_absent(self) -> None:
+        identity = self.build(AN_KLA_AGENT_NAME=None, AN_KLA_AGENT_MODEL=None,
+                              AN_KLA_AGENT_ROLE=None, AN_KLA_SESSION_ID=None)
+        self.assertEqual(identity["agent"], {"name": "sin-nombre", "cli": "claude-code",
+                                             "model": "desconocido", "role": "desconocido"})
+        self.assertEqual(identity["session"], {"id": "claude-code:sin-sesion"})
+        self.assertEqual(c0.validate(identity), [])
+
+    def test_only_the_cli_is_required(self) -> None:
+        identity = c0.build_identity("/ignored", {"AN_KLA_AGENT_CLI": "codex"})
+        self.assertEqual(c0.validate(identity), [])
+        self.assertEqual(identity["session"]["id"], "codex:sin-sesion")
+
+    def test_session_id_is_composed_with_the_cli(self) -> None:
+        self.assertEqual(self.build(AN_KLA_AGENT_CLI="codex", AN_KLA_SESSION_ID="abc:def")["session"]["id"],
+                         "codex:abc:def")
+
+    def test_missing_cli_names_the_variable(self) -> None:
+        error = self.error(AN_KLA_AGENT_CLI=None)
+        self.assertEqual((error.code, error.field), ("identity_env_missing", "AN_KLA_AGENT_CLI"))
+
+    def test_present_values_that_violate_c0_name_the_culprit_and_are_never_corrected(self) -> None:
+        for label, overrides, field in (
+            ("name outside the pattern", {"AN_KLA_AGENT_NAME": "Ejecutor 1"}, "AN_KLA_AGENT_NAME"),
+            ("name too long", {"AN_KLA_AGENT_NAME": "a" * 33}, "AN_KLA_AGENT_NAME"),
+            ("reserved name desconocido", {"AN_KLA_AGENT_NAME": "desconocido"}, "AN_KLA_AGENT_NAME"),
+            ("reserved name sin-sesion", {"AN_KLA_AGENT_NAME": "sin-sesion"}, "AN_KLA_AGENT_NAME"),
+            ("empty name is present, not a sentinel", {"AN_KLA_AGENT_NAME": ""}, "AN_KLA_AGENT_NAME"),
+            ("cli outside the pattern", {"AN_KLA_AGENT_CLI": "Claude Code"}, "AN_KLA_AGENT_CLI"),
+            ("empty cli is present, not missing", {"AN_KLA_AGENT_CLI": ""}, "AN_KLA_AGENT_CLI"),
+            ("model with outer spaces", {"AN_KLA_AGENT_MODEL": " modelo"}, "AN_KLA_AGENT_MODEL"),
+            ("model too long", {"AN_KLA_AGENT_MODEL": "m" * 81}, "AN_KLA_AGENT_MODEL"),
+            ("empty model", {"AN_KLA_AGENT_MODEL": ""}, "AN_KLA_AGENT_MODEL"),
+            ("role outside the enum", {"AN_KLA_AGENT_ROLE": "jefe"}, "AN_KLA_AGENT_ROLE"),
+            ("session id with a space", {"AN_KLA_SESSION_ID": "con espacio"}, "AN_KLA_SESSION_ID"),
+            ("session id too long", {"AN_KLA_SESSION_ID": "s" * 201}, "AN_KLA_SESSION_ID"),
+            ("empty session id", {"AN_KLA_SESSION_ID": ""}, "AN_KLA_SESSION_ID"),
+        ):
+            with self.subTest(label):
+                error = self.error(**overrides)
+                self.assertEqual((error.code, error.field), ("identity_env_invalid", field))
+                for value in overrides.values():
+                    if value:
+                        self.assertNotIn(value, repr(error.args) + str(error))
+
+    def test_boundary_values_are_accepted(self) -> None:
+        identity = self.build(AN_KLA_AGENT_NAME="a" * 32, AN_KLA_AGENT_MODEL="m" * 80,
+                              AN_KLA_SESSION_ID="s" * 200, AN_KLA_AGENT_ROLE="desconocido")
+        self.assertEqual(c0.validate(identity), [])
+
+    def test_the_explicit_sentinel_name_is_accepted(self) -> None:
+        self.assertEqual(self.build(AN_KLA_AGENT_NAME="sin-nombre")["agent"]["name"], "sin-nombre")
+
+    def test_every_role_is_accepted(self) -> None:
+        for role in sorted(c0.ROLES):
+            with self.subTest(role=role):
+                self.assertEqual(self.build(AN_KLA_AGENT_ROLE=role)["agent"]["role"], role)
+
+    def test_the_caller_env_is_not_mutated(self) -> None:
+        env = dict(VALID_ENV)
+        c0.build_identity("/ignored", env)
+        self.assertEqual(env, VALID_ENV)
+
+    def test_detached_head_leaves_the_branch_out(self) -> None:
+        with mock.patch.object(c0, "branch_for", return_value=None):
+            self.assertEqual(self.build()["repo"], {"id": "github.com/o/r"})
+
+
+class EnvelopeTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.identity = copy.deepcopy(load_vectors()["validos"][0]["objeto"])
+        self.key = digest_json({"k": 1})
+
+    def test_envelope_shape_and_injected_clock(self) -> None:
+        clock = lambda: datetime(2026, 11, 14, 18, 30, 0, 123456, tzinfo=timezone.utc)
+        envelope = c0.build_envelope(self.identity, "fact", self.key, clock)
+        self.assertEqual(envelope, {
+            "schema": "an-kla/record-envelope-v1",
+            "writer": self.identity,
+            "enqueued_at": "2026-11-14T18:30:00.123456Z",
+            "time_source": "host-clock/v1",
+            "idempotency_key": self.key,
+            "kind": "fact",
+        })
+        self.assertEqual(c0.validate_envelope(envelope), [])
+
+    def test_microseconds_are_always_six_digits_and_offsets_become_utc(self) -> None:
+        zone = timezone(timedelta(hours=-6))
+        stamp = c0.build_envelope(self.identity, "fact", self.key,
+                                  lambda: datetime(2026, 1, 2, 3, 4, 5, 0, tzinfo=zone))["enqueued_at"]
+        self.assertEqual(stamp, "2026-01-02T09:04:05.000000Z")
+
+    def test_default_clock_is_the_utc_host_clock(self) -> None:
+        before = datetime.now(timezone.utc)
+        stamp = c0.build_envelope(self.identity, "fact", self.key)["enqueued_at"]
+        parsed = datetime.strptime(stamp, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
+        self.assertLessEqual(before.replace(microsecond=0), parsed)
+        self.assertLessEqual(parsed, datetime.now(timezone.utc))
+
+    def test_naive_clock_is_refused(self) -> None:
+        with self.assertRaises(ValueError):
+            c0.build_envelope(self.identity, "fact", self.key, lambda: datetime(2026, 1, 1))
+
+    def test_envelope_does_not_alias_the_identity(self) -> None:
+        envelope = c0.build_envelope(self.identity, "fact", self.key)
+        envelope["writer"]["agent"]["name"] = "otro"
+        self.assertNotEqual(self.identity["agent"]["name"], "otro")
+
+    def test_invalid_inputs_are_refused(self) -> None:
+        broken = copy.deepcopy(self.identity)
+        broken["agent"]["role"] = "jefe"
+        for label, args in (
+            ("identity violating C0", (broken, "fact", self.key)),
+            ("kind with uppercase", (self.identity, "Fact", self.key)),
+            ("empty kind", (self.identity, "", self.key)),
+            ("non-string kind", (self.identity, 3, self.key)),
+            ("key without prefix", (self.identity, "fact", "a" * 64)),
+            ("key with short digest", (self.identity, "fact", "sha256:abc")),
+        ):
+            with self.subTest(label), self.assertRaises(ValueError):
+                c0.build_envelope(*args)
+
+    def test_validate_envelope_reasons(self) -> None:
+        good = c0.build_envelope(self.identity, "fact", self.key)
+        for label, mutate, reason in (
+            ("extra key", lambda e: e.update(extra=1), "claves_raiz"),
+            ("schema", lambda e: e.update(schema="an-kla/record-envelope-v2"), "schema"),
+            ("writer role", lambda e: e["writer"]["agent"].update(role="jefe"), "writer:agent_role"),
+            ("no microseconds", lambda e: e.update(enqueued_at="2026-11-14T18:30:00Z"), "enqueued_at"),
+            ("impossible date", lambda e: e.update(enqueued_at="2026-13-14T18:30:00.000000Z"), "enqueued_at"),
+            ("non-utc offset", lambda e: e.update(enqueued_at="2026-11-14T18:30:00.000000+01:00"), "enqueued_at"),
+            ("time source", lambda e: e.update(time_source="ntp/v1"), "time_source"),
+            ("key", lambda e: e.update(idempotency_key="sha256:x"), "idempotency_key"),
+            ("kind", lambda e: e.update(kind="Fact"), "kind"),
+        ):
+            with self.subTest(label):
+                envelope = copy.deepcopy(good)
+                mutate(envelope)
+                self.assertIn(reason, c0.validate_envelope(envelope))
+        self.assertEqual(c0.validate_envelope(None), ["raiz_no_es_objeto"])
+
+    def test_default_idempotency_key_follows_the_adr_formula(self) -> None:
+        key = c0.derive_idempotency_key(self.identity, "fact", "texto")
+        formula = digest_json({"repo": self.identity["repo"]["id"], "agent": self.identity["agent"]["name"],
+                               "session": self.identity["session"]["id"], "kind": "fact",
+                               "text": "texto", "supersedes": None})
+        self.assertEqual(key, formula)
+        self.assertNotEqual(key, c0.derive_idempotency_key(self.identity, "fact", "texto", "f-1"))
+        self.assertNotEqual(c0.derive_idempotency_key(self.identity, "fact", "texto", "f-1"),
+                            c0.derive_idempotency_key(self.identity, "fact", "texto", "f-2"))
+        self.assertNotEqual(key, c0.derive_idempotency_key(self.identity, "decision", "texto"))
+
+
+class EnvelopeSchemaTests(unittest.TestCase):
+    def test_schema_is_registered_and_mirrored(self) -> None:
+        self.assertIn("record-envelope-v1", schema_names())
+        entry = next(i for i in schema_catalog()["schemas"] if i["name"] == "record-envelope-v1")
+        self.assertEqual(entry["id"], "urn:an-kla:schema:record-envelope:v1")
+        mirror = (ROOT / "docs" / "schemas" / "record-envelope-v1.schema.json").read_bytes()
+        self.assertEqual(schema_bytes("record-envelope-v1"), mirror)
+
+    def test_schema_is_closed_at_every_level(self) -> None:
+        document = schema_document("record-envelope-v1")
+        self.assertIs(document["additionalProperties"], False)
+        defs = document["$defs"]["identity"]
+        self.assertIs(defs["additionalProperties"], False)
+        for part in ("repo", "agent", "session"):
+            self.assertIs(defs["properties"][part]["additionalProperties"], False)
+
+    def validator(self):
+        try:
+            from jsonschema import Draft202012Validator
+        except ImportError:
+            self.skipTest("jsonschema unavailable")
+        return Draft202012Validator(schema_document("record-envelope-v1"))
+
+    def test_schema_accepts_what_the_builder_produces(self) -> None:
+        validator = self.validator()
+        key = digest_json({"k": 1})
+        for case in load_vectors()["validos"]:
+            with self.subTest(case["nombre"]):
+                envelope = c0.build_envelope(case["objeto"], "fact", key)
+                self.assertEqual(list(validator.iter_errors(envelope)), [])
+
+    def test_schema_rejects_the_structural_invalid_vectors(self) -> None:
+        validator = self.validator()
+        key = digest_json({"k": 1})
+        # Reasons the grammar can express; the rest (cli/session prefix match) is the validator's job.
+        structural = {"claves_raiz", "schema", "repo_forma", "repo_id", "repo_branch", "agent_forma", "agent_name",
+                      "agent_name_reservado", "agent_cli", "agent_model", "agent_role", "session_forma", "session_id"}
+        rejected = 0
+        for case in load_vectors()["invalidos"]:
+            if case["motivo"] not in structural or not isinstance(case["objeto"], dict):
+                continue
+            envelope = {"schema": "an-kla/record-envelope-v1", "writer": case["objeto"],
+                        "enqueued_at": "2026-11-14T18:30:00.000000Z", "time_source": "host-clock/v1",
+                        "idempotency_key": key, "kind": "fact"}
+            with self.subTest(case["nombre"]):
+                self.assertNotEqual(list(validator.iter_errors(envelope)), [])
+                rejected += 1
+        self.assertGreater(rejected, 20)
+
+
+if __name__ == "__main__":
+    unittest.main()
