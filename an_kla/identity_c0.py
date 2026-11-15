@@ -93,8 +93,8 @@ class IdentityC0Error(ValueError):
     """Stable identity construction failure.
 
     ``code`` is the contract (``identity_env_missing``, ``identity_env_invalid``,
-    ``identity_repo_unavailable``); ``field`` names the culprit (an env var or
-    ``repo.branch``) and never carries the offending value.  ``str(error)``
+    ``identity_repo_unavailable``); ``field`` names the culprit (an env var,
+    ``repo.branch``, or ``git``) and never carries the offending value.  ``str(error)``
     equals ``code``.
     """
 
@@ -205,8 +205,16 @@ def git_version() -> tuple[int, ...] | None:
 def git_is_usable() -> bool:
     """True when ``git`` exists and is at least ``GIT_MIN_VERSION``."""
 
+    return git_problem() is None
+
+
+def git_problem() -> str | None:
+    """Why ``git`` cannot be used: ``git`` when absent, ``git>=<min>`` when too old, else ``None``."""
+
     version = git_version()
-    return version is not None and version >= GIT_MIN_VERSION
+    if version is None:
+        return "git"
+    return None if version >= GIT_MIN_VERSION else "git>=" + ".".join(map(str, GIT_MIN_VERSION))
 
 
 def repo_id_for(checkout: str | os.PathLike[str]) -> str:
@@ -317,9 +325,13 @@ def build_identity(
     ``AN_KLA_AGENT_CLI`` is mandatory.  Absent name, model, role and session
     take the C0 sentinels; a variable that is present and violates C0 fails with
     its name and is never corrected or replaced by a sentinel.  ``env`` defaults
-    to ``os.environ``.
+    to ``os.environ``.  A missing or too old ``git`` fails first with
+    ``identity_repo_unavailable`` and ``field`` ``git`` or ``git>=<min>``.
     """
 
+    problem = git_problem()
+    if problem is not None:
+        raise IdentityC0Error("identity_repo_unavailable", problem)
     source = os.environ if env is None else env
     cli = source.get(ENV_CLI)
     if cli is None:
@@ -336,9 +348,11 @@ def build_identity(
         },
         "session": {"id": f"{cli}:{NO_SESSION_SENTINEL if session_part is None else session_part}"},
     }
-    for reason in validate(identity):
-        if reason in _REASON_FIELDS and reason != "repo_branch":
-            raise IdentityC0Error("identity_env_invalid", _REASON_FIELDS[reason])
+    # Only env-derived fields can fail here (the repo id is a valid placeholder and the
+    # branch is not set yet), so any reason is the env's fault; an unmapped one still fails.
+    reasons = validate(identity)
+    if reasons:
+        raise IdentityC0Error("identity_env_invalid", _REASON_FIELDS.get(reasons[0], reasons[0]))
     identity["repo"] = {"id": repo_id_for(checkout)}
     branch = branch_for(checkout)
     if branch is not None:
@@ -386,7 +400,7 @@ def build_envelope(
     now = (clock or (lambda: datetime.now(timezone.utc)))()
     return {
         "schema": ENVELOPE_SCHEMA,
-        "writer": copy.deepcopy(dict(identity)),
+        "writer": copy.deepcopy(identity),
         "enqueued_at": format_utc(now),
         "time_source": TIME_SOURCE,
         "idempotency_key": idempotency_key,
@@ -417,7 +431,6 @@ def validate_envelope(obj: Any) -> list[str]:
     if not (isinstance(kind, str) and _KIND.fullmatch(kind)):
         reasons.append("kind")
     return reasons
-
 
 
 def _is_real_time(stamp: str) -> bool:

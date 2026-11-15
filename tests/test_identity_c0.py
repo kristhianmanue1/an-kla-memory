@@ -39,8 +39,8 @@ VALID_ENV = {
 }
 
 
-def load_vectors() -> dict:
-    payload = VECTORS.read_bytes()
+def load_vectors(path: Path = VECTORS) -> dict:
+    payload = path.read_bytes()
     digest = hashlib.sha256(payload).hexdigest()
     if digest != VECTORS_SHA256:
         raise AssertionError(f"vectores.json digest {digest} != {VECTORS_SHA256}")
@@ -117,7 +117,10 @@ class VectorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             tampered = Path(tmp) / "vectores.json"
             tampered.write_bytes(VECTORS.read_bytes() + b" ")
-            self.assertNotEqual(hashlib.sha256(tampered.read_bytes()).hexdigest(), VECTORS_SHA256)
+            with self.assertRaises(AssertionError):
+                load_vectors(tampered)
+            tampered.write_bytes(VECTORS.read_bytes())
+            self.assertEqual(load_vectors(tampered), load_vectors())
 
     def test_validator_never_raises_on_wrong_types(self) -> None:
         for value in (None, 1, [], "x", {"schema": 1, "repo": [], "agent": None, "session": 3}):
@@ -162,12 +165,15 @@ class DerivationTests(unittest.TestCase):
         b = self.make_repo(self.base / "sub" / "b")
         worktree = self.base / "wt"
         git(a, "worktree", "add", "-q", str(worktree))
+        second = self.base / "wt2"
+        git(a, "worktree", "add", "-q", str(second))
         link = self.base / "enlace"
         link.symlink_to(a, target_is_directory=True)
         expected = c0.repo_id_from_common_dir(str((a / ".git").resolve()))
 
         self.assertEqual(c0.repo_id_for(a), expected)                                   # 1 checkout
         self.assertEqual(c0.repo_id_for(worktree), expected)                            # 2 worktree
+        self.assertEqual(c0.repo_id_for(second), expected)                              # 2b another worktree
         self.assertEqual(c0.repo_id_for(link), expected)                                # 3 symlink
         self.assertNotEqual(c0.repo_id_for(a), c0.repo_id_from_common_dir(str(a)))      # 4 not the checkout root
         self.assertNotEqual(c0.repo_id_for(b), expected)                                # 5 another repo
@@ -184,6 +190,14 @@ class DerivationTests(unittest.TestCase):
         self.assertEqual(c0.repo_id_for(repo), "github.com/owner/repo")
         git(repo, "remote", "set-url", "origin", "file:///srv/repos/demo.git")
         self.assertEqual(c0.repo_id_for(repo), "remoto:88b36cf419d13ed6")
+
+    def test_bare_repo_uses_its_own_directory_as_base_for_a_relative_remote(self) -> None:
+        bare = self.base / "desnudo.git"
+        bare.mkdir()
+        git(bare, "init", "-q", "--bare")
+        self.assertEqual(c0.repo_id_for(bare), c0.repo_id_from_common_dir(str(bare.resolve())))
+        git(bare, "remote", "add", "origin", "./remoto-relativo")
+        self.assertEqual(c0.repo_id_for(bare), "remoto:" + hash16(str((bare / "remoto-relativo").resolve())))
 
     def test_repo_outside_git_is_unavailable(self) -> None:
         plain = self.base / "plano"
@@ -252,7 +266,7 @@ class EnvironmentIdentityTests(unittest.TestCase):
     """Identity construction that needs no repo: the env is validated first, and `git` is stubbed."""
 
     def setUp(self) -> None:
-        for name, value in (("repo_id_for", "github.com/o/r"), ("branch_for", "main")):
+        for name, value in (("repo_id_for", "github.com/o/r"), ("branch_for", "main"), ("git_problem", None)):
             patcher = mock.patch.object(c0, name, return_value=value)
             patcher.start()
             self.addCleanup(patcher.stop)
@@ -334,9 +348,73 @@ class EnvironmentIdentityTests(unittest.TestCase):
         c0.build_identity("/ignored", env)
         self.assertEqual(env, VALID_ENV)
 
+    def test_a_reason_the_module_does_not_know_still_fails(self) -> None:
+        with mock.patch.object(c0, "validate", return_value=["motivo_futuro"]):
+            error = self.error()
+        self.assertEqual((error.code, error.field), ("identity_env_invalid", "motivo_futuro"))
+
     def test_detached_head_leaves_the_branch_out(self) -> None:
         with mock.patch.object(c0, "branch_for", return_value=None):
             self.assertEqual(self.build()["repo"], {"id": "github.com/o/r"})
+
+
+@unittest.skipIf(os.name == "nt", "the fake git is a POSIX shell script")
+class GitAvailabilityTests(unittest.TestCase):
+    """R1-05: a missing or too old git fails first, and says so."""
+
+    def fake_git(self, version_line: str | None) -> Path:
+        """A directory to use as the whole PATH, with a `git` that only knows `--version`."""
+        directory = Path(tempfile.mkdtemp(prefix="c0-fake-git-"))
+        self.addCleanup(shutil.rmtree, directory, ignore_errors=True)
+        if version_line is not None:
+            script = directory / "git"
+            script.write_text(f'#!/bin/sh\nif [ "$1" = "--version" ]; then echo "{version_line}"; exit 0; fi\nexit 1\n')
+            script.chmod(0o755)
+        return directory
+
+    def error_with_path(self, directory: Path) -> c0.IdentityC0Error:
+        with mock.patch.dict(os.environ, {"PATH": str(directory)}):
+            with self.assertRaises(c0.IdentityC0Error) as caught:
+                c0.build_identity("/ignored", VALID_ENV)
+        return caught.exception
+
+    def test_absent_git_fails_before_anything_else(self) -> None:
+        error = self.error_with_path(self.fake_git(None))
+        self.assertEqual((error.code, error.field), ("identity_repo_unavailable", "git"))
+
+    def test_old_git_is_told_apart_from_a_missing_one(self) -> None:
+        error = self.error_with_path(self.fake_git("git version 2.30.2"))
+        self.assertEqual((error.code, error.field), ("identity_repo_unavailable", "git>=2.31"))
+
+    def test_git_check_precedes_the_env_check(self) -> None:
+        with mock.patch.dict(os.environ, {"PATH": str(self.fake_git(None))}):
+            with self.assertRaises(c0.IdentityC0Error) as caught:
+                c0.build_identity("/ignored", {})
+        self.assertEqual(caught.exception.code, "identity_repo_unavailable")
+
+    def test_version_parsing_and_minimum(self) -> None:
+        for line, version, usable in (
+            ("git version 2.30.2", (2, 30), False),
+            ("git version 2.31.0", (2, 31), True),
+            ("git version 2.39.5 (Apple Git-154)", (2, 39), True),
+            ("git version 3.0.0", (3, 0), True),
+        ):
+            with self.subTest(line), mock.patch.dict(os.environ, {"PATH": str(self.fake_git(line))}):
+                self.assertEqual(c0.git_version(), version)
+                self.assertEqual(c0.git_is_usable(), usable)
+        with mock.patch.dict(os.environ, {"PATH": str(self.fake_git("garbage"))}):
+            self.assertIsNone(c0.git_version())
+
+    def test_repo_id_without_git_is_unavailable(self) -> None:
+        with mock.patch.dict(os.environ, {"PATH": str(self.fake_git(None))}):
+            with self.assertRaises(c0.IdentityC0Error) as caught:
+                c0.repo_id_for(".")
+        self.assertEqual(caught.exception.code, "identity_repo_unavailable")
+
+    def test_non_string_remote_does_not_normalize(self) -> None:
+        for value in (None, 5, b"https://a.example/x", ["a"]):
+            with self.subTest(value=value):
+                self.assertIsNone(c0.normalize_remote(value))
 
 
 class EnvelopeTests(unittest.TestCase):
@@ -411,6 +489,9 @@ class EnvelopeTests(unittest.TestCase):
                 mutate(envelope)
                 self.assertIn(reason, c0.validate_envelope(envelope))
         self.assertEqual(c0.validate_envelope(None), ["raiz_no_es_objeto"])
+        broken = copy.deepcopy(good)
+        broken["writer"] = "no es un objeto"
+        self.assertEqual(c0.validate_envelope(broken), ["writer:raiz_no_es_objeto"])
 
     def test_default_idempotency_key_follows_the_adr_formula(self) -> None:
         key = c0.derive_idempotency_key(self.identity, "fact", "texto")
