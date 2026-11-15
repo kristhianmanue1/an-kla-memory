@@ -1,0 +1,935 @@
+{
+ "contrato": "memoria/identidad/v1",
+ "validos": [
+  {
+   "nombre": "orquestador-claude",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/kristhianmanue1/devherdrexpert",
+     "branch": "main"
+    },
+    "agent": {
+     "name": "asistente2",
+     "cli": "claude-code",
+     "model": "claude-opus-5-5",
+     "role": "orquestador"
+    },
+    "session": {
+     "id": "claude-code:5b3046bd-e6d6-4881-a8a6-bce4741cec0e"
+    }
+   }
+  },
+  {
+   "nombre": "ejecutor-en-rama-con-barra",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/kristhianmanue1/an-kla-memory",
+     "branch": "feat/e1a-bandeja"
+    },
+    "agent": {
+     "name": "ankla-ejecutor-1",
+     "cli": "claude-code",
+     "model": "claude-sonnet-5-5",
+     "role": "ejecutor"
+    },
+    "session": {
+     "id": "claude-code:0a92bdfb-286a-44b5-8c24-8d7a1332c6b6"
+    }
+   }
+  },
+  {
+   "nombre": "revisor-opencode-sin-rama",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/kristhianmanue1/skopos"
+    },
+    "agent": {
+     "name": "revisor-r1",
+     "cli": "opencode",
+     "model": "dashscope-ws/deepseek-v4.1-flash-1017",
+     "role": "revisor"
+    },
+    "session": {
+     "id": "opencode:ses_e2f2de81fffeJx7RxqsYR2WKB5"
+    }
+   }
+  },
+  {
+   "nombre": "repo-sin-remoto",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "local:7313d879be6508cc"
+    },
+    "agent": {
+     "name": "capitan",
+     "cli": "codex",
+     "model": "desconocido",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:rollout-2026-11-14T10-00-00"
+    }
+   }
+  },
+  {
+   "nombre": "remoto-no-normalizable",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "remoto:88b36cf419d13ed6"
+    },
+    "agent": {
+     "name": "capitan",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "cli-con-guion-bajo",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/kristhianmanue1/skopos"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "mi_cli",
+     "model": "m",
+     "role": "ejecutor"
+    },
+    "session": {
+     "id": "mi_cli:abc"
+    }
+   }
+  },
+  {
+   "nombre": "centinelas-sin-nombre-y-sin-sesion",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/kristhianmanue1/skopos"
+    },
+    "agent": {
+     "name": "sin-nombre",
+     "cli": "kimi",
+     "model": "desconocido",
+     "role": "ejecutor"
+    },
+    "session": {
+     "id": "kimi:sin-sesion"
+    }
+   }
+  },
+  {
+   "nombre": "puerto-conservado",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "gitlab.example.org:8443/grupo/sub/repo"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "rol-desconocido-en-captura-pasiva",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/k/skopos"
+    },
+    "agent": {
+     "name": "sin-nombre",
+     "cli": "codex",
+     "model": "desconocido",
+     "role": "desconocido"
+    },
+    "session": {
+     "id": "codex:rollout-1"
+    }
+   }
+  }
+ ],
+ "invalidos": [
+  {
+   "nombre": "schema-de-otra-version",
+   "motivo": "schema",
+   "objeto": {
+    "schema": "memoria/identidad/v2",
+    "repo": {
+     "id": "github.com/k/skopos"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "repo-como-nombre-de-carpeta",
+   "motivo": "repo_id",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "skopos"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "repo-con-url-sin-normalizar",
+   "motivo": "repo_id",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "https://github.com/k/skopos.git"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "repo-con-mayusculas",
+   "motivo": "repo_id",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/k/devHerdrExpert"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "repo-con-sufijo-git",
+   "motivo": "repo_id",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/a/b.git"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "repo-con-barra-final",
+   "motivo": "repo_id",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/a/b/"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "repo-con-doble-barra",
+   "motivo": "repo_id",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com//a"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "repo-con-punto-punto",
+   "motivo": "repo_id",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/a/../b"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "repo-sin-host",
+   "motivo": "repo_id",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "../x"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "repo-con-puerto-imposible",
+   "motivo": "repo_id",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "host:99999/x"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "repo-con-puerto-cero",
+   "motivo": "repo_id",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "host:0/x"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "repo-local-con-hash-corto",
+   "motivo": "repo_id",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "local:abc"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "repo-id-numerico",
+   "motivo": "repo_id",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": 7
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "rama-con-doble-punto",
+   "motivo": "repo_branch",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/k/skopos",
+     "branch": "a..b"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "rama-head",
+   "motivo": "repo_branch",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/k/skopos",
+     "branch": "HEAD"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "rama-con-doble-barra",
+   "motivo": "repo_branch",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/k/skopos",
+     "branch": "feat//x"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "rama-nula",
+   "motivo": "repo_branch",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/k/skopos",
+     "branch": null
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "rol-inventado",
+   "motivo": "agent_role",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/k/skopos"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "administrador"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "rol-como-lista",
+   "motivo": "agent_role",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/k/skopos"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": [
+      "capitan"
+     ]
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "falta-el-modelo",
+   "motivo": "agent_forma",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/k/skopos"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "modelo-vacio",
+   "motivo": "agent_model",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/k/skopos"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "nombre-con-espacio",
+   "motivo": "agent_name",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/k/skopos"
+    },
+    "agent": {
+     "name": "mi agente",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "nombre-que-usa-centinela-de-modelo",
+   "motivo": "agent_name_reservado",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/k/skopos"
+    },
+    "agent": {
+     "name": "desconocido",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    }
+   }
+  },
+  {
+   "nombre": "sesion-sin-calificar",
+   "motivo": "session_id",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/k/skopos"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "5b3046bd-e6d6-4881-a8a6-bce4741cec0e"
+    }
+   }
+  },
+  {
+   "nombre": "sesion-vacia-tras-el-prefijo",
+   "motivo": "session_id",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/k/skopos"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:"
+    }
+   }
+  },
+  {
+   "nombre": "sesion-calificada-por-otro-cli",
+   "motivo": "session_no_calificada_por_cli",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/k/skopos"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "opencode:ses_1"
+    }
+   }
+  },
+  {
+   "nombre": "sesion-vacia-como-objeto",
+   "motivo": "session_forma",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/k/skopos"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {}
+   }
+  },
+  {
+   "nombre": "clave-de-mas-en-la-raiz",
+   "motivo": "claves_raiz",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "repo": {
+     "id": "github.com/k/skopos"
+    },
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    },
+    "firma": "abc"
+   }
+  },
+  {
+   "nombre": "no-es-objeto",
+   "motivo": "raiz_no_es_objeto",
+   "objeto": "github.com/k/skopos"
+  },
+  {
+   "nombre": "rama-ref-completo",
+   "motivo": "repo_branch",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    },
+    "repo": {
+     "id": "github.com/k/skopos",
+     "branch": "refs/heads/main"
+    }
+   }
+  },
+  {
+   "nombre": "host-con-etiqueta-que-termina-en-guion",
+   "motivo": "repo_id",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    },
+    "repo": {
+     "id": "a-.b/x"
+    }
+   }
+  },
+  {
+   "nombre": "host-con-etiqueta-vacia",
+   "motivo": "repo_id",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    },
+    "repo": {
+     "id": "a..b/x"
+    }
+   }
+  },
+  {
+   "nombre": "puerto-de-mas-de-cinco-digitos",
+   "motivo": "repo_id",
+   "objeto": {
+    "schema": "memoria/identidad/v1",
+    "agent": {
+     "name": "a",
+     "cli": "codex",
+     "model": "m",
+     "role": "capitan"
+    },
+    "session": {
+     "id": "codex:x"
+    },
+    "repo": {
+     "id": "host:999999/x"
+    }
+   }
+  }
+ ],
+ "normalizacion": [
+  {
+   "url": "https://github.com/kristhianmanue1/devHerdrExpert.git",
+   "repo_id": "github.com/kristhianmanue1/devherdrexpert"
+  },
+  {
+   "url": "https://github.com/kristhianmanue1/devHerdrExpert",
+   "repo_id": "github.com/kristhianmanue1/devherdrexpert"
+  },
+  {
+   "url": "git@github.com:kristhianmanue1/devHerdrExpert.git",
+   "repo_id": "github.com/kristhianmanue1/devherdrexpert"
+  },
+  {
+   "url": "ssh://git@github.com/kristhianmanue1/devHerdrExpert.git",
+   "repo_id": "github.com/kristhianmanue1/devherdrexpert"
+  },
+  {
+   "url": "https://usuario@github.com/kristhianmanue1/skopos.git/",
+   "repo_id": "github.com/kristhianmanue1/skopos"
+  },
+  {
+   "url": "https://github.com/Kris/Repo.GIT",
+   "repo_id": "github.com/kris/repo"
+  },
+  {
+   "url": "https://gitlab.example.org:8443/grupo/sub/repo.git",
+   "repo_id": "gitlab.example.org:8443/grupo/sub/repo"
+  },
+  {
+   "url": "https://github.com:443/a/b.git",
+   "repo_id": "github.com:443/a/b"
+  },
+  {
+   "url": "usuario@example.org:/srv/vcs/repo.git",
+   "repo_id": "example.org/srv/vcs/repo"
+  },
+  {
+   "url": "",
+   "repo_id": null
+  },
+  {
+   "url": "/Users/alguien/repos/local",
+   "repo_id": null
+  },
+  {
+   "url": "file:///srv/repos/demo.git",
+   "repo_id": null
+  },
+  {
+   "url": "ssh://usuario@[::1]:2222/grupo/repo.git",
+   "repo_id": null
+  },
+  {
+   "url": "https://github.com/a//b",
+   "repo_id": null
+  },
+  {
+   "url": "https://github.com/a/../b",
+   "repo_id": null
+  },
+  {
+   "url": "https://host:99999/a/b",
+   "repo_id": null
+  },
+  {
+   "url": "https://github.com/a/b.git.git",
+   "repo_id": null
+  },
+  {
+   "url": "example.com:/srv/vcs/repo.git",
+   "repo_id": "example.com/srv/vcs/repo"
+  },
+  {
+   "url": "./repo.git",
+   "repo_id": null
+  },
+  {
+   "url": "file://localhost/srv/x.git",
+   "repo_id": null
+  },
+  {
+   "url": "file://example.org/srv/vcs/repo.git",
+   "repo_id": null
+  },
+  {
+   "url": "example.com:",
+   "repo_id": null
+  }
+ ],
+ "remoto_no_normalizable": [
+  {
+   "url": "file:///srv/repos/demo.git",
+   "repo_id": "remoto:88b36cf419d13ed6"
+  },
+  {
+   "url": "  file:///srv/repos/demo.git  ",
+   "repo_id": "remoto:88b36cf419d13ed6"
+  },
+  {
+   "url": "ssh://usuario@[::1]:2222/grupo/repo.git",
+   "repo_id": "remoto:df0bf29b097fb42c"
+  },
+  {
+   "url": "https://github.com/k/skopos.git",
+   "repo_id": "github.com/k/skopos"
+  },
+  {
+   "url": "./repo.git",
+   "base": "/c0-vectores/a",
+   "repo_id": "remoto:fc43ec46b3135feb"
+  },
+  {
+   "url": "./repo.git",
+   "base": "/c0-vectores/b",
+   "repo_id": "remoto:92d501250c68f8ec"
+  },
+  {
+   "url": "/c0-vectores/origen/repo.git",
+   "base": "/c0-vectores/a",
+   "repo_id": "remoto:231d8833ede54b93"
+  },
+  {
+   "url": "file://localhost/srv/x.git",
+   "repo_id": "remoto:d11127947c45a9c7"
+  },
+  {
+   "url": "file://example.org/srv/vcs/repo.git",
+   "repo_id": "remoto:58182f595d498de2"
+  },
+  {
+   "url": "example.com:",
+   "repo_id": "remoto:30e8cd6fe4c1abc7"
+  }
+ ],
+ "local": [
+  {
+   "ruta_comun": "/srv/repos/demo/.git",
+   "repo_id": "local:7313d879be6508cc"
+  },
+  {
+   "ruta_comun": "/srv/repos/demo-movido/.git",
+   "repo_id": "local:9e4ff6df06b8562f"
+  }
+ ],
+ "nota_rutas": "Las rutas /c0-vectores/... no existen: se asume que no atraviesan enlaces simbólicos."
+}

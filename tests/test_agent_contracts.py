@@ -76,6 +76,7 @@ class InstalledSchemaTests(unittest.TestCase):
         "mcp-retrieve-v3",
         "project-identity-v1",
         "provenance-manifest-v1",
+        "record-envelope-v1",
         "reference-benchmark-v1",
         "refutation-v1",
         "refute-authority-attestation-v1",
