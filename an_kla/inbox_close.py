@@ -28,6 +28,13 @@ AUDIT_INCOMPLETE = "inbox_audit_incomplete"
 _MAX_MARKER_BYTES = 1024 * 1024
 
 
+def transaction_code(code: Any) -> str:
+    """``transaction_<código>`` sin repetir el prefijo (varios códigos de ``inspect`` ya lo traen)."""
+
+    text = str(code)
+    return text if text.startswith("transaction_") else f"transaction_{text}"
+
+
 class DrainAbort(Exception):
     """El vaciado se detiene sin tocar marcador ni entradas; ``code`` es el ``drain_error``."""
 
@@ -91,7 +98,7 @@ def close_committed_journal(store: Any, txid: str) -> dict[str, Any]:
 
     info = tx.inspect_transaction(store, txid)
     if info.get("committed") is not True:
-        raise DrainAbort(f"transaction_{info.get('state')}")
+        raise DrainAbort(transaction_code(info.get("state")))
     candidate = info["candidate_revision"]
     journal, attempt = _completed_journal(store, txid, candidate)
     if journal.get("stage") == "committed" and isinstance(journal.get("observed_log"), str):
@@ -213,7 +220,7 @@ def settle_committed(store: Any, txid: str, entries: list[str], warnings: list[s
             raise DrainAbort("transaction_durability_repair_failed") from None
     final = tx.inspect_transaction(store, txid)
     if final.get("committed") is not True or final.get("durability_state") != "complete":
-        raise DrainAbort(f"transaction_{final.get('state')}")
+        raise DrainAbort(transaction_code(final.get("state")))
     if final.get("audit_state") != "complete" and AUDIT_INCOMPLETE not in warnings:
         warnings.append(AUDIT_INCOMPLETE)
     delete_entries(store, entries)
@@ -245,11 +252,11 @@ def reconcile_markers(store: Any, warnings: list[str]) -> list[dict[str, Any]]:
             delete_marker(store, txid)
             summary.append({"txid": txid, "branch": "no_trace"})
         else:
-            raise DrainAbort(f"transaction_{info.get('operation_error_code') or info.get('state')}", unknown=True)
+            raise DrainAbort(transaction_code(info.get("operation_error_code") or info.get("state")), unknown=True)
     return summary
 
 
 __all__ = [
     "AUDIT_INCOMPLETE", "DrainAbort", "close_committed_journal", "delete_entries", "delete_marker",
-    "has_no_trace", "read_marker", "reconcile_markers", "settle_committed", "write_marker",
+    "has_no_trace", "read_marker", "reconcile_markers", "settle_committed", "transaction_code", "write_marker",
 ]
