@@ -42,11 +42,10 @@ from an_kla.export_io import (
     rename_noreplace,
     safe_read,
 )
-# Política de enumeración/rutas de v1 reutilizada (fuente única; el camino
-# sellado NO redefine qué exporta el store ni modifica nada del camino v1).
+# Política de enumeración/rutas de v1 reutilizada (fuente única; el sellado no la redefine).
 from an_kla.export_restore import _allowed, _export_anchor, _files, _read_anchor
 from an_kla.identity import identity_lock
-from an_kla.inbox import custody_guard
+from an_kla.inbox import custody_guarded
 from an_kla.sealed.cek import generate_cek
 from an_kla.sealed.kdf import BUNDLE_ID_RAW_LENGTH, derive_subkeys
 
@@ -534,6 +533,7 @@ def _identity_crosscheck(manifest: dict[str, Any], payloads: dict[str, bytes]) -
 # create sellado (staging + renombrado atómico — F6)
 
 
+@custody_guarded  # bandeja exclusiva al entrar (ADR-0063 D1): antes de la CEK, de identity_lock y de todo archivo
 def create_sealed_bundle(store: Any, bundle: str | Path, runner: Any) -> dict:
     """Crea un bundle sellado ``sealed-export/v1`` (§2/§6, filas §9-7/13).
 
@@ -552,11 +552,7 @@ def create_sealed_bundle(store: Any, bundle: str | Path, runner: Any) -> dict:
         raise ExportIOError("export_destination_exists")
     if target == anchor or anchor in target.parents:
         raise ExportIOError("export_destination_inside_source")
-    with custody_guard(store):  # antes de la CEK, de identity_lock y de cualquier archivo
-        return _create_sealed(store, target, anchor, runner)
 
-
-def _create_sealed(store: Any, target: Path, anchor: Path, runner: Any) -> dict:
     cek = generate_cek()
     subkeys = derive_subkeys(cek)
     with identity_lock(store):

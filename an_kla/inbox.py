@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import contextlib
 import errno
+import functools
 import json
 import os
 from pathlib import Path
@@ -383,6 +384,17 @@ def custody_guard(store: Any, *, wait_seconds: float | None = None) -> Iterator[
         yield
 
 
+def custody_guarded(func: Callable[..., Any]) -> Callable[..., Any]:
+    """Decorador de una orden ``func(store, ...)``: la ejecuta entera dentro de ``custody_guard(store)``."""
+
+    @functools.wraps(func)
+    def wrapper(store: Any, *args: Any, **kwargs: Any) -> Any:
+        with custody_guard(store):
+            return func(store, *args, **kwargs)
+
+    return wrapper
+
+
 # --- recolector de tmp/ ------------------------------------------------------
 
 
@@ -723,7 +735,7 @@ def read_status(store: Any) -> dict[str, Any]:
 
 __all__ = [
     "ENTRY_SCHEMA", "InboxError", "InboxPaths", "KINDS", "MAX_TEXT_BYTES", "STATUS_SCHEMA",
-    "collect_tmp", "custody_guard", "enqueue", "entry_names", "inbox_lock", "inbox_paths", "inflight_is_empty",
+    "collect_tmp", "custody_guard", "custody_guarded", "enqueue", "entry_names", "inbox_lock", "inbox_paths", "inflight_is_empty",
     "is_entry_name", "is_marker_name", "marker_names", "payload_digest", "pending_is_empty",
     "read_status", "record_id", "resolve_kind", "root_state", "stream_for_kind",
 ]
