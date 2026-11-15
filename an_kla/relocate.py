@@ -468,7 +468,22 @@ def commit_relocation(store: Any, plan: Any, expected_current: str) -> dict[str,
     replayed = _replay(project_root, plan)
     if replayed is not None:
         return replayed
-    # Un solo punto para ida y `--back`: antes de identity_lock, del staging y del journal.
+    # Validaciones de sólo lectura primero (mismos códigos que antes de B4); después, un solo
+    # punto de custodia para ida y `--back`: antes de identity_lock, del staging y del journal.
+    back = core["direction"] == BACK_DIRECTION
+    if back:
+        if not store.store_external or str(store.store_root) != core["source_store_root"]:
+            raise RelocateError("relocate_plan_root_mismatch")
+    else:
+        if str(store.store_root) != core["source_store_root"]:
+            raise RelocateError("relocate_plan_root_mismatch")
+        try:
+            _require_source(store)
+        except RelocateError:
+            replayed = _replay(project_root, plan)  # un commit idéntico pudo terminar entre medias
+            if replayed is not None:
+                return replayed
+            raise
     with custody_guard(store):
         return _commit_guarded(store, plan, core)
 
@@ -479,8 +494,6 @@ def _commit_guarded(store: Any, plan: Any, core: Mapping[str, Any]) -> dict[str,
         from .relocate_back import commit_back
 
         return commit_back(store, plan)
-    if str(store.store_root) != core["source_store_root"]:
-        raise RelocateError("relocate_plan_root_mismatch")
     target = Path(core["destination_store_root"])
     anchor = store.store_root
     with identity_lock(store):

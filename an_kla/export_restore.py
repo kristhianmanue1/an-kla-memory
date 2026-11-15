@@ -117,13 +117,20 @@ def _manifest(entries: list[dict[str, Any]], current: str, project_id: str, stor
     return {"schema": "an-kla/export-manifest-v1", "profile": PROFILE, "core": core, "manifest_sha256": digest_json(core)}
 
 
-def create_export(store: Any, bundle: str | Path) -> dict[str, Any]:
+def _export_target(store: Any, bundle: str | Path) -> tuple[Path, Path]:
+    """Validaciones de sólo lectura de ``export create`` (v1 y sellado): custodia, destino libre y fuera del origen."""
+
     target = Path(bundle).resolve()
     anchor = _export_anchor(store)
     if target.exists():
         raise ExportError("export_destination_exists")
     if target == anchor or anchor in target.parents:
         raise ExportError("export_destination_inside_source")
+    return target, anchor
+
+
+def create_export(store: Any, bundle: str | Path) -> dict[str, Any]:
+    target, anchor = _export_target(store, bundle)
     with custody_guard(store):  # antes del mkdir del bundle y de identity_lock
         return _create_bundle(store, target, anchor)
 
