@@ -92,6 +92,15 @@ def capabilities() -> dict[str, Any]:
                 "mcp": False,
                 "decision": "ADR-0041",
             },
+            "inbox": {
+                "command": "inbox status",
+                "schema": "an-kla/inbox-status-v1",
+                "entry_schema": "an-kla/inbox-entry-v1",
+                "read_only": True,
+                "creates_nothing": True,
+                "mcp": False,
+                "decision": "ADR-0063 D1",
+            },
             "integration": {
                 "command": "integration status",
                 "schema": "an-kla/integration-status-v1",

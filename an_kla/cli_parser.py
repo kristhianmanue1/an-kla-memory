@@ -456,6 +456,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--show-paths", action="store_true",
         help="Incluir rutas (sólo para un artefacto efímero del operador).",
     )
+    inbox_cmd = sub.add_parser(
+        "inbox", help="Inspeccionar la bandeja de entrada de memoria (sólo lectura)."
+    )
+    inbox_sub = inbox_cmd.add_subparsers(dest="inbox_command", required=True)
+    inbox_sub.add_parser(
+        "status",
+        help="Entradas pendientes, lotes en vuelo, rechazos y temporales; no crea nada.",
+    )
     identity_cmd = sub.add_parser("identity", help="Inspeccionar o adoptar identidad local.")
     identity_sub = identity_cmd.add_subparsers(dest="identity_command", required=True)
     identity_status_cmd = identity_sub.add_parser("status")

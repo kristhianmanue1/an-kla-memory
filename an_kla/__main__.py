@@ -51,6 +51,7 @@ from .identity import (
     repair,
 )
 from .identity_relocation import record_project_relocation
+from .inbox import read_status as inbox_status
 from .inventory import DEFAULT_LIMIT as INVENTORY_DEFAULT_LIMIT
 from .inventory import MAX_LIMIT as INVENTORY_MAX_LIMIT
 from .inventory import STREAMS as INVENTORY_STREAMS
@@ -445,6 +446,8 @@ def _run() -> None:
                 store, _json(args.plan), args.expected_current,
                 args.relocation_receipt,
             )
+    elif args.command == "inbox":
+        result = inbox_status(store)
     elif args.command == "subject":
         result = resolve_namespace(store)
     elif args.command == "view":
@@ -603,6 +606,7 @@ def _run() -> None:
         "checkpoint",
         "init",
         "identity",
+        "inbox",
         "evaluate-v2",
         "export",
         "resume",
