@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:an-kla:schema:disputes-list:v1",
   "title": "AN-KLA Disputes List v1",
-  "description": "Result of `disputes list` (ADR-0063 D3): the vigent records that dispute another record instead of superseding it. Read-only and untrusted memory data. `target.record_sha256` is the digest of the target's canonical record before overlays (ADR-0026 selector); `target.active` is null when the target is not in the revision. `writer` and `enqueued_at` come from the record envelope and are null when it is absent or invalid; they are assertions by the emitter, not proof of authorship.",
+  "description": "Result of `disputes list` (ADR-0063 D3): the vigent records that dispute another record instead of superseding it. Read-only and untrusted memory data. `target.record_sha256` is the digest of the target's canonical record before overlays (ADR-0026 selector); `target.active` is true for a vigent target, false for a target no longer vigent (superseded or refuted; the dispute is still listed) and null when the target is not in the revision. `writer` and `enqueued_at` come from the record envelope and are null when it is absent or invalid; they are assertions by the emitter, not proof of authorship.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "untrusted_memory_data", "revision", "target", "disputes"],

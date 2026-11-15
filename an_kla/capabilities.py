@@ -97,7 +97,7 @@ def capabilities() -> dict[str, Any]:
                 "schema": "an-kla/disputes-list-v1",
                 "read_only": True,
                 "content": "vigent dispute records of CURRENT (ADR-0063 D3)",
-                "target_selector": "raw_record_sha256",
+                "target_selector": "physical_record_sha256",
                 "mcp": False,
                 "decision": "ADR-0063",
             },

@@ -374,6 +374,8 @@ def _run() -> None:
                 revision=args.revision,
             )
     elif args.command == "disputes":
+        if args.target == "":
+            raise CliUsageError("invalid_disputes_target")
         result = list_disputes(store.snapshot(), target=args.target)
     elif args.command == "export":
         # Dispatcher dual ADR-0042 §2/§3/§8 (T5): sin --seal el camino es
