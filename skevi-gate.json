@@ -1,12 +1,10 @@
 {
   "limits": {
     "AGENTS.md": 120,
-    "docs/architecture/0042-sealed-export-v1.md": 700
+    "docs/architecture/0042-sealed-export-v1.md": 700,
+    "tests/fixtures/identidad-v1/vectores.json": 935
   },
   "default_limit": 800,
-  "exempt_paths": [
-    "tests/fixtures/identidad-v1/vectores.json"
-  ],
   "root_markdown": [
     "AN-KLA.md",
     "CHANGELOG.md",

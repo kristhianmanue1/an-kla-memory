@@ -134,6 +134,18 @@ class VectorTests(unittest.TestCase):
                 candidate[path[0]][path[1]] = wrong
                 self.assertNotEqual(c0.validate(candidate), [])
 
+    def test_a_newline_inside_the_input_changes_the_case_not_just_the_verdict(self) -> None:
+        # R1-03; documented in tests/fixtures/identidad-v1/ORIGEN.md.  The reference's `$`
+        # lets these through as canonical ids that contain the newline; fullmatch does not.
+        self.assertIsNone(c0.normalize_remote("OM\n:eU3"))
+        self.assertEqual(c0.repo_id_from_remote("GwXYo\n:Vu", "/base"), "remoto:e720d808474ba2b6")
+        self.assertEqual(c0.repo_id_from_remote("GwXYo\n:Vu", "/base"), "remoto:" + hash16("GwXYo\n:Vu"))
+        self.assertFalse(c0.is_valid_branch("rama\n"))
+        self.assertFalse(c0.is_valid_branch("ra\nma"))
+        self.assertFalse(c0.is_canonical_repo_id("om\n/eu3"))
+        origin = (VECTORS.parent / "ORIGEN.md").read_text(encoding="utf-8")
+        self.assertIn("Divergencia conocida", origin)
+
     def test_trailing_newline_is_not_a_valid_branch_or_id(self) -> None:
         # `$` would accept it; the contract says no whitespace.
         self.assertFalse(c0.is_valid_branch("feat/x\n"))
