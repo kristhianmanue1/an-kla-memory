@@ -6,7 +6,6 @@ byte (resultado o error, y árbol del store).
 """
 from __future__ import annotations
 
-import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -21,32 +20,17 @@ GOLDENS = Path(__file__).parent / "fixtures" / "write-commit-goldens"
 
 
 class WriteCommitGoldenTests(unittest.TestCase):
-    def setUp(self) -> None:
-        recorded = json.loads((GOLDENS / "_meta.json").read_text(encoding="utf-8"))
-        try:
-            actual = scenarios.resolved_base_dir()
-        except OSError as exc:
-            self.skipTest(f"sin directorio fijo de goldens: {exc}")
-        if actual != recorded["base_dir_resolved"]:
-            self.skipTest(
-                "los digests dependen de la ruta resuelta del proyecto: "
-                f"{actual} != {recorded['base_dir_resolved']}"
-            )
-
     def test_every_scenario_has_a_golden_and_vice_versa(self) -> None:
-        on_disk = {
-            path.stem for path in GOLDENS.glob("*.json") if path.stem != "_meta"
-        }
+        on_disk = {path.stem for path in GOLDENS.glob("*.json")}
         self.assertEqual(on_disk, set(scenarios.SCENARIOS))
 
     def test_scenarios_match_goldens_byte_for_byte(self) -> None:
         for name in scenarios.SCENARIOS:
-            with self.subTest(scenario=name):
+            with self.subTest(scenario=name), tempfile.TemporaryDirectory() as temp:
                 actual = scenarios.canonical_bytes(
-                    scenarios.run_scenario(name, scenarios.default_base_dir())
+                    scenarios.run_scenario(name, Path(temp))
                 )
-                expected = (GOLDENS / f"{name}.json").read_bytes()
-                self.assertEqual(actual, expected)
+                self.assertEqual(actual, (GOLDENS / f"{name}.json").read_bytes())
 
 
 def _commit_by_hand(store, **kwargs):
@@ -62,17 +46,15 @@ def _commit_by_hand(store, **kwargs):
 
 
 class LockedBodyTests(unittest.TestCase):
-    setUp = WriteCommitGoldenTests.setUp
-
     def test_locked_body_with_held_lock_matches_goldens_and_never_blocks(self) -> None:
         # Si el cuerpo intentara tomar el candado (no reentrante), el flock de
         # otro descriptor del mismo proceso agotaría el plazo y levantaría
         # LockBusyError, que ``run_scenario`` no captura.
         with patch("an_kla.store._commit_write_plan_flow", _commit_by_hand):
             for name in scenarios.SCENARIOS:
-                with self.subTest(scenario=name):
+                with self.subTest(scenario=name), tempfile.TemporaryDirectory() as temp:
                     actual = scenarios.canonical_bytes(
-                        scenarios.run_scenario(name, scenarios.default_base_dir())
+                        scenarios.run_scenario(name, Path(temp))
                     )
                     expected = (GOLDENS / f"{name}.json").read_bytes()
                     self.assertEqual(actual, expected)

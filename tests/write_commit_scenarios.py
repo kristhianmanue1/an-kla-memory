@@ -5,9 +5,9 @@ byte a byte con ``tests/fixtures/write-commit-goldens/``) y el generador de
 goldens (``python -m tests.write_commit_scenarios <dir>`` con la raíz del repo
 como cwd). No es una prueba: no empieza por ``test_``.
 
-Determinismo: ``uuid.uuid4`` se sustituye por un contador, el store vive en una
-ruta fija dentro de ``TMPDIR`` y esa ruta se normaliza a ``<ROOT>`` en la
-salida. Cada escenario devuelve el resultado (o el código de error) y el árbol
+Determinismo: ``uuid.uuid4`` se sustituye por un contador, el proyecto usa una
+raíz testigo (``WITNESS_ROOT``) y la ruta temporal real se normaliza a
+``<TMP>`` en la salida. Cada escenario devuelve el resultado (o el código de error) y el árbol
 del store resultante (ruta relativa y sha256 de cada archivo).
 """
 from __future__ import annotations
@@ -17,6 +17,7 @@ import json
 import os
 import shutil
 import sys
+import tempfile
 import uuid
 from copy import deepcopy
 from pathlib import Path
@@ -32,6 +33,9 @@ from an_kla.write_policy import (
 )
 
 DIGEST_B = "sha256:" + "b" * 64
+# Raíz absoluta inexistente: ``canonical_project_root_at_init`` entra en los
+# digests y no puede depender del directorio temporal de cada corrida.
+WITNESS_ROOT = Path("/an-kla-golden-root")
 TXID = "11111111-2222-4333-8444-555555555555"
 TXID_OTHER = "66666666-7777-4888-9999-aaaaaaaaaaaa"
 
@@ -246,7 +250,7 @@ def s_no_indexable_text(store, root):
     return store.commit_write_plan(**commit_kwargs(candidate, auth, planning, root))
 
 
-def s_release_error(store, root):
+def _unlock_fails():
     import fcntl
 
     original = fcntl.flock
@@ -256,10 +260,39 @@ def s_release_error(store, root):
             raise OSError("unlock-EIO")
         return original(fd, operation)
 
+    return patch("fcntl.flock", side_effect=injected)
+
+
+def s_batch_no_text(store, root):
+    candidate = proposal_v2(root, count=2)
+    candidate["records"] = [{"id": "b-0"}, {"id": "b-1"}]
+    auth = authority_for(candidate)
+    planning = plan_for(store, candidate, auth)
+    return store.commit_write_plan(**commit_kwargs(candidate, auth, planning, root))
+
+
+def s_replay_release_error(store, root):
+    rev1, candidate, auth, planning = _add(store, root, "f-replay", TXID)
+    with _unlock_fails():
+        return store.commit_write_plan(
+            **commit_kwargs(candidate, auth, planning, root, transaction_id=TXID)
+        )
+
+
+def s_skip_release_error(store, root):
+    candidate = proposal_v1(root, "f-skip")
+    candidate["requested_representation"] = "full"
+    auth = authority_for(candidate, "unresolved")
+    planning = plan_for(store, candidate, auth)
+    with _unlock_fails():
+        return store.commit_write_plan(**commit_kwargs(candidate, auth, planning, root))
+
+
+def s_release_error(store, root):
     candidate = proposal_v1(root, "f-unlock")
     auth = authority_for(candidate)
     planning = plan_for(store, candidate, auth)
-    with patch("fcntl.flock", side_effect=injected):
+    with _unlock_fails():
         return store.commit_write_plan(
             **commit_kwargs(candidate, auth, planning, root, transaction_id=TXID)
         )
@@ -277,11 +310,20 @@ SCENARIOS: dict[str, Callable[[MemoryStore, str], dict[str, Any]]] = {
     "tool_observed_no_receipt": s_tool_observed_no_receipt,
     "record_without_indexable_text": s_no_indexable_text,
     "release_error_on_unlock": s_release_error,
+    "batch_v2_without_indexable_text": s_batch_no_text,
+    "replay_release_error_on_unlock": s_replay_release_error,
+    "skip_release_error_on_unlock": s_skip_release_error,
 }
 
 
 def run_scenario(name: str, base_dir: Path) -> dict[str, Any]:
-    """Ejecuta un escenario en un store nuevo y devuelve su salida canónica."""
+    """Ejecuta un escenario en un store nuevo y devuelve su salida canónica.
+
+    ``base_dir`` es un directorio propio de quien llama (p. ej. un
+    ``TemporaryDirectory`` bajo ``TMPDIR``). Los digests del store incluyen la
+    raíz del proyecto, así que se fija una raíz testigo (``WITNESS_ROOT``)
+    antes de inicializar y la salida no depende de ``base_dir``.
+    """
 
     project = base_dir / name
     if project.exists():
@@ -289,6 +331,7 @@ def run_scenario(name: str, base_dir: Path) -> dict[str, Any]:
     project.mkdir(parents=True)
     with patch("uuid.uuid4", _counter_uuid4()):
         store = MemoryStore(project)
+        store.project_root = WITNESS_ROOT
         root = store.initialize()
         try:
             outcome: dict[str, Any] = {"result": SCENARIOS[name](store, root)}
@@ -296,41 +339,23 @@ def run_scenario(name: str, base_dir: Path) -> dict[str, Any]:
             outcome = {"error": exc.code, "detail": exc.detail}
     outcome["store_tree"] = tree(project / ".an-kla")
     text = json.dumps(outcome, sort_keys=True, indent=2, default=str)
-    return json.loads(text.replace(str(project.resolve()), "<ROOT>"))
+    for real in {str(project), str(project.resolve())}:
+        text = text.replace(real, "<TMP>")
+    return json.loads(text.replace(str(WITNESS_ROOT), "<ROOT>"))
 
 
 def canonical_bytes(value: dict[str, Any]) -> bytes:
     return (json.dumps(value, sort_keys=True, indent=2) + "\n").encode("utf-8")
 
 
-def default_base_dir() -> Path:
-    """Directorio fijo: ``canonical_project_root_at_init`` entra en los hashes.
-
-    Los digests del store dependen de la ruta resuelta del proyecto, así que
-    generar y verificar exigen la misma ruta (``_meta.json`` guarda la
-    resuelta; la prueba se omite, con motivo, si la plataforma la resuelve
-    distinto).
-    """
-
-    return Path("/var/tmp/ankla-write-commit-goldens")
-
-
-def resolved_base_dir() -> str:
-    base = default_base_dir()
-    base.mkdir(parents=True, exist_ok=True)
-    return str(base.resolve())
-
-
 def main(argv: list[str]) -> int:
     target = Path(argv[1])
     target.mkdir(parents=True, exist_ok=True)
-    base = default_base_dir()
-    (target / "_meta.json").write_bytes(
-        canonical_bytes({"base_dir_resolved": resolved_base_dir()})
-    )
-    for name in SCENARIOS:
-        (target / f"{name}.json").write_bytes(canonical_bytes(run_scenario(name, base)))
-        print("golden", name)
+    with tempfile.TemporaryDirectory() as base:
+        for name in SCENARIOS:
+            output = canonical_bytes(run_scenario(name, Path(base)))
+            (target / f"{name}.json").write_bytes(output)
+            print("golden", name)
     return 0
 
 
