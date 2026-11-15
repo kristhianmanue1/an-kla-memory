@@ -491,6 +491,30 @@ class LastResortTests(DrainCase):
         self.assertEqual(len(result["batches"]), 1)
 
 
+class ReleaseErrorTests(DrainCase):
+    def test_a_failed_unlock_is_reported_as_a_warning_and_the_commit_stands(self) -> None:
+        """``lock_result.release_error``: el post-proceso común lo anota tras soltar; no deshace nada."""
+
+        import fcntl
+
+        original = fcntl.flock
+
+        def injected(fd, operation):
+            if operation == fcntl.LOCK_UN:
+                raise OSError("unlock-EIO")
+            return original(fd, operation)
+
+        name = self.factory.write("uno")
+        with mock.patch("fcntl.flock", side_effect=injected):
+            result = self.drain()
+        self.assertEqual(result["state"], "drained")
+        self.assertEqual([i["entry"] for i in result["committed"]["entries"]], [name])
+        self.assertIn("lock_release_incomplete", result["warnings"])
+        self.assertEqual(self.names(self.paths.pending) + self.names(self.paths.inflight), [])
+        self.assertEqual(len(facts(self.store)), 1)
+        self.assertTrue(self.store.verify()["ok"])
+
+
 class ErrorCodeTests(unittest.TestCase):
     def test_error_code_never_echoes_a_message_with_a_path_or_prose(self) -> None:
         self.assertEqual(inbox_drain.error_code(RuntimeError("/Users/x/store: fallo grave")), "runtimeerror")
