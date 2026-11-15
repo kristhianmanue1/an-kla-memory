@@ -57,6 +57,7 @@ class InstalledSchemaTests(unittest.TestCase):
         "context-baseline-adoption-result-v1",
         "context-view-v1",
         "cost-certificate-v1",
+        "disputes-list-v1",
         "durability-receipt-v1",
         "export-manifest-v1",
         "export-result-v1",
