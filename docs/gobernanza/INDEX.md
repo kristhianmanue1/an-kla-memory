@@ -34,6 +34,7 @@ Cerrados desde el estado anterior de este índice (29-08): #95, #56 (G2) y
 
 | Fecha | Qué | Dónde |
 |---|---|---|
+| 14-11 | Delegación del dueño al capitán de an-kla para el esfuerzo de memoria agéntica: ramas, commits, push, PR sin squash y merge tras gates y `proceed`, con la fase que fije cada mandato; tags, releases, hooks y servicios, visibilidad, licencia y publicar reservados | `docs/gobernanza/2026-11-14-delegacion-memoria-agentica.md` |
 | 17-10 | Toda release lleva ronda adversarial de release con marcador de gate, auditoría §9 en venv limpio y wheel adjunto como asset (restituidos los de beta.31–33) | `docs/practicas-ingenieria.md` §1 y §9; `docs/releases/v0.1.0-beta.34.md` §Wheels |
 | 16-10 | Los consumidores se actualizan proyecto a proyecto al usarlos, con todas sus instalaciones (venv y CLI global) a la vez y luego `context update` con el mismo intérprete | `docs/releases/v0.1.0-beta.32.md` y `v0.1.0-beta.34.md` (§Actualizar, §Límites) |
 | 13-10 | Python 3.12 o superior para rondas, suites y CI local (`.venv/bin/python`) | `docs/adversarial-template.md` |
