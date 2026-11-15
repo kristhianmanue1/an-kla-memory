@@ -28,15 +28,17 @@ class LockResult:
 
 
 @contextmanager
-def write_lock(root: Path) -> Iterator[LockResult]:
+def write_lock(root: Path, deadline: float | None = None) -> Iterator[LockResult]:
     # Se registra para el invariante de orden de candados (ADR-0063 D1), también cuando
     # se usa sin `MemoryStore.write_lock` (p. ej. `hook_runs`); no cambia su comportamiento.
-    with holding(WRITE), _write_flock(root) as result:
+    # `deadline` (segundos) es el plazo corto del vaciado; sin él rige la constante de 10 s.
+    with holding(WRITE), _write_flock(root, deadline) as result:
         yield result
 
 
 @contextmanager
-def _write_flock(root: Path) -> Iterator[LockResult]:
+def _write_flock(root: Path, wait_seconds: float | None = None) -> Iterator[LockResult]:
+    wait = WRITE_LOCK_DEADLINE_SECONDS if wait_seconds is None else wait_seconds
     result = LockResult()
     try:
         import fcntl  # type: ignore
@@ -63,7 +65,7 @@ def _write_flock(root: Path) -> Iterator[LockResult]:
                 handle.write(b"0")
                 handle.flush()
             handle.seek(0)
-            deadline = time.monotonic() + WRITE_LOCK_DEADLINE_SECONDS
+            deadline = time.monotonic() + wait
             while True:
                 try:
                     msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
@@ -86,7 +88,7 @@ def _write_flock(root: Path) -> Iterator[LockResult]:
         # Issue #111/P2: LOCK_NB + backoff con deadline (paridad con la
         # rama Windows). Antes: flock bloqueante sin deadline — un writer
         # colgado bloqueaba a todos los demás indefinidamente.
-        deadline = time.monotonic() + WRITE_LOCK_DEADLINE_SECONDS
+        deadline = time.monotonic() + wait
         while True:
             try:
                 fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)

@@ -567,14 +567,17 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
             return doctor_report(self)
 
     @contextmanager
-    def write_lock(self) -> Iterator[LockResult]:
+    def write_lock(self, deadline: float | None = None) -> Iterator[LockResult]:
         """Adquiere el lock de escritura (deadline 10s; issue #111/P2).
+
+        ``deadline`` (segundos) acorta el plazo para el vaciado de la bandeja (ADR-0063 D1);
+        sin él no cambia nada para nadie más.
 
         Mientras se tiene, ``_active_write_lock`` es su ``LockResult``: es el
         testigo que ``write_commit._commit_write_plan_locked`` exige.
         """
         self._make_layout()
-        with _write_lock_under_root(self.root) as lock_result:
+        with _write_lock_under_root(self.root, deadline) as lock_result:
             self._active_write_lock = lock_result
             try:
                 yield lock_result

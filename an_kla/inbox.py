@@ -350,8 +350,10 @@ def collect_tmp(store: Any) -> dict[str, Any]:
         return {"state": "absent", "removed": 0, "errors": 0}
     if state == "unsafe":
         raise InboxError("inbox_unsafe_path")
+    # R3-03: con la raíz presente y sin `.lock` (layout hecho a mano) se crea con las mismas garantías.
+    create = not os.path.lexists(paths.lock)
     try:
-        with inbox_lock(store, exclusive=True, wait_seconds=0.0, create=False):
+        with inbox_lock(store, exclusive=True, wait_seconds=0.0, create=create):
             return _remove_tmp_contents(paths.tmp)
     except InboxError as exc:
         if exc.code == "inbox_busy":
@@ -360,7 +362,10 @@ def collect_tmp(store: Any) -> dict[str, Any]:
 
 
 def _remove_tmp_contents(tmp: Path) -> dict[str, Any]:
-    if _dir_state(tmp) != "present":
+    state = _dir_state(tmp)
+    if state == "unsafe":  # R3-02: nunca se informa «recolectado» sin haber inspeccionado `tmp/`
+        raise InboxError("inbox_unsafe_path")
+    if state == "absent":
         return {"state": "collected", "removed": 0, "errors": 0}
     removed = errors = 0
     with os.scandir(tmp) as scan:
