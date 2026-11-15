@@ -53,6 +53,7 @@ from .identity import (
 from .identity_relocation import record_project_relocation
 from .disputes import list_disputes
 from .inbox import read_status as inbox_status
+from .lock_order import LockOrderError
 from .inventory import DEFAULT_LIMIT as INVENTORY_DEFAULT_LIMIT
 from .inventory import MAX_LIMIT as INVENTORY_MAX_LIMIT
 from .inventory import STREAMS as INVENTORY_STREAMS
@@ -707,7 +708,7 @@ def main() -> None:
         suffix = f" ({exc.detail})" if exc.detail else ""
         sys.stderr.write(f"an-kla error: {exc}{suffix}\n")
         raise SystemExit(2)
-    except (CheckpointPolicyError, CompactionError, ExportError, StoreError, ConcurrentUpdateError, IdentityError, ReaderGateError, TransactionError, SealingAdapterError, SealingAdapterRequiredError, SealedPayloadAuthFailedError, SealedEntryTooLargeError, SealedAdapterIdInvalidError, SealedExtraNotInstalledError, ValueError, OSError) as exc:
+    except (CheckpointPolicyError, CompactionError, ExportError, StoreError, ConcurrentUpdateError, IdentityError, ReaderGateError, TransactionError, SealingAdapterError, SealingAdapterRequiredError, SealedPayloadAuthFailedError, SealedEntryTooLargeError, SealedAdapterIdInvalidError, SealedExtraNotInstalledError, LockOrderError, ValueError, OSError) as exc:
         if (
             isinstance(exc, (TransactionError, IdentityError))
             and str(exc) == "invalid_transaction_id"
