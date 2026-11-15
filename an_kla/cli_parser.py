@@ -335,6 +335,16 @@ def build_parser() -> argparse.ArgumentParser:
     refute_inspect.add_argument("--stream", required=True, choices=("facts", "events", "episodes"))
     refute_inspect.add_argument("--record-sha256", required=True)
     refute_inspect.add_argument("--revision")
+    disputes_cmd = sub.add_parser(
+        "disputes", help="Disputas vigentes entre records (ADR-0063 D3), sólo lectura."
+    )
+    disputes_sub = disputes_cmd.add_subparsers(dest="disputes_command", required=True)
+    disputes_list = disputes_sub.add_parser(
+        "list", help="Enumerar los records que disputan a otro, en la revisión vigente."
+    )
+    disputes_list.add_argument(
+        "--target", default=None, help="Sólo las disputas contra este id de record."
+    )
     export_cmd = sub.add_parser("export", help="Export/backup local verificable.")
     export_sub = export_cmd.add_subparsers(dest="export_command", required=True)
     export_create = export_sub.add_parser("create")

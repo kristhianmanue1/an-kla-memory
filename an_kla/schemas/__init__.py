@@ -29,6 +29,7 @@ SCHEMA_FILES = {
     "cost-certificate-v1": "cost-certificate-v1.schema.json",
     "context-assembly-v2": "context-assembly-v2.schema.json",
     "context-view-v1": "context-view-v1.schema.json",
+    "disputes-list-v1": "disputes-list-v1.schema.json",
     "durability-receipt-v1": "durability-receipt-v1.schema.json",
     "export-manifest-v1": "export-manifest-v1.schema.json",
     "export-result-v1": "export-result-v1.schema.json",
