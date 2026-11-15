@@ -4,6 +4,9 @@
     "docs/architecture/0042-sealed-export-v1.md": 700
   },
   "default_limit": 800,
+  "exempt_paths": [
+    "tests/fixtures/identidad-v1/vectores.json"
+  ],
   "root_markdown": [
     "AN-KLA.md",
     "CHANGELOG.md",
