@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:an-kla:schema:record-envelope:v1",
   "title": "AN-KLA Record Envelope v1",
-  "description": "Reserved key `an_kla_envelope` of a record (ADR-0063 D2): writer identity C0 `memoria/identidad/v1`, enqueue time and idempotency key. Structural check only: the C0 validator is authoritative for what a schema cannot express (`session.id` prefix equal to `agent.cli`, the 200-character bound of the session identifier, calendar validity of `enqueued_at`). Whitespace is spelled out as an explicit class, never `\\s`, and patterns end with `(?![\\s\\S])` instead of `$` (Python engines let `$` match before a final newline), so every JSON Schema engine agrees with the validator. The envelope is an assertion by the emitter, stored as given.",
+  "description": "Reserved key `an_kla_envelope` of a record (ADR-0063 D2): writer identity C0 `memoria/identidad/v1`, enqueue time and idempotency key. Structural check only: the C0 validator is authoritative for what a schema cannot express (`session.id` prefix equal to `agent.cli`, calendar validity of `enqueued_at`). Whitespace is spelled out as an explicit class equal to Python `\\s` on `str` (what the C0 reference validator uses), never `\\s` itself, and patterns end with `(?![\\s\\S])` instead of `$` (Python engines let `$` match before a final newline): character classes and anchors agree on every JSON Schema engine. Length bounds do not: `maxLength` of `model` (80) and `repo.branch` (200), and the total `maxLength` of `session.id` (233; the 200-character bound of the identifier itself is not expressed), count code points in conforming engines and UTF-16 units in some, so an engine of the second kind rejects values with astral characters that the validator accepts. The envelope is an assertion by the emitter, stored as given.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "writer", "enqueued_at", "time_source", "idempotency_key", "kind"],
@@ -39,7 +39,7 @@
           "properties": {
             "name": {"allOf": [{"$ref": "#/$defs/ident"}, {"not": {"enum": ["desconocido", "sin-sesion"]}}]},
             "cli": {"$ref": "#/$defs/ident"},
-            "model": {"type": "string", "minLength": 1, "maxLength": 80, "pattern": "^(?:[^\\t\\n\\x0b\\x0c\\r\\x1c-\\x1f\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]|[^\\t\\n\\x0b\\x0c\\r\\x1c-\\x1f\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff][\\s\\S]*[^\\t\\n\\x0b\\x0c\\r\\x1c-\\x1f\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff])(?![\\s\\S])"},
+            "model": {"type": "string", "minLength": 1, "maxLength": 80, "pattern": "^(?:[^\\t-\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]|[^\\t-\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000][\\s\\S]*[^\\t-\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S])"},
             "role": {"enum": ["operador", "orquestador", "capitan", "ejecutor", "revisor", "desconocido"]}
           }
         },
@@ -48,7 +48,7 @@
           "additionalProperties": false,
           "required": ["id"],
           "properties": {
-            "id": {"type": "string", "maxLength": 233, "pattern": "^[a-z][a-z0-9_-]{0,31}:[^\\t\\n\\x0b\\x0c\\r\\x1c-\\x1f\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+(?![\\s\\S])"}
+            "id": {"type": "string", "maxLength": 233, "pattern": "^[a-z][a-z0-9_-]{0,31}:[^\\t-\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]+(?![\\s\\S])"}
           }
         }
       }
@@ -70,7 +70,7 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 200,
-      "pattern": "^[^\\t\\n\\x0b\\x0c\\r\\x1c-\\x1f\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff~^:?*\\[\\\\]+(?![\\s\\S])",
+      "pattern": "^[^\\t-\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000~^:?*\\[\\\\]+(?![\\s\\S])",
       "allOf": [
         {"not": {"pattern": "^(?:HEAD(?![\\s\\S])|[-/.]|refs/)"}},
         {"not": {"pattern": "(?:[/.]|\\.lock)(?![\\s\\S])"}},

@@ -35,3 +35,26 @@ la lectura del contrato («sin espacios»); la prueba
 Es un defecto del validador de referencia, no del contrato: queda para que el
 dueño de C0 decida una errata. Hasta entonces, dos implementaciones pueden dar
 identidades distintas para un remoto con salto de línea interno.
+
+Espacio en blanco: el validador y el schema usan una clase enumerada que es
+exactamente el `\s` de Python sobre `str` (lo que usa la referencia), de modo
+que U+FEFF se acepta como en ella y no hay otra divergencia por este motivo.
+`test_whitespace_class_is_exactly_python_s_over_the_whole_unicode_range` lo
+comprueba carácter a carácter sobre todo el rango Unicode.
+
+## Residual del schema: cotas de longitud
+
+El schema `record-envelope-v1` coincide con el validador en clases de carácter
+y anclas en cualquier motor JSON Schema, pero no en las cotas de longitud:
+`maxLength` cuenta code points en los motores conformes y unidades UTF-16 en
+algunos. Un motor del segundo tipo rechaza lo que el validador acepta:
+
+| valor | longitud | validador | schema (motor que cuenta UTF-16) |
+|---|---|---|---|
+| `repo.branch` = `"𝕏" * 200` | 200 code points, 400 unidades | válido | rechazado (`maxLength: 200`) |
+| `agent.model` = `"𝕏" * 80` | 80 code points, 160 unidades | válido | rechazado (`maxLength: 80`) |
+
+La cota de 200 del identificador de `session.id` no se expresa en el schema
+(sólo `maxLength: 233` sobre el total, con el prefijo variable). Sólo hay
+discrepancia con caracteres fuera del plano básico; el validador es la
+autoridad y el schema lo declara en su `description`.

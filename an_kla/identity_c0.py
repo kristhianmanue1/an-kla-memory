@@ -59,12 +59,12 @@ _SEGMENT = re.compile(r"[a-z0-9._~-]+")
 _HASHED_ID = re.compile(r"(?:local|remoto):[0-9a-f]{16}")
 _IDENT = re.compile(r"[a-z][a-z0-9_-]{0,31}")
 # Whitespace spelled out, never ``\s``/``\S``: engines disagree on it (U+FEFF is
-# ECMA-262 whitespace but not Python's; U+001C-U+001F and U+0085 the reverse), and
-# the published schema must accept and reject what this validator does.  The union
-# is rejected; the schema spells out the same set.
+# ECMA-262 whitespace but not Python's).  C0's reference validator uses Python's
+# ``\s`` on ``str``, so this class is exactly that set, enumerated, and the schema
+# spells out the same one: validator, schema (any engine) and reference agree.
+# ``tests/test_identity_c0.py`` checks it against ``\s`` over the whole Unicode range.
 WHITESPACE_CLASS = (
-    r"\t\n\x0b\x0c\r\x1c-\x1f\x20\x85\xa0\u1680\u2000-\u200a"
-    r"\u2028\u2029\u202f\u205f\u3000\ufeff"
+    r"\t-\r\x1c-\x20\x85\xa0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000"
 )
 _SESSION = re.compile(rf"([a-z][a-z0-9_-]{{0,31}}):([^{WHITESPACE_CLASS}]{{1,200}})")
 _BRANCH = re.compile(rf"[^{WHITESPACE_CLASS}~^:?*\[\\]{{1,200}}")
@@ -127,12 +127,20 @@ def is_canonical_repo_id(value: Any) -> bool:
     return not path.endswith(_GIT_SUFFIX)
 
 
-def normalize_remote(url: Any) -> str | None:
-    """Origin URL to canonical ``host[:port]/path``, or ``None`` (case 2)."""
+def _require_str(value: Any, what: str) -> str:
+    if not isinstance(value, str):
+        raise TypeError(f"{what} must be str, got {type(value).__name__}")
+    return value
 
-    if not isinstance(url, str):
-        return None
-    text = url.strip()
+
+def normalize_remote(url: str) -> str | None:
+    """Origin URL to canonical ``host[:port]/path``, or ``None`` (case 2).
+
+    ``url`` must be ``str``: anything else raises ``TypeError`` (a missing remote is
+    handled by the caller, not by passing ``None``).
+    """
+
+    text = _require_str(url, "url").strip()
     if text.lower().startswith("file://"):
         return None  # Git ignores the host of file://: it identifies nothing
     match = _URL_WITH_HOST.fullmatch(text)
@@ -159,7 +167,8 @@ def repo_id_from_remote(url: str, base: str | os.PathLike[str] | None = None) ->
     A scheme-less non-scp URL is a local path: its resolved absolute path,
     taken relative to ``base`` (the checkout root), is hashed so two repos with
     the same relative remote do not share an identity.  Anything else that does
-    not normalize is hashed as the stripped URL.
+    not normalize is hashed as the stripped URL.  ``url`` must be ``str``
+    (``TypeError`` otherwise).
     """
 
     canonical = normalize_remote(url)
@@ -172,8 +181,9 @@ def repo_id_from_remote(url: str, base: str | os.PathLike[str] | None = None) ->
 
 
 def repo_id_from_common_dir(common_dir: str) -> str:
-    """Case 3: ``local:`` + 16 hex of the resolved absolute common git dir."""
+    """Case 3: ``local:`` + 16 hex of the resolved absolute common git dir (``str``, else ``TypeError``)."""
 
+    _require_str(common_dir, "common_dir")
     return "local:" + _hash16(common_dir)
 
 

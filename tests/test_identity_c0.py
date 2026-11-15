@@ -423,10 +423,15 @@ class GitAvailabilityTests(unittest.TestCase):
                 c0.repo_id_for(".")
         self.assertEqual(caught.exception.code, "identity_repo_unavailable")
 
-    def test_non_string_remote_does_not_normalize(self) -> None:
+    def test_public_derivation_functions_require_str(self) -> None:
         for value in (None, 5, b"https://a.example/x", ["a"]):
             with self.subTest(value=value):
-                self.assertIsNone(c0.normalize_remote(value))
+                with self.assertRaisesRegex(TypeError, "must be str"):
+                    c0.normalize_remote(value)
+                with self.assertRaisesRegex(TypeError, "must be str"):
+                    c0.repo_id_from_remote(value, "/base")
+                with self.assertRaisesRegex(TypeError, "must be str"):
+                    c0.repo_id_from_common_dir(value)
 
 
 class EnvelopeTests(unittest.TestCase):
@@ -593,7 +598,7 @@ def schema_patterns(node: object) -> list[str]:
 class WhitespaceAgreementTests(unittest.TestCase):
     """R1-01: the validator and the published schema accept and reject the same whitespace."""
 
-    SPACES = ("﻿", " ", "\u0085", "\x1c", " ", "　", " ", "\t")
+    SPACES = ("\u2003", "\u0085", "\x1c", "\xa0", "\u3000", "\u2028", "\t")
 
     def setUp(self) -> None:
         self.identity = copy.deepcopy(load_vectors()["validos"][0]["objeto"])
@@ -616,8 +621,40 @@ class WhitespaceAgreementTests(unittest.TestCase):
                 self.assertIn("repo_branch", c0.validate(self.with_fields(branch="a" + char + "b")))
                 self.assertIn("session_id", c0.validate(self.with_fields(session="a" + char + "b")))
         # Interior whitespace of a model is allowed (only the ends are constrained).
-        self.assertEqual(c0.validate(self.with_fields(model="a﻿b")), [])
+        self.assertEqual(c0.validate(self.with_fields(model="a\u2003b")), [])
         self.assertEqual(c0.validate(self.with_fields(model="a b")), [])
+
+    def test_whitespace_class_is_exactly_python_s_over_the_whole_unicode_range(self) -> None:
+        import re
+        explicit = re.compile(f"[{c0.WHITESPACE_CLASS}]")
+        builtin = re.compile(r"\s")
+        wrong = [hex(code) for code in range(0x110000)
+                 if (explicit.fullmatch(chr(code)) is None) != (builtin.fullmatch(chr(code)) is None)]
+        self.assertEqual(wrong, [])
+        self.assertEqual([hex(c) for c in range(0x110000) if chr(c).isspace() != (explicit.fullmatch(chr(c)) is not None)], [])
+
+    def test_length_bounds_count_code_points_in_the_validator(self) -> None:
+        # Documented residual (ORIGEN.md): a schema engine counting UTF-16 units would reject these.
+        astral = "\U0001d54f"
+        self.assertEqual(c0.validate(self.with_fields(branch=astral * 200)), [])
+        self.assertEqual(c0.validate(self.with_fields(model=astral * 80)), [])
+        self.assertIn("repo_branch", c0.validate(self.with_fields(branch=astral * 201)))
+        self.assertIn("agent_model", c0.validate(self.with_fields(model=astral * 81)))
+
+    def test_bom_is_accepted_like_the_reference_does(self) -> None:
+        # U+FEFF is not whitespace for Python's `\s`, which is what the C0 reference validator uses.
+        self.assertEqual(c0.validate(self.with_fields(model="\ufeffmodelo")), [])
+        self.assertEqual(c0.validate(self.with_fields(model="modelo\ufeff")), [])
+        self.assertEqual(c0.validate(self.with_fields(branch="a\ufeffb")), [])
+        self.assertEqual(c0.validate(self.with_fields(session="a\ufeffb")), [])
+        try:
+            from jsonschema import Draft202012Validator
+        except ImportError:
+            return
+        validator = Draft202012Validator(schema_document("record-envelope-v1"))
+        for fields in ({"model": "\ufeffmodelo"}, {"branch": "a\ufeffb"}, {"session": "a\ufeffb"}):
+            envelope = c0.build_envelope(self.with_fields(**fields), "fact", digest_json({"k": 1}))
+            self.assertEqual(list(validator.iter_errors(envelope)), [])
 
     def test_schema_has_no_engine_dependent_classes(self) -> None:
         for pattern in schema_patterns(schema_document("record-envelope-v1")):
