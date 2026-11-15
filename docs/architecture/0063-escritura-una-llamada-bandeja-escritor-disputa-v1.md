@@ -135,7 +135,11 @@ pública de hoy (toma el candado; mismos bytes y errores) y
 `_commit_write_plan_locked(store, lock_result, …)`, que recibe el testigo
 del candado, hace la misma revalidación completa (`verify_write_plan`, CAS
 contra `CURRENT`, replay por `transaction_id` de ADR-0024, supersede,
-`subject_ref`) y devuelve `(revision, outcome)`. La envoltura y cualquier
+`subject_ref`) y devuelve un `_LockedCommit`: el resultado final ya
+armado en el replay y en `skip`, o el `(revision, outcome)` de
+`_commit_locked` más lo que el post-proceso necesita. Exige que el testigo
+sea el candado activo del store (si no, falla cerrado con
+`write_lock_required`). La envoltura y cualquier
 llamante futuro que ya tenga el candado comparten el post-proceso tras
 soltarlo (`_post_lock_outcome`, `_maybe_reindex`, `_context_diagnostics`,
 aviso `record_without_indexable_text`), en el orden de hoy. Es la técnica de
