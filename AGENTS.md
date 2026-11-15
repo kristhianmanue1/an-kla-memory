@@ -33,7 +33,9 @@ guide        = docs/ai-agent-guide/00-INDICE.md
 ## Este repositorio
 
 Este es el propio código fuente de an-kla-memory (no un consumidor). El
-operador humano de este repo es su maintainer. Antes de trabajo material,
+operador humano de este repo es su maintainer; sus delegaciones vigentes a
+agentes, con alcance y reservas, están en `docs/gobernanza/INDEX.md`
+(§Decisiones de gobierno vigentes). Antes de trabajo material,
 revisa issues y PRs abiertos: `gh issue list --state open`, `gh pr list
 --state open` — el backlog vive en GitHub, no solo en `docs/`.
 
