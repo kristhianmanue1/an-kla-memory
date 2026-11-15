@@ -15,6 +15,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterator
 
+from .lock_order import WRITE, holding
 from .store_errors import LockBusyError
 
 WRITE_LOCK_DEADLINE_SECONDS = 10.0
@@ -28,6 +29,14 @@ class LockResult:
 
 @contextmanager
 def write_lock(root: Path) -> Iterator[LockResult]:
+    # Se registra para el invariante de orden de candados (ADR-0063 D1), también cuando
+    # se usa sin `MemoryStore.write_lock` (p. ej. `hook_runs`); no cambia su comportamiento.
+    with holding(WRITE), _write_flock(root) as result:
+        yield result
+
+
+@contextmanager
+def _write_flock(root: Path) -> Iterator[LockResult]:
     result = LockResult()
     try:
         import fcntl  # type: ignore

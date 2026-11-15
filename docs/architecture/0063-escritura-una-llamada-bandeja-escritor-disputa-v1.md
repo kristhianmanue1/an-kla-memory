@@ -1,11 +1,10 @@
 # ADR-0063: Escribir en una llamada con bandeja, escritor declarado y disputa
 
-- **Estado:** Aceptada (2026-11-15, decisión del orquestador bajo la
-  delegación del esfuerzo de memoria agéntica). D2, D3 y «Commit con el
-  candado tomado» se aceptaron el 2026-11-14 (mandato 4); D1 el 2026-11-15
-  (mandato 5), con la evidencia del spike de recuperación y la ronda de
-  cierre `proceed`. Ver «Partición del estado».
-- **Implementación:** No iniciada
+- **Estado:** Aceptada por el orquestador (delegación de memoria
+  agéntica): D2, D3 y «Commit con el candado tomado» el 2026-11-14; D1 el
+  2026-11-15, con el spike de recuperación y la ronda de cierre `proceed`.
+  Ver «Partición del estado».
+- **Implementación:** Parcial (fase A en `main`; fase B en curso)
 - **Fecha:** 2026-11-14
 - **Decide sobre:** la orden aditiva de CLI `remember`, que guarda un
   recuerdo en una invocación sin perder ni pisar escrituras concurrentes,
@@ -158,14 +157,12 @@ Orden de trabajo, no dependencia: la extracción se programó después del
 spike de recuperación, por si el cierre del journal (deuda H5) pedía más
 del cuerpo bloqueado. El spike concluyó que sigue siendo neutra: el paso 0
 y el cierre no llaman al cuerpo, y el marcador se escribe antes de
-invocarlo. El cuerpo recibe además el `preflight` ya calculado (`binding`
-y `context`).
+invocarlo. El cuerpo recibe el `preflight` ya calculado (`binding`, `context`).
 
 ### D1 — Bandeja de entrada y vaciado en lote bajo candado, sin demonio
 
-> **Estado de D1: Aceptada** (2026-11-15), con la evidencia del spike. Ver
-> «Partición del estado». Su implementación es la fase B, con mandato
-> propio.
+> **Estado de D1: Aceptada** (2026-11-15), con la evidencia del spike; su
+> implementación es la fase B. Ver «Partición del estado».
 
 **Orden.** `remember (--text <t> | --text-file <ruta|->) [--kind
 fact|decision|state] [--supersedes <id>] [--idempotency-key <k>]`. Único
@@ -261,7 +258,10 @@ Con `write_lock` tomado:
      (`audit_state != "complete"`) no aborta: las entradas ya están en
      `CURRENT` con durabilidad completa, así que se borran y se informa
      el aviso `inbox_audit_incomplete`. Con el cierre de abajo no se
-     observó nunca (spike, configuración F). Después borra de
+     observó nunca (spike, configuración F). Si `repair_durability` lanza
+     siempre (E/S), el paso 0 aborta en cada vaciado y la custodia queda
+     bloqueada (`inbox_pending`/`inbox_inflight`): es deliberado, no se
+     borra sin durabilidad. Después borra de
      `pending/` las entradas del marcador (fsync de `pending/`) y, al
      final, el marcador (fsync de `inflight/`). El orden journal → entradas
      → marcador es obligatorio;
@@ -481,7 +481,8 @@ Cada record que escribe `remember` lleva una clave reservada:
     el campo culpable; nunca se corrige ni se sustituye por un centinela.
 - **Validación.** an-kla implementa su propio validador C0. Los vectores de
   C0 `8fccbcc` se copian al repo con su digest
-  (`a169a7f93728f327f2f47282b339ff8a2b4fc1f0e9cd383a6afe7f6441a92643`).
+  (`a169a7f93728f327f2f47282b339ff8a2b4fc1f0e9cd383a6afe7f6441a92643`), y
+  los 11 de su errata 1 (`vectores-errata-1.json`, `4c0fc1e`).
 - **Alcance aceptado.** El formato del sobre, el validador, la derivación
   y la construcción desde el entorno se implementan sin llamante. Escribir
   el sobre en un record llega con `remember`, que sigue el estado de D1.

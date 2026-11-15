@@ -19,6 +19,7 @@ from .identity_evidence import (
     write_identity_receipt,
 )
 from .custody import CustodyError, check_custody
+from .lock_order import IDENTITY, holding
 from .relocation_receipts import (
     RelocationReceiptError,
     project_relocation_expectation,
@@ -227,6 +228,13 @@ def verify_manifest_link(store: Any, manifest: Mapping[str, Any]) -> None:
 
 @contextmanager
 def identity_lock(store: Any) -> Iterator[None]:
+    # Se registra para el invariante de orden de candados (ADR-0063 D1).
+    with holding(IDENTITY), _identity_flock(store):
+        yield
+
+
+@contextmanager
+def _identity_flock(store: Any) -> Iterator[None]:
     paths = _paths(store)
     _reject_symlink_path(paths["lock"], store.custody_walk_root)
     paths["anchor"].mkdir(parents=True, exist_ok=True)
