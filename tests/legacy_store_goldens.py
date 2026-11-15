@@ -8,6 +8,7 @@ código de la beta.35 (ver `GENERAR.md` en el fixture); aquí sólo se abre.
 from __future__ import annotations
 
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -31,9 +32,17 @@ def sha256_hex(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
-def extract_store(project: Path) -> None:
-    """Extrae `.an-kla/` del tar versionado; rechaza cualquier miembro que se salga de él."""
-    with tarfile.open(STORE_TAR) as tar:
+def extract_store(project: Path, verify: bool = True) -> None:
+    """Extrae `.an-kla/` del tar versionado; rechaza cualquier miembro que se salga de él.
+
+    Con `verify` el sha256 del tar se comprueba contra `goldens.json` antes de abrirlo, y
+    se abre el mismo contenido que se hasheó. Sólo `--write` lo desactiva (el digest aún
+    no existe).
+    """
+    payload = STORE_TAR.read_bytes()
+    if verify and sha256_hex(payload) != json.loads(GOLDENS.read_text(encoding="utf-8"))["store_tar_sha256"]:
+        raise ValueError("store_tar_digest_mismatch")
+    with tarfile.open(fileobj=io.BytesIO(payload)) as tar:
         for member in tar.getmembers():
             parts = Path(member.name).parts
             if not parts or parts[0] != ".an-kla" or ".." in parts or not (member.isfile() or member.isdir()):
@@ -152,14 +161,14 @@ def compute(project: Path, scratch: Path) -> dict[str, str]:
     return out
 
 
-def compute_fresh() -> dict[str, str]:
+def compute_fresh(verify: bool = True) -> dict[str, str]:
     """Extrae el store en un directorio temporal nuevo y calcula los goldens."""
     with tempfile.TemporaryDirectory(prefix="legacy-store-") as tmp:
         base = Path(tmp)
         project = base / "project"
         project.mkdir()
         (base / "scratch").mkdir()
-        extract_store(project)
+        extract_store(project, verify)
         return compute(project, base / "scratch")
 
 
@@ -167,6 +176,6 @@ if __name__ == "__main__":
     if sys.argv[1:] != ["--write"]:
         raise SystemExit("uso: legacy_store_goldens.py --write")
     digest_tar = sha256_hex(STORE_TAR.read_bytes())
-    document = {"store_tar_sha256": digest_tar, "goldens": compute_fresh()}
+    document = {"store_tar_sha256": digest_tar, "goldens": compute_fresh(verify=False)}
     GOLDENS.write_text(json.dumps(document, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"escrito {GOLDENS} ({len(document['goldens'])} goldens)")
