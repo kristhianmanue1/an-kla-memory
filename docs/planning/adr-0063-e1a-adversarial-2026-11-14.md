@@ -119,3 +119,13 @@ Cierre de r3: G1, G5 y G6 cerrados; G2, G3 y G4 parciales. Hallazgos: 2 HIGH,
 
 **Estado:** H1 y H2 corregidos sin ronda que los verifique. Sin `proceed`:
 #199 no se fusiona y se escala al orquestador.
+
+## Partición del estado (mandato 4)
+
+Decisión del orquestador sobre el informe 3, opción (1): D2, D3 y «Commit
+con el candado tomado» pasan a Aceptada; D1 queda en Propuesta, pendiente de
+un spike de recuperación que prototipe los pasos 0 y 7 contra
+`transactions.py` real y absorba H3–H8 y la deuda heredada de `tmp/`. No
+habrá más rondas de papel sobre esos pasos. Condición previa a fusionar: una
+ronda breve por un revisor de otra familia y contexto fresco que responda si
+la partición es limpia.

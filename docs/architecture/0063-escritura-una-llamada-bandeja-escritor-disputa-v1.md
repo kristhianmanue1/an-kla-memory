@@ -1,6 +1,10 @@
 # ADR-0063: Escribir en una llamada con bandeja, escritor declarado y disputa
 
-- **Estado:** Propuesta
+- **Estado:** Aceptada parcialmente (2026-11-14, decisión del orquestador
+  en el mandato 4, bajo la delegación del esfuerzo de memoria agéntica):
+  aceptadas D2, D3 y «Commit con el candado tomado»; **D1 (bandeja y
+  vaciado) sigue en Propuesta**, pendiente del spike de recuperación. Ver
+  «Partición del estado».
 - **Implementación:** No iniciada
 - **Fecha:** 2026-11-14
 - **Decide sobre:** la orden aditiva de CLI `remember`, que guarda un
@@ -84,9 +88,75 @@ Añadir a la CLI `remember`, `inbox drain`, `inbox status` y
 `disputes list`. El MCP no cambia; de las órdenes existentes sólo cambian
 `export` y `relocate commit` cuando hay bandeja (D1, «La bandeja no es
 estado durable»). Tres decisiones; el trato de la bandeja en la custodia es
-parte de D1, no un cuarto cambio.
+parte de D1, no un cuarto cambio. La extracción del commit con el candado
+tomado tiene sección propia porque se acepta aparte.
+
+### Partición del estado
+
+Las rondas r1 a r4 convergieron en todo salvo en la recuperación tras un
+corte durante el vaciado (pasos 0 y 7 de D1), que ya no se puede cerrar en
+el papel. Por eso el estado se parte:
+
+| Parte | Estado | Qué autoriza | Criterios |
+|---|---|---|---|
+| «Commit con el candado tomado» | Aceptada | Extracción neutra en `write_commit.py`, sin llamante nuevo | 10 |
+| D2: formato del sobre, validador C0, derivación de `repo.id`, construcción desde el entorno | Aceptada | Módulo y schema `record-envelope-v1` sin llamante: ninguna orden escribe sobres | 5 y las pruebas de C0 |
+| D3: regla propia/ajena, record de disputa, selector `raw_records` | Aceptada | Nada en `main` todavía: su único camino es `remember` | 4 (al implementarse) |
+| D1: `remember`, bandeja, vaciado, órdenes `inbox`, `disputes list`, cambios de custodia en `export`/`relocate` | **Propuesta, pendiente del spike de recuperación** | Nada | 1–3, 6–9 |
+
+**Regla de cierre.** Mientras D1 no esté aceptada, no entra en `main`
+código de la bandeja, `remember`, `inbox drain`, `inbox status`,
+`disputes list`, los cambios de custodia de D1 ni el camino de D3 (la fase
+B y la C). D1 se acepta sólo con un PR `docs/` que reescriba sus pasos 0 y 7
+con la evidencia del spike (`kill -9` en los cuatro puntos del criterio 3,
+8 clientes concurrentes) y resuelva la «Deuda abierta tras la ronda r4»,
+con ronda adversarial `proceed` y decisión de quien acepta. Ese PR cambia
+esta tabla.
+
+**Independencia.** Lo aceptado no depende de la forma de D1:
+
+- la extracción es un refactor neutro de `commit_write_plan` y se demuestra
+  con sus propias pruebas (criterio 10). Que el vaciado sea un futuro
+  llamante no es requisito;
+- el sobre y el validador de D2 son datos y funciones puras. Sólo el
+  momento en que se escribe el sobre en un record depende de `remember`;
+- la regla de D3 se aplica bajo `write_lock` al planificar el commit del
+  record, sea cual sea el mecanismo que lo lleve allí. Los destinos
+  «al vaciar», `rejected/` y `"resolution": "pending"` son los de D1 y
+  siguen su estado.
+
+Si el spike obliga a cambiar algo de lo aceptado, esa parte vuelve a
+Propuesta en el mismo PR.
+
+### Commit con el candado tomado (aceptado)
+
+`write_commit.py` se parte, sin cambio de comportamiento, en la envoltura
+pública de hoy (toma el candado; mismos bytes y errores) y
+`_commit_write_plan_locked(store, lock_result, …)`, que recibe el testigo
+del candado, hace la misma revalidación completa (`verify_write_plan`, CAS
+contra `CURRENT`, replay por `transaction_id` de ADR-0024, supersede,
+`subject_ref`) y devuelve `(revision, outcome)`. La envoltura y cualquier
+llamante futuro que ya tenga el candado comparten el post-proceso tras
+soltarlo (`_post_lock_outcome`, `_maybe_reindex`, `_context_diagnostics`,
+aviso `record_without_indexable_text`), en el orden de hoy. Es la técnica de
+la extracción de `supersede.py` (#59 Fase 0). El candado no es reentrante
+(`store.py:567-570`): sin esta extracción, nadie que ya tenga `write_lock`
+puede comprometer. La compactación toma `write_lock` (`compaction.py:540`),
+así que planificar bajo él cubre el TOCTOU que ADR-0060 cierra para
+`plan_write` con el gate de lectores. En este camino la defensa contra
+duplicados es `_assign_records` (`duplicate_<stream>_id`), bajo el candado;
+`plan_duplicate_id` (`plan_guard.py`) sólo actúa en `plan_write`.
+
+Orden de trabajo, no dependencia: la extracción se programa después del
+spike de recuperación, porque el cierre del journal (deuda H5) podría
+aconsejar que el cuerpo bloqueado devuelva más información. Si el spike
+muestra que la extracción no puede ser neutra, no se hace y esta sección
+vuelve a Propuesta.
 
 ### D1 — Bandeja de entrada y vaciado en lote bajo candado, sin demonio
+
+> **Estado de D1: Propuesta, pendiente del spike de recuperación.** Ver
+> «Partición del estado». Nada de esta sección se implementa todavía.
 
 **Orden.** `remember (--text <t> | --text-file <ruta|->) [--kind
 fact|decision|state] [--supersedes <id>] [--idempotency-key <k>]`. Único
@@ -223,20 +293,10 @@ rechazos que produjeron. `rejected/` no se borra sola: es evidencia, y se
 declara. La bandeja no tiene cuota total: un `pending/` que crece sin vaciar
 es un límite declarado (cada entrada ≤ 64 KiB de texto).
 
-**Commit con el candado tomado.** `write_commit.py` se parte, sin cambio de
-comportamiento, en la envoltura pública de hoy (toma el candado; mismos
-bytes y errores) y `_commit_write_plan_locked(store, lock_result, …)`, que
-recibe el testigo del candado, hace la misma revalidación completa
-(`verify_write_plan`, CAS contra `CURRENT`, supersede, `subject_ref`) y
-devuelve `(revision, outcome)`. Envoltura y vaciado comparten el
-post-proceso tras soltar el candado (`_post_lock_outcome`, `_maybe_reindex`, `_context_diagnostics`, aviso
-`record_without_indexable_text`). Es la técnica de la extracción de
-`supersede.py` (#59 Fase 0). La compactación toma `write_lock`
-(`compaction.py:540`), así que planificar bajo él cubre el TOCTOU que
-ADR-0060 cierra para `plan_write` con el gate de lectores. Defensa contra
-duplicados en este camino: la deduplicación del paso 4 y `_assign_records`
-(`duplicate_<stream>_id`), ambas bajo el candado; `plan_duplicate_id`
-(`plan_guard.py`) sólo actúa en `plan_write`.
+**Commit desde el vaciado.** El vaciado compromete con
+`_commit_write_plan_locked` (sección «Commit con el candado tomado») y
+comparte su post-proceso. En este camino, a la defensa de `_assign_records`
+se suma la deduplicación del paso 4, también bajo el candado.
 
 **La bandeja no es estado durable del store.**
 
@@ -281,8 +341,9 @@ Cada record que escribe `remember` lleva una clave reservada:
 
 - **Sin segmento v2 ni `revision-v4`.** El sobre es una clave más del
   record; los stores existentes no se migran y se leen igual.
-- **Hora.** `enqueued_at` es el reloj del host en UTC al encolar, declarado
-  `host-clock/v1`: una observación, no un sello. Una entrada puede
+- **Hora.** `enqueued_at` es el reloj del host en UTC en el momento en que
+  `remember` acepta la petición, antes de cualquier cola o commit (con D1,
+  al encolar), declarado `host-clock/v1`: una observación, no un sello. Una entrada puede
   comprometerse después; **la hora de commit (por record o por revisión)
   sigue sin registrarse** y queda para otra decisión. El orden del vaciado
   (nombre de archivo) no es orden causal entre relojes distintos.
@@ -306,8 +367,11 @@ Cada record que escribe `remember` lleva una clave reservada:
     rol fuera del enum, rama inválida) falla con `identity_env_invalid` y
     el campo culpable; nunca se corrige ni se sustituye por un centinela.
 - **Validación.** an-kla implementa su propio validador C0. Los vectores de
-  C0 se copian al repo con su digest en la fase de código, cuando el
-  orquestador confirme la versión congelada.
+  C0 `8fccbcc` se copian al repo con su digest
+  (`a169a7f93728f327f2f47282b339ff8a2b4fc1f0e9cd383a6afe7f6441a92643`).
+- **Alcance aceptado.** El formato del sobre, el validador, la derivación
+  y la construcción desde el entorno se implementan sin llamante. Escribir
+  el sobre en un record llega con `remember`, que sigue el estado de D1.
 - **Protección del sobre.** `plan-write` no cambia: un caller puede escribir
   a mano un `an_kla_envelope`. El sobre es aserción, como C0. Endurecer
   `plan-write` cambia el `policy_fingerprint` y queda como decisión aparte
@@ -315,7 +379,11 @@ Cada record que escribe `remember` lleva una clave reservada:
 
 ### D3 — Sustitución ajena convertida en disputa
 
-`remember --supersedes <id>` se resuelve al vaciar, bajo el candado:
+`remember --supersedes <id>` se resuelve bajo `write_lock`, al planificar el
+commit del record (con D1, en el paso 3 del vaciado). Lo que esta sección
+acepta es la regla. Los destinos que nombra (`rejected/`, «queda en cola»)
+son los de D1 y siguen su estado. El código de D3 no entra en `main` antes
+que D1 («Partición del estado»).
 
 - **Target.** Se busca el id en los tres streams del snapshot. Ausente o no
   vigente → la entrada va a `rejected/` con `invalid_supersede_target`.
@@ -457,13 +525,28 @@ abierto. Respecto de #197 no cierra G1 (firma), G5 (CAS por objeto) ni G6
 9. **Orden de candados.** Prueba negativa: ningún camino pide el candado de
    bandeja teniendo `identity_lock` o `write_lock` (instrumentación del
    orden en test).
+10. **Extracción neutra.** Antes de tocar `write_commit.py`, en un commit
+    propio, goldens diferenciales generados con el código de `main` (add,
+    lote, supersede válido y a target ausente, `skip`, CAS sin
+    `transaction_id`, replay comprometido y no comprometido, `tool_observed`
+    sin recibo, record sin texto indexable, `release_error` al soltar el
+    candado), con resultado y árbol del store. Después de la extracción
+    coinciden byte a byte. Las pruebas existentes de `write_commit` no se
+    modifican. `_commit_write_plan_locked` llamado con el candado tomado no
+    da `write_lock_busy` y produce el mismo resultado que la envoltura.
+
+Los criterios 1–4 y 6–9 se exigen al implementar D1 y D3, y pueden
+cambiar con el PR que acepte D1. En la fase A sólo se exigen el 5
+(goldens, sin bandeja), el 10 y las pruebas del validador C0.
 
 ## Deuda abierta tras la ronda r4
 
 La ronda r4 (acotada al delta de r3) dejó estos hallazgos MEDIUM y LOW sin
-corregir en el texto. Son obligatorios para la fase B (bandeja y
-`remember`) y no afectan a la fase A (validador C0, sobre, goldens y
-extracción de `_commit_write_plan_locked`):
+corregir en el texto. Todos son de D1. Entran en el spike de recuperación y
+D1 no se acepta sin resolverlos con su evidencia. No afectan a lo aceptado
+(validador C0, sobre, goldens y extracción de `_commit_write_plan_locked`).
+H5 condiciona sólo el orden de trabajo de la extracción
+(«Commit con el candado tomado»):
 
 | ID r4 | Sev | Deuda | Corrección prescrita por el revisor |
 |---|---|---|---|
@@ -528,6 +611,7 @@ extracción de `_commit_write_plan_locked`):
 - `tests/test_identity_c0.py`: vectores de C0 `8fccbcc` y comprobaciones
   de derivación; dos worktrees del mismo repo dan el mismo `repo.id`;
   control negativo.
+- `tests/test_write_commit_locked_extraction.py`: criterio 10.
 - `tests/test_inbox.py`: atomicidad, orden, `queued`, deduplicación,
   `remember_id_collision`, `rejected/`, `inbox status`.
 - `tests/test_remember_concurrency.py`: criterio 2.
