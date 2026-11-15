@@ -33,8 +33,11 @@ from .write_policy import (
 )
 
 DISPUTES_LIST_SCHEMA = "an-kla/disputes-list-v1"
-# ``--kind`` to the stream that holds it; ``events`` has no kind, so a target
-# there never matches one (``remember_kind_mismatch``).
+# ``--kind`` to the stream that holds it (ADR-0063 D1 "Orden": ``fact|decision|state``;
+# not the ``fact|event|episode`` of ``refutations``).  ``kind`` arrives validated from
+# the enqueue; a value outside D1 is never a "kind invalid" here, it matches no stream.
+# ``events`` has no kind (``remember`` never writes it), so a target there never
+# matches one (``remember_kind_mismatch``).
 KIND_STREAMS = {"fact": "facts", "decision": "facts", "state": "episodes"}
 _BATCH_SCHEMA = "an-kla/write-proposal-v2"
 _PROPOSAL_SCHEMA = "an-kla/write-proposal-v1"
@@ -83,7 +86,10 @@ class RememberOp:
 
 
 def _writer_key(envelope: Mapping[str, Any] | None) -> tuple[str, str] | None:
-    """``(repo.id, agent.name)`` of an envelope, or ``None`` if it has no usable writer."""
+    """``(repo.id, agent.name)`` of an envelope, or ``None`` without a usable writer.
+
+    Both must be non-empty strings: two malformed envelopes never compare equal.
+    """
 
     if not isinstance(envelope, Mapping):
         return None
@@ -94,7 +100,7 @@ def _writer_key(envelope: Mapping[str, Any] | None) -> tuple[str, str] | None:
     if not isinstance(repo, Mapping) or not isinstance(agent, Mapping):
         return None
     repo_id, name = repo.get("id"), agent.get("name")
-    if not isinstance(repo_id, str) or not isinstance(name, str):
+    if not (isinstance(repo_id, str) and repo_id and isinstance(name, str) and name):
         return None
     return repo_id, name
 
@@ -141,18 +147,21 @@ def resolve_supersede_target(
     if len(found) > 1:
         raise WritePolicyError("remember_target_ambiguous", ",".join(found))
     stream = found[0]
-    index = next(
-        i for i, row in enumerate(snapshot.raw_records[stream])
-        if str(row.get("id", "")) == target_id
+    raw = next(
+        row for row in snapshot.raw_records[stream] if str(row.get("id", "")) == target_id
     )
-    # Vigency is read from the overlaid rows; the digest, from the raw ones.
-    if not is_active(snapshot.records[stream][index]):
+    # Vigency is read from the overlaid row found by id (as ``supersede.py``); the
+    # digest, from the raw one.  No positional pairing between the two.
+    projected = next(
+        (row for row in snapshot.records[stream] if str(row.get("id", "")) == target_id),
+        None,
+    )
+    if projected is None or not is_active(projected):
         raise WritePolicyError("invalid_supersede_target", "target_not_vigente")
     if KIND_STREAMS.get(kind) != stream:
         raise WritePolicyError(
             "remember_kind_mismatch", "kind_explicit" if kind_explicit else "kind_derived"
         )
-    raw = snapshot.raw_records[stream][index]
     return TargetResolution(
         stream=stream,
         target_id=target_id,
@@ -179,19 +188,21 @@ def build_remember_op(
     target.  Own target: ``supersede``.  Foreign target: ``add``, which writes
     neither ``supersedes_map`` nor ``refutations_map``.  Without target the
     stream is the one of ``kind``.
+
+    ``target`` must come from :func:`resolve_supersede_target`, which already
+    checked ``kind`` against the target's stream: this does not repeat it.  An
+    invalid envelope raises ``WritePolicyError("invalid_record_envelope", <reasons>)``.
     """
 
     problems = validate_envelope(envelope)
     if problems:
-        raise ValueError("invalid_record_envelope")
+        raise WritePolicyError("invalid_record_envelope", ",".join(problems))
     if target is None:
         stream = KIND_STREAMS.get(kind)
         if stream is None:
             raise ValueError("invalid_remember_kind")
     else:
         stream = target.stream
-        if KIND_STREAMS.get(kind) != stream:
-            raise WritePolicyError("remember_kind_mismatch", "kind_derived")
     record: dict[str, Any] = {
         "id": record_id(stream, envelope["idempotency_key"]),
         "text": text,
@@ -225,11 +236,33 @@ def resolve_remember(
     return build_remember_op(envelope, text, kind, target)
 
 
+def duplicate_supersede_targets(ops: Sequence[RememberOp]) -> list[int]:
+    """Positions of the ops whose supersede target an earlier op already took.
+
+    For the drain's step 4: with ``ops`` oldest first, keep the oldest per target
+    and send the listed ones to ``rejected/`` with ``supersedes:duplicate_target``.
+    Disputes (``add``) never collide.  Pure, O(n).
+    """
+
+    seen: set[str] = set()
+    repeated: list[int] = []
+    for position, op in enumerate(ops):
+        if op.supersedes is None:
+            continue
+        if op.supersedes in seen:
+            repeated.append(position)
+        else:
+            seen.add(op.supersedes)
+    return repeated
+
+
 def build_remember_proposal(base_revision: str, ops: Sequence[RememberOp]) -> dict[str, Any]:
     """``write-proposal-v1`` for one op, ``write-proposal-v2`` for a homogeneous batch.
 
     The batch is homogeneous in stream and operation (ADR-0054), as the drain
-    builds it.  ``summary`` is the ceiling of ``model_derived``.
+    builds it.  ``summary`` is the ceiling of ``model_derived``.  Two ops with the same
+    supersede target raise ``WritePolicyError("supersedes:duplicate_target")``: defense
+    in depth, the drain isolates them first with :func:`duplicate_supersede_targets`.
     """
 
     if not ops:
@@ -237,6 +270,8 @@ def build_remember_proposal(base_revision: str, ops: Sequence[RememberOp]) -> di
     first = ops[0]
     if any((op.stream, op.operation) != (first.stream, first.operation) for op in ops):
         raise ValueError("remember_batch_not_homogeneous")
+    if duplicate_supersede_targets(ops):
+        raise WritePolicyError("supersedes:duplicate_target")
     proposal: dict[str, Any] = {
         "schema": _PROPOSAL_SCHEMA if len(ops) == 1 else _BATCH_SCHEMA,
         "base_revision": base_revision,
@@ -349,6 +384,7 @@ __all__ = [
     "build_remember_op",
     "build_remember_plan",
     "build_remember_proposal",
+    "duplicate_supersede_targets",
     "is_own",
     "list_disputes",
     "record_id",

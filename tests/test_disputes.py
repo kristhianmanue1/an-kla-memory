@@ -503,5 +503,165 @@ class DisputesListCliTests(DisputeBase):
         self.assertNotIn("Traceback", completed.stderr)
 
 
+class Round1FixesTests(DisputeBase):
+    """Arreglos de la ronda 1 (R1-01 a R1-11)."""
+
+    def test_r1_01_empty_target_is_a_usage_error_without_json(self) -> None:
+        completed = subprocess.run(
+            [sys.executable, "-m", "an_kla", "--no-update-check",
+             "--project-root", str(self.root), "disputes", "list", "--target", ""],
+            cwd=ROOT, capture_output=True, text=True,
+        )
+        self.assertNotEqual(completed.returncode, 0)
+        self.assertEqual(completed.stdout, "")
+        self.assertNotIn("Traceback", completed.stderr)
+        self.assertIn("invalid_disputes_target", completed.stderr)
+
+    def test_r1_02_batch_of_own_supersedes_commits_with_the_right_map(self) -> None:
+        a = writer("agente-a")
+        t1, t2 = self.remember(a, "uno"), self.remember(a, "dos")
+        snapshot = self.store.snapshot()
+        ops = [
+            disputes.resolve_remember(
+                snapshot, envelope=envelope(a, f"nuevo {n}", "fact", t.record["id"]),
+                text=f"nuevo {n}", kind="fact", kind_explicit=False, target_id=t.record["id"],
+            )
+            for n, t in (("uno", t1), ("dos", t2))
+        ]
+        proposal = disputes.build_remember_proposal(self.store.read_current(), ops)
+        self.assertEqual(proposal["schema"], "an-kla/write-proposal-v2")
+        self.assertEqual(
+            proposal["supersedes"],
+            {ops[0].record["id"]: t1.record["id"], ops[1].record["id"]: t2.record["id"]},
+        )
+        self.commit(proposal)
+        self.assertEqual(self.row(t1.record["id"])["status"], "sustituida")
+        self.assertEqual(self.row(t2.record["id"])["status"], "sustituida")
+        self.assertTrue(is_active(self.row(ops[0].record["id"])))
+
+    def test_r1_03_vigency_is_looked_up_by_id_not_by_position(self) -> None:
+        self.legacy_add("f-1", text="uno")
+        self.legacy_add("f-2", text="dos")
+        real = self.store.snapshot()
+        ids = [r["id"] for r in real.raw_records["facts"]]
+        self.assertEqual(ids, ["f-1", "f-2"])
+        swapped = (
+            {**real.records["facts"][1], "status": "sustituida"},
+            real.records["facts"][0],
+        )
+        fake = Snapshot(
+            real.revision_id, real.manifest, real.checkpoint,
+            {**real.records, "facts": swapped}, real.raw_records,
+        )
+        resolution = disputes.resolve_supersede_target(
+            fake, "f-1", kind="fact", kind_explicit=False, envelope=envelope(writer("agente-a"), "x"),
+        )
+        self.assertEqual(resolution.target_id, "f-1")
+        with self.assertRaises(WritePolicyError) as caught:
+            disputes.resolve_supersede_target(
+                fake, "f-2", kind="fact", kind_explicit=False,
+                envelope=envelope(writer("agente-a"), "x"),
+            )
+        self.assertEqual(caught.exception.detail, "target_not_vigente")
+
+    def test_r1_04_invalid_envelope_is_a_policy_error_with_reasons(self) -> None:
+        bad = envelope(writer("agente-a"), "x")
+        bad["time_source"] = "otro"
+        with self.assertRaises(WritePolicyError) as caught:
+            disputes.build_remember_op(bad, "x", "fact")
+        self.assertEqual(caught.exception.code, "invalid_record_envelope")
+        self.assertIn("time_source", caught.exception.detail)
+
+    def test_r1_05_builder_trusts_the_resolution_and_does_not_recheck_kind(self) -> None:
+        resolution = disputes.TargetResolution("episodes", "ep-x", False, "sha256:" + "a" * 64)
+        op = disputes.build_remember_op(envelope(writer("agente-a"), "x", "fact"), "x", "fact", resolution)
+        self.assertEqual(op.stream, "episodes")
+
+    def test_r1_06_duplicate_targets_are_listed_and_the_builder_refuses_them(self) -> None:
+        a = writer("agente-a")
+        t1, t2 = self.remember(a, "uno"), self.remember(a, "dos")
+        snapshot = self.store.snapshot()
+
+        def op(text: str, target) -> disputes.RememberOp:
+            return disputes.resolve_remember(
+                snapshot, envelope=envelope(a, text, "fact", target.record["id"]),
+                text=text, kind="fact", kind_explicit=False, target_id=target.record["id"],
+            )
+
+        ops = [op("a", t1), op("b", t2), op("c", t1), op("d", t1)]
+        self.assertEqual(disputes.duplicate_supersede_targets(ops), [2, 3])
+        self.assertEqual(disputes.duplicate_supersede_targets([ops[0], ops[1]]), [])
+        with self.assertRaises(WritePolicyError) as caught:
+            disputes.build_remember_proposal(self.store.read_current(), [ops[0], ops[2]])
+        self.assertEqual(caught.exception.code, "supersedes:duplicate_target")
+        kept = [o for i, o in enumerate(ops) if i not in (2, 3)]
+        self.commit(disputes.build_remember_proposal(self.store.read_current(), kept))
+
+    def test_r1_06_disputes_to_the_same_target_do_not_collide(self) -> None:
+        a, b = writer("agente-a"), writer("agente-b")
+        target = self.remember(b, "uno")
+        snapshot = self.store.snapshot()
+        ops = [
+            disputes.resolve_remember(
+                snapshot, envelope=envelope(a, t, "fact", target.record["id"]),
+                text=t, kind="fact", kind_explicit=False, target_id=target.record["id"],
+            )
+            for t in ("no uno", "no uno, otra vez")
+        ]
+        self.assertEqual(disputes.duplicate_supersede_targets(ops), [])
+        self.commit(disputes.build_remember_proposal(self.store.read_current(), ops))
+
+    def test_r1_07_dispute_in_episodes_is_listed_with_its_stream(self) -> None:
+        a, b = writer("agente-a"), writer("agente-b")
+        state = self.remember(b, "estado de B", kind="state")
+        op = self.remember(a, "no, es otro", kind="state", target=state.record["id"], kind_explicit=True)
+        self.assertEqual(op.stream, "episodes")
+        listed = disputes.list_disputes(self.store.snapshot(), target=state.record["id"])["disputes"]
+        (item,) = listed
+        self.assertEqual(item["stream"], "episodes")
+        self.assertEqual(item["target"]["stream"], "episodes")
+        self.assertIs(item["target"]["active"], True)
+        self.assertEqual(
+            item["target"]["record_sha256"], digest_json(self.raw(state.record["id"], "episodes"))
+        )
+
+    def test_r1_08_empty_identity_strings_never_make_a_record_own(self) -> None:
+        hollow = {"writer": {"repo": {"id": ""}, "agent": {"name": ""}}}
+        self.assertFalse(disputes.is_own({"an_kla_envelope": hollow}, hollow))
+        self.legacy_add("f-hueco")
+        base = self.store.read_current()
+        self.commit({
+            "schema": "an-kla/write-proposal-v1", "base_revision": base, "stream": "facts",
+            "operation": "add", "requested_representation": "summary",
+            "record": {"id": "f-hueco-2", "text": "x", "an_kla_envelope": hollow},
+            "lineage": {"derived_from_retrieval": False, "refs": []},
+        })
+        fake_current = {"writer": {"repo": {"id": ""}, "agent": {"name": ""}}}
+        resolution = disputes.resolve_supersede_target(
+            self.store.snapshot(), "f-hueco-2", kind="fact", kind_explicit=False, envelope=fake_current,
+        )
+        self.assertFalse(resolution.own)
+
+    def test_r1_09_capabilities_use_the_refute_selector_name(self) -> None:
+        caps = json.loads(subprocess.run(
+            [sys.executable, "-m", "an_kla", "--no-update-check", "--project-root", str(self.root),
+             "capabilities"], cwd=ROOT, capture_output=True, text=True).stdout)
+        self.assertEqual(caps["storage"]["disputes"]["target_selector"], "physical_record_sha256")
+        self.assertEqual(
+            caps["storage"]["disputes"]["target_selector"],
+            caps["storage"]["refute"]["target_selector"],
+        )
+
+    def test_r1_11_schema_describes_target_active(self) -> None:
+        from an_kla.schemas import schema_document
+
+        description = schema_document("disputes-list-v1")["description"]
+        self.assertIn("no longer vigent", description)
+        mirror = (ROOT / "docs" / "schemas" / "disputes-list-v1.schema.json").read_bytes()
+        from an_kla.schemas import schema_bytes
+
+        self.assertEqual(schema_bytes("disputes-list-v1"), mirror)
+
+
 if __name__ == "__main__":
     unittest.main()
