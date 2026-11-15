@@ -101,3 +101,21 @@ Dictamen íntegro fuera del repo:
 **Estado tras r3:** correcciones absorbidas en el texto, **sin ronda que
 las verifique**. El tope del mandato (tres rondas) se alcanzó sin `proceed`:
 se escala al orquestador. El ADR sigue en `Propuesta` y su PR sin fusionar.
+
+## Ronda r4 — `fix-and-retry` (acotada al delta `3ebf1d4..4e6f9da`; última)
+
+Autorizada por el orquestador (mandato 3, opción a). Revisor: DeepSeek por
+OpenCode, contexto fresco, distinto del de r3. Dictamen íntegro fuera del
+repo: `/var/tmp/orquestador-memoria/capitanes/ankla/ronda-adr0063/dictamen-r4-deepseek.md`.
+
+Cierre de r3: G1, G5 y G6 cerrados; G2, G3 y G4 parciales. Hallazgos: 2 HIGH,
+4 MED, 2 LOW, más una observación heredada.
+
+| ID | Sev | Hallazgo | Disposición |
+|---|---|---|---|
+| H1 | HIGH | El aislamiento «contra la misma base» es imposible: el primer commit mueve `CURRENT` | Corregido: bisección en memoria contra la misma base; los supervivientes se replanifican contra el `CURRENT` releído; el uno a uno, sólo como último recurso y replanificado |
+| H2 | HIGH→MED | Coste del aislamiento no acotado | Corregido: ≤ 8 niveles de evaluación pura por entrada mala y un solo commit; la cifra de las Consecuencias declara qué no incluye |
+| H3–H8, heredada | MED/LOW | Ver «Deuda abierta tras la ronda r4» en el ADR | Anotados como deuda obligatoria para la fase B, según el mandato 3 |
+
+**Estado:** H1 y H2 corregidos sin ronda que los verifique. Sin `proceed`:
+#199 no se fusiona y se escala al orquestador.

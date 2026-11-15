@@ -185,11 +185,24 @@ nuevo de `write_lock`; la constante de 10 s no cambia). Si está ocupado →
    - `committed: true` → borra las entradas del lote de `pending/`;
    - `decision: skip` o error terminal de política del lote ya
      prevalidado (`invalid_*`, `plan_*`, `invalid_supersede_target`,
-     `duplicate_<stream>_id`) → **sin soltar `write_lock`** y contra la misma
-     base, compromete las entradas del lote una a una; la que falle sola va a
-     `rejected/` con su código. No se suelta el candado durante este
-     aislamiento, para que un escritor concurrente no convierta el intento en
-     `write_plan_base_changed`;
+     `duplicate_<stream>_id`) → **aislamiento sin soltar `write_lock`**, en
+     dos tiempos:
+     1. **bisección en memoria**: contra la misma base, con las funciones
+        puras (`evaluate_write`, construcción del plan) y la validación de
+        lote de `write_batch` sobre sub-lotes, parte el lote por mitades
+        hasta aislar las entradas que hacen fallar a su sub-lote (como mucho
+        ⌈log₂ 250⌉ = 8 niveles por entrada mala; nada se escribe). Esas
+        entradas van a `rejected/` con su código;
+     2. los supervivientes se comprometen en **un** lote nuevo: se relee
+        `CURRENT` bajo el candado, se replanifica con esa `base_revision` y
+        se recalcula su `transaction_id`. Como nadie más puede mover
+        `CURRENT` mientras el candado esté tomado, `write_plan_base_changed`
+        no puede ocurrir aquí; si ocurre, es un defecto y aborta.
+     Sólo si ese lote vuelve a fallar con un error que la bisección pura no
+     predijo (`duplicate_<stream>_id`, que nace en `_assign_records`), se
+     compromete entrada por entrada, releyendo `CURRENT` y replanificando
+     cada commit, y cada entrada comprometida se borra de `pending/` en el
+     acto. Este último recurso cuesta un commit por entrada y se reporta;
    - `committed: false` sin decisión `skip`, `committed: null` /
      `outcome_unknown`, o un error de infraestructura o concurrencia (E/S,
      `write_lock_busy`, `store_root_divergence`, `store_identity_changed`,
@@ -445,6 +458,23 @@ abierto. Respecto de #197 no cierra G1 (firma), G5 (CAS por objeto) ni G6
    bandeja teniendo `identity_lock` o `write_lock` (instrumentación del
    orden en test).
 
+## Deuda abierta tras la ronda r4
+
+La ronda r4 (acotada al delta de r3) dejó estos hallazgos MEDIUM y LOW sin
+corregir en el texto. Son obligatorios para la fase B (bandeja y
+`remember`) y no afectan a la fase A (validador C0, sobre, goldens y
+extracción de `_commit_write_plan_locked`):
+
+| ID r4 | Sev | Deuda | Corrección prescrita por el revisor |
+|---|---|---|---|
+| H3 | MED | Ningún criterio ejerce el aislamiento del paso 7 | Añadir al criterio 8 dos entradas con `--supersedes` sobre el mismo target (`supersedes:duplicate_target`, `write_batch.py:88-93`): una se compromete, la otra va a `rejected/` |
+| H4 | MED | El paso 0 trata `committed: None` de `inspect_transaction` como «no llegó» | Tres ramas: `True` cierra; `False` borra sólo el marcador; `None` conserva el marcador y aborta con `transaction_*` |
+| H5 | MED | La ruta de cierre del journal no existe en `_commit_locked` (`transactions.py:505-508` retorna sin escribir) | Cerrar con `stage="committed"` y los campos de `transactions.py:712-725` siguiendo `_reconcile_committed_journal` (`compaction.py:424-466`), sin fabricar receipts; si el corte fue entre `_replace_current` y `write_receipt`, el estado honesto es `durability_incomplete` |
+| H6 | MED | `remember-result-v1` no mapea todos los desenlaces | `committed`; `rejected` con código y entrada; `queued`; `queued` + `drain_error`; `queued` + `outcome: "unknown"`; reintento idempotente por el paso 4 |
+| H7 | LOW | `os.replace` puede sobrescribir un nombre plantado o repetido | `lstat` del destino antes de publicar; si existe, regenerar el sufijo o fallar sin publicar; EXDEV/ENOSPC dejan el temporal en `tmp/` y fallan el encolado |
+| H8 | LOW | `inflight/` no viaja con la custodia y nadie lo exige vacío | Exigir `inflight/` vacío junto a `pending/` en `export`, sellado y `relocate commit`; borrar el marcador en la rama de éxito del paso 7; `inbox status` informa `inflight` |
+| — | heredada | Nada recoge los temporales de `tmp/` de un proceso muerto antes de publicar | Recolector de `tmp/` en el vaciado, con antigüedad mínima; el criterio 3 sólo sostiene «0 perdidos» sobre entradas publicadas |
+
 ## Por qué no
 
 - **Reintento sobre el CAS actual.** Mantiene la planificación fuera del
@@ -485,7 +515,10 @@ abierto. Respecto de #197 no cierra G1 (firma), G5 (CAS por objeto) ni G6
   código toca `export_restore.py`, `relocate.py`, `relocate_back.py`,
   sellado y `write_commit.py` (extracción sin cambio de comportamiento)
   además de los módulos nuevos; el vaciado retiene el candado de los demás
-  durante su lote (≤ 0,2 s medidos con 250 entradas sobre 20.000 records).
+  durante su lote (≤ 0,2 s medidos con 250 entradas sobre 20.000 records,
+  sin la prevalidación del paso 5 ni el aislamiento del paso 7; ambos deben
+  medirse en la implementación, y el último recurso uno a uno queda fuera de
+  esa cifra).
 - Neutras: la receta del bloque gestionado no cambia en E1.a (llega en
   E1.c, con el MCP escribible); la anotación de disputas en la recuperación
   llega en E1.b.
