@@ -46,6 +46,7 @@ from an_kla.export_io import (
 # sellado NO redefine qué exporta el store ni modifica nada del camino v1).
 from an_kla.export_restore import _allowed, _export_anchor, _files, _read_anchor
 from an_kla.identity import identity_lock
+from an_kla.inbox import custody_guard
 from an_kla.sealed.cek import generate_cek
 from an_kla.sealed.kdf import BUNDLE_ID_RAW_LENGTH, derive_subkeys
 
@@ -551,7 +552,11 @@ def create_sealed_bundle(store: Any, bundle: str | Path, runner: Any) -> dict:
         raise ExportIOError("export_destination_exists")
     if target == anchor or anchor in target.parents:
         raise ExportIOError("export_destination_inside_source")
+    with custody_guard(store):  # antes de la CEK, de identity_lock y de cualquier archivo
+        return _create_sealed(store, target, anchor, runner)
 
+
+def _create_sealed(store: Any, target: Path, anchor: Path, runner: Any) -> dict:
     cek = generate_cek()
     subkeys = derive_subkeys(cek)
     with identity_lock(store):

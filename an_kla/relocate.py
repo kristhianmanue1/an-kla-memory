@@ -27,6 +27,7 @@ from .custody import (
 from .export_io import ExportIOError, normalize_and_sync_tree, rename_noreplace, safe_read
 from .export_restore import _allowed, _files
 from .identity import identity_lock, mutation_preflight, read_binding
+from .inbox import custody_guard
 from .reader_gate import ReaderGateError, exclusive_reader_gate
 from .store_locks import WRITE_LOCK_DEADLINE_SECONDS as _GATE_TIMEOUT
 from .relocation_receipts import _read_regular, write_relocation_receipt
@@ -49,7 +50,7 @@ _KEPT = frozenset({
     ".identity.lock", "store-root.txt", "store-root.intent", "host-hooks.json",
     "memory/.write.lock", "memory/.reader-gate",
 })
-_KEPT_PREFIXES = ("context/", "relocations/")
+_KEPT_PREFIXES = ("context/", "relocations/", "memory/inbox/")  # la bandeja no es custodia (ADR-0063 D1)
 _TXID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
 _CORE_KEYS = frozenset({
     "direction", "transaction_id", "project_root", "source_store_root",
@@ -467,6 +468,13 @@ def commit_relocation(store: Any, plan: Any, expected_current: str) -> dict[str,
     replayed = _replay(project_root, plan)
     if replayed is not None:
         return replayed
+    # Un solo punto para ida y `--back`: antes de identity_lock, del staging y del journal.
+    with custody_guard(store):
+        return _commit_guarded(store, plan, core)
+
+
+def _commit_guarded(store: Any, plan: Any, core: Mapping[str, Any]) -> dict[str, Any]:
+    project_root = Path(store.project_root)
     if core["direction"] == BACK_DIRECTION:
         from .relocate_back import commit_back
 

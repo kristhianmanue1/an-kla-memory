@@ -13,6 +13,7 @@ from typing import Any
 
 from .canonical import bare_digest, canonical_json, digest_bytes, digest_json
 from .identity import identity_lock
+from .inbox import custody_guard
 from .custody import CustodyError, check_custody
 from .export_io import (
     ExportIOError, normalize_and_sync_tree, rename_noreplace, safe_read,
@@ -79,6 +80,9 @@ def _read_anchor(store: Any, source: Path) -> bytes:
     return safe_read(anchor.parent, source.relative_to(anchor.parent).as_posix())
 
 
+INBOX_PREFIX = "anchor/memory/inbox/"
+
+
 def _files(anchor: Path) -> list[tuple[str, Path]]:
     rows: list[tuple[str, Path]] = []
     for path in sorted(anchor.rglob("*")):
@@ -90,6 +94,8 @@ def _files(anchor: Path) -> list[tuple[str, Path]]:
         stat = path.lstat()
         if not path.is_file() or stat.st_nlink != 1:
             raise ExportError("export_unsafe_file")
+        if relative.startswith(INBOX_PREFIX):
+            continue  # la bandeja no es estado durable (ADR-0063 D1); los enlaces ya se rechazaron arriba
         if _allowed(relative):
             rows.append((relative, path))
         elif relative in {"anchor/.identity.lock", "anchor/memory/.write.lock", "anchor/memory/.reader-gate", "anchor/attest.key", "anchor/host-hooks.json", "anchor/store-root.txt"} or relative.startswith(("anchor/context/", "anchor/relocations/", "anchor/memory/indexes/", "anchor/memory/leases/", "anchor/memory/quarantine/", "anchor/memory/watermarks/")):
@@ -118,6 +124,11 @@ def create_export(store: Any, bundle: str | Path) -> dict[str, Any]:
         raise ExportError("export_destination_exists")
     if target == anchor or anchor in target.parents:
         raise ExportError("export_destination_inside_source")
+    with custody_guard(store):  # antes del mkdir del bundle y de identity_lock
+        return _create_bundle(store, target, anchor)
+
+
+def _create_bundle(store: Any, target: Path, anchor: Path) -> dict[str, Any]:
     target.mkdir(mode=0o700, parents=False)
     try:
         entries_dir = target / "entries"
