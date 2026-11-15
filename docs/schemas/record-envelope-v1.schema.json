@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:record-envelope:v1",
+  "title": "AN-KLA Record Envelope v1",
+  "description": "Reserved key `an_kla_envelope` of a record (ADR-0063 D2): writer identity C0 `memoria/identidad/v1`, enqueue time and idempotency key. Structural check only: the C0 validator is authoritative for what a schema cannot express (`session.id` prefix equal to `agent.cli`, calendar validity of `enqueued_at`). Whitespace is spelled out as an explicit class equal to Python `\\s` on `str` (what the C0 reference validator uses), never `\\s` itself, and patterns end with `(?![\\s\\S])` instead of `$` (Python engines let `$` match before a final newline): character classes and anchors agree on every JSON Schema engine. Length bounds do not: `maxLength` of `model` (80) and `repo.branch` (200), and the total `maxLength` of `session.id` (233; the 200-character bound of the identifier itself is not expressed), count code points in conforming engines and UTF-16 units in some, so an engine of the second kind rejects values with astral characters that the validator accepts. The envelope is an assertion by the emitter, stored as given.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "writer", "enqueued_at", "time_source", "idempotency_key", "kind"],
+  "properties": {
+    "schema": {"const": "an-kla/record-envelope-v1"},
+    "writer": {"$ref": "#/$defs/identity"},
+    "enqueued_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z(?![\\s\\S])"},
+    "time_source": {"const": "host-clock/v1"},
+    "idempotency_key": {"$ref": "#/$defs/digest"},
+    "kind": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,31}(?![\\s\\S])"}
+  },
+  "$defs": {
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"},
+    "ident": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,31}(?![\\s\\S])"},
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schema", "repo", "agent", "session"],
+      "properties": {
+        "schema": {"const": "memoria/identidad/v1"},
+        "repo": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id"],
+          "properties": {
+            "id": {"$ref": "#/$defs/repo_id"},
+            "branch": {"$ref": "#/$defs/branch"}
+          }
+        },
+        "agent": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "cli", "model", "role"],
+          "properties": {
+            "name": {"allOf": [{"$ref": "#/$defs/ident"}, {"not": {"enum": ["desconocido", "sin-sesion"]}}]},
+            "cli": {"$ref": "#/$defs/ident"},
+            "model": {"type": "string", "minLength": 1, "maxLength": 80, "pattern": "^(?:[^\\t-\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]|[^\\t-\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000][\\s\\S]*[^\\t-\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000])(?![\\s\\S])"},
+            "role": {"enum": ["operador", "orquestador", "capitan", "ejecutor", "revisor", "desconocido"]}
+          }
+        },
+        "session": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id"],
+          "properties": {
+            "id": {"type": "string", "maxLength": 233, "pattern": "^[a-z][a-z0-9_-]{0,31}:[^\\t-\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000]+(?![\\s\\S])"}
+          }
+        }
+      }
+    },
+    "repo_id": {
+      "anyOf": [
+        {"type": "string", "pattern": "^(?:local|remoto):[0-9a-f]{16}(?![\\s\\S])"},
+        {
+          "type": "string",
+          "pattern": "^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)*[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?::(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))?/(?:[a-z0-9._~-]+/)*[a-z0-9._~-]+(?![\\s\\S])",
+          "allOf": [
+            {"not": {"pattern": "(?:^|/)\\.{1,2}(?:/|(?![\\s\\S]))"}},
+            {"not": {"pattern": "\\.git(?![\\s\\S])"}}
+          ]
+        }
+      ]
+    },
+    "branch": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200,
+      "pattern": "^[^\\t-\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000~^:?*\\[\\\\]+(?![\\s\\S])",
+      "allOf": [
+        {"not": {"pattern": "^(?:HEAD(?![\\s\\S])|[-/.]|refs/)"}},
+        {"not": {"pattern": "(?:[/.]|\\.lock)(?![\\s\\S])"}},
+        {"not": {"pattern": "\\.\\.|//|@\\{|/\\."}}
+      ]
+    }
+  }
+}

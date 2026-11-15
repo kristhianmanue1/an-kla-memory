@@ -65,6 +65,7 @@ publica:
   - { tipo: contrato, id: an-kla/transaction-attempt-v1 }
   - { tipo: contrato, id: an-kla/durability-receipt-v1 }
   - { tipo: contrato, id: an-kla/attest-receipt-v1 }
+  - { tipo: contrato, id: an-kla/record-envelope-v1 }
   # Continuidad
   - { tipo: contrato, id: an-kla/working-state-v2 }
   - { tipo: contrato, id: an-kla/checkpoint-v2 }
