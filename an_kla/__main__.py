@@ -51,6 +51,7 @@ from .identity import (
     repair,
 )
 from .identity_relocation import record_project_relocation
+from .disputes import list_disputes
 from .inventory import DEFAULT_LIMIT as INVENTORY_DEFAULT_LIMIT
 from .inventory import MAX_LIMIT as INVENTORY_MAX_LIMIT
 from .inventory import STREAMS as INVENTORY_STREAMS
@@ -372,6 +373,8 @@ def _run() -> None:
                 target_record_sha256=args.record_sha256,
                 revision=args.revision,
             )
+    elif args.command == "disputes":
+        result = list_disputes(store.snapshot(), target=args.target)
     elif args.command == "export":
         # Dispatcher dual ADR-0042 §2/§3/§8 (T5): sin --seal el camino es
         # EXACTAMENTE export/v1 (delega en create_export/verify_export/
