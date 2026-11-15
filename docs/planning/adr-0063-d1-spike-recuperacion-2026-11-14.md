@@ -275,3 +275,23 @@ Los puntos de corte son la variable `SPIKE_CUT` (sólo la lee `spikes/e1a_recove
   `git commit`) como órdenes simples. Sin otros bloqueos.
 - Commit local único en la rama (mensaje en español, con `Co-Authored-By`). Sin push, PR, merge ni instalaciones; sin agentes ni Herdr.
 - `scripts/check_sizes.py` sobre el worktree: OK.
+
+## Ronda adversarial del texto de D1 — `fix-and-retry`
+
+Revisor: Gemini vía `agy --mode plan`, contexto fresco, sólo lectura, sobre
+`5c5750a..3c310ad` contra la evidencia del spike. Deuda r4: H3–H8 y `tmp/`
+**cerrados**. La regla «sin rastro» del paso 0 se juzgó segura. Hallazgos:
+2 MEDIUM y 3 LOW, todos de redacción. Dictamen íntegro fuera del repo:
+`/var/tmp/orquestador-memoria/capitanes/ankla/ronda-adr0063/dictamen-D1-spike-gemini.md`.
+
+| ID | Sev | Hallazgo | Disposición |
+|---|---|---|---|
+| H-01 | MED | La cifra de 0,041–0,064 s no incluía la bisección | Corregido: lote limpio y bisección (21,7 ms) por separado |
+| H-02 | MED | El paso 2 movería un directorio a `rejected/`, contra el criterio 8 | Corregido: sólo nombres de entrada; los directorios se ignoran |
+| H-03 | LOW | Fallo de `repair_durability` sin camino | Corregido: aborta sin borrar marcador ni entradas |
+| H-04 | LOW | «reanuda desde el journal» es inexacto | Corregido: «reintenta el commit sobre el journal existente» |
+| H-05 | LOW | Marcador del lote replanificado no explícito | Corregido en el paso 7.2 |
+
+**Estado:** correcciones absorbidas, **sin ronda que las verifique**: el
+mandato 4 autoriza una sola ronda sobre D1. D1 sigue en Propuesta y este PR
+no se fusiona; va al orquestador con el dictamen.

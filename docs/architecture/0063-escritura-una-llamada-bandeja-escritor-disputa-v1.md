@@ -241,13 +241,15 @@ Con `write_lock` tomado:
    `transactions.py:312-313`) y tres ramas:
    - `committed is True` → **cierra el journal** («Cierre del journal»).
      Si el resultado es `durability_incomplete`, llama a
-     `repair_durability(txid)` y vuelve a inspeccionar. Después borra de
+     `repair_durability(txid)` y vuelve a inspeccionar; si la reparación
+     falla o la transacción no queda `committed` completa, aborta sin
+     borrar marcador ni entradas. Después borra de
      `pending/` las entradas del marcador (fsync de `pending/`) y, al
      final, el marcador (fsync de `inflight/`). El orden journal → entradas
      → marcador es obligatorio;
    - `committed is False` → borra sólo el marcador. Las entradas siguen
      pendientes; si el lote siguiente reconstruye el mismo `txid`,
-     `commit_locked` reanuda desde el journal existente;
+     `commit_locked` reintenta el commit sobre el journal existente;
    - `committed is None` no significa «no llegó». Se borra el marcador
      sólo si la transacción **no dejó rastro**: no existe
      `transactions/<txid>.json`, ningún manifiesto lleva ese
@@ -282,9 +284,11 @@ Con `write_lock` tomado:
    de los recibos. `repair_durability` escribe el recibo `repair` y deja la
    transacción en `committed` completa.
 1. lee `CURRENT` y el snapshot;
-2. para cada entrada candidata, `lstat`: si no es archivo regular con
-   `st_nlink == 1` → `rejected/` con `inbox_entry_unsafe`, sin abrirla
-   (un FIFO no bloquea el vaciado); si no se puede leer o no valida
+2. para cada nombre de `pending/` que casa el patrón de entrada, `lstat`:
+   un directorio se ignora sin tocarlo (como todo nombre que no casa); si
+   no es archivo regular con `st_nlink == 1` (FIFO, socket, enlace,
+   hardlink) → `rejected/` con `inbox_entry_unsafe`, sin abrirla (un FIFO
+   no bloquea el vaciado); si no se puede leer o no valida
    `inbox-entry-v1` → `rejected/` con su motivo;
 3. resuelve cada `--supersedes` (D3), con lo que cada entrada tiene stream e
    id definitivos;
@@ -327,7 +331,8 @@ Con `write_lock` tomado:
         (medido con `duplicate_target`: las dos mitades pasan solas);
      2. los supervivientes se comprometen en **un** lote nuevo: se relee
         `CURRENT` bajo el candado, se replanifica con esa `base_revision` y
-        se recalcula su `transaction_id`. Como nadie más puede mover
+        se recalcula su `transaction_id`, y se escribe su marcador en
+        `inflight/` antes del commit. Como nadie más puede mover
         `CURRENT` mientras el candado esté tomado, `write_plan_base_changed`
         no puede ocurrir aquí; si ocurre, es un defecto y aborta.
      Sólo si ese lote vuelve a fallar con un error que la bisección pura no
@@ -715,9 +720,9 @@ Cifras globales, con la configuración del texto:
   sellado y `write_commit.py` (extracción sin cambio de comportamiento)
   además de los módulos nuevos; el vaciado retiene el candado de los demás
   durante su lote (≤ 0,2 s medidos con 250 entradas sobre 20.000 records
-  sin prevalidación; el spike midió entre 0,041 y 0,064 s por lote de 250
-  con la bisección incluida. El último recurso uno a uno queda fuera de
-  esa cifra).
+  sin prevalidación; el spike midió entre 0,041 y 0,064 s por lote limpio
+  de 250 y, aparte, 21,7 ms de bisección por prefijos sobre 250; el último
+  recurso uno a uno queda fuera de esas cifras).
 - Neutras: la receta del bloque gestionado no cambia en E1.a (llega en
   E1.c, con el MCP escribible); la anotación de disputas en la recuperación
   llega en E1.b.
