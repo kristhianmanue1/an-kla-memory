@@ -1,0 +1,170 @@
+{
+  "schema": "memoria/identidad/v1",
+  "errata": 1,
+  "nota": "Casos con salto de línea que la referencia de 8fccbcc aceptaba por anclar con `$`. No modifican vectores.json.",
+  "validos": [
+    {
+      "nombre": "control: el objeto base es válido",
+      "objeto": {
+        "schema": "memoria/identidad/v1",
+        "repo": {
+          "id": "github.com/acme/demo",
+          "branch": "main"
+        },
+        "agent": {
+          "name": "capitan-uno",
+          "cli": "claude",
+          "model": "claude-opus-5-5",
+          "role": "capitan"
+        },
+        "session": {
+          "id": "claude:abc123"
+        }
+      }
+    }
+  ],
+  "invalidos": [
+    {
+      "nombre": "rama con salto de línea final",
+      "motivo": "repo_branch",
+      "objeto": {
+        "schema": "memoria/identidad/v1",
+        "repo": {
+          "id": "github.com/acme/demo",
+          "branch": "main\n"
+        },
+        "agent": {
+          "name": "capitan-uno",
+          "cli": "claude",
+          "model": "claude-opus-5-5",
+          "role": "capitan"
+        },
+        "session": {
+          "id": "claude:abc123"
+        }
+      }
+    },
+    {
+      "nombre": "repo.id canónico con salto final",
+      "motivo": "repo_id",
+      "objeto": {
+        "schema": "memoria/identidad/v1",
+        "repo": {
+          "id": "github.com/acme/demo\n",
+          "branch": "main"
+        },
+        "agent": {
+          "name": "capitan-uno",
+          "cli": "claude",
+          "model": "claude-opus-5-5",
+          "role": "capitan"
+        },
+        "session": {
+          "id": "claude:abc123"
+        }
+      }
+    },
+    {
+      "nombre": "repo.id local con salto final",
+      "motivo": "repo_id",
+      "objeto": {
+        "schema": "memoria/identidad/v1",
+        "repo": {
+          "id": "local:0123456789abcdef\n",
+          "branch": "main"
+        },
+        "agent": {
+          "name": "capitan-uno",
+          "cli": "claude",
+          "model": "claude-opus-5-5",
+          "role": "capitan"
+        },
+        "session": {
+          "id": "claude:abc123"
+        }
+      }
+    },
+    {
+      "nombre": "agent.name con salto final",
+      "motivo": "agent_name",
+      "objeto": {
+        "schema": "memoria/identidad/v1",
+        "repo": {
+          "id": "github.com/acme/demo",
+          "branch": "main"
+        },
+        "agent": {
+          "name": "capitan-uno\n",
+          "cli": "claude",
+          "model": "claude-opus-5-5",
+          "role": "capitan"
+        },
+        "session": {
+          "id": "claude:abc123"
+        }
+      }
+    },
+    {
+      "nombre": "agent.cli con salto final",
+      "motivo": "agent_cli",
+      "objeto": {
+        "schema": "memoria/identidad/v1",
+        "repo": {
+          "id": "github.com/acme/demo",
+          "branch": "main"
+        },
+        "agent": {
+          "name": "capitan-uno",
+          "cli": "claude\n",
+          "model": "claude-opus-5-5",
+          "role": "capitan"
+        },
+        "session": {
+          "id": "claude:abc123"
+        }
+      }
+    },
+    {
+      "nombre": "session.id con salto final",
+      "motivo": "session_id",
+      "objeto": {
+        "schema": "memoria/identidad/v1",
+        "repo": {
+          "id": "github.com/acme/demo",
+          "branch": "main"
+        },
+        "agent": {
+          "name": "capitan-uno",
+          "cli": "claude",
+          "model": "claude-opus-5-5",
+          "role": "capitan"
+        },
+        "session": {
+          "id": "claude:abc123\n"
+        }
+      }
+    }
+  ],
+  "normalizacion": [
+    {
+      "url": "OM\n:eU3",
+      "repo_id": null
+    },
+    {
+      "url": "https://github.com/acme/de\nmo",
+      "repo_id": null
+    },
+    {
+      "url": "https://github.com/acme/demo.git\n",
+      "repo_id": "github.com/acme/demo"
+    }
+  ],
+  "remoto_no_normalizable": [
+    {
+      "url": "GwXYo\n:Vu",
+      "base": "/base",
+      "repo_id": "remoto:e720d808474ba2b6"
+    }
+  ],
+  "local": []
+}
