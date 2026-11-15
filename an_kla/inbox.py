@@ -60,6 +60,7 @@ KINDS = ("fact", "decision", "state")
 MAX_TEXT_BYTES = 64 * 1024
 MAX_TARGET_CHARS = 256
 ENQUEUE_LOCK_WAIT_SECONDS = 2.0
+CUSTODY_LOCK_WAIT_SECONDS = 2.0
 _LOCK_BACKOFF_SECONDS = 0.01
 _NAME_ATTEMPTS = 16
 MAX_LISTED = 1000
@@ -186,14 +187,39 @@ def _subdir_names(store: Any, subdir: str) -> list[str]:
     return _names(getattr(inbox_paths(store), subdir))
 
 
-def entry_names(store: Any) -> list[str]:
-    """Nombres de ``pending/`` que casan el patrón de entrada, orden de nombre."""
+def _is_regular_file(directory: Path, name: str) -> bool:
+    """``lstat`` sin abrir: sólo un archivo regular cuenta (R3-01); un nombre que desaparece, no."""
 
-    return [name for name in _subdir_names(store, PENDING_DIR) if is_entry_name(name)]
+    try:
+        return stat.S_ISREG(os.lstat(directory / name).st_mode)
+    except FileNotFoundError:
+        return False
+    except OSError:
+        raise InboxError("inbox_unavailable") from None
+
+
+def _regular_matches(directory: Path, names: list[str], matches: Callable[[str], bool]) -> list[str]:
+    return [name for name in names if matches(name) and _is_regular_file(directory, name)]
+
+
+def _counted(store: Any, subdir: str, matches: Callable[[str], bool]) -> list[str]:
+    return _regular_matches(getattr(inbox_paths(store), subdir), _subdir_names(store, subdir), matches)
+
+
+def entry_names(store: Any) -> list[str]:
+    """Entradas de ``pending/``: archivos regulares cuyo nombre casa el patrón, orden de nombre.
+
+    Un directorio u otro no-archivo con nombre de entrada no cuenta (R3-01, D1 «Directorios»);
+    sólo se hace ``lstat``, nunca se abre (un FIFO colgaría la lectura).
+    """
+
+    return _counted(store, PENDING_DIR, is_entry_name)
 
 
 def marker_names(store: Any) -> list[str]:
-    return [name for name in _subdir_names(store, INFLIGHT_DIR) if is_marker_name(name)]
+    """Marcadores de ``inflight/``: archivos regulares cuyo nombre casa el patrón de marcador."""
+
+    return _counted(store, INFLIGHT_DIR, is_marker_name)
 
 
 def pending_is_empty(store: Any) -> bool:
@@ -329,6 +355,32 @@ def inbox_lock(
             _unlock(fd)
     finally:
         os.close(fd)
+
+
+@contextlib.contextmanager
+def custody_guard(store: Any, *, wait_seconds: float | None = None) -> Iterator[None]:
+    """Candado exclusivo de bandeja para ``export``, ``--seal`` y ``relocate commit`` (D1 «no es estado durable», punto 2).
+
+    Se toma al principio de la orden, antes de crear nada y de ``identity_lock``, y se suelta
+    al final. Exige ``pending/`` e ``inflight/`` vacíos (``pending/`` primero): si no, falla con
+    ``inbox_pending`` o ``inbox_inflight`` (pista ``inbox drain``). Ocupado, ``inbox_busy``.
+    Sin ``memory/inbox/`` no hace nada: no crea la bandeja ni el ``.lock`` y la orden recorre
+    el camino de hoy. Con una raíz insegura (enlace o no-directorio) tampoco: la orden la
+    rechaza como siempre (``export_unsafe_link``) al recorrer el ancla. Con la raíz presente
+    pero sin ``.lock`` o con subdirectorios sin crear, ``create=True`` completa el layout.
+    """
+
+    if root_state(store) != "present":
+        lock_order.require_inbox_allowed(store)
+        yield
+        return
+    wait = CUSTODY_LOCK_WAIT_SECONDS if wait_seconds is None else wait_seconds
+    with inbox_lock(store, exclusive=True, wait_seconds=wait):
+        if not pending_is_empty(store):
+            raise InboxError("inbox_pending", "vacía la bandeja con `inbox drain` y reintenta")
+        if not inflight_is_empty(store):
+            raise InboxError("inbox_inflight", "hay un vaciado interrumpido; ejecuta `inbox drain` y reintenta")
+        yield
 
 
 # --- recolector de tmp/ ------------------------------------------------------
@@ -646,8 +698,9 @@ def read_status(store: Any) -> dict[str, Any]:
         if name.endswith(REASON_SUFFIX):
             continue
         rejected.append({"name": name, **_read_reason(paths.rejected, name)})
-    pending_entries = [n for n in names["pending"] if is_entry_name(n)]
-    inflight_markers = [n for n in names["inflight"] if is_marker_name(n)]
+    pending_entries = _regular_matches(paths.pending, names["pending"], is_entry_name)
+    inflight_markers = _regular_matches(paths.inflight, names["inflight"], is_marker_name)
+    counted = set(pending_entries) | set(inflight_markers)
     return {
         "schema": STATUS_SCHEMA,
         "untrusted_memory_data": True,
@@ -662,15 +715,15 @@ def read_status(store: Any) -> dict[str, Any]:
         },
         "tmp": _listing(names["tmp"]),
         "ignored": {
-            "pending": _listing([n for n in names["pending"] if not is_entry_name(n)]),
-            "inflight": _listing([n for n in names["inflight"] if not is_marker_name(n)]),
+            "pending": _listing([n for n in names["pending"] if n not in counted]),
+            "inflight": _listing([n for n in names["inflight"] if n not in counted]),
         },
     }
 
 
 __all__ = [
     "ENTRY_SCHEMA", "InboxError", "InboxPaths", "KINDS", "MAX_TEXT_BYTES", "STATUS_SCHEMA",
-    "collect_tmp", "enqueue", "entry_names", "inbox_lock", "inbox_paths", "inflight_is_empty",
+    "collect_tmp", "custody_guard", "enqueue", "entry_names", "inbox_lock", "inbox_paths", "inflight_is_empty",
     "is_entry_name", "is_marker_name", "marker_names", "payload_digest", "pending_is_empty",
     "read_status", "record_id", "resolve_kind", "root_state", "stream_for_kind",
 ]
