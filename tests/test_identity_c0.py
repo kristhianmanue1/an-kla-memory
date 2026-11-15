@@ -13,6 +13,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -471,6 +472,120 @@ class EnvelopeSchemaTests(unittest.TestCase):
                 self.assertNotEqual(list(validator.iter_errors(envelope)), [])
                 rejected += 1
         self.assertGreater(rejected, 20)
+
+
+NODE = shutil.which("node")
+# Runs each pattern the way an ECMA-262 engine would (no `u` flag) over the cases.
+NODE_SCRIPT = (
+    "const d = JSON.parse(require('fs').readFileSync(0, 'utf8'));"
+    "const re = d.patterns.map(p => new RegExp(p));"
+    "process.stdout.write(d.cases.map(([i, s]) => re[i].test(s) ? '1' : '0').join(''));"
+)
+
+
+def schema_patterns(node: object) -> list[str]:
+    found: list[str] = []
+    if isinstance(node, dict):
+        for key, value in node.items():
+            if key == "pattern" and isinstance(value, str):
+                found.append(value)
+            else:
+                found += schema_patterns(value)
+    elif isinstance(node, list):
+        for item in node:
+            found += schema_patterns(item)
+    return found
+
+
+class WhitespaceAgreementTests(unittest.TestCase):
+    """R1-01: the validator and the published schema accept and reject the same whitespace."""
+
+    SPACES = ("﻿", " ", "\u0085", "\x1c", " ", "　", " ", "\t")
+
+    def setUp(self) -> None:
+        self.identity = copy.deepcopy(load_vectors()["validos"][0]["objeto"])
+
+    def with_fields(self, **fields: str) -> dict:
+        identity = copy.deepcopy(self.identity)
+        if "model" in fields:
+            identity["agent"]["model"] = fields["model"]
+        if "branch" in fields:
+            identity["repo"]["branch"] = fields["branch"]
+        if "session" in fields:
+            identity["session"]["id"] = f"{identity['agent']['cli']}:{fields['session']}"
+        return identity
+
+    def test_validator_rejects_bom_and_unicode_spaces(self) -> None:
+        for char in self.SPACES:
+            with self.subTest(char=repr(char)):
+                self.assertIn("agent_model", c0.validate(self.with_fields(model=char + "m")))
+                self.assertIn("agent_model", c0.validate(self.with_fields(model="m" + char)))
+                self.assertIn("repo_branch", c0.validate(self.with_fields(branch="a" + char + "b")))
+                self.assertIn("session_id", c0.validate(self.with_fields(session="a" + char + "b")))
+        # Interior whitespace of a model is allowed (only the ends are constrained).
+        self.assertEqual(c0.validate(self.with_fields(model="a﻿b")), [])
+        self.assertEqual(c0.validate(self.with_fields(model="a b")), [])
+
+    def test_schema_has_no_engine_dependent_classes(self) -> None:
+        for pattern in schema_patterns(schema_document("record-envelope-v1")):
+            with self.subTest(pattern=pattern[:60]):
+                stripped = pattern.replace(r"[\s\S]", "")
+                self.assertNotIn(r"\s", stripped)
+                self.assertNotIn(r"\S", stripped)
+                self.assertNotIn("$", stripped)
+
+    def test_schema_rejects_what_the_validator_rejects_with_python_jsonschema(self) -> None:
+        try:
+            from jsonschema import Draft202012Validator
+        except ImportError:
+            self.skipTest("jsonschema unavailable")
+        validator = Draft202012Validator(schema_document("record-envelope-v1"))
+        key = digest_json({"k": 1})
+
+        def errors(writer: dict, **overrides: str) -> list:
+            envelope = {"schema": "an-kla/record-envelope-v1", "writer": writer,
+                        "enqueued_at": "2026-11-14T18:30:00.000000Z", "time_source": "host-clock/v1",
+                        "idempotency_key": key, "kind": "fact", **overrides}
+            return list(validator.iter_errors(envelope))
+
+        for char in self.SPACES:
+            for field in ("model", "branch", "session"):
+                with self.subTest(char=repr(char), field=field):
+                    value = char + "m" if field == "model" else "a" + char + "b"
+                    self.assertNotEqual(errors(self.with_fields(**{field: value})), [])
+        # `$` would let Python engines accept a final newline.
+        self.assertNotEqual(errors(self.identity, kind="fact\n"), [])
+        self.assertNotEqual(errors(self.identity, enqueued_at="2026-11-14T18:30:00.000000Z\n"), [])
+        self.assertNotEqual(errors(self.identity, idempotency_key=key + "\n"), [])
+        self.assertNotEqual(errors(self.with_fields(session="abc\n")), [])
+
+    @unittest.skipUnless(NODE, "node not available: the ECMA-262 agreement check needs a real ECMA engine")
+    def test_ecma_engine_agrees_with_the_validator_on_every_bmp_character(self) -> None:
+        document = schema_document("record-envelope-v1")
+        defs = document["$defs"]
+        patterns = [
+            defs["branch"]["pattern"],
+            defs["identity"]["properties"]["session"]["properties"]["id"]["pattern"],
+            defs["identity"]["properties"]["agent"]["properties"]["model"]["pattern"],
+        ]
+        cases, expected = [], []
+        for code in range(0x10000):
+            if 0xD800 <= code <= 0xDFFF:
+                continue
+            char = chr(code)
+            cases += [[0, "a" + char], [1, "claude-code:" + char], [2, char + "b"], [2, "a" + char + "b"]]
+            expected += [
+                c0._BRANCH.fullmatch("a" + char) is not None,
+                c0._SESSION.fullmatch("claude-code:" + char) is not None,
+                c0._NO_OUTER_SPACE.fullmatch(char + "b") is not None,
+                c0._NO_OUTER_SPACE.fullmatch("a" + char + "b") is not None,
+            ]
+        done = subprocess.run([NODE, "-e", NODE_SCRIPT], input=json.dumps({"patterns": patterns, "cases": cases}),
+                              capture_output=True, text=True, check=True, timeout=60)
+        actual = [c == "1" for c in done.stdout]
+        self.assertEqual(len(actual), len(expected))
+        wrong = [cases[i] for i, (a, e) in enumerate(zip(actual, expected)) if a != e]
+        self.assertEqual(wrong, [], f"ECMA engine disagrees with the validator on {len(wrong)} cases")
 
 
 if __name__ == "__main__":

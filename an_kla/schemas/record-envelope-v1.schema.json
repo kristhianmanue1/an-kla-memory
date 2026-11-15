@@ -2,21 +2,21 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:an-kla:schema:record-envelope:v1",
   "title": "AN-KLA Record Envelope v1",
-  "description": "Reserved key `an_kla_envelope` of a record (ADR-0063 D2): writer identity C0 `memoria/identidad/v1`, enqueue time and idempotency key. Structural check only: the C0 validator is authoritative for what a schema cannot express (`session.id` prefix equal to `agent.cli`, calendar validity of `enqueued_at`). The envelope is an assertion by the emitter, stored as given.",
+  "description": "Reserved key `an_kla_envelope` of a record (ADR-0063 D2): writer identity C0 `memoria/identidad/v1`, enqueue time and idempotency key. Structural check only: the C0 validator is authoritative for what a schema cannot express (`session.id` prefix equal to `agent.cli`, the 200-character bound of the session identifier, calendar validity of `enqueued_at`). Whitespace is spelled out as an explicit class, never `\\s`, and patterns end with `(?![\\s\\S])` instead of `$` (Python engines let `$` match before a final newline), so every JSON Schema engine agrees with the validator. The envelope is an assertion by the emitter, stored as given.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "writer", "enqueued_at", "time_source", "idempotency_key", "kind"],
   "properties": {
     "schema": {"const": "an-kla/record-envelope-v1"},
     "writer": {"$ref": "#/$defs/identity"},
-    "enqueued_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z$"},
+    "enqueued_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z(?![\\s\\S])"},
     "time_source": {"const": "host-clock/v1"},
     "idempotency_key": {"$ref": "#/$defs/digest"},
-    "kind": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,31}$"}
+    "kind": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,31}(?![\\s\\S])"}
   },
   "$defs": {
-    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
-    "ident": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,31}$"},
+    "digest": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"},
+    "ident": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,31}(?![\\s\\S])"},
     "identity": {
       "type": "object",
       "additionalProperties": false,
@@ -39,7 +39,7 @@
           "properties": {
             "name": {"allOf": [{"$ref": "#/$defs/ident"}, {"not": {"enum": ["desconocido", "sin-sesion"]}}]},
             "cli": {"$ref": "#/$defs/ident"},
-            "model": {"type": "string", "minLength": 1, "maxLength": 80, "pattern": "^(?:\\S|\\S[\\s\\S]*\\S)$"},
+            "model": {"type": "string", "minLength": 1, "maxLength": 80, "pattern": "^(?:[^\\t\\n\\x0b\\x0c\\r\\x1c-\\x1f\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]|[^\\t\\n\\x0b\\x0c\\r\\x1c-\\x1f\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff][\\s\\S]*[^\\t\\n\\x0b\\x0c\\r\\x1c-\\x1f\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff])(?![\\s\\S])"},
             "role": {"enum": ["operador", "orquestador", "capitan", "ejecutor", "revisor", "desconocido"]}
           }
         },
@@ -48,20 +48,20 @@
           "additionalProperties": false,
           "required": ["id"],
           "properties": {
-            "id": {"type": "string", "pattern": "^[a-z][a-z0-9_-]{0,31}:\\S{1,200}$"}
+            "id": {"type": "string", "maxLength": 233, "pattern": "^[a-z][a-z0-9_-]{0,31}:[^\\t\\n\\x0b\\x0c\\r\\x1c-\\x1f\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+(?![\\s\\S])"}
           }
         }
       }
     },
     "repo_id": {
       "anyOf": [
-        {"type": "string", "pattern": "^(?:local|remoto):[0-9a-f]{16}$"},
+        {"type": "string", "pattern": "^(?:local|remoto):[0-9a-f]{16}(?![\\s\\S])"},
         {
           "type": "string",
-          "pattern": "^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)*[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?::(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))?/(?:[a-z0-9._~-]+/)*[a-z0-9._~-]+$",
+          "pattern": "^(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)*[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?::(?:[1-9][0-9]{0,3}|[1-5][0-9]{4}|6[0-4][0-9]{3}|65[0-4][0-9]{2}|655[0-2][0-9]|6553[0-5]))?/(?:[a-z0-9._~-]+/)*[a-z0-9._~-]+(?![\\s\\S])",
           "allOf": [
-            {"not": {"pattern": "(?:^|/)\\.{1,2}(?:/|$)"}},
-            {"not": {"pattern": "\\.git$"}}
+            {"not": {"pattern": "(?:^|/)\\.{1,2}(?:/|(?![\\s\\S]))"}},
+            {"not": {"pattern": "\\.git(?![\\s\\S])"}}
           ]
         }
       ]
@@ -70,10 +70,10 @@
       "type": "string",
       "minLength": 1,
       "maxLength": 200,
-      "pattern": "^[^\\s~^:?*\\[\\\\]+$",
+      "pattern": "^[^\\t\\n\\x0b\\x0c\\r\\x1c-\\x1f\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff~^:?*\\[\\\\]+(?![\\s\\S])",
       "allOf": [
-        {"not": {"pattern": "^(?:HEAD$|[-/.]|refs/)"}},
-        {"not": {"pattern": "(?:[/.]|\\.lock)$"}},
+        {"not": {"pattern": "^(?:HEAD(?![\\s\\S])|[-/.]|refs/)"}},
+        {"not": {"pattern": "(?:[/.]|\\.lock)(?![\\s\\S])"}},
         {"not": {"pattern": "\\.\\.|//|@\\{|/\\."}}
       ]
     }

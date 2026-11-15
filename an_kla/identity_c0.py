@@ -58,8 +58,17 @@ _LABEL = re.compile(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?")
 _SEGMENT = re.compile(r"[a-z0-9._~-]+")
 _HASHED_ID = re.compile(r"(?:local|remoto):[0-9a-f]{16}")
 _IDENT = re.compile(r"[a-z][a-z0-9_-]{0,31}")
-_SESSION = re.compile(r"([a-z][a-z0-9_-]{0,31}):(\S{1,200})")
-_BRANCH = re.compile(r"[^\s~^:?*\[\\]{1,200}")
+# Whitespace spelled out, never ``\s``/``\S``: engines disagree on it (U+FEFF is
+# ECMA-262 whitespace but not Python's; U+001C-U+001F and U+0085 the reverse), and
+# the published schema must accept and reject what this validator does.  The union
+# is rejected; the schema spells out the same set.
+WHITESPACE_CLASS = (
+    r"\t\n\x0b\x0c\r\x1c-\x1f\x20\x85\xa0\u1680\u2000-\u200a"
+    r"\u2028\u2029\u202f\u205f\u3000\ufeff"
+)
+_SESSION = re.compile(rf"([a-z][a-z0-9_-]{{0,31}}):([^{WHITESPACE_CLASS}]{{1,200}})")
+_BRANCH = re.compile(rf"[^{WHITESPACE_CLASS}~^:?*\[\\]{{1,200}}")
+_NO_OUTER_SPACE = re.compile(rf"[^{WHITESPACE_CLASS}](?:.*[^{WHITESPACE_CLASS}])?", re.DOTALL)
 _KIND = re.compile(r"[a-z][a-z0-9_-]{0,31}")
 _DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
 _ENQUEUED_AT = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}Z")
@@ -279,7 +288,7 @@ def _validate_agent(agent: Any) -> tuple[list[str], str | None]:
     valid_cli = isinstance(cli, str) and _IDENT.fullmatch(cli) is not None
     if not valid_cli:
         reasons.append("agent_cli")
-    if not (isinstance(model, str) and 1 <= len(model) <= 80 and model == model.strip()):
+    if not (isinstance(model, str) and 1 <= len(model) <= 80 and _NO_OUTER_SPACE.fullmatch(model)):
         reasons.append("agent_model")
     if not (isinstance(role, str) and role in ROLES):
         reasons.append("agent_role")
