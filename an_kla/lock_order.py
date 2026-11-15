@@ -8,12 +8,12 @@ producción, acaba en interbloqueo entre procesos (el candado de bandeja lo
 pide en exclusivo un ``export`` que ya espera al de identidad), y un error
 inmediato es más barato que un plazo agotado a los 10 s.
 
-Sólo se aplica donde se pide el candado de bandeja: ``identity_lock`` se limita a
-registrarse (``holding``) para no cambiar el comportamiento de las órdenes
-existentes, y ``write_lock`` ya deja su testigo en ``store._active_write_lock``.
-Límite declarado: el testigo de ``write_lock`` es por instancia de ``MemoryStore``;
-tomar el candado con una instancia y pedir el de bandeja con otra del mismo
-store sólo se detectaría con ``store_locks`` instrumentado.
+Sólo se aplica donde se pide el candado de bandeja: ``identity_lock`` y ``store_locks.write_lock``
+(el de módulo, que usan ``MemoryStore.write_lock`` y ``hook_runs``) se limitan a registrarse
+(``holding``) para no cambiar el comportamiento de las órdenes existentes; el testigo
+``store._active_write_lock`` se conserva como defensa en profundidad. Límite declarado: el
+registro es un ``ContextVar``, es decir por hilo y por tarea; un candado tomado en otro hilo no
+se ve desde éste (y entre procesos el orden lo sostiene el propio ``flock``, no este registro).
 """
 
 from __future__ import annotations
