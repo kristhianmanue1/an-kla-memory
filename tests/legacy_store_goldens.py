@@ -31,6 +31,8 @@ def _env() -> dict[str, str]:
     cambia la resolución del store), salvo las dos que se fijan aquí."""
     clean = {k: v for k, v in os.environ.items() if not k.startswith("AN_KLA_")}
     return {**clean, "AN_KLA_NO_UPDATE_CHECK": "1", "PYTHONDONTWRITEBYTECODE": "1"}
+
+
 FRESH_NOW = "2026-06-01T00:00:00Z"
 
 

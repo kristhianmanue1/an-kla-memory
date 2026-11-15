@@ -613,7 +613,7 @@ class WhitespaceAgreementTests(unittest.TestCase):
             identity["session"]["id"] = f"{identity['agent']['cli']}:{fields['session']}"
         return identity
 
-    def test_validator_rejects_bom_and_unicode_spaces(self) -> None:
+    def test_validator_rejects_unicode_spaces(self) -> None:
         for char in self.SPACES:
             with self.subTest(char=repr(char)):
                 self.assertIn("agent_model", c0.validate(self.with_fields(model=char + "m")))
