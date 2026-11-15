@@ -73,23 +73,64 @@ comportamiento. Tres decisiones:
   defecto `fact`; `fact` y `decision` van al stream `facts`, `state` a
   `episodes` (el checkpoint `working-state-v2` no se toca).
 - **Encolar.** Serializa una entrada `an-kla/inbox-entry-v1` y la deja en
-  `<custodia>/inbox/pending/<tiempo_ns>-<clave16>.json` con escritura
-  temporal, `os.replace` y fsync del directorio. La bandeja vive en la raíz
-  de custodia (viaja con la bóveda, ADR-0048).
+  `<custodia>/memory/inbox/pending/<tiempo_ns>-<clave16>.json` con escritura
+  temporal en `memory/inbox/tmp/`, `os.replace` y fsync del directorio. No
+  hay `done/`: una entrada comprometida se borra.
+- **La bandeja no es estado durable del store.** Hoy `export`, el sellado y
+  `relocate plan` recorren la custodia y fallan cerrado con
+  `export_unrecognized_durable_path` ante cualquier archivo no listado
+  (`an_kla/export_restore.py:84-98`; medido en el spike de E1.a). Por eso:
+  1. `memory/inbox/` se añade a los prefijos excluidos de `_files`, junto a
+     `memory/{indexes,leases,quarantine,watermarks}/`: nunca se exporta, se
+     sella ni se reubica;
+  2. `export create` y `relocate plan` (ambas direcciones) exigen
+     `pending/` vacío y fallan cerrado con un código nuevo `inbox_pending`
+     (pista: `inbox drain`) antes de tocar nada. Así ninguna entrada se
+     pierde por exclusión;
+  3. `compact` ya ignora la ruta (`compaction_inventory.py:16-31`) y hereda
+     la precondición por su bundle previo;
+  4. encolar no toma el candado, así que una entrada puede llegar después de
+     la comprobación. En `export` no se pierde (queda en `pending/` del
+     store, que sigue vivo). En `relocate commit`, justo antes de limpiar el
+     origen y con `write_lock` tomado (`relocate.py:479`, `relocate_back.py`),
+     las entradas que hayan llegado a `pending/` del origen se mueven con
+     `os.replace` a `pending/` del destino y el resultado lo informa; la
+     limpieza nunca borra una entrada pendiente.
+  Un store sin `memory/inbox/` recorre exactamente el mismo camino que hoy.
 - **Vaciar.** A continuación intenta `write_lock` con un plazo corto
   (constante del perfil, menor que los 10 s del candado). Con el candado:
   1. lee `CURRENT` y el snapshot **dentro** del candado;
-  2. ordena las entradas pendientes por nombre de archivo;
+  2. ordena las entradas pendientes por nombre de archivo; una entrada
+     ilegible o que no valide `inbox-entry-v1` se mueve a
+     `memory/inbox/rejected/` con su motivo y no entra en el lote, para que
+     no tumbe el lote entero (v2 es todo o nada);
   3. descarta las ya comprometidas (su `record.id` está en el snapshot);
   4. construye, contra la base observada bajo el candado, la propuesta, la
      autoridad `model_derived` (la misma plantilla que emite hoy
-     `plan-write --emit-authority-template`) y el plan, y compromete por
-     `commit_write_plan` (única implementación de la política);
-  5. sólo con `committed: true`, retira las entradas de `pending/`.
-  Las altas van en un `write-proposal-v2` por stream; las sustituciones
-  propias, en otro commit dentro del mismo candado. Un vaciado procesa como
-  máximo `drain_max_entries` entradas (constante fijada con la medición del
-  spike); el resto queda para la siguiente invocación.
+     `plan-write --emit-authority-template`) y el plan con las funciones
+     puras de política (`evaluate_write`, `build_write_plan`), y compromete
+     por el cuerpo de `commit_write_plan` **con el candado ya tomado**;
+  5. sólo con `committed: true`, borra las entradas de `pending/`.
+- **Commit con el candado tomado.** `write_lock` es `flock` sobre un
+  descriptor nuevo y no es reentrante: llamar a `commit_write_plan` dentro
+  de otro `write_lock` espera 10 s y falla con `write_lock_busy` (spike).
+  `an_kla/write_commit.py` se parte, sin cambio de comportamiento, en una
+  envoltura pública que toma el candado (la de hoy, mismos bytes y errores)
+  y un cuerpo `_commit_write_plan_locked` que exige el candado tomado y
+  hace la misma revalidación completa (`verify_write_plan`, CAS contra
+  `CURRENT`, supersede, `subject_ref`). Es la misma técnica que la extracción
+  de `supersede.py` (#59 Fase 0). La compactación también toma
+  `write_lock`, así que planificar bajo él cubre el TOCTOU que ADR-0060
+  cierra con el gate de lectores.
+- **Tamaño del lote.** `_MAX_JSON_NODES = 10_000` (`write_policy.py:48`) se
+  aplica a la propuesta y al plan completos: con un sobre de 21 nodos por
+  record el máximo real medido es ≈ 380 records, no 1000. Un vaciado arma
+  lotes por presupuesto de nodos (propuesta + plan ≤ 9.000) y como máximo
+  `drain_max_entries = 250` entradas; el resto queda para la siguiente
+  invocación. Medido: 250 entradas con sobre cuestan 0,07 s sobre 2.000
+  records y 0,19 s sobre 20.000, el 2 % del plazo del candado.
+- Las altas van en un `write-proposal-v2` por stream; las sustituciones
+  propias, en otro commit dentro del mismo candado.
 - **Candado ocupado** → `{"state": "queued"}`. Vacían sólo `remember` e
   `inbox drain`. Las lecturas **no** vacían ni informan de la bandeja;
   `inbox status` (sólo lectura) cuenta las pendientes.
@@ -218,6 +259,15 @@ nunca concede escritura. #58 sigue abierto. Tampoco cierra G1 (firma) ni G5
    añaden entradas.
 6. **Lecturas puras.** Con entradas en `pending/`, ninguna lectura cambia
    `CURRENT` ni toca la bandeja.
+7. **Bandeja y custodia.** Con `pending/` no vacío, `export create`,
+   `--seal sealed-export/v1` y `relocate plan` (ida y `--back`) fallan con
+   `inbox_pending` sin efectos; tras `inbox drain` pasan y el bundle no
+   contiene `memory/inbox/`. Una entrada encolada durante `relocate commit`
+   aparece en `pending/` del destino. Un store sin `memory/inbox/` produce
+   el mismo bundle byte a byte que hoy.
+8. **Lote.** Un vaciado de 1000 pendientes con sobre C0 completo termina en
+   varios commits sin `invalid_write_proposal` ni `invalid_write_plan`; una
+   entrada corrupta acaba en `rejected/` y las demás se comprometen.
 
 ## Por qué no
 
@@ -235,6 +285,12 @@ nunca concede escritura. #58 sigue abierto. Tampoco cierra G1 (firma) ni G5
 - **Endurecer `plan-write` ya.** Cambia el `policy_fingerprint` y los bytes
   de todas las planificaciones; no protege contra suplantación, que está
   fuera de alcance.
+- **Bandeja fuera de la custodia** (p. ej. en la raíz del proyecto). Ensucia
+  `git status` del consumidor (ADR-0031 §7, huella Git) y no viaja con la
+  bóveda; dentro de la custodia basta excluirla de `_files` y exigir
+  `pending/` vacío.
+- **Exportar la bandeja.** Un bundle con entradas sin comprometer mezclaría
+  estado no revisado por la política con revisiones verificables.
 - **Planificar bajo candado sin bandeja.** Resuelve el CAS, pero un escritor
   que no consigue el candado en su plazo pierde la escritura o espera; la
   bandeja la conserva y responde `queued`.
@@ -247,8 +303,11 @@ nunca concede escritura. #58 sigue abierto. Tampoco cierra G1 (firma) ni G5
 - Negativas: dos caminos de escritura conviven (`plan-write` sigue
   permitiendo la sustitución ajena); el sobre es aserción; la bandeja es un
   directorio nuevo en la custodia que `export`, `compact`, `doctor`,
-  `inventory` y `relocate` deben tratar de forma explícita (spike E1.a); el
-  vaciado retiene el candado de los demás durante su lote.
+  `relocate` tratan de forma explícita (exclusión y precondición
+  `inbox_pending`), así que el código toca `export_restore.py` y
+  `write_commit.py` (extracción sin cambio de comportamiento) además de los
+  módulos nuevos; el vaciado retiene el candado de los demás durante su
+  lote (≤ 0,2 s medidos).
 - Neutras: la receta del bloque gestionado no cambia en E1.a (llega en
   E1.c); la anotación de disputas en la recuperación llega en E1.b; el
   tiempo de commit por revisión queda para otra decisión.
@@ -264,6 +323,12 @@ nunca concede escritura. #58 sigue abierto. Tampoco cierra G1 (firma) ni G5
 - `tests/test_remember_dispute.py`: criterio 4.
 - `tests/test_legacy_store_byte_identity.py`: criterios 5 y 6 sobre un
   fixture `v0.1.0-beta.35`.
+- `tests/test_inbox_custody.py`: criterio 7 (export, sellado si
+  `cryptography` está disponible, `relocate` ida y vuelta, carrera durante
+  `relocate commit`).
+- `tests/test_inbox_batch_limits.py`: criterio 8.
+- Pruebas existentes de `write_commit` sin cambios y en verde tras la
+  extracción de `_commit_write_plan_locked`.
 - Escenario de escala nuevo en `benchmarks/scale/` (8 escritores) sobre la
   batería existente.
 
