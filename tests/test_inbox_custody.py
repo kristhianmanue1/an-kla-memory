@@ -150,13 +150,34 @@ class ExportCustodyTests(CustodyCase):
         os.mkfifo(paths.tmp / "fifo")
         self.assert_code("export_unsafe_file", self.create, "v1")
 
-    def test_a_link_named_like_an_entry_does_not_block_custody_but_the_export_rejects_it(self) -> None:
+    def test_a_non_directory_with_an_entry_name_counts_as_pending(self) -> None:
+        """R1-04: FIFO, enlace, hardlink o archivo con nombre de entrada esperan al vaciado (que los rechaza)."""
+
         paths = inbox.inbox_paths(self.store)
         inbox.enqueue(self.store, "x", env=AGENT_ENV)
         self.drain_by_hand()
-        os.symlink("/etc/hostname", paths.pending / "1-1-0000000000000006-00000006.json")
-        self.assertTrue(inbox.pending_is_empty(self.store))
-        self.assert_code("export_unsafe_link", self.create, "v1")
+        name = "1-1-0000000000000006-00000006.json"
+        outside = self.scratch / "fuera.txt"
+        outside.write_bytes(b"x")
+        plants = {
+            "enlace": lambda: os.symlink(outside, paths.pending / name),
+            "fifo": lambda: os.mkfifo(paths.pending / name),
+            "hardlink": lambda: os.link(outside, paths.pending / name),
+            "archivo": lambda: (paths.pending / name).write_bytes(b"{}"),
+        }
+        for label, plant in plants.items():
+            for kind in ("v1", "sealed"):
+                with self.subTest(label=label, kind=kind):
+                    plant()
+                    try:
+                        self.assertEqual(inbox.entry_names(self.store), [name])
+                        with self.assertRaises(inbox.InboxError) as caught:
+                            self.create(kind)
+                        self.assertEqual(str(caught.exception), "inbox_pending")
+                        self.assertIn("inbox drain", caught.exception.detail)
+                        self.assertFalse(self.bundle.exists())
+                    finally:
+                        os.unlink(paths.pending / name)
 
     def test_something_already_under_the_inbox_path_moves_from_unrecognized_to_the_new_rule(self) -> None:
         """Punto 5 del ADR: antes, `export_unrecognized_durable_path`; ahora la regla de bandeja."""
@@ -174,33 +195,99 @@ class ExportCustodyTests(CustodyCase):
         outsider.write_bytes(b"x")
         self.assert_code("export_unrecognized_durable_path", self.create, "v1")
 
-    def test_an_inbox_directory_without_lock_gets_its_layout_completed(self) -> None:
+    def test_the_custody_never_creates_the_layout(self) -> None:
+        """R1-02: con la raíz presente y la estructura incompleta, sólo puede crearse el `.lock`."""
+
         self.inbox.mkdir()
-        create_export(self.store, self.bundle)
-        self.assertTrue((self.inbox / ".lock").exists())
-        self.assertTrue((self.inbox / "pending").is_dir())
+        for kind in ("v1", "sealed"):
+            if kind == "sealed" and not _cryptography_importable():
+                continue
+            with self.subTest(kind=kind):
+                self.create(kind)
+                self.assertEqual(sorted(p.name for p in self.inbox.iterdir()), [".lock"])
+                self.assertEqual((self.inbox / ".lock").stat().st_mode & 0o777, 0o600)
+                shutil.rmtree(self.bundle)
+        (self.inbox / ".lock").unlink()
+        create_export(self.store, self.bundle)  # un `.lock` que falta se crea él solo
+        self.assertEqual(sorted(p.name for p in self.inbox.iterdir()), [".lock"])
+
+    def test_a_failing_custody_creates_nothing_even_with_an_incomplete_layout(self) -> None:
+        paths = inbox.inbox_paths(self.store)
+        paths.pending.mkdir(parents=True)
+        (paths.pending / "1-1-0000000000000001-00000001.json").write_bytes(b"{}")
+        for kind in ("v1", "sealed"):
+            with self.subTest(kind=kind):
+                self.assert_code("inbox_pending", self.create, kind)
+        self.assertEqual(sorted(p.name for p in self.inbox.iterdir()), [".lock", "pending"])
+        self.assertFalse(self.bundle.exists())
+
+    def test_a_hardlinked_or_linked_lock_fails_the_custody_closed(self) -> None:
+        self.inbox.mkdir()
+        outside = self.scratch / "fuera.txt"
+        outside.write_bytes(b"x")
+        os.symlink(outside, self.inbox / ".lock")
+        self.assert_code("inbox_unsafe_path", self.create, "v1")
+        self.assertFalse(self.bundle.exists())
 
     def test_a_directory_with_an_entry_name_does_not_block_custody(self) -> None:
-        """R3-01: sólo un archivo regular cuenta como entrada o marcador."""
+        """R1-04: un directorio (en `pending/` o `inflight/`) se ignora y `inbox status` lo informa aparte."""
 
         self.queue()
         self.drain_by_hand()
         paths = inbox.inbox_paths(self.store)
         (paths.pending / "1-2-0123456789abcdef-01234567.json").mkdir()
         (paths.inflight / MARKER).mkdir()
-        os.mkfifo(paths.pending / "1-3-0123456789abcdef-01234567.json")
         self.assertTrue(inbox.pending_is_empty(self.store))
         self.assertTrue(inbox.inflight_is_empty(self.store))
-        self.assertEqual(inbox.entry_names(self.store), [])
         status = inbox.read_status(self.store)
         self.assertEqual(status["pending"]["count"], 0)
         self.assertEqual(status["inflight"]["count"], 0)
-        self.assertEqual(status["ignored"]["pending"]["count"], 2)
+        self.assertEqual(status["ignored"]["pending"]["count"], 1)
         self.assertEqual(status["ignored"]["inflight"]["names"], [MARKER])
-        # la custodia pasa por la definición; la orden la rechaza por el FIFO (archivo especial), no por la bandeja
-        self.assert_code("export_unsafe_file", self.create, "v1")
-        os.unlink(paths.pending / "1-3-0123456789abcdef-01234567.json")
         create_export(self.store, self.bundle)
+
+    def test_validations_come_before_the_custody_and_agree_between_profiles(self) -> None:
+        """R1-03: mismo código para la misma situación, con la bandeja pendiente, en v1 y en sellado."""
+
+        self.queue()
+        self.bundle.mkdir()
+        for kind in ("v1", "sealed"):
+            with self.subTest(case="destino existe", kind=kind):
+                self.assert_code("export_destination_exists", self.create, kind)
+        shutil.rmtree(self.bundle)
+        for kind in ("v1", "sealed"):
+            with self.subTest(case="destino dentro del origen", kind=kind):
+                self.bundle = Path(self.store.root) / "dentro"
+                self.assert_code("export_destination_inside_source", self.create, kind)
+                self.assertFalse(self.bundle.exists())
+
+    def test_a_divergent_custody_is_reported_before_the_inbox(self) -> None:
+        commit_relocation(self.store, plan_relocation(self.store, self.vault), self.revision)
+        external = MemoryStore(self.project, store_root=self.vault)
+        self.queue(external)
+        stale = MemoryStore(self.project)  # puntero presente: la raíz local diverge
+        left = inbox.inbox_paths(stale).pending  # una bandeja con entradas en el ancla abandonada
+        left.mkdir(parents=True)
+        (left / "1-1-0000000000000001-00000001.json").write_bytes(b"{}")
+        for kind in ("v1", "sealed"):
+            with self.subTest(kind=kind):
+                self.store = stale
+                self.assert_code("store_root_divergence", self.create, kind)
+
+    def test_lock_order_violation_has_a_canonical_cli_code(self) -> None:
+        """R1-07: sale por su código, no como `cli_unexpected_failure`."""
+
+        import io
+        from contextlib import redirect_stderr
+        from an_kla import __main__ as cli
+
+        error = lock_order.LockOrderError(lock_order.INBOX, (lock_order.IDENTITY,))
+        buffer = io.StringIO()
+        with mock.patch.object(cli, "_run", side_effect=error), redirect_stderr(buffer):
+            with self.assertRaises(SystemExit) as caught:
+                cli.main()
+        self.assertEqual(caught.exception.code, 1)
+        self.assertEqual(buffer.getvalue().strip(), "an-kla error: lock_order_violation")
 
 
 class CompactCustodyTests(CustodyCase):
@@ -322,11 +409,12 @@ class RelocateCustodyTests(CustodyCase):
         self.assertFalse((self.project / ".an-kla" / "memory" / "inbox").exists())
         self.assertFalse((self.vault / "memory" / "inbox").exists())
 
-    def test_a_concurrent_enqueue_never_leaves_an_entry_in_the_abandoned_anchor(self) -> None:
-        """Criterio 7: el encolador espera el candado, ve la custodia cambiada y falla; nada queda en el ancla vieja."""
+    def race_enqueue_during_relocate(self, *, with_inbox: bool) -> dict:
+        """Un encolador con el store anterior arranca cuando el commit ya tiene los candados de identidad y escritura."""
 
-        self.queue()
-        self.drain_by_hand()
+        if with_inbox:
+            self.queue()
+            self.drain_by_hand()
         plan = self.forward()
         stale = MemoryStore(self.project)  # abierto antes del relocate, como un `remember` en vuelo
         passed_first_preflight = threading.Event()
@@ -349,25 +437,39 @@ class RelocateCustodyTests(CustodyCase):
         thread = threading.Thread(target=racer)
 
         def fault(name: str) -> None:
-            if name == "journal_staging":  # con identity_lock y write_lock tomados, bandeja exclusiva viva
+            if name == "journal_staging":
                 thread.start()
                 self.assertTrue(passed_first_preflight.wait(20))
+                thread.join(1.5)  # con R1-01 sigue bloqueado en `identity_lock`; sin él ya habría publicado
 
         relocate._fault = fault
         self.addCleanup(setattr, relocate, "_fault", None)
-        result = commit_relocation(self.store, plan, self.revision)
+        outcome["relocation"] = commit_relocation(self.store, plan, self.revision)
         thread.join(30)
-        self.assertEqual(result["stage"], "cleaned")
-        # `store_identity_invalid`: el preflight lee la identidad (ya movida) antes de comparar la custodia
-        self.assertIn(
-            outcome.get("error"),
-            {"inbox_busy", "store_root_divergence", "store_identity_changed", "store_identity_invalid"},
-            outcome,
-        )
+        return outcome
+
+    def assert_nothing_abandoned(self, outcome: dict) -> None:
+        self.assertEqual(outcome["relocation"]["stage"], "cleaned")
         old = self.project / ".an-kla" / "memory" / "inbox"
-        self.assertEqual([p for p in old.rglob("*.json")], [])
-        self.assertEqual(inbox.entry_names(MemoryStore(self.project, store_root=self.vault)), [])
-        self.assertEqual(self.residue_of(MemoryStore(self.project, store_root=self.vault).doctor()), 0)
+        self.assertEqual([p for p in old.rglob("*.json")], [], outcome)
+        destination = MemoryStore(self.project, store_root=self.vault)
+        self.assertEqual(inbox.entry_names(destination), [])
+        self.assertEqual(self.residue_of(destination.doctor()), 0)
+
+    def test_a_concurrent_enqueue_never_leaves_an_entry_in_the_abandoned_anchor(self) -> None:
+        """Criterio 7 con la bandeja ya creada: sólo los tres códigos del ADR."""
+
+        outcome = self.race_enqueue_during_relocate(with_inbox=True)
+        self.assertIn(outcome.get("error"), {"inbox_busy", "store_root_divergence", "store_identity_changed"}, outcome)
+        self.assert_nothing_abandoned(outcome)
+
+    def test_a_concurrent_enqueue_with_the_inbox_absent_at_the_start_is_not_lost(self) -> None:
+        """R1-01: la bandeja no existía al empezar la reubicación; el encolado toma `identity_lock` y espera."""
+
+        self.assertFalse(self.inbox.exists())
+        outcome = self.race_enqueue_during_relocate(with_inbox=False)
+        self.assertIn(outcome.get("error"), {"store_root_divergence", "store_identity_changed"}, outcome)
+        self.assert_nothing_abandoned(outcome)
 
 
 class LockOrderCustodyTests(CustodyCase):

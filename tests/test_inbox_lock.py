@@ -74,7 +74,7 @@ class InboxLockTests(InboxCase):
         for directory in (paths.pending, paths.inflight):
             directory.mkdir(parents=True)
         (paths.pending / "algo.txt").write_bytes(b"")
-        (paths.pending / "1-2-0123456789abcdef-99999999.json").mkdir()  # R3-01: un directorio no cuenta
+        (paths.pending / "1-2-0123456789abcdef-99999999.json").mkdir()  # R1-04: un directorio se ignora
         (paths.pending / "1-2-0123456789abcdef-01234567.json").write_bytes(b"{}")
         (paths.pending / "1-2-0123456789abcdef-0123456.json").write_bytes(b"")  # un dígito corto: ignorado
         (paths.inflight / "no-es-uuid.json").write_bytes(b"")

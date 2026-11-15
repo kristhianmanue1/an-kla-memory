@@ -107,8 +107,8 @@ class StatusReadTests(InboxCase):
         os.symlink("/etc/hostname", paths.pending / "1-1-0000000000000006-00000006.json")
         status = inbox.read_status(self.store)
         self.assertEqual(status["rejected"]["entries"][0]["reason"], None)
-        self.assertEqual(status["pending"]["count"], 1)  # R3-01: un enlace con nombre de entrada no es archivo
-        self.assertEqual(status["ignored"]["pending"]["names"], ["1-1-0000000000000006-00000006.json"])
+        self.assertEqual(status["pending"]["count"], 2)  # R1-04: el enlace casa el patrón y no es directorio
+        self.assertEqual(status["ignored"]["pending"]["count"], 0)
 
     def test_unsafe_root_is_reported_without_descending_or_leaking_a_path(self) -> None:
         """R2-01: raíz archivo o enlazada (a archivo o a directorio con entradas ajenas)."""

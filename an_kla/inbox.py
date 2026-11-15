@@ -29,7 +29,8 @@ from typing import Any, Callable, Iterator, Mapping, NamedTuple
 
 from . import identity_c0, lock_order
 from .canonical import canonical_json, digest_json
-from .identity import _mutation_preflight_with_context
+from .custody import check_custody
+from .identity import IdentityError, _mutation_preflight_with_context, identity_lock
 from .reader_gate import ReaderGateError
 from .storage_primitives import fsync_directory
 from .store import PREFIXES
@@ -188,37 +189,38 @@ def _subdir_names(store: Any, subdir: str) -> list[str]:
     return _names(getattr(inbox_paths(store), subdir))
 
 
-def _is_regular_file(directory: Path, name: str) -> bool:
-    """``lstat`` sin abrir: sólo un archivo regular cuenta (R3-01); un nombre que desaparece, no."""
+def _is_not_directory(directory: Path, name: str) -> bool:
+    """``lstat`` sin abrir: todo lo que no es un directorio cuenta; un nombre que desaparece, no."""
 
     try:
-        return stat.S_ISREG(os.lstat(directory / name).st_mode)
+        return not stat.S_ISDIR(os.lstat(directory / name).st_mode)
     except FileNotFoundError:
         return False
     except OSError:
         raise InboxError("inbox_unavailable") from None
 
 
-def _regular_matches(directory: Path, names: list[str], matches: Callable[[str], bool]) -> list[str]:
-    return [name for name in names if matches(name) and _is_regular_file(directory, name)]
+def _counted_names(directory: Path, names: list[str], matches: Callable[[str], bool]) -> list[str]:
+    return [name for name in names if matches(name) and _is_not_directory(directory, name)]
 
 
 def _counted(store: Any, subdir: str, matches: Callable[[str], bool]) -> list[str]:
-    return _regular_matches(getattr(inbox_paths(store), subdir), _subdir_names(store, subdir), matches)
+    return _counted_names(getattr(inbox_paths(store), subdir), _subdir_names(store, subdir), matches)
 
 
 def entry_names(store: Any) -> list[str]:
-    """Entradas de ``pending/``: archivos regulares cuyo nombre casa el patrón, orden de nombre.
+    """Entradas de ``pending/``: nombres que casan el patrón y no son directorio, orden de nombre.
 
-    Un directorio u otro no-archivo con nombre de entrada no cuenta (R3-01, D1 «Directorios»);
-    sólo se hace ``lstat``, nunca se abre (un FIFO colgaría la lectura).
+    Un directorio con nombre de entrada se ignora (D1 «Directorios»). Un FIFO, enlace, hardlink o
+    archivo con ese nombre SÍ cuenta: el vaciado lo envía a ``rejected/`` y la custodia espera.
+    Sólo se hace ``lstat``, nunca se abre (un FIFO colgaría la lectura).
     """
 
     return _counted(store, PENDING_DIR, is_entry_name)
 
 
 def marker_names(store: Any) -> list[str]:
-    """Marcadores de ``inflight/``: archivos regulares cuyo nombre casa el patrón de marcador."""
+    """Marcadores de ``inflight/``: nombres que casan el patrón de marcador y no son directorio."""
 
     return _counted(store, INFLIGHT_DIR, is_marker_name)
 
@@ -297,6 +299,8 @@ def _open_lock_file(path: Path, flags: int) -> int:
         fd = os.open(path, flags, 0o600)
     except FileNotFoundError:
         raise InboxError("inbox_absent") from None
+    except FileExistsError:  # sólo con O_EXCL: otro proceso creó el `.lock` entre el intento y la creación
+        raise InboxError("inbox_lock_exists") from None
     except OSError as exc:
         if exc.errno in (errno.ELOOP, errno.EISDIR, errno.ENOTDIR, errno.EMLINK):
             raise InboxError("inbox_unsafe_path") from None
@@ -318,21 +322,40 @@ def _open_lock_file(path: Path, flags: int) -> int:
     return fd
 
 
+def _open_lock_creating_only_it(path: Path, flags: int) -> int:
+    """Abre ``.lock``; si falta, crea sólo él (``O_CREAT|O_EXCL``, 0600) y aplica las mismas comprobaciones."""
+
+    for _ in range(_NAME_ATTEMPTS):
+        try:
+            return _open_lock_file(path, flags)
+        except InboxError as exc:
+            if exc.code != "inbox_absent":
+                raise
+        try:
+            return _open_lock_file(path, flags | os.O_CREAT | os.O_EXCL)
+        except InboxError as exc:
+            if exc.code != "inbox_lock_exists":
+                raise
+    raise InboxError("inbox_lock_unavailable")
+
+
 @contextlib.contextmanager
 def inbox_lock(
-    store: Any, *, exclusive: bool, wait_seconds: float = 0.0, create: bool = True
+    store: Any, *, exclusive: bool, wait_seconds: float = 0.0, create: bool = True, layout: bool = True
 ) -> Iterator[bool]:
     """Candado de bandeja con plazo. Rinde ``True`` si lo tomó en exclusivo.
 
     Compartido salvo donde no hay ``flock`` compartido (entonces es exclusivo siempre).
     Falla con ``InboxError("inbox_busy")`` si no lo obtiene en ``wait_seconds``. Falla
     cerrado con ``LockOrderError`` si el contexto ya tiene ``identity_lock`` o
-    ``write_lock``. Con ``create=False`` no crea nada y exige que la bandeja exista.
+    ``write_lock``. Con ``create=False`` no crea nada y exige que la bandeja exista. Con
+    ``layout=False`` (la custodia) tampoco crea la estructura: exige la raíz y sólo crea el
+    ``.lock`` si falta.
     """
 
     lock_order.require_inbox_allowed(store)
     paths = inbox_paths(store)
-    if create:
+    if create and layout:
         _ensure_layout(store)
     else:
         state = root_state(store)
@@ -340,7 +363,10 @@ def inbox_lock(
             raise InboxError("inbox_unsafe_path" if state == "unsafe" else "inbox_absent")
     effective_exclusive = exclusive or not SHARED_SUPPORTED
     flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0)
-    fd = _open_lock_file(paths.lock, flags if create else flags & ~os.O_CREAT)
+    if create and not layout:
+        fd = _open_lock_creating_only_it(paths.lock, flags & ~os.O_CREAT)
+    else:
+        fd = _open_lock_file(paths.lock, flags if create else flags & ~os.O_CREAT)
     try:
         if os.fstat(fd).st_size == 0 and msvcrt is not None:  # pragma: no cover - sólo Windows
             os.write(fd, b"0")
@@ -367,8 +393,9 @@ def custody_guard(store: Any, *, wait_seconds: float | None = None) -> Iterator[
     ``inbox_pending`` o ``inbox_inflight`` (pista ``inbox drain``). Ocupado, ``inbox_busy``.
     Sin ``memory/inbox/`` no hace nada: no crea la bandeja ni el ``.lock`` y la orden recorre
     el camino de hoy. Con una raíz insegura (enlace o no-directorio) tampoco: la orden la
-    rechaza como siempre (``export_unsafe_link``) al recorrer el ancla. Con la raíz presente
-    pero sin ``.lock`` o con subdirectorios sin crear, ``create=True`` completa el layout.
+    rechaza como siempre (``export_unsafe_link``) al recorrer el ancla. Nunca crea la
+    estructura (R1-02): con la raíz presente sólo crea el ``.lock`` si falta, y un
+    subdirectorio ausente cuenta como vacío.
     """
 
     if root_state(store) != "present":
@@ -376,7 +403,7 @@ def custody_guard(store: Any, *, wait_seconds: float | None = None) -> Iterator[
         yield
         return
     wait = CUSTODY_LOCK_WAIT_SECONDS if wait_seconds is None else wait_seconds
-    with inbox_lock(store, exclusive=True, wait_seconds=wait):
+    with inbox_lock(store, exclusive=True, wait_seconds=wait, layout=False):
         if not pending_is_empty(store):
             raise InboxError("inbox_pending", "vacía la bandeja con `inbox drain` y reintenta")
         if not inflight_is_empty(store):
@@ -531,7 +558,7 @@ def enqueue(
     """
 
     lock_order.require_inbox_allowed(store)
-    preflight(store)
+    _custody_preflight(store, preflight)
     data_text = _validated_text(text)
     if target_id is not None and (
         not isinstance(target_id, str) or not 0 < len(target_id) <= MAX_TARGET_CHARS
@@ -547,21 +574,25 @@ def enqueue(
         raise InboxError("inbox_idempotency_key_invalid", "la clave debe ser sha256:<64 hex>")
     paths = inbox_paths(store)
     with inbox_lock(store, exclusive=False, wait_seconds=wait_seconds):
-        preflight(store)  # la custodia pudo cambiar mientras se esperaba el candado
-        envelope = identity_c0.build_envelope(identity, resolved_kind, key, clock)
-        entry: dict[str, Any] = {
-            "schema": ENTRY_SCHEMA,
-            "text": data_text,
-            "kind": resolved_kind,
-            "kind_explicit": explicit,
-            "envelope": envelope,
-            "idempotency_key": key,
-            "payload_sha256": payload_digest(data_text, resolved_kind, target_id),
-        }
-        if target_id is not None:
-            entry["target_id"] = target_id
-        payload = canonical_json(entry)
-        entry_name = _publish(paths, payload, key, time_ns, token, replace)
+        # R1-01: una reubicación en curso tiene `identity_lock` durante todo el cambio de custodia;
+        # tomarlo aquí (bandeja -> identidad, orden permitido) bloquea la publicación y, al terminar,
+        # el preflight repetido falla sin dejar entrada, también con la bandeja ausente al empezar ella.
+        with identity_lock(store):
+            _custody_preflight(store, preflight)  # la custodia pudo cambiar mientras se esperaba
+            envelope = identity_c0.build_envelope(identity, resolved_kind, key, clock)
+            entry: dict[str, Any] = {
+                "schema": ENTRY_SCHEMA,
+                "text": data_text,
+                "kind": resolved_kind,
+                "kind_explicit": explicit,
+                "envelope": envelope,
+                "idempotency_key": key,
+                "payload_sha256": payload_digest(data_text, resolved_kind, target_id),
+            }
+            if target_id is not None:
+                entry["target_id"] = target_id
+            payload = canonical_json(entry)
+            entry_name = _publish(paths, payload, key, time_ns, token, replace)
     result: dict[str, Any] = {
         "state": "queued",
         "entry": entry_name,
@@ -574,6 +605,21 @@ def enqueue(
     if target_id is None:
         result["record_id"] = record_id(stream_for_kind(resolved_kind), key)
     return result
+
+
+def _custody_preflight(store: Any, preflight: Callable[[Any], Any]) -> Any:
+    """El preflight gobernado, con el código de custodia cuando la identidad ya no está donde estaba.
+
+    Tras una reubicación el store obsoleto no ve su identidad (``store_identity_invalid``);
+    si el puntero o la bóveda local lo contradicen, el código estable es ``store_root_divergence``.
+    """
+
+    try:
+        return preflight(store)
+    except IdentityError as exc:
+        if str(exc) == "store_identity_invalid":
+            check_custody(store, binding=None)
+        raise
 
 
 def _validated_text(text: Any) -> str:
@@ -710,8 +756,8 @@ def read_status(store: Any) -> dict[str, Any]:
         if name.endswith(REASON_SUFFIX):
             continue
         rejected.append({"name": name, **_read_reason(paths.rejected, name)})
-    pending_entries = _regular_matches(paths.pending, names["pending"], is_entry_name)
-    inflight_markers = _regular_matches(paths.inflight, names["inflight"], is_marker_name)
+    pending_entries = _counted_names(paths.pending, names["pending"], is_entry_name)
+    inflight_markers = _counted_names(paths.inflight, names["inflight"], is_marker_name)
     counted = set(pending_entries) | set(inflight_markers)
     return {
         "schema": STATUS_SCHEMA,
