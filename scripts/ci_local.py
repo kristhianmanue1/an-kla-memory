@@ -1,6 +1,7 @@
 """ci_local.py — gate local vigente; no hay workflow remoto de PR.
 
-Ejecuta importabilidad + unittest +
+Ejecuta importabilidad + unittest + la matriz `kill -9` de la bandeja (lenta, con
+AN_KLA_SLOW_KILL9=1; ADR-0063 criterio 3) +
 check_sizes + check_plans + registro ADR sin consumir GitHub Actions.
 La simulación local no acredita ejecución en otros sistemas operativos.
 
@@ -40,11 +41,12 @@ CHECK_SIZES = ROOT / "scripts" / "check_sizes.py"
 CHECK_PLANS = ROOT / "scripts" / "check_plans.py"
 CHECK_ADRS = ROOT / "scripts" / "check_adr_registry.py"
 REDTEAM = ROOT / "scripts" / "redteam_consistent_rewrite.py"
+KILL9_TEST = ROOT / "tests" / "test_inbox_crash.py"
 SUPPORTED_VERSIONS = ("3.9", "3.12", "3.13")
 
 
 def paso_import() -> str:
-    print("==> [1/7] importabilidad de an_kla", flush=True)
+    print("==> [1/8] importabilidad de an_kla", flush=True)
     try:
         result = subprocess.run(
             [PYTHON, "-c", "import an_kla"],
@@ -67,7 +69,7 @@ def paso_import() -> str:
 
 def paso_tests(simulate_ci: bool) -> str:
     etiqueta = " (simulate-ci)" if simulate_ci else ""
-    print(f"==> [2/7] unittest discover{etiqueta}", flush=True)
+    print(f"==> [2/8] unittest discover{etiqueta}", flush=True)
     env = dict(os.environ)
     if simulate_ci:
         env["GITHUB_ACTIONS"] = "true"
@@ -83,7 +85,7 @@ def paso_tests(simulate_ci: bool) -> str:
 
 
 def paso_redteam_selftest() -> str:
-    print("==> [3/7] selftest G-3 (redteam_consistent_rewrite)", flush=True)
+    print("==> [3/8] selftest G-3 (redteam_consistent_rewrite)", flush=True)
     if not REDTEAM.exists():
         print("    SKIP: scripts/redteam_consistent_rewrite.py no existe")
         return "SKIP"
@@ -120,7 +122,7 @@ def _interprete_para(version: str) -> str | None:
 
 
 def paso_matriz() -> str:
-    print("==> [4/7] matriz de intérpretes soportados", flush=True)
+    print("==> [4/8] matriz de intérpretes soportados", flush=True)
     if os.environ.get("AN_KLA_CI_LOCAL_MATRIX") == "0":
         print("    SKIP (AN_KLA_CI_LOCAL_MATRIX=0)")
         return "SKIP"
@@ -151,8 +153,34 @@ def paso_matriz() -> str:
     return "OK"
 
 
+def paso_kill9_bandeja() -> str:
+    """Matriz ``kill -9`` real de la bandeja (ADR-0063, criterio 3): 8 puntos + último recurso × 20.
+
+    Es lenta, así que no corre en el ``unittest discover`` normal (la prueba se salta sin
+    ``AN_KLA_SLOW_KILL9=1``): este paso la ejecuta aparte, con esa variable. Define
+    AN_KLA_CI_LOCAL_KILL9=0 para saltarlo (SKIP declarado); lo hace la prueba que corre
+    ``ci_local`` anidado.
+    """
+
+    print("==> [5/8] kill -9 de la bandeja (criterio 3)", flush=True)
+    if os.environ.get("AN_KLA_CI_LOCAL_KILL9") == "0":
+        print("    SKIP (AN_KLA_CI_LOCAL_KILL9=0)")
+        return "SKIP"
+    if not KILL9_TEST.exists():
+        print("    SKIP: tests/test_inbox_crash.py no existe")
+        return "SKIP"
+    env = dict(os.environ)
+    env["AN_KLA_SLOW_KILL9"] = "1"
+    result = subprocess.run(
+        [PYTHON, "-m", "unittest", "tests.test_inbox_crash.Kill9MatrixTests"], cwd=ROOT, env=env
+    )
+    estado = "OK" if result.returncode == 0 else "FAIL"
+    print(f"    {estado}")
+    return estado
+
+
 def paso_sizes() -> str:
-    print("==> [5/7] check_sizes", flush=True)
+    print("==> [6/8] check_sizes", flush=True)
     if not CHECK_SIZES.exists():
         print("    SKIP: scripts/check_sizes.py no existe (ver issue #21 / PR #24)")
         return "SKIP"
@@ -163,7 +191,7 @@ def paso_sizes() -> str:
 
 
 def paso_plans() -> str:
-    print("==> [6/7] check_plans", flush=True)
+    print("==> [7/8] check_plans", flush=True)
     if not CHECK_PLANS.exists():
         print("    SKIP: scripts/check_plans.py no existe")
         return "SKIP"
@@ -174,7 +202,7 @@ def paso_plans() -> str:
 
 
 def paso_adrs() -> str:
-    print("==> [7/7] check_adr_registry", flush=True)
+    print("==> [8/8] check_adr_registry", flush=True)
     result = subprocess.run([PYTHON, str(CHECK_ADRS)], cwd=ROOT)
     estado = "OK" if result.returncode == 0 else "FAIL"
     print(f"    {estado}")
@@ -195,6 +223,7 @@ def main() -> int:
         "unittest": paso_tests(args.simulate_ci),
         "redteam_selftest": paso_redteam_selftest(),
         "matriz_interpretes": paso_matriz(),
+        "kill9_bandeja": paso_kill9_bandeja(),
         "check_sizes": paso_sizes(),
         "check_plans": paso_plans(),
         "check_adr_registry": paso_adrs(),
