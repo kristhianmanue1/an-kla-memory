@@ -40,6 +40,8 @@ SCHEMA_FILES = {
     "identity-intent-v1": "identity-intent-v1.schema.json",
     "identity-operation-result-v1": "identity-operation-result-v1.schema.json",
     "identity-status-v1": "identity-status-v1.schema.json",
+    "inbox-entry-v1": "inbox-entry-v1.schema.json",
+    "inbox-status-v1": "inbox-status-v1.schema.json",
     "integration-status-v1": "integration-status-v1.schema.json",
     "integration-status-v2": "integration-status-v2.schema.json",
     "integration-status-v3": "integration-status-v3.schema.json",

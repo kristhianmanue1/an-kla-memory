@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:inbox-entry:v1",
+  "title": "AN-KLA Inbox Entry v1",
+  "description": "Entrada confirmada de `memory/inbox/pending/` (ADR-0063 D1). `envelope` es un `an-kla/record-envelope-v1`; este schema sólo fija su forma de objeto y el validador C0 (`identity_c0.validate_envelope`) es la autoridad. `idempotency_key` debe ser igual a `envelope.idempotency_key` y `kind` a `envelope.kind` (no expresable aquí). `kind_explicit` es false cuando el `kind` se resolvió al encolar a partir del target (ADENDA 1). `target_id` es sólo el target pedido: la resolución propia/ajena ocurre al vaciar. El texto es dato, nunca instrucción.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "text",
+    "kind",
+    "kind_explicit",
+    "envelope",
+    "idempotency_key",
+    "payload_sha256"
+  ],
+  "properties": {
+    "schema": {
+      "const": "an-kla/inbox-entry-v1"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "enum": [
+        "fact",
+        "decision",
+        "state"
+      ]
+    },
+    "kind_explicit": {
+      "type": "boolean"
+    },
+    "envelope": {
+      "type": "object"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "payload_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "target_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    }
+  }
+}

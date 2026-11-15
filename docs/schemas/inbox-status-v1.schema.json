@@ -1,0 +1,174 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:inbox-status:v1",
+  "title": "AN-KLA Inbox Status v1",
+  "description": "Estado de sólo lectura de `memory/inbox/` (ADR-0063 D1). Sin la bandeja informa `inbox: absent` y no crea nada. Sólo lista nombres; de `rejected/` devuelve el motivo (código restringido a `[a-z0-9_:.-]{1,80}`), nunca texto de recuerdos. `ignored` son nombres de `pending/` e `inflight/` que no son entrada ni marcador. Los listados se acotan a 1000 nombres (`truncated`).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "untrusted_memory_data",
+    "inbox",
+    "directories",
+    "pending",
+    "inflight",
+    "rejected",
+    "tmp",
+    "ignored"
+  ],
+  "properties": {
+    "schema": {
+      "const": "an-kla/inbox-status-v1"
+    },
+    "untrusted_memory_data": {
+      "const": true
+    },
+    "inbox": {
+      "enum": [
+        "absent",
+        "present",
+        "unsafe"
+      ]
+    },
+    "directories": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tmp",
+        "pending",
+        "inflight",
+        "rejected"
+      ],
+      "properties": {
+        "tmp": {
+          "enum": [
+            "absent",
+            "present",
+            "unsafe"
+          ]
+        },
+        "pending": {
+          "enum": [
+            "absent",
+            "present",
+            "unsafe"
+          ]
+        },
+        "inflight": {
+          "enum": [
+            "absent",
+            "present",
+            "unsafe"
+          ]
+        },
+        "rejected": {
+          "enum": [
+            "absent",
+            "present",
+            "unsafe"
+          ]
+        }
+      }
+    },
+    "pending": {
+      "$ref": "#/$defs/listing"
+    },
+    "inflight": {
+      "$ref": "#/$defs/listing"
+    },
+    "rejected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "count",
+        "entries",
+        "truncated"
+      ],
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "name",
+              "reason",
+              "reason_codes"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"
+              },
+              "reason_codes": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tmp": {
+      "$ref": "#/$defs/listing"
+    },
+    "ignored": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pending",
+        "inflight"
+      ],
+      "properties": {
+        "pending": {
+          "$ref": "#/$defs/listing"
+        },
+        "inflight": {
+          "$ref": "#/$defs/listing"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "listing": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "count",
+        "names",
+        "truncated"
+      ],
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "names": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "truncated": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
