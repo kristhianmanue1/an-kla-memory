@@ -25,7 +25,8 @@ Guardar un hecho hoy cuesta cuatro invocaciones y ~5 KB de JSON
    (`an_kla/write_commit.py:42-51, 104-110`;
    `benchmarks/scale/scenarios_ops.py:43-69`).
 2. **Procedencia.** `lineage` e `issuer` se validan
-   (`an_kla/write_policy.py:335-344`) pero `lineage.refs`, `issuer` y la
+   (`an_kla/write_policy.py:335-344` para `lineage`, `:414-434` para
+   `issuer`) pero `lineage.refs`, `issuer` y la
    atribución por registro no se persisten: el evento
    `write_policy_decision` sólo lleva clase, hashes, decisión y razones
    (`write_policy.py:655-676`; el booleano `derived_from_retrieval`
@@ -101,10 +102,12 @@ target (ver D3).
 indexa (`record_text.py:15-32`), con `requested_representation: "summary"`
 (techo de `model_derived`) y `lineage: {"derived_from_retrieval": false,
 "refs": []}`. Schemas nuevos: `inbox-entry-v1`, `record-envelope-v1`,
-`remember-result-v1`, `inbox-status-v1`, `disputes-list-v1`.
+`remember-result-v1`, `inbox-drain-result-v1`, `inbox-status-v1`,
+`disputes-list-v1`.
 
 **Directorios.** `memory/inbox/` contiene `.lock`, `tmp/` (temporales del
-encolado), `pending/` (entradas completas), `rejected/` (evidencia). Sólo
+encolado), `pending/` (entradas completas), `inflight/` (marcadores de
+lotes en vuelo, paso 0), `rejected/` (evidencia). Sólo
 cuenta como entrada un archivo de `pending/` cuyo nombre case
 `^[0-9]+-[0-9]+-[0-9a-f]{16}-[0-9a-f]{8}\.json$`; el vaciado ignora sin
 tocar todo lo demás de `pending/`.
@@ -127,10 +130,11 @@ lento, igual de correcto); hay prueba por plataforma.
 3. Con él, repite el preflight; si la custodia cambió, falla con su código
    (`store_root_divergence` o `store_identity_changed`) y no deja entrada.
 4. Escribe la entrada `an-kla/inbox-entry-v1` en `memory/inbox/tmp/`
-   (fsync del archivo) y la publica en `pending/` con
-   `os.link` + `unlink` del temporal (nunca sobrescribe; un nombre que ya
-   exista es error, no pérdida) y fsync de `pending/`. Nombre:
-   `<tiempo_ns>-<pid>-<clave16>-<aleatorio8>.json`. La entrada guarda texto,
+   (fsync del archivo) y la publica en `pending/` con `os.replace` (mismo
+   sistema de archivos, el inodo nunca tiene dos nombres, `st_nlink` sigue
+   en 1) y fsync de `pending/`. Nombre:
+   `<tiempo_ns>-<pid>-<clave16>-<aleatorio8>.json`; la colisión exige mismo
+   nanosegundo, mismo pid, misma clave y los mismos 32 bits aleatorios. La entrada guarda texto,
    `kind`, sobre (D2), clave, `payload_sha256` (de texto, `kind` y target) y,
    si lo hay, sólo el `target_id` pedido: la resolución propia/ajena ocurre
    al vaciar.
@@ -140,11 +144,19 @@ lento, igual de correcto); hay prueba por plataforma.
 nuevo de `write_lock`; la constante de 10 s no cambia). Si está ocupado →
 `{"state": "queued"}`. Con el candado:
 
-0. **Reconcilia** los journals propios de la bandeja (`transaction_id` del
-   espacio `NS_AN_KLA_INBOX`) con `stage != committed`, por la
-   reconciliación existente (`store.inspect_transaction`, ADR-0024): si el
-   candidato ya es `CURRENT` o ancestro suyo, el journal se cierra; si no,
-   queda y se informa.
+0. **Reconcilia** los lotes en vuelo. Antes de comprometer un lote, el
+   vaciado escribe con fsync `memory/inbox/inflight/<transaction_id>.json`
+   con los nombres de sus entradas; así la bandeja sabe qué journals son
+   suyos sin depender del espacio UUIDv5. En el paso 0, por cada marcador:
+   `store.inspect_transaction(txid)` (sólo lectura,
+   `transactions.py:312-313`); si el candidato es `CURRENT` o ancestro
+   suyo, cierra el journal escribiendo el registro `committed` por la misma
+   ruta de reconciliación de `_commit_locked` que usa el replay de
+   `write_commit.py:52-83` (si esa ruta no escribe hoy el journal final, la
+   implementación la completa y lo prueba), borra de `pending/` las entradas
+   del marcador y el marcador; si el candidato no llegó a `CURRENT`, borra
+   sólo el marcador y las entradas siguen pendientes. Los journals de otras
+   órdenes no se tocan.
 1. lee `CURRENT` y el snapshot;
 2. para cada entrada candidata, `lstat`: si no es archivo regular con
    `st_nlink == 1` → `rejected/` con `inbox_entry_unsafe`, sin abrirla
@@ -157,7 +169,12 @@ nuevo de `write_lock`; la constante de 10 s no cambia). Si está ocupado →
    el id coincide con otro `payload_sha256` → `rejected/` con
    `remember_id_collision`. Contra el snapshot, igual comparando con la
    clave y el texto del record existente;
-5. arma lotes homogéneos con presupuesto de nodos (propuesta + plan
+5. **evalúa cada entrada sola** con las funciones puras de política
+   (`evaluate_write` y construcción del plan de un record, sin escribir
+   nada), con el candado tomado: `skip` → `rejected/` con
+   `remember_policy_skip` y sus `reason_codes`; error terminal de política
+   → `rejected/` con su código. Después arma lotes homogéneos sólo con las
+   entradas que pasaron, con presupuesto de nodos (propuesta + plan
    ≤ 9.000) y como máximo 250 entradas;
 6. construye propuesta, autoridad `model_derived` (la plantilla de
    `emit_write_authority_template`) y plan con las funciones puras de
@@ -166,13 +183,13 @@ nuevo de `write_lock`; la constante de 10 s no cambia). Si está ocupado →
    de las entradas del lote))`;
 7. según el resultado:
    - `committed: true` → borra las entradas del lote de `pending/`;
-   - `decision: skip` → cada entrada es rechazo de política:
-     `rejected/` con `remember_policy_skip` y sus `reason_codes`;
-   - error terminal de política (`invalid_*`, `plan_*`,
-     `invalid_supersede_target`, `duplicate_<stream>_id`) → **bisección**:
-     parte el lote en mitades y reintenta, soltando y retomando `write_lock`
-     entre intentos, hasta aislar las entradas que fallan solas, que van a
-     `rejected/` con su código;
+   - `decision: skip` o error terminal de política del lote ya
+     prevalidado (`invalid_*`, `plan_*`, `invalid_supersede_target`,
+     `duplicate_<stream>_id`) → **sin soltar `write_lock`** y contra la misma
+     base, compromete las entradas del lote una a una; la que falle sola va a
+     `rejected/` con su código. No se suelta el candado durante este
+     aislamiento, para que un escritor concurrente no convierta el intento en
+     `write_plan_base_changed`;
    - `committed: false` sin decisión `skip`, `committed: null` /
      `outcome_unknown`, o un error de infraestructura o concurrencia (E/S,
      `write_lock_busy`, `store_root_divergence`, `store_identity_changed`,
@@ -180,7 +197,11 @@ nuevo de `write_lock`; la constante de 10 s no cambia). Si está ocupado →
      `pending/` intacto y lo informa. Estos códigos **nunca** van a
      `rejected/`.
 
-`remember` vacía como máximo un lote; `inbox drain` vacía lotes sucesivos
+`remember` vacía como máximo un lote, y ese lote incluye su propia entrada
+(se arma primero el lote de su stream y operación con ella dentro); si su
+entrada no se comprometió en esta invocación (candado ocupado, entrada
+rechazada o vaciado abortado), responde `queued` o el rechazo, con el nombre
+de su entrada. `inbox drain` vacía lotes sucesivos
 hasta dejar `pending/` vacío o agotar un presupuesto de tiempo, soltando el
 candado entre lotes. Las lecturas no vacían ni informan de la bandeja.
 `inbox status` (sólo lectura) informa `pending`, `rejected` (con motivo por
@@ -337,7 +358,7 @@ sistema; todos los procesos pueden leer y escribir el store.
 | Un sobre falso escrito a mano vía `plan-write` | Fuera, declarado | Igual; endurecer `plan-write` es decisión aparte |
 | Dos escritores honestos se pisan | **Dentro** | D1: planificación y CAS bajo el mismo candado |
 | Corte brusco o de energía al encolar o vaciar | **Dentro** | fsync en `tmp/` antes de publicar; nada sale de `pending/` sin `committed: true`; reconciliación de journals (paso 0); deduplicación por clave y `payload_sha256` |
-| Una entrada mala bloquea toda la escritura (corrupta, no regular, FIFO, `skip`, error terminal) | **Dentro** | D1 pasos 2, 4 y 7: `rejected/` con motivo y bisección; el resto se compromete |
+| Una entrada mala bloquea toda la escritura (corrupta, no regular, FIFO, `skip`, error terminal) | **Dentro** | D1 pasos 2, 4, 5 y 7: `rejected/` con motivo, prevalidación por entrada y aislamiento sin soltar el candado; el resto se compromete |
 | El vaciado toma el temporal de un encolado en curso | **Dentro** | Temporales en `tmp/`; sólo cuentan los nombres completos de `pending/` |
 | Una entrada se pierde en `export`/`relocate` o en un ancla abandonada | **Dentro** | Preflight de custodia antes y después del candado de bandeja; exclusivo y `inbox_pending` en `export` y `relocate commit` |
 | `pending/` crece sin vaciar hasta llenar el disco | Dentro, límite declarado | Sin cuota total; ≤ 64 KiB por entrada; `inbox status` lo hace visible |

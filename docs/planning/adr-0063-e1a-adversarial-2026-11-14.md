@@ -80,3 +80,24 @@ del repo: `/var/tmp/orquestador-memoria/capitanes/ankla/ronda-adr0063/dictamen-r
 | N15 | MED | Orden de pasos: el id depende del target | Aceptado: resolver target antes de deduplicar |
 | N16 | LOW | Citas, rechazos invisibles al llamante, `--kind` omitido, `relocate plan` | Aceptado: citas corregidas; rechazos en las respuestas; regla de `--kind`; `plan` no exige bandeja vacía |
 | N17 | LOW | Plazo corto, `inbox_busy`, colisión de nombre, prefijo de sesión, `identity_env_invalid` | Aceptado en los cinco puntos |
+
+## Ronda r3 — `fix-and-retry` (tercera y última ronda; escalada)
+
+Revisor de otra familia distinta de r1 y r2: Gemini vía `agy --mode plan`,
+contexto fresco, sólo lectura. Cierre de r2: los 17 hallazgos y la
+condición de H3, **cerrados**. Hallazgos nuevos: 3 HIGH, 1 MED, 2 LOW.
+Dictamen íntegro fuera del repo:
+`/var/tmp/orquestador-memoria/capitanes/ankla/ronda-adr0063/dictamen-r3-gemini.md`.
+
+| ID | Sev | Hallazgo | Disposición |
+|---|---|---|---|
+| G1 | HIGH | Un corte entre `os.link` y `unlink` deja `st_nlink == 2` y la entrada legítima iría a `rejected/`; `os.link` no es portable | Aceptado: `os.replace` desde `tmp/` |
+| G2 | HIGH | La bisección soltando `write_lock` aborta en bucle bajo concurrencia | Aceptado: prevalidación pura por entrada y aislamiento uno a uno sin soltar el candado |
+| G3 | HIGH | El paso 0 no puede reconocer sus journals por UUIDv5 y `inspect_transaction` no escribe | Aceptado: marcadores `inflight/<txid>.json` y cierre por la ruta de reconciliación de `_commit_locked` |
+| G4 | MED | `remember` sin resultado definido si su entrada no entra en el lote | Aceptado: el lote de `remember` incluye su entrada; si no se compromete, `queued` o rechazo |
+| G5 | LOW | Falta `inbox-drain-result-v1` | Aceptado |
+| G6 | LOW | Cita de `issuer` | Aceptado: `write_policy.py:414-434` |
+
+**Estado tras r3:** correcciones absorbidas en el texto, **sin ronda que
+las verifique**. El tope del mandato (tres rondas) se alcanzó sin `proceed`:
+se escala al orquestador. El ADR sigue en `Propuesta` y su PR sin fusionar.
