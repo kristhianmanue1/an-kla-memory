@@ -1,0 +1,70 @@
+{
+  "result": {
+    "committed": true,
+    "context_diagnostics": {
+      "diagnostics": [
+        "context_status_unavailable"
+      ],
+      "error": "ContextPackageError",
+      "ok": null,
+      "schema": "an-kla/context-status/v1"
+    },
+    "decision": "write-summary",
+    "outcome": {
+      "audit_state": "complete",
+      "authority_state": "candidate_authoritative",
+      "candidate_relation": "current",
+      "candidate_revision": "sha256:8ae9a248420ae29035095124f161911c794219e212cfddca29af62190eb3846d",
+      "committed": true,
+      "current_observed": "sha256:8ae9a248420ae29035095124f161911c794219e212cfddca29af62190eb3846d",
+      "durability_state": "complete",
+      "operation_error_code": null,
+      "parent_revision": "sha256:57a1e02d32d8732531e68860c7dd527644960484c3eb08a7f5ca0b6a2ab33154",
+      "recorded": true,
+      "schema": "an-kla/commit-outcome-v2",
+      "state": "committed",
+      "transaction_id": "00000000-0000-4000-8000-00000000000b",
+      "warnings": [
+        "record_without_indexable_text"
+      ]
+    },
+    "plan_fingerprint": "sha256:1968b258c0555d0c27095f21fda73c4a6dbe89c34bc8a092a839eaeba9c256ed",
+    "reason_codes": [
+      "derived_authority_capped",
+      "record_without_indexable_text",
+      "representation_accepted"
+    ],
+    "revision": "sha256:8ae9a248420ae29035095124f161911c794219e212cfddca29af62190eb3846d",
+    "schema": "an-kla/write-commit-result-v1"
+  },
+  "store_tree": {
+    ".identity.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "attest-whitelist.json": "f15c377a8cbc33e126dbdbe3f35853abde42698e95f53945315bc7367c913b89",
+    "attest.key": "<random:32>",
+    "identity-intent.json": "8a2d49ff638eea452aa1fb87605a3236e483eaed27d4f292b7753caa4c7778c5",
+    "identity-intents/sha256/3b6cb5e1af684800d11b58a9d3532fc51d9ebddec3e36a839ced725533786efa.json": "3b6cb5e1af684800d11b58a9d3532fc51d9ebddec3e36a839ced725533786efa",
+    "identity-receipts/sha256/9265704f8e70a9f2e3cd43b80230d0d98d0767a343752f493d8d9a4cf114592d.json": "9265704f8e70a9f2e3cd43b80230d0d98d0767a343752f493d8d9a4cf114592d",
+    "memory/.reader-gate": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "memory/.write.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "memory/checkpoints/sha256/7028388135dc3c7f12f0f1a68c77e88d91b0b38e2653f47c7c55916751cda598.json": "7028388135dc3c7f12f0f1a68c77e88d91b0b38e2653f47c7c55916751cda598",
+    "memory/identities/sha256/4c3dd84b0f92b7d538842abd257b5a67348fa9b0246b5fc535af55395e2d4ad5.json": "4c3dd84b0f92b7d538842abd257b5a67348fa9b0246b5fc535af55395e2d4ad5",
+    "memory/identity.json": "4c3dd84b0f92b7d538842abd257b5a67348fa9b0246b5fc535af55395e2d4ad5",
+    "memory/refs/CURRENT": "2f2f3400eff1a9010b1931a5d1e4d4b054a373b4cf2b474ede2cf02991c46fd1",
+    "memory/refs/ref-log/sha256/300f2ee8a0bbaaa0e5507c134c5e1b214b991b6e1af0818cc8ef5d665fa2f262.json": "300f2ee8a0bbaaa0e5507c134c5e1b214b991b6e1af0818cc8ef5d665fa2f262",
+    "memory/refs/ref-log/sha256/7a894f17403a2aed8578d068d0d087ff8fa61a657b956357fe8737fa56995904.json": "7a894f17403a2aed8578d068d0d087ff8fa61a657b956357fe8737fa56995904",
+    "memory/revisions/sha256/57a1e02d32d8732531e68860c7dd527644960484c3eb08a7f5ca0b6a2ab33154.json": "57a1e02d32d8732531e68860c7dd527644960484c3eb08a7f5ca0b6a2ab33154",
+    "memory/revisions/sha256/8ae9a248420ae29035095124f161911c794219e212cfddca29af62190eb3846d.json": "8ae9a248420ae29035095124f161911c794219e212cfddca29af62190eb3846d",
+    "memory/segments/events/sha256/e4cd1bff8e605b1876ae476cad1d593dd6500936f9c439215661c0bbfcf47e26.jsonl": "e4cd1bff8e605b1876ae476cad1d593dd6500936f9c439215661c0bbfcf47e26",
+    "memory/segments/facts/sha256/d24c4528024f1ecb055a3189cda7cd3ca41f35ec85ad03d5bbec04b772c76d81.jsonl": "d24c4528024f1ecb055a3189cda7cd3ca41f35ec85ad03d5bbec04b772c76d81",
+    "memory/transactions/00000000-0000-4000-8000-000000000003.json": "723eeb6a9e444dbe8fde69994e622606c84e12ae8f6add2644417c9c23984e9c",
+    "memory/transactions/00000000-0000-4000-8000-000000000003/receipts/sha256/52ff569738f8f4890b4ffad2898289c9f16701ae559ca4571eb9adcc2e793c61.json": "52ff569738f8f4890b4ffad2898289c9f16701ae559ca4571eb9adcc2e793c61",
+    "memory/transactions/00000000-0000-4000-8000-000000000003/receipts/sha256/595ce056037b4da1a411097210abcd7616591ab3fa5a9b5b90e19c6c7bcccc57.json": "595ce056037b4da1a411097210abcd7616591ab3fa5a9b5b90e19c6c7bcccc57",
+    "memory/transactions/00000000-0000-4000-8000-000000000003/stages/sha256/c1b7ad6698bc4a66e7104e67b46d4dc040964990bf20af52b808ebd097b0f068.json": "c1b7ad6698bc4a66e7104e67b46d4dc040964990bf20af52b808ebd097b0f068",
+    "memory/transactions/00000000-0000-4000-8000-00000000000b.json": "2c56145b0ddc509551a513e51d597acd68553e22d21b302ff3a5ffc9fe076a9e",
+    "memory/transactions/00000000-0000-4000-8000-00000000000b/receipts/sha256/0209d7e3459667ba9112e60bf3994a0b90cfd6bc0ca05adcd3cf2c4be8824212.json": "0209d7e3459667ba9112e60bf3994a0b90cfd6bc0ca05adcd3cf2c4be8824212",
+    "memory/transactions/00000000-0000-4000-8000-00000000000b/receipts/sha256/7a656591af03ac003a200927a7bf235912a0a9bdab820e3816a7446a6b4ab725.json": "7a656591af03ac003a200927a7bf235912a0a9bdab820e3816a7446a6b4ab725",
+    "memory/transactions/00000000-0000-4000-8000-00000000000b/stages/sha256/1f89c444c850fddba5a71d0e03bd3210d4e030eeaed7132a21d40d4ad2682570.json": "1f89c444c850fddba5a71d0e03bd3210d4e030eeaed7132a21d40d4ad2682570",
+    "memory/watermarks/CURRENT": "4ae7985996ee3701c625ab949fd5f34a3251bceb6a72c39420d1896d3360e92a",
+    "project-identity.json": "9de839bf45f89e59dcaccd2ef06f367496b394702af437bdea960020a15b2fa1"
+  }
+}

@@ -2,42 +2,39 @@
   "result": {
     "committed": false,
     "context_diagnostics": {
-      "current_template_version": "0.1.0-beta.33",
-      "diagnostics": [],
-      "installed": false,
-      "ok": false,
-      "runtime_version": "0.1.0b35",
-      "schema": "an-kla/context-status/v1",
-      "target": "AGENTS.md",
-      "template_version": null,
-      "warnings": []
+      "diagnostics": [
+        "context_status_unavailable"
+      ],
+      "error": "ContextPackageError",
+      "ok": null,
+      "schema": "an-kla/context-status/v1"
     },
     "decision": "skip",
-    "plan_fingerprint": "sha256:bc9647b2cbba969bf843f3000d7cd2d0daa131b410e8fe6d96c49612bf5e5fa9",
+    "plan_fingerprint": "sha256:a8e80aced6a227afe6a2542de39d7fe5a6b0907d38327284cfccfdf73b26d53a",
     "reason_codes": [
       "unresolved_authority"
     ],
-    "revision": "sha256:f217a4226cea6dacb6b0093be9d212d5a59fe2c76ec52d2c099d89c07bbfafe0",
+    "revision": "sha256:57a1e02d32d8732531e68860c7dd527644960484c3eb08a7f5ca0b6a2ab33154",
     "schema": "an-kla/write-commit-result-v1"
   },
   "store_tree": {
     ".identity.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "attest-whitelist.json": "f15c377a8cbc33e126dbdbe3f35853abde42698e95f53945315bc7367c913b89",
     "attest.key": "<random:32>",
-    "identity-intent.json": "b8d8509a5a22e5be6ae89bd98bf05160e6985ac1f71ede722b7afa84f4f6b803",
-    "identity-intents/sha256/d44981f2ba8304ab6184b4b67df44a69caff0b49fa8d2d777063b7f4d1547cbb.json": "d44981f2ba8304ab6184b4b67df44a69caff0b49fa8d2d777063b7f4d1547cbb",
-    "identity-receipts/sha256/0c535d33e08c74626b80c259f0a5e814fcaf3b02d493571cca8495f83b1abf54.json": "0c535d33e08c74626b80c259f0a5e814fcaf3b02d493571cca8495f83b1abf54",
+    "identity-intent.json": "8a2d49ff638eea452aa1fb87605a3236e483eaed27d4f292b7753caa4c7778c5",
+    "identity-intents/sha256/3b6cb5e1af684800d11b58a9d3532fc51d9ebddec3e36a839ced725533786efa.json": "3b6cb5e1af684800d11b58a9d3532fc51d9ebddec3e36a839ced725533786efa",
+    "identity-receipts/sha256/9265704f8e70a9f2e3cd43b80230d0d98d0767a343752f493d8d9a4cf114592d.json": "9265704f8e70a9f2e3cd43b80230d0d98d0767a343752f493d8d9a4cf114592d",
     "memory/.reader-gate": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "memory/.write.lock": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "memory/checkpoints/sha256/7028388135dc3c7f12f0f1a68c77e88d91b0b38e2653f47c7c55916751cda598.json": "7028388135dc3c7f12f0f1a68c77e88d91b0b38e2653f47c7c55916751cda598",
-    "memory/identities/sha256/f14d14b5b4c7cc1872a8c47ac15bda872b8007143189d61f9500549a5176b618.json": "f14d14b5b4c7cc1872a8c47ac15bda872b8007143189d61f9500549a5176b618",
-    "memory/identity.json": "f14d14b5b4c7cc1872a8c47ac15bda872b8007143189d61f9500549a5176b618",
-    "memory/refs/CURRENT": "82d0433ae0254bf4deee09a770e67626e3b93723d4bbd243493036e19014cec8",
-    "memory/revisions/sha256/f217a4226cea6dacb6b0093be9d212d5a59fe2c76ec52d2c099d89c07bbfafe0.json": "f217a4226cea6dacb6b0093be9d212d5a59fe2c76ec52d2c099d89c07bbfafe0",
-    "memory/transactions/00000000-0000-4000-8000-000000000003.json": "758bc8ae43bce359804aad6b37a157a90289486bebfed5a5ff89fdc337850b38",
-    "memory/transactions/00000000-0000-4000-8000-000000000003/receipts/sha256/51c2a19ff8f0b3db51ea580dc11e8659da0c9e63c1f32c4e9f4ad38837101301.json": "51c2a19ff8f0b3db51ea580dc11e8659da0c9e63c1f32c4e9f4ad38837101301",
-    "memory/transactions/00000000-0000-4000-8000-000000000003/receipts/sha256/6e07220ec72da947b8f1151f3fd665558a1aeb65b8e3ac63a002e71a4055a7f3.json": "6e07220ec72da947b8f1151f3fd665558a1aeb65b8e3ac63a002e71a4055a7f3",
-    "memory/transactions/00000000-0000-4000-8000-000000000003/stages/sha256/5b8306d495fa18b824e511ddb640b096a88e75c615f3910aa13a59ee616b5b62.json": "5b8306d495fa18b824e511ddb640b096a88e75c615f3910aa13a59ee616b5b62",
+    "memory/identities/sha256/4c3dd84b0f92b7d538842abd257b5a67348fa9b0246b5fc535af55395e2d4ad5.json": "4c3dd84b0f92b7d538842abd257b5a67348fa9b0246b5fc535af55395e2d4ad5",
+    "memory/identity.json": "4c3dd84b0f92b7d538842abd257b5a67348fa9b0246b5fc535af55395e2d4ad5",
+    "memory/refs/CURRENT": "c49e75b83bd472ad52daaf8d2ac09b3d065181472200597a9e5ef28f7052e720",
+    "memory/revisions/sha256/57a1e02d32d8732531e68860c7dd527644960484c3eb08a7f5ca0b6a2ab33154.json": "57a1e02d32d8732531e68860c7dd527644960484c3eb08a7f5ca0b6a2ab33154",
+    "memory/transactions/00000000-0000-4000-8000-000000000003.json": "723eeb6a9e444dbe8fde69994e622606c84e12ae8f6add2644417c9c23984e9c",
+    "memory/transactions/00000000-0000-4000-8000-000000000003/receipts/sha256/52ff569738f8f4890b4ffad2898289c9f16701ae559ca4571eb9adcc2e793c61.json": "52ff569738f8f4890b4ffad2898289c9f16701ae559ca4571eb9adcc2e793c61",
+    "memory/transactions/00000000-0000-4000-8000-000000000003/receipts/sha256/595ce056037b4da1a411097210abcd7616591ab3fa5a9b5b90e19c6c7bcccc57.json": "595ce056037b4da1a411097210abcd7616591ab3fa5a9b5b90e19c6c7bcccc57",
+    "memory/transactions/00000000-0000-4000-8000-000000000003/stages/sha256/c1b7ad6698bc4a66e7104e67b46d4dc040964990bf20af52b808ebd097b0f068.json": "c1b7ad6698bc4a66e7104e67b46d4dc040964990bf20af52b808ebd097b0f068",
     "project-identity.json": "9de839bf45f89e59dcaccd2ef06f367496b394702af437bdea960020a15b2fa1"
   }
 }
