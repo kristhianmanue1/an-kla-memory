@@ -14,6 +14,7 @@ from __future__ import annotations
 import contextlib
 import json
 import os
+import re
 import stat
 from pathlib import Path
 from typing import Any
@@ -25,6 +26,8 @@ from .storage_primitives import fsync_directory
 from .transaction_repair import repair_durability
 
 AUDIT_INCOMPLETE = "inbox_audit_incomplete"
+# Temporal de ``storage_primitives.atomic_write`` (``.<nombre>.<uuid4 hex>.tmp``) que un corte dejó atrás.
+_STALE_TEMPORARY = re.compile(r"\..+\.[0-9a-f]{32}\.tmp")
 _MAX_MARKER_BYTES = 1024 * 1024
 
 
@@ -209,6 +212,31 @@ def delete_entries(store: Any, names: list[str]) -> None:
 # --- reconciliación ----------------------------------------------------------
 
 
+def remove_stale_temporaries(store: Any) -> int:
+    """Borra los temporales de ``atomic_write`` que un corte dejó en ``inflight/`` y ``rejected/``.
+
+    Con ``write_lock`` tomado sólo el vaciado escribe ahí, así que un temporal con ese nombre es
+    huérfano. Sin esto se acumularían (``inbox status`` los lista como ``ignored`` o, en
+    ``rejected/``, como un rechazo sin motivo).
+    """
+
+    paths = inbox_paths(store)
+    removed = 0
+    for directory in (paths.inflight, paths.rejected):
+        try:
+            names = [n for n in os.listdir(directory) if _STALE_TEMPORARY.fullmatch(n)]
+        except FileNotFoundError:
+            continue
+        for name in names:
+            with contextlib.suppress(OSError):
+                if stat.S_ISREG(os.lstat(directory / name).st_mode):
+                    os.unlink(directory / name)
+                    removed += 1
+        if names:
+            fsync_directory(directory)
+    return removed
+
+
 def settle_committed(store: Any, txid: str, entries: list[str], warnings: list[str]) -> dict[str, Any]:
     """Rama ``committed is True``: cierra, repara, comprueba el predicado y borra entradas y marcador."""
 
@@ -231,6 +259,7 @@ def settle_committed(store: Any, txid: str, entries: list[str], warnings: list[s
 def reconcile_markers(store: Any, warnings: list[str]) -> list[dict[str, Any]]:
     """Paso 0 completo; devuelve un resumen por marcador o lanza ``DrainAbort``."""
 
+    remove_stale_temporaries(store)
     try:
         names = sorted(name for name in os.listdir(inbox_paths(store).inflight) if is_marker_name(name))
     except FileNotFoundError:
@@ -258,5 +287,5 @@ def reconcile_markers(store: Any, warnings: list[str]) -> list[dict[str, Any]]:
 
 __all__ = [
     "AUDIT_INCOMPLETE", "DrainAbort", "close_committed_journal", "delete_entries", "delete_marker",
-    "has_no_trace", "read_marker", "reconcile_markers", "settle_committed", "transaction_code", "write_marker",
+    "has_no_trace", "read_marker", "reconcile_markers", "remove_stale_temporaries", "settle_committed", "transaction_code", "write_marker",
 ]

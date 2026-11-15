@@ -242,6 +242,21 @@ class OtherBranchTests(CloseCase):
         self.assertEqual(len(after), len(before) + 1)
 
 
+class StaleTemporaryTests(CloseCase):
+    def test_orphan_atomic_write_temporaries_are_removed_and_real_files_are_kept(self) -> None:
+        self.factory.write("uno")
+        self.paths.inflight.mkdir(parents=True, exist_ok=True)
+        self.paths.rejected.mkdir(parents=True, exist_ok=True)
+        stale = "." + "7b0f6a62-0f3e-5f6b-8d49-4a1d6a1c9a11.json." + "a" * 32 + ".tmp"
+        (self.paths.inflight / stale).write_bytes(b"x")
+        (self.paths.rejected / ("." + "x.json.reason." + "b" * 32 + ".tmp")).write_bytes(b"x")
+        (self.paths.rejected / "evidencia.json").write_bytes(b"{}")
+        (self.paths.inflight / ".otra-cosa").write_bytes(b"x")
+        inbox_drain.drain(self.store)
+        self.assertEqual(self.names(self.paths.inflight), [".otra-cosa"])
+        self.assertEqual(self.names(self.paths.rejected), ["evidencia.json"])
+
+
 class MarkerValidationTests(CloseCase):
     def put(self, name: str, payload: bytes) -> None:
         self.paths.inflight.mkdir(parents=True, exist_ok=True)
