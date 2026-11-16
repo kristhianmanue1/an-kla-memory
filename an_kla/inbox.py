@@ -743,8 +743,14 @@ def read_status(store: Any) -> dict[str, Any]:
                 state = "unsafe"
         states[label] = state
     rejected = []
+    present = set(names["rejected"])
     for name in names["rejected"]:
         if name.endswith(REASON_SUFFIX):
+            # R3-01 de B2: un inodo inseguro no se mueve a `rejected/`; su único rastro es el `.reason`.
+            base = name[: -len(REASON_SUFFIX)]
+            if base in present:
+                continue
+            rejected.append({"name": name, **_read_reason(paths.rejected, base)})
             continue
         rejected.append({"name": name, **_read_reason(paths.rejected, name)})
     pending_entries = _counted_names(paths.pending, names["pending"], is_entry_name)

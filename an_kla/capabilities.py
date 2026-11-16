@@ -107,6 +107,19 @@ def capabilities() -> dict[str, Any]:
                     "mcp": False,
                 },
             },
+            "remember": {
+                "command": "remember (--text <t> | --text-file <ruta|->) [--kind fact|decision|state] [--supersedes <id>] [--idempotency-key <k>]",
+                "schema": "an-kla/remember-result-v1",
+                "read_only": False,
+                "mcp": False,
+                "decision": "ADR-0063 D1",
+                "recommended_input": "--text-file - (--text expone el contenido en argv)",
+                "idempotency_key": "texto libre de 1 a 256 caracteres; sha256:<64 hex> se usa tal cual, otro valor se hashea",
+                "identity_env": {
+                    "required": ["AN_KLA_AGENT_CLI"],
+                    "optional": ["AN_KLA_AGENT_NAME", "AN_KLA_AGENT_MODEL", "AN_KLA_AGENT_ROLE", "AN_KLA_SESSION_ID"],
+                },
+            },
             "disputes": {
                 "command": "disputes list [--target <id>]",
                 "schema": "an-kla/disputes-list-v1",
@@ -365,6 +378,7 @@ def capabilities() -> dict[str, Any]:
                     "init": "outcome.committed is not true",
                     "commit-write-plan": "outcome.committed is not true",
                     "inbox drain": "state == aborted u outcome != known (drained, queued y partial salen con 0)",
+                    "remember": "state == rejected, drain_error presente u outcome != known (committed y queued sin drain_error salen con 0)",
                     "subject namespace": "result == namespace_unavailable",
                 },
             },

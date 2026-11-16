@@ -6,6 +6,10 @@ proceso trabajador, 20 repeticiones por punto (los ocho del ADR y un corte dentr
 recurso uno a uno). Es **lenta**: se salta salvo con ``AN_KLA_SLOW_KILL9=1`` y ``scripts/ci_local.py``
 tiene un paso propio que la corre con esa variable. Escribe su resumen en
 ``AN_KLA_KILL9_REPORT`` (por defecto, en el directorio temporal).
+
+La «siguiente invocación de escritura» del criterio 3 es ``inbox drain`` **y** ``remember`` (la orden
+real del CLI): ``AN_KLA_KILL9_NEXT`` (por defecto ``drain,remember``) elige cuáles; las dos corren con
+la misma variable y en el mismo paso de ``ci_local``.
 """
 
 from __future__ import annotations
@@ -26,11 +30,13 @@ from an_kla import transactions as tx
 from an_kla.store import MemoryStore
 from tests import inbox_cuts
 from tests.inbox_support import AGENT_ENV, GIT_ENV, EntryFactory, InboxCase, make_project
+from tests.remember_support import cli as run_cli
 
 ROOT = Path(__file__).resolve().parents[1]
 SLOW = os.environ.get("AN_KLA_SLOW_KILL9") == "1"
 REPETITIONS = int(os.environ.get("AN_KLA_KILL9_REPS", "20"))
 ENTRIES = 5
+NEXT_INVOCATIONS = tuple(n for n in os.environ.get("AN_KLA_KILL9_NEXT", "drain,remember").split(",") if n)
 
 
 class Crash(BaseException):
@@ -130,40 +136,62 @@ def worker(project: Path, *args: str) -> subprocess.CompletedProcess:
     )
 
 
-def one_repetition(point: str, index: int, base: Path) -> dict:
-    (base / f"{point}-{index}").mkdir(parents=True)
-    project = make_project((base / f"{point}-{index}").resolve())
+def second_invocation(project: Path, nxt: str, tag: str) -> tuple[dict, str | None]:
+    """La 2.ª invocación de escritura: ``inbox drain`` (trabajador) o ``remember`` (CLI real).
+
+    Devuelve su resultado JSON y, con ``remember``, el texto confirmado (``committed`` o ``queued``)."""
+
+    if nxt == "drain":
+        done = worker(project, "drain", str(project), "-")
+        stdout, stderr = done.stdout, done.stderr
+        text = None
+    else:
+        text = f"{tag}-remember"
+        done = run_cli(project, "remember", "--text-file", "-", stdin=text, timeout=180)
+        stdout, stderr = done.stdout, done.stderr
+    try:
+        return json.loads(stdout), text
+    except ValueError:
+        return {"state": "unreadable", "stderr": stderr[-300:]}, None
+
+
+def one_repetition(point: str, index: int, base: Path, nxt: str = "drain") -> dict:
+    tag = f"{point}-{index}"
+    (base / f"{nxt}-{tag}").mkdir(parents=True)
+    project = make_project((base / f"{nxt}-{tag}").resolve())
     store = MemoryStore(project)
     store.initialize()
     factory = EntryFactory(store)
-    texts = [f"{point}-{index}-{n}" for n in range(ENTRIES)]
+    texts = [f"{tag}-{n}" for n in range(ENTRIES)]
     for text in texts:
         factory.write(text)
     if point == "enq_tmp":
-        killed = worker(project, "enqueue", str(project), f"{point}-{index}-sin-confirmar", "corte").returncode == -9
+        killed = worker(project, "enqueue", str(project), f"{tag}-sin-confirmar", "corte").returncode == -9
     else:
         killed = worker(project, "drain", str(project), point).returncode == -9
-    second = worker(project, "drain", str(project), "-")
-    measured = measure(MemoryStore(project), texts)  # R1-06: tras la 2.ª invocación (criterio 3)
-    third = worker(project, "drain", str(project), "-")
+    second_state, remembered = second_invocation(project, nxt, tag)
+    acked = texts + ([remembered] if remembered and second_state.get("state") in ("committed", "queued") else [])
+    if second_state.get("state") == "queued":  # R1-09: la entrada sigue confirmada; se vacía antes de medir
+        worker(project, "drain", str(project), "-")
+    measured = measure(MemoryStore(project), acked)  # R1-06: tras la 2.ª invocación (criterio 3)
+    third = worker(project, "drain", str(project), "-")  # la 3.ª sólo comprueba que no se atasca
     try:
-        second_state = json.loads(second.stdout)
         third_state = json.loads(third.stdout)
     except ValueError:
-        second_state = third_state = {"state": "unreadable", "stderr": (second.stderr + third.stderr)[-300:]}
-    result = {
-        "point": point, "index": index, "killed": killed, "second_state": second_state.get("state"),
+        third_state = {"state": "unreadable"}
+    return {
+        "point": point, "index": index, "next": nxt, "killed": killed, "second_state": second_state.get("state"),
+        "second_error": second_state.get("drain_error"),
         "second_branches": sorted({c["branch"] for c in second_state.get("closed_journals", [])}),
         "third_state": third_state.get("state"), "third_batches": len(third_state.get("batches", [])),
         **measured,
     }
-    return result
 
 
-def summarize(rows: list[dict]) -> dict:
+def summarize(rows: list[dict], nxt: str = "drain") -> dict:
     summary: dict = {}
     for point in (*inbox_cuts.POINTS, *inbox_cuts.EXTRA_POINTS):
-        mine = [r for r in rows if r["point"] == point]
+        mine = [r for r in rows if r["point"] == point and r["next"] == nxt]
         summary[point] = {
             "repetitions": len(mine),
             "killed": sum(r["killed"] for r in mine),
@@ -176,6 +204,7 @@ def summarize(rows: list[dict]) -> dict:
             "third_not_drained": sum(r["third_state"] != "drained" or r["third_batches"] != 0 for r in mine),
             "second_states": dict(Counter(r["second_state"] for r in mine)),
             "second_branches": dict(Counter(b for r in mine for b in r["second_branches"])),
+            "second_drain_errors": dict(Counter(r["second_error"] for r in mine if r["second_error"])),
         }
     return summary
 
@@ -186,22 +215,30 @@ class Kill9MatrixTests(unittest.TestCase):
         points = (*inbox_cuts.POINTS, *inbox_cuts.EXTRA_POINTS)
         started = time.monotonic()
         with tempfile.TemporaryDirectory(prefix="kill9-") as temp:
-            jobs = [(point, index) for point in points for index in range(REPETITIONS)]
+            jobs = [(point, index, nxt) for nxt in NEXT_INVOCATIONS for point in points for index in range(REPETITIONS)]
             with ThreadPoolExecutor(max_workers=int(os.environ.get("AN_KLA_KILL9_JOBS", "4"))) as pool:
-                rows = list(pool.map(lambda job: one_repetition(job[0], job[1], Path(temp)), jobs))
-        summary = summarize(rows)
+                rows = list(pool.map(lambda job: one_repetition(job[0], job[1], Path(temp), job[2]), jobs))
+        summaries = {nxt: summarize(rows, nxt) for nxt in NEXT_INVOCATIONS}
         report = Path(os.environ.get("AN_KLA_KILL9_REPORT") or Path(tempfile.gettempdir()) / "an-kla-kill9-summary.json")
-        report.write_text(json.dumps({"repetitions_per_point": REPETITIONS, "seconds": round(time.monotonic() - started, 1),
-                                      "points": summary}, indent=1, sort_keys=True))
-        for point, row in summary.items():
-            with self.subTest(point=point):
-                self.assertEqual(row["repetitions"], REPETITIONS)
-                self.assertEqual(row["killed"], REPETITIONS, "el punto de corte no se alcanzó siempre")
-                self.assertEqual((row["lost"], row["duplicates"], row["verify_failures"]), (0, 0, 0))
-                self.assertEqual((row["open_journals_current"], row["durability_incomplete"]), (0, 0))
-                self.assertEqual(row["residues"], {"markers": 0, "pending": 0, "tmp": 0, "rejected": 0})
-                self.assertEqual(row["second_states"], {"drained": REPETITIONS})  # R1-06
-                self.assertEqual(row["third_not_drained"], 0)
+        # La clave `points` conserva el resumen de la siguiente invocación `drain` (formato de B2).
+        document = {"repetitions_per_point": REPETITIONS, "seconds": round(time.monotonic() - started, 1),
+                    "next_invocations": list(NEXT_INVOCATIONS), "by_next": summaries}
+        if "drain" in summaries:
+            document["points"] = summaries["drain"]
+        report.write_text(json.dumps(document, indent=1, sort_keys=True))
+        for nxt, summary in summaries.items():
+            ok_states = {"drained"} if nxt == "drain" else {"committed", "queued"}  # R1-09: `queued` también confirma
+            for point, row in summary.items():
+                with self.subTest(next=nxt, point=point):
+                    self.assertEqual(row["repetitions"], REPETITIONS)
+                    self.assertEqual(row["killed"], REPETITIONS, "el punto de corte no se alcanzó siempre")
+                    self.assertEqual((row["lost"], row["duplicates"], row["verify_failures"]), (0, 0, 0))
+                    self.assertEqual((row["open_journals_current"], row["durability_incomplete"]), (0, 0))
+                    self.assertEqual(row["residues"], {"markers": 0, "pending": 0, "tmp": 0, "rejected": 0})
+                    self.assertLessEqual(set(row["second_states"]), ok_states)  # R1-06 / R1-09
+                    self.assertEqual(sum(row["second_states"].values()), REPETITIONS)
+                    self.assertEqual(row["second_drain_errors"], {})
+                    self.assertEqual(row["third_not_drained"], 0)
 
 
 if __name__ == "__main__":

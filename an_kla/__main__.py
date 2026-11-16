@@ -55,6 +55,7 @@ from .disputes import list_disputes
 from .inbox import read_status as inbox_status
 from .inbox_drain import DEFAULT_BUDGET_SECONDS as INBOX_DRAIN_BUDGET_SECONDS
 from .inbox_drain import drain as inbox_drain
+from .remember import read_text_file, remember
 from .lock_order import LockOrderError
 from .inventory import DEFAULT_LIMIT as INVENTORY_DEFAULT_LIMIT
 from .inventory import MAX_LIMIT as INVENTORY_MAX_LIMIT
@@ -464,6 +465,12 @@ def _run() -> None:
             result = inbox_drain(store, budget_seconds=budget)
         else:
             raise CliUsageError("inbox_command_unknown")
+    elif args.command == "remember":
+        text = args.text if args.text_file is None else read_text_file(args.text_file)
+        result = remember(
+            store, text, kind=args.kind, supersedes=args.supersedes,
+            idempotency_key=args.idempotency_key,
+        )
     elif args.command == "subject":
         result = resolve_namespace(store)
     elif args.command == "view":
@@ -623,6 +630,7 @@ def _run() -> None:
         "init",
         "identity",
         "inbox",
+        "remember",
         "evaluate-v2",
         "export",
         "resume",
@@ -705,6 +713,15 @@ def pending_outcome_reason(args: Any, result: Any) -> str | None:
         # `drained`, `queued` y el corte por presupuesto (`partial`) salen con 0.
         if result.get("state") == "aborted" or result.get("outcome") != "known":
             return "inbox_drain_outcome_not_firm"
+    if args.command == "remember":
+        # `committed` y `queued` sin `drain_error` salen con 0 (la entrada está confirmada); `rejected`,
+        # `queued` + `drain_error` (el vaciado abortó) y `outcome` desconocido, con 3 y el JSON íntegro (R1-02).
+        if result.get("state") == "rejected":
+            return "remember_rejected"
+        if result.get("drain_error"):
+            return "remember_drain_error"
+        if result.get("outcome") != "known":
+            return "remember_outcome_not_firm"
     if args.command == "subject" and args.subject_command == "namespace":
         if result.get("result") == "namespace_unavailable":
             return "subject_namespace_unavailable"

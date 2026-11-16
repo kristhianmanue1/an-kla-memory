@@ -41,6 +41,8 @@ from .disputes import (
 from .identity import IdentityError, _mutation_preflight_with_context
 from .inbox import (
     InboxError,
+    record_id as record_id_of,
+    stream_for_kind,
     collect_tmp,
     ensure_layout,
     inbox_paths,
@@ -60,6 +62,7 @@ from .inbox_close import (
 )
 from .inbox_entries import Entry, Reject, age_key, kind_of_path, load_entry, reject_entry, safe_codes
 from .reader_gate import ReaderGateError
+from .store import STREAMS
 from .store_errors import LockBusyError, StoreError
 from .transaction_attempts import TransactionError
 from .write_commit import _commit_write_plan_locked, _finish_locked_commit
@@ -80,6 +83,8 @@ SCAN_CHUNK = 250
 MAX_LISTED = 1000
 _TERMINAL_STORE_PREFIXES = ("duplicate_", "missing_")
 _KNOWN_INFRA = (LockBusyError, IdentityError, CustodyError, TransactionError, ReaderGateError)
+# Fallos de preparación (preflight, layout, recolección de `tmp/`): se informan como `drain_error`.
+_SETUP_ERRORS = (StoreError, IdentityError, TransactionError, ReaderGateError, InboxError, OSError)
 
 
 class BatchFail(Exception):
@@ -234,6 +239,7 @@ class Scanner:
     def __init__(self, store: Any, snapshot: Any, observed: str, run: Run) -> None:
         self.store, self.snapshot, self.observed, self.run = store, snapshot, observed, run
         self.index = _snapshot_index(snapshot)
+        self.by_stream = {stream: {str(row.get("id", "")): row for row in snapshot.records[stream]} for stream in STREAMS}
         self.seen: dict[str, Entry] = {}
         self.by_name: dict[str, Entry] = {}
         self.prefiltered: list[Entry] = []
@@ -264,6 +270,22 @@ class Scanner:
             self.reject(name, rejected.code, rejected.reason_codes)
             return None
         if entry is None:  # directorio: se ignora sin tocarlo
+            return None
+        # R1-01 de B5: un record con la misma clave y el mismo texto ya está en el snapshot: es un reintento
+        # ya comprometido. Va ANTES de resolver `--supersedes` (el target propio ya está `sustituida` y la
+        # resolución lo rechazaría con `invalid_supersede_target`): se borra sin evidencia en `rejected/`.
+        # R2-01/R2-02 de B5: se busca por el `record.id` de la entrada EN SU PROPIO STREAM (el de su `kind`);
+        # una clave igual en otro stream no cuenta. Con una `--idempotency-key` explícita reutilizada con otro
+        # target del mismo stream es la misma intención (el target no se guarda en el record).
+        stream = stream_for_kind(entry.data["kind"])
+        done = self.by_stream[stream].get(record_id_of(stream, entry.key))
+        if done is not None:
+            envelope = done.get("an_kla_envelope")
+            if isinstance(envelope, dict) and envelope.get("idempotency_key") == entry.key and done.get("text") == entry.text:
+                self.to_delete.append(name)
+                self.run.already_committed.append({"entry": name, "record_id": str(done.get("id", ""))})
+            else:
+                self.reject(name, "remember_id_collision", ["id_exists_in_snapshot"])
             return None
         try:
             self._resolve(entry)
@@ -517,11 +539,15 @@ def attempt(store: Any, run: Run, include: str | None, lock_wait: float) -> str:
     """``idle`` | ``progress`` | ``queued`` | ``aborted``. Un intento = un lote."""
 
     run.attempts += 1
-    if not _has_work(store):
-        return "idle"
-    preflight = _mutation_preflight_with_context(store)
-    store._make_layout()
-    ensure_layout(store)
+    try:
+        if not _has_work(store):
+            return "idle"
+        preflight = _mutation_preflight_with_context(store)
+        store._make_layout()
+        ensure_layout(store)
+    except _SETUP_ERRORS as exc:  # R3-06 de B2: infraestructura, nunca traza; nada se tocó
+        run.drain_error = error_code(exc)
+        return "aborted"
     acquired = False
     started = 0.0
     try:
@@ -532,7 +558,7 @@ def attempt(store: Any, run: Run, include: str | None, lock_wait: float) -> str:
             except DrainAbort as abort:
                 run.drain_error, run.unknown = abort.code, abort.unknown
                 return "aborted"
-            except (StoreError, IdentityError, TransactionError, ReaderGateError, OSError) as exc:
+            except (StoreError, IdentityError, TransactionError, ReaderGateError, InboxError, OSError) as exc:
                 run.drain_error = error_code(exc)  # lectura de CURRENT/snapshot: infraestructura, no rechazo
                 return "aborted"
             finally:
@@ -579,12 +605,22 @@ def drain(
 
     lock_order.require_inbox_allowed(store)
     run = Run()
-    top = root_state(store)
+    try:
+        top = root_state(store)
+    except _SETUP_ERRORS as exc:  # R2-03 de B5: ningún fallo de la raíz sale como línea de error
+        run.drain_error = error_code(exc)
+        return _result(run, "aborted", "present")
     if top == "unsafe":
-        raise InboxError("inbox_unsafe_path")
+        run.drain_error = "inbox_unsafe_path"
+        return _result(run, "aborted", "present")
     if top == "absent":
         return _result(run, "drained", "absent")
-    run.tmp = collect_tmp(store)
+    try:
+        run.tmp = collect_tmp(store)
+    except _SETUP_ERRORS as exc:  # R3-06 de B2: el vaciado informa `drain_error`, no una traza
+        run.drain_error = error_code(exc)
+        run.ignored = count_ignored(store)
+        return _result(run, "aborted", "present")
     deadline = clock() + budget_seconds
     state = "drained"
     while True:
@@ -598,7 +634,11 @@ def drain(
             state = "aborted"
             break
         if (max_batches is not None and len(run.batches) >= max_batches) or clock() >= deadline:
-            state = "partial" if _has_work(store) else "drained"
+            try:
+                state = "partial" if _has_work(store) else "drained"
+            except _SETUP_ERRORS as exc:  # R2-03: ni `partial` silencioso ni traza
+                run.drain_error = error_code(exc)
+                state = "aborted"
             break
     run.ignored = count_ignored(store)
     return _result(run, state, "present")
