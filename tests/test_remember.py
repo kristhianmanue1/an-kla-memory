@@ -14,7 +14,7 @@ import tempfile
 import unittest
 from unittest import mock
 
-from an_kla import inbox, inbox_drain, remember as remember_module
+from an_kla import inbox, inbox_drain, lock_order, remember as remember_module
 from an_kla.schemas import schema_document
 from an_kla.store import MemoryStore
 from tests.inbox_support import AGENT_ENV, InboxCase, hold_flock
@@ -299,6 +299,29 @@ class DisputeVisibilityTests(CliCase):
         self.assertEqual((rc, result["state"], result["operation"]), (0, "committed", "add"))
         self.assertEqual(result["disputed"]["target_id"], "f-legado")
         self.assertNotIn("superseded", result)
+
+
+class LockOrderTests(CliCase):
+    def test_criterion_9_remember_never_asks_for_the_inbox_lock_holding_a_later_lock(self) -> None:
+        seen: list[tuple[str, ...]] = []
+        real = lock_order.require_inbox_allowed
+
+        def spy(store=None):
+            seen.append(lock_order.held())
+            return real(store)
+
+        with mock.patch.object(lock_order, "require_inbox_allowed", spy):
+            self.assertEqual(remember_module.remember(self.store, "uno", env=AGENT_ENV)["state"], "committed")
+            self.assertEqual(remember_module.remember(self.store, "dos", env=AGENT_ENV)["state"], "committed")
+        self.assertTrue(seen)
+        for held in seen:
+            self.assertFalse({lock_order.IDENTITY, lock_order.WRITE} & set(held), held)
+
+    def test_remember_under_a_later_lock_fails_closed_before_enqueueing(self) -> None:
+        with lock_order.holding(lock_order.WRITE):
+            with self.assertRaises(lock_order.LockOrderError):
+                remember_module.remember(self.store, "no", env=AGENT_ENV)
+        self.assertEqual(inbox.entry_names(self.store), [])
 
 
 class SurfaceTests(unittest.TestCase):
