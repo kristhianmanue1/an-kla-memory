@@ -683,5 +683,85 @@ class RoundTwoTests(CustodyCase):
                 self.assertFalse(self.bundle.exists())
 
 
+class RoundThreeTests(CustodyCase):
+    """Arreglos de la ronda 3: R3-01 (`relocate reconcile` revisa la bandeja) y R3-03 (`relocate plan`)."""
+
+    def crash_at(self, point: str) -> None:
+        def fault(name: str) -> None:
+            if name == point:
+                raise relocate.SimulatedCrash(name)
+
+        relocate._fault = fault
+        self.addCleanup(setattr, relocate, "_fault", None)
+
+    def cut_commit(self, store: MemoryStore, plan: dict, point: str) -> str:
+        self.crash_at(point)
+        with self.assertRaises(relocate.SimulatedCrash):
+            commit_relocation(store, plan, self.revision)
+        relocate._fault = None
+        return plan["core"]["transaction_id"]
+
+    def test_reconcile_forward_refuses_while_an_entry_arrived_after_the_cut(self) -> None:
+        for point in ("after_rename", "after_publish"):
+            with self.subTest(point=point):
+                self.setUp()
+                plan = plan_relocation(self.store, self.vault)
+                txid = self.cut_commit(self.store, plan, point)
+                self.assertIsNone(read_pointer(self.project))
+                self.queue()  # el store vigente sigue aceptando encolados entre el corte y el reconcile
+                stage = relocate._read_journal(self.project, txid)["stage"]
+                self.assert_code("inbox_pending", relocate.reconcile_relocation, self.project, txid)
+                self.assertIsNone(read_pointer(self.project))
+                self.assertEqual(len(inbox.entry_names(self.store)), 1)
+                self.assertEqual(relocate._read_journal(self.project, txid)["stage"], stage)
+                self.drain_by_hand()
+                result = relocate.reconcile_relocation(self.project, txid)
+                self.assertEqual(result["stage"], "cleaned")
+                self.assertIsNotNone(read_pointer(self.project))
+
+    def test_reconcile_forward_can_still_abort_with_a_pending_entry(self) -> None:
+        plan = plan_relocation(self.store, self.vault)
+        txid = self.cut_commit(self.store, plan, "after_rename")
+        self.queue()
+        result = relocate.reconcile_relocation(self.project, txid, abort=True)
+        self.assertEqual(result["stage"], "aborted")
+        self.assertEqual(len(inbox.entry_names(self.store)), 1)
+
+    def test_reconcile_back_refuses_while_an_entry_arrived_after_the_cut(self) -> None:
+        for point in ("after_rename", "after_publish"):
+            with self.subTest(point=point):
+                self.setUp()
+                commit_relocation(self.store, plan_relocation(self.store, self.vault), self.revision)
+                external = MemoryStore(self.project, store_root=self.vault)
+                plan = plan_back(external)
+                txid = self.cut_commit(external, plan, point)
+                self.queue(external)
+                self.assert_code("inbox_pending", relocate.reconcile_relocation, self.project, txid)
+                self.assertIsNotNone(read_pointer(self.project))
+                self.assertEqual(len(inbox.entry_names(external)), 1)
+                self.drain_by_hand(external)
+                result = relocate.reconcile_relocation(self.project, txid)
+                self.assertEqual(result["stage"], "cleaned")
+                self.assertIsNone(read_pointer(self.project))
+
+    def test_a_marker_after_the_cut_is_inbox_inflight(self) -> None:
+        plan = plan_relocation(self.store, self.vault)
+        txid = self.cut_commit(self.store, plan, "after_publish")
+        paths = inbox.inbox_paths(self.store)
+        paths.inflight.mkdir(parents=True)
+        (paths.inflight / MARKER).write_bytes(b"{}")
+        self.assert_code("inbox_inflight", relocate.reconcile_relocation, self.project, txid)
+        self.assertIsNone(read_pointer(self.project))
+
+    def test_relocate_plan_treats_a_file_at_the_inbox_root_as_unsafe(self) -> None:
+        (Path(self.store.root) / "inbox").write_bytes(b"x")
+        self.assert_code("inbox_unsafe_path", plan_relocation, self.store, self.vault)
+        (Path(self.store.root) / "inbox").unlink()
+        commit_relocation(self.store, plan_relocation(self.store, self.vault), self.revision)
+        external = MemoryStore(self.project, store_root=self.vault)
+        (Path(external.root) / "inbox").write_bytes(b"x")
+        self.assert_code("inbox_unsafe_path", plan_back, external)
+
+
 if __name__ == "__main__":
     unittest.main()

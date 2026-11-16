@@ -27,7 +27,7 @@ from .custody import (
 from .export_io import ExportIOError, normalize_and_sync_tree, rename_noreplace, safe_read
 from .export_restore import _allowed, _files
 from .identity import identity_lock, mutation_preflight, read_binding
-from .inbox_custody import custody_guard, require_empty
+from .inbox_custody import custody_guard, require_empty, require_safe_root
 from .reader_gate import ReaderGateError, exclusive_reader_gate
 from .store_locks import WRITE_LOCK_DEADLINE_SECONDS as _GATE_TIMEOUT
 from .relocation_receipts import _read_regular, write_relocation_receipt
@@ -176,6 +176,7 @@ def plan_relocation(store: Any, destination: str | Path) -> dict[str, Any]:
     """Bind the exact move set to the observed revision and identity."""
 
     _require_source(store)
+    require_safe_root(store)  # R3-03: un archivo en `memory/inbox` es raíz insegura, como en `export`
     target = _validate_destination(store, destination)
     anchor = store.store_root
     with identity_lock(store):
@@ -704,6 +705,10 @@ def reconcile_relocation(
                     _discard_staging(staging)
                     _write_journal(root, journal, "aborted")
                     return _result(journal)
+                if not abort:
+                    # R3-01: el puntero aún no existe y el store vigente sigue aceptando encolados
+                    # (sólo lectura, antes de tocar el journal); `inbox drain` y volver a reconciliar.
+                    require_empty(source)
                 # The rename happened; the journal update did not.
                 journal["relocation_receipt"] = receipt
                 _write_journal(root, journal, "published")
@@ -734,6 +739,7 @@ def reconcile_relocation(
                     or custody_fingerprint(binding) != core["custody_fingerprint"]
                 ):
                     raise RelocateError("relocate_destination_unrecognized")
+                require_empty(source)  # R3-01: antes del punto de no retorno (el puntero)
                 _publish_pointer(core, binding)
                 _write_journal(root, journal, "pointer_written")
             if abort:

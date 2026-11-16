@@ -33,8 +33,7 @@ def custody_guard(store: Any, *, wait_seconds: float | None = None) -> Iterator[
     """
 
     state = inbox.root_state(store)
-    if state == "unsafe" and _is_foreign_file(inbox.inbox_paths(store).root):
-        raise inbox.InboxError("inbox_unsafe_path")  # R2-05: algo que no es directorio ni enlace en `memory/inbox`
+    require_safe_root(store, state)
     if state != "present":
         lock_order.require_inbox_allowed(store)
         yield
@@ -43,6 +42,18 @@ def custody_guard(store: Any, *, wait_seconds: float | None = None) -> Iterator[
     with inbox.inbox_lock(store, exclusive=True, wait_seconds=wait, layout=False):
         require_empty(store)
         yield
+
+
+def require_safe_root(store: Any, state: str | None = None) -> None:
+    """``inbox_unsafe_path`` si exactamente en ``memory/inbox`` hay algo que no es directorio ni enlace (R2-05, R3-03).
+
+    Sólo lectura. Lo usan el guardián y los ``relocate plan`` (ida y ``--back``), igual que ``export``.
+    """
+
+    if (inbox.root_state(store) if state is None else state) == "unsafe" and _is_foreign_file(
+        inbox.inbox_paths(store).root
+    ):
+        raise inbox.InboxError("inbox_unsafe_path")
 
 
 def _is_foreign_file(root: Path) -> bool:
@@ -69,4 +80,4 @@ def require_empty(store: Any) -> None:
         raise inbox.InboxError("inbox_inflight", "hay un vaciado interrumpido; ejecuta `inbox drain` y reintenta")
 
 
-__all__ = ["CUSTODY_LOCK_WAIT_SECONDS", "custody_guard", "require_empty"]
+__all__ = ["CUSTODY_LOCK_WAIT_SECONDS", "custody_guard", "require_empty", "require_safe_root"]

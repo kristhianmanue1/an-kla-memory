@@ -22,7 +22,7 @@ from .custody import (
 )
 from .export_io import ExportIOError, rename_noreplace
 from .identity import identity_lock, mutation_preflight, read_binding
-from .inbox_custody import require_empty
+from .inbox_custody import require_empty, require_safe_root
 from .relocation_receipts import write_relocation_receipt
 from . import relocate as forward
 from .relocate import RelocateError
@@ -58,6 +58,7 @@ def plan_back(store: Any) -> dict[str, Any]:
         raise RelocateError("relocate_source_not_external")
     anchor = store.store_root
     destination = default_store_root(store.project_root)
+    require_safe_root(store)  # R3-03, como `relocate plan` hacia fuera
     with identity_lock(store):
         with store.write_lock():
             binding = mutation_preflight(store)
@@ -181,6 +182,7 @@ def _finish(core: Mapping[str, Any], journal: dict[str, Any], source: Any) -> No
     if journal["stage"] == "published":
         if not _published_matches(core, journal["relocation_receipt"]):
             raise RelocateError("relocate_destination_unrecognized")
+        require_empty(source)  # R3-01: antes del punto de no retorno (quitar el puntero)
         # Record the intent first: a missing pointer counts as the commit
         # point only when this transaction was about to remove it
         # (release round 5, R5-02).
@@ -298,6 +300,7 @@ def reconcile_back(journal: dict[str, Any], *, abort: bool) -> dict[str, Any]:
                     forward._discard_staging(staging)
                     forward._write_journal(root, journal, "aborted")
                     return forward._result(journal)
+                require_empty(source)  # R3-01: el store externo sigue vigente hasta quitar el puntero
                 _publish_units(staging, anchor, units)
                 forward._discard_staging(staging)
                 forward._write_journal(root, journal, "published")
