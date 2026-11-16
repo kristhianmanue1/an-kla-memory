@@ -79,10 +79,10 @@ class InProcessCutTests(InboxCase):
 
     def check_recovery(self, acked: list[str]) -> None:
         second = inbox_drain.drain(self.store)
-        self.assertNotEqual(second["state"], "aborted", second)
-        third = inbox_drain.drain(self.store)
+        self.assertEqual((second["state"], second.get("drain_error")), ("drained", None), second)
+        state = measure(self.store, acked)  # R1-06: el criterio 3 mide tras la 2.ª invocación
+        third = inbox_drain.drain(self.store)  # la 3.ª sólo comprueba que no se atasca
         self.assertEqual((third["state"], third["batches"], third.get("drain_error")), ("drained", [], None))
-        state = measure(self.store, acked)
         self.assertEqual(state["lost"], [])
         self.assertEqual(state["duplicates"], 0)
         self.assertTrue(state["verify_ok"])
@@ -144,18 +144,18 @@ def one_repetition(point: str, index: int, base: Path) -> dict:
     else:
         killed = worker(project, "drain", str(project), point).returncode == -9
     second = worker(project, "drain", str(project), "-")
+    measured = measure(MemoryStore(project), texts)  # R1-06: tras la 2.ª invocación (criterio 3)
     third = worker(project, "drain", str(project), "-")
     try:
         second_state = json.loads(second.stdout)
         third_state = json.loads(third.stdout)
     except ValueError:
         second_state = third_state = {"state": "unreadable", "stderr": (second.stderr + third.stderr)[-300:]}
-    store = MemoryStore(project)
     result = {
         "point": point, "index": index, "killed": killed, "second_state": second_state.get("state"),
         "second_branches": sorted({c["branch"] for c in second_state.get("closed_journals", [])}),
         "third_state": third_state.get("state"), "third_batches": len(third_state.get("batches", [])),
-        **measure(store, texts),
+        **measured,
     }
     return result
 
@@ -200,6 +200,7 @@ class Kill9MatrixTests(unittest.TestCase):
                 self.assertEqual((row["lost"], row["duplicates"], row["verify_failures"]), (0, 0, 0))
                 self.assertEqual((row["open_journals_current"], row["durability_incomplete"]), (0, 0))
                 self.assertEqual(row["residues"], {"markers": 0, "pending": 0, "tmp": 0, "rejected": 0})
+                self.assertEqual(row["second_states"], {"drained": REPETITIONS})  # R1-06
                 self.assertEqual(row["third_not_drained"], 0)
 
 
