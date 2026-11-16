@@ -175,6 +175,12 @@ def _names(path: Path) -> list[str]:
         raise InboxError("inbox_unavailable") from None
 
 
+def subdir_names(store: Any, subdir: str) -> list[str]:
+    """Todos los nombres de un subdirectorio de la bandeja, sin filtrar (el vaciado clasifica con ``lstat``)."""
+
+    return _subdir_names(store, subdir)
+
+
 def _subdir_names(store: Any, subdir: str) -> list[str]:
     """Nombres de un subdirectorio vistos a través de ``root_state``: raíz ausente = vacío, insegura = error."""
 
@@ -683,5 +689,5 @@ __all__ = [
     "ENTRY_SCHEMA", "InboxError", "InboxPaths", "KINDS", "MAX_TEXT_BYTES", "STATUS_SCHEMA",
     "collect_tmp", "ensure_layout", "enqueue", "entry_names", "inbox_lock", "inbox_paths", "inflight_is_empty",
     "is_entry_name", "is_marker_name", "marker_names", "payload_digest", "pending_is_empty",
-    "read_status", "record_id", "resolve_kind", "root_state", "stream_for_kind",
+    "read_status", "record_id", "resolve_kind", "root_state", "stream_for_kind", "subdir_names",
 ]

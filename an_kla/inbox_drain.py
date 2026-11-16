@@ -43,12 +43,12 @@ from .inbox import (
     InboxError,
     collect_tmp,
     ensure_layout,
-    entry_names,
     inbox_paths,
     is_entry_name,
     is_marker_name,
     marker_names,
     root_state,
+    subdir_names,
 )
 from .inbox_close import (
     DrainAbort,
@@ -235,6 +235,7 @@ class Scanner:
         self.store, self.snapshot, self.observed, self.run = store, snapshot, observed, run
         self.index = _snapshot_index(snapshot)
         self.seen: dict[str, Entry] = {}
+        self.by_name: dict[str, Entry] = {}
         self.prefiltered: list[Entry] = []
         self.accepted: list[Entry] = []
         self.to_delete: list[str] = []
@@ -242,6 +243,10 @@ class Scanner:
     def reject(self, name: str, code: str, reason_codes: list[str] | None = None) -> None:
         final = reject_entry(self.store, name, code, reason_codes)
         self.run.rejected.append({"entry": name, "rejected_as": final, "code": code, "reason_codes": safe_codes(reason_codes or [])})
+        # R2-03: la gemela de una entrada rechazada va también a `rejected/` con el mismo código.
+        owner = self.by_name.get(name)
+        for twin in (owner.extra.pop("twins", []) if owner is not None else []):
+            self.reject(twin, code, reason_codes)
 
     def _resolve(self, entry: Entry) -> None:
         target = None
@@ -268,21 +273,30 @@ class Scanner:
         record_id = entry.op.record["id"]
         prior = self.seen.get(record_id)
         if prior is not None:
-            if (prior.key, prior.payload) == (entry.key, entry.payload):
-                self.to_delete.append(name)
-                self.run.duplicates_removed.append(name)
-            else:
+            if (prior.key, prior.payload) != (entry.key, entry.payload):
                 self.reject(name, "remember_id_collision", ["same_id_other_payload"])
+                return None
+            fate = prior.extra.get("fate")
+            if fate is None:  # la conservada sigue en juego: la gemela espera a su suerte (R2-03)
+                prior.extra.setdefault("twins", []).append(name)
+            elif fate[0] == "already":
+                self.to_delete.append(name)
+                self.run.already_committed.append({"entry": name, "record_id": record_id})
+            else:
+                self.reject(name, fate[1], fate[2])
             return None
         self.seen[record_id] = entry
+        self.by_name[name] = entry
         existing = self.index.get(record_id)
         if existing is not None:
             envelope = existing.get("an_kla_envelope")
             same = isinstance(envelope, dict) and envelope.get("idempotency_key") == entry.key and existing.get("text") == entry.text
             if same:
+                entry.extra["fate"] = ("already",)
                 self.to_delete.append(name)
                 self.run.already_committed.append({"entry": name, "record_id": record_id})
             else:
+                entry.extra["fate"] = ("rejected", "remember_id_collision", ["id_exists_in_snapshot"])
                 self.reject(name, "remember_id_collision", ["id_exists_in_snapshot"])
             return None
         return entry
@@ -302,7 +316,10 @@ class Scanner:
             if self.to_delete:
                 delete_entries(self.store, self.to_delete)
                 self.to_delete = []
-            combined = self.prefiltered + candidates
+            # R2-01: primero la evaluación por entrada (paso 5); el prefiltro sólo mira a las que
+            # PASARON, así una rechazada por política nunca bloquea a otra válida.
+            survivors = [entry for entry in candidates if self._evaluate(entry)]
+            combined = self.prefiltered + survivors
             repeated = set(duplicate_supersede_targets([entry.op for entry in combined]))
             kept = []
             for position, entry in enumerate(combined):
@@ -311,7 +328,7 @@ class Scanner:
                 elif position >= len(self.prefiltered):
                     kept.append(entry)
             self.prefiltered = [e for p, e in enumerate(combined) if p not in repeated]
-            self.accepted += [entry for entry in kept if self._evaluate(entry)]
+            self.accepted += kept
             if self.accepted and self._first_group_full():
                 break
         return self.accepted
@@ -365,6 +382,7 @@ def commit_entries(
 
     txid = batch_txid(observed, entries)
     names = [entry.name for entry in entries]
+    twins = [twin for entry in entries for twin in entry.extra.get("twins", [])]
     write_marker(store, txid, observed, names)
     try:
         locked = _commit_write_plan_locked(
@@ -391,10 +409,11 @@ def commit_entries(
             raise DrainAbort(outcome.get("operation_error_code") or "outcome_unknown", unknown=True)
         run.finish.append((lock_result, locked))
     if state == "committed":
-        delete_entries(store, names)
+        delete_entries(store, names + twins)
         delete_marker(store, txid)
     else:  # durabilidad o auditoría incompletas: cierra, repara y borra como el paso 0
-        settle_committed(store, txid, names, run.warnings)
+        settle_committed(store, txid, names + twins, run.warnings)
+    run.duplicates_removed.extend(twins)  # R2-03: sólo se informan como borradas si la conservada se comprometió
     run.batches.append({"transaction_id": txid, "mode": mode, "stream": entries[0].op.stream,
                         "operation": entries[0].op.operation, "entries": len(entries), "revision": revision})
     for entry in entries:
@@ -446,8 +465,11 @@ def processable_names(store: Any) -> list[str]:
     ``inbox.entry_names`` cuenta o no los directorios con nombre de entrada, el vaciado sólo procesa
     archivos (regulares o no: los no seguros van a ``rejected/``)."""
 
+    # R2-02: enumeración propia de `pending/` (scandir + lstat, sin abrir), independiente de la
+    # semántica de `inbox.entry_names`: un FIFO, enlace o hardlink con nombre de entrada se procesa
+    # (y va a `rejected/`) con cualquier definición de «vacío» que adopten B1 o B4.
     pending = inbox_paths(store).pending
-    return [name for name in entry_names(store) if kind_of_path(pending / name) in ("ok", "unsafe")]
+    return [name for name in subdir_names(store, "pending") if is_entry_name(name) and kind_of_path(pending / name) in ("ok", "unsafe")]
 
 
 def count_ignored(store: Any) -> int:
@@ -597,7 +619,10 @@ def _result(run: Run, state: str, inbox: str) -> dict[str, Any]:
         "committed": _capped(run.committed),
         "rejected": _capped(run.rejected),
         "already_committed": _capped(run.already_committed),
-        "duplicates_removed": {"count": len(run.duplicates_removed), "names": run.duplicates_removed[:MAX_LISTED]},
+        "duplicates_removed": {
+            "count": len(run.duplicates_removed), "names": run.duplicates_removed[:MAX_LISTED],
+            "truncated": len(run.duplicates_removed) > MAX_LISTED,
+        },
         "batches": run.batches[:MAX_LISTED],
         "closed_journals": run.closed_journals[:MAX_LISTED],
         "warnings": sorted(set(run.warnings)),
