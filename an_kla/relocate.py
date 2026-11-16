@@ -27,6 +27,7 @@ from .custody import (
 from .export_io import ExportIOError, normalize_and_sync_tree, rename_noreplace, safe_read
 from .export_restore import _allowed, _files
 from .identity import identity_lock, mutation_preflight, read_binding
+from .inbox_custody import custody_guard, require_empty, require_safe_root
 from .reader_gate import ReaderGateError, exclusive_reader_gate
 from .store_locks import WRITE_LOCK_DEADLINE_SECONDS as _GATE_TIMEOUT
 from .relocation_receipts import _read_regular, write_relocation_receipt
@@ -49,7 +50,7 @@ _KEPT = frozenset({
     ".identity.lock", "store-root.txt", "store-root.intent", "host-hooks.json",
     "memory/.write.lock", "memory/.reader-gate",
 })
-_KEPT_PREFIXES = ("context/", "relocations/")
+_KEPT_PREFIXES = ("context/", "relocations/", "memory/inbox/")  # la bandeja no es custodia (ADR-0063 D1)
 _TXID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}")
 _CORE_KEYS = frozenset({
     "direction", "transaction_id", "project_root", "source_store_root",
@@ -175,6 +176,7 @@ def plan_relocation(store: Any, destination: str | Path) -> dict[str, Any]:
     """Bind the exact move set to the observed revision and identity."""
 
     _require_source(store)
+    require_safe_root(store)  # R3-03: un archivo en `memory/inbox` es raíz insegura, como en `export`
     target = _validate_destination(store, destination)
     anchor = store.store_root
     with identity_lock(store):
@@ -467,15 +469,36 @@ def commit_relocation(store: Any, plan: Any, expected_current: str) -> dict[str,
     replayed = _replay(project_root, plan)
     if replayed is not None:
         return replayed
+    # Validaciones de sólo lectura primero (mismos códigos que antes de B4); después, un solo
+    # punto de custodia para ida y `--back`: antes de identity_lock, del staging y del journal.
+    back = core["direction"] == BACK_DIRECTION
+    if back:
+        if not store.store_external or str(store.store_root) != core["source_store_root"]:
+            raise RelocateError("relocate_plan_root_mismatch")
+    else:
+        if str(store.store_root) != core["source_store_root"]:
+            raise RelocateError("relocate_plan_root_mismatch")
+        try:
+            _require_source(store)
+        except RelocateError:
+            replayed = _replay(project_root, plan)  # un commit idéntico pudo terminar entre medias
+            if replayed is not None:
+                return replayed
+            raise
+    with custody_guard(store):
+        return _commit_guarded(store, plan, core)
+
+
+def _commit_guarded(store: Any, plan: Any, core: Mapping[str, Any]) -> dict[str, Any]:
+    project_root = Path(store.project_root)
     if core["direction"] == BACK_DIRECTION:
         from .relocate_back import commit_back
 
         return commit_back(store, plan)
-    if str(store.store_root) != core["source_store_root"]:
-        raise RelocateError("relocate_plan_root_mismatch")
     target = Path(core["destination_store_root"])
     anchor = store.store_root
     with identity_lock(store):
+        require_empty(store)  # R2-01: con identidad tomada ya no se publica ningún encolado
         with store.write_lock():
             # A concurrent commit of the same plan may have finished while
             # this one waited for the locks: replay it, never redo it.
@@ -682,6 +705,10 @@ def reconcile_relocation(
                     _discard_staging(staging)
                     _write_journal(root, journal, "aborted")
                     return _result(journal)
+                if not abort:
+                    # R3-01: el puntero aún no existe y el store vigente sigue aceptando encolados
+                    # (sólo lectura, antes de tocar el journal); `inbox drain` y volver a reconciliar.
+                    require_empty(source)
                 # The rename happened; the journal update did not.
                 journal["relocation_receipt"] = receipt
                 _write_journal(root, journal, "published")
@@ -712,6 +739,7 @@ def reconcile_relocation(
                     or custody_fingerprint(binding) != core["custody_fingerprint"]
                 ):
                     raise RelocateError("relocate_destination_unrecognized")
+                require_empty(source)  # R3-01: antes del punto de no retorno (el puntero)
                 _publish_pointer(core, binding)
                 _write_journal(root, journal, "pointer_written")
             if abort:

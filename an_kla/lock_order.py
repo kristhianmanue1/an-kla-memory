@@ -42,7 +42,7 @@ _HELD: ContextVar[tuple[_Hold, ...]] = ContextVar("an_kla_held_locks", default=(
 class LockOrderError(RuntimeError):
     """Se pidió un candado anterior teniendo uno posterior (defecto, no condición de uso)."""
 
-    code = "lock_order_violation"
+    code = ERROR_CODE = "lock_order_violation"  # `ERROR_CODE`: el CLI lo muestra tal cual, sin cli_unexpected_failure
 
     def __init__(self, requested: str, held: tuple[str, ...]) -> None:
         super().__init__(f"{self.code}: {requested} while holding {','.join(held)}")
