@@ -55,6 +55,7 @@ from .disputes import list_disputes
 from .inbox import read_status as inbox_status
 from .inbox_drain import DEFAULT_BUDGET_SECONDS as INBOX_DRAIN_BUDGET_SECONDS
 from .inbox_drain import drain as inbox_drain
+from .recall import recall, render as render_recall
 from .remember import read_text_file, remember
 from .lock_order import LockOrderError
 from .inventory import DEFAULT_LIMIT as INVENTORY_DEFAULT_LIMIT
@@ -471,6 +472,13 @@ def _run() -> None:
             store, text, kind=args.kind, supersedes=args.supersedes,
             idempotency_key=args.idempotency_key,
         )
+    elif args.command == "recall":
+        result = recall(
+            store, args.query, budget=args.budget, scope=args.scope,
+            streams=tuple(item for item in args.streams.split(",")),
+        )
+        sys.stdout.buffer.write(render_recall(result))
+        return
     elif args.command == "subject":
         result = resolve_namespace(store)
     elif args.command == "view":

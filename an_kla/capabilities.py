@@ -120,6 +120,18 @@ def capabilities() -> dict[str, Any]:
                     "optional": ["AN_KLA_AGENT_NAME", "AN_KLA_AGENT_MODEL", "AN_KLA_AGENT_ROLE", "AN_KLA_SESSION_ID"],
                 },
             },
+            "recall": {
+                "command": "recall --query <texto> [--budget <bytes>] [--scope repo|all] [--streams facts[,episodes]]",
+                "schema": "an-kla/recall-result-v1",
+                "analyzer": "an-kla/lexico-es-v1",
+                "ranking": "bm25 k1=1.2 b=0.75 over the candidate set (no persistent index)",
+                "read_only": True,
+                "budget": "bounds the complete JSON output in bytes, trailing newline included",
+                "scope_default": "repo",
+                "streams_default": ["facts"],
+                "mcp": False,
+                "decision": "ADR-0064",
+            },
             "disputes": {
                 "command": "disputes list [--target <id>]",
                 "schema": "an-kla/disputes-list-v1",

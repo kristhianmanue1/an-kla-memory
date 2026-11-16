@@ -53,6 +53,7 @@ SCHEMA_FILES = {
     "provenance-manifest-v1": "provenance-manifest-v1.schema.json",
     "record-envelope-v1": "record-envelope-v1.schema.json",
     "reference-benchmark-v1": "reference-benchmark-v1.schema.json",
+    "recall-result-v1": "recall-result-v1.schema.json",
     "refutation-v1": "refutation-v1.schema.json",
     "refute-authority-attestation-v1": "refute-authority-attestation-v1.schema.json",
     "refute-authority-claim-v1": "refute-authority-claim-v1.schema.json",

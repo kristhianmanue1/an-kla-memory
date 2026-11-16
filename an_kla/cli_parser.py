@@ -514,6 +514,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Clave de idempotencia: texto libre de 1 a 256 caracteres; sha256:<64 hex> se usa tal cual, "
         "cualquier otro valor se usa como sha256:<sha256 de su UTF-8>.",
     )
+    recall_cmd = sub.add_parser(
+        "recall",
+        help="Recuperar hechos por relevancia léxica ponderada (ADR-0064); sólo lectura, no cambia `retrieve`.",
+        description=(
+            "Recupera hechos con BM25 sobre texto plegado y reducido a su raíz (an-kla/lexico-es-v1), con ámbito de "
+            "repo, escritor y hora del sobre, disputas y estado de la bandeja. --budget acota la salida JSON completa "
+            "en bytes. Sólo lectura: no vacía la bandeja. Con --scope repo exige un repo Git en --project-root."
+        ),
+    )
+    recall_cmd.add_argument("--query", required=True, help="Texto de la consulta.")
+    recall_cmd.add_argument("--budget", type=int, default=4000, help="Cota en bytes de la salida JSON completa (4000).")
+    recall_cmd.add_argument(
+        "--scope", choices=("repo", "all"), default="repo",
+        help="repo (por defecto): hechos del repo del --project-root y los anteriores al sobre; all: todos, marcados.",
+    )
+    recall_cmd.add_argument(
+        "--streams", default="facts", help="facts (por defecto) y/o episodes, separados por comas."
+    )
     identity_cmd = sub.add_parser("identity", help="Inspeccionar o adoptar identidad local.")
     identity_sub = identity_cmd.add_subparsers(dest="identity_command", required=True)
     identity_status_cmd = identity_sub.add_parser("status")
