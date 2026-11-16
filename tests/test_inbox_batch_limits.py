@@ -135,7 +135,8 @@ class BadEntriesTests(BatchLimitCase):
         self.assertEqual(result["duplicates_removed"]["names"], [twin_b])
         self.assertEqual(self.names(self.paths.pending), [folder])  # el directorio se ignora, sin tocarlo
         self.assertEqual(self.names(self.paths.inflight), [])
-        self.assertEqual(len(self.names(self.paths.rejected)), 2 * len(rejected))  # entrada + .reason
+        # regulares: entrada + .reason; FIFO y enlace (inodos inseguros): sólo el .reason con la evidencia
+        self.assertEqual(len(self.names(self.paths.rejected)), 2 * (len(rejected) - 2) + 2)
         self.assertEqual(sum(1 for r in facts(self.store).values() if r["text"] == "gemela"), 1)
         self.assertEqual(facts(self.store)[target]["status"], "sustituida")
         self.assertTrue(self.store.verify()["ok"])

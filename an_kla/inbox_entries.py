@@ -11,6 +11,7 @@ motivo huérfano y el siguiente vaciado repite el rechazo.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
@@ -176,24 +177,60 @@ def load_entry(store: Any, name: str) -> Entry | None:
     return Entry(name=name, data=data, digest=digest_json(data))
 
 
+def _lstat_evidence(info: os.stat_result) -> dict[str, Any]:
+    """Metadatos de ``lstat`` de un inodo inseguro: tipo, modo, ``st_nlink`` y tamaño (nunca destino ni contenido)."""
+
+    mode = info.st_mode
+    kinds = (
+        (stat.S_ISLNK, "symlink"), (stat.S_ISFIFO, "fifo"), (stat.S_ISSOCK, "socket"),
+        (stat.S_ISCHR, "chardev"), (stat.S_ISBLK, "blockdev"), (stat.S_ISREG, "regular"),
+    )
+    return {
+        "type": next((name for test, name in kinds if test(mode)), "other"),
+        "mode": format(stat.S_IMODE(mode), "04o"),
+        "st_nlink": info.st_nlink,
+        "size": info.st_size,
+    }
+
+
 def reject_entry(store: Any, name: str, code: str, reason_codes: list[str] | None = None) -> str:
-    """Mueve ``pending/<name>`` a ``rejected/`` con su motivo; devuelve el nombre final en ``rejected/``."""
+    """Rechaza ``pending/<name>`` con su motivo; devuelve el nombre final del rastro en ``rejected/``.
+
+    Una entrada que es archivo regular con ``st_nlink == 1`` se mueve a ``rejected/`` (más su
+    ``.reason``). Un inodo que no lo es (enlace, FIFO, socket, dispositivo, hardlink) **no** se
+    mueve: ``export``, ``relocate`` y ``compact`` recorren ``rejected/`` y fallarían para
+    siempre. Para esos se escribe sólo ``rejected/<nombre>.reason`` con el código y los
+    metadatos de ``lstat`` (``lstat``: tipo, modo, ``st_nlink``, tamaño; nunca el destino de un
+    enlace ni su contenido) y se borra el nombre de ``pending/`` con ``unlink`` (no sigue
+    enlaces; un hardlink sólo pierde ese nombre).
+    """
 
     paths: InboxPaths = inbox_paths(store)
     final = name
     counter = 0
-    while os.path.lexists(paths.rejected / final):
+    while os.path.lexists(paths.rejected / final) or os.path.lexists(paths.rejected / (final + REASON_SUFFIX)):
         counter += 1
         final = f"{name}.{counter}"
-    reason = {"code": code, "reason_codes": safe_codes(reason_codes or [])}
-    store._atomic_write(paths.rejected / (final + REASON_SUFFIX), canonical_json(reason))
+    reason: dict[str, Any] = {"code": code, "reason_codes": safe_codes(reason_codes or [])}
     try:
-        os.replace(paths.pending / name, paths.rejected / final)
+        info = os.lstat(paths.pending / name)
     except FileNotFoundError:
-        pass
+        info = None
+    safe_inode = info is None or (stat.S_ISREG(info.st_mode) and info.st_nlink == 1)
+    if not safe_inode:
+        reason["lstat"] = _lstat_evidence(info)
+    store._atomic_write(paths.rejected / (final + REASON_SUFFIX), canonical_json(reason))
+    if safe_inode:
+        try:
+            os.replace(paths.pending / name, paths.rejected / final)
+        except FileNotFoundError:
+            pass
+    else:
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(paths.pending / name)
     fsync_directory(paths.rejected)
     fsync_directory(paths.pending)
-    return final
+    return final if safe_inode else final + REASON_SUFFIX
 
 
 __all__ = [

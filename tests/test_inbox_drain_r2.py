@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import os
+import stat
 import unittest
 from unittest import mock
 
@@ -120,6 +122,65 @@ class Round2Tests(DrainCase):
         validates(body)
         run.duplicates_removed = ["a.json"]
         self.assertFalse(inbox_drain._result(run, "drained", "present")["duplicates_removed"]["truncated"])
+
+
+class UnsafeInodeTests(DrainCase):
+    """ADENDA R3-02 (B4): un inodo inseguro no se mueve a `rejected/`; sólo queda su evidencia."""
+
+    def plant(self) -> tuple[str, str, str, Path]:
+        self.paths.pending.mkdir(parents=True, exist_ok=True)
+        fifo = self.factory.fresh_name()
+        os.mkfifo(self.paths.pending / fifo)
+        link = self.factory.fresh_name()
+        os.symlink("/etc/hostname-secreto-destino", self.paths.pending / link)
+        hard = self.factory.write("enlace duro")
+        elsewhere = self.project / "otro-nombre"
+        os.link(self.paths.pending / hard, elsewhere)
+        return fifo, link, hard, elsewhere
+
+    def test_evidence_only_and_the_name_is_unlinked_from_pending(self) -> None:
+        fifo, link, hard, elsewhere = self.plant()
+        result = self.drain()
+        self.assertEqual({i["entry"]: i["code"] for i in result["rejected"]["entries"]},
+                         {n: "inbox_entry_unsafe" for n in (fifo, link, hard)})
+        self.assertEqual(self.names(self.paths.pending), [])
+        self.assertEqual(self.names(self.paths.rejected), sorted(f"{n}.reason" for n in (fifo, link, hard)))
+        for name, kind in ((fifo, "fifo"), (link, "symlink"), (hard, "regular")):
+            raw = (self.paths.rejected / f"{name}.reason").read_bytes()
+            body = json.loads(raw)
+            self.assertEqual((body["code"], body["lstat"]["type"]), ("inbox_entry_unsafe", kind))
+            self.assertEqual(set(body["lstat"]), {"type", "mode", "st_nlink", "size"})
+            self.assertNotIn(b"hostname-secreto", raw)  # nunca el destino de un enlace
+        self.assertEqual(json.loads((self.paths.rejected / f"{hard}.reason").read_bytes())["lstat"]["st_nlink"], 2)
+        self.assertTrue(elsewhere.exists())  # el hardlink sólo pierde el nombre de pending/
+        self.assertEqual(elsewhere.read_bytes()[:1], b"{")
+        status = inbox.read_status(self.store)
+        self.assertEqual(status["pending"]["count"], 0)
+
+    def test_regular_entries_rejected_for_another_reason_still_move(self) -> None:
+        corrupt = self.factory.write_raw(b"{roto")
+        self.drain()
+        self.assertEqual(self.names(self.paths.rejected), sorted([corrupt, corrupt + ".reason"]))
+        self.assertEqual(json.loads((self.paths.rejected / (corrupt + ".reason")).read_bytes()).get("lstat"), None)
+
+    def test_rejected_holds_only_regular_single_name_files_so_walkers_do_not_fail(self) -> None:
+        from an_kla import export_restore
+        from an_kla.compaction_inventory import validate_no_links
+
+        self.plant()
+        self.factory.write_raw(b"{roto")
+        self.drain()
+        for path in self.paths.rejected.rglob("*"):
+            info = path.lstat()
+            self.assertTrue(stat.S_ISREG(info.st_mode) and info.st_nlink == 1, path)
+        validate_no_links(self.store)  # el recorrido de `compact` no falla por rejected/
+        original = export_restore._allowed  # B4 excluye la bandeja; aquí se acepta para probar sólo el recorrido
+        with mock.patch.object(export_restore, "_allowed", lambda p: p.startswith("anchor/memory/inbox/") or original(p)):
+            rows = export_restore._files(self.store.store_root)  # sin export_unsafe_link / export_unsafe_file
+        self.assertTrue(any("/rejected/" in relative for relative, _ in rows))
+        with mock.patch.object(export_restore, "_allowed", lambda p: p.startswith("anchor/memory/inbox/") or original(p)):
+            done = export_restore.create_export(self.store, self.project.parent / (self.project.name + "-bundle"))
+        self.assertEqual(done["schema"], "an-kla/export-result-v1")
 
 
 if __name__ == "__main__":
