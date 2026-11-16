@@ -378,7 +378,7 @@ def capabilities() -> dict[str, Any]:
                     "init": "outcome.committed is not true",
                     "commit-write-plan": "outcome.committed is not true",
                     "inbox drain": "state == aborted u outcome != known (drained, queued y partial salen con 0)",
-                    "remember": "state == rejected u outcome != known (committed y queued, con o sin drain_error, salen con 0)",
+                    "remember": "state == rejected, drain_error presente u outcome != known (committed y queued sin drain_error salen con 0)",
                     "subject namespace": "result == namespace_unavailable",
                 },
             },

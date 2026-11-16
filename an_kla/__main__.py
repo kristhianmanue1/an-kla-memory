@@ -714,9 +714,12 @@ def pending_outcome_reason(args: Any, result: Any) -> str | None:
         if result.get("state") == "aborted" or result.get("outcome") != "known":
             return "inbox_drain_outcome_not_firm"
     if args.command == "remember":
-        # `queued` (con o sin `drain_error`) sale con 0: la entrada está confirmada y reintentar no duplica.
+        # `committed` y `queued` sin `drain_error` salen con 0 (la entrada está confirmada); `rejected`,
+        # `queued` + `drain_error` (el vaciado abortó) y `outcome` desconocido, con 3 y el JSON íntegro (R1-02).
         if result.get("state") == "rejected":
             return "remember_rejected"
+        if result.get("drain_error"):
+            return "remember_drain_error"
         if result.get("outcome") != "known":
             return "remember_outcome_not_firm"
     if args.command == "subject" and args.subject_command == "namespace":

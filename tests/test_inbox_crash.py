@@ -171,6 +171,8 @@ def one_repetition(point: str, index: int, base: Path, nxt: str = "drain") -> di
         killed = worker(project, "drain", str(project), point).returncode == -9
     second_state, remembered = second_invocation(project, nxt, tag)
     acked = texts + ([remembered] if remembered and second_state.get("state") in ("committed", "queued") else [])
+    if second_state.get("state") == "queued":  # R1-09: la entrada sigue confirmada; se vacía antes de medir
+        worker(project, "drain", str(project), "-")
     measured = measure(MemoryStore(project), acked)  # R1-06: tras la 2.ª invocación (criterio 3)
     third = worker(project, "drain", str(project), "-")  # la 3.ª sólo comprueba que no se atasca
     try:
@@ -225,7 +227,7 @@ class Kill9MatrixTests(unittest.TestCase):
             document["points"] = summaries["drain"]
         report.write_text(json.dumps(document, indent=1, sort_keys=True))
         for nxt, summary in summaries.items():
-            ok_state = "drained" if nxt == "drain" else "committed"
+            ok_states = {"drained"} if nxt == "drain" else {"committed", "queued"}  # R1-09: `queued` también confirma
             for point, row in summary.items():
                 with self.subTest(next=nxt, point=point):
                     self.assertEqual(row["repetitions"], REPETITIONS)
@@ -233,7 +235,8 @@ class Kill9MatrixTests(unittest.TestCase):
                     self.assertEqual((row["lost"], row["duplicates"], row["verify_failures"]), (0, 0, 0))
                     self.assertEqual((row["open_journals_current"], row["durability_incomplete"]), (0, 0))
                     self.assertEqual(row["residues"], {"markers": 0, "pending": 0, "tmp": 0, "rejected": 0})
-                    self.assertEqual(row["second_states"], {ok_state: REPETITIONS})  # R1-06
+                    self.assertLessEqual(set(row["second_states"]), ok_states)  # R1-06 / R1-09
+                    self.assertEqual(sum(row["second_states"].values()), REPETITIONS)
                     self.assertEqual(row["second_drain_errors"], {})
                     self.assertEqual(row["third_not_drained"], 0)
 

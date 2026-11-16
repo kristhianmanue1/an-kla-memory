@@ -236,6 +236,11 @@ class Scanner:
     def __init__(self, store: Any, snapshot: Any, observed: str, run: Run) -> None:
         self.store, self.snapshot, self.observed, self.run = store, snapshot, observed, run
         self.index = _snapshot_index(snapshot)
+        self.by_key = {
+            str(env["idempotency_key"]): row
+            for row in self.index.values()
+            if isinstance(env := row.get("an_kla_envelope"), dict) and isinstance(env.get("idempotency_key"), str)
+        }
         self.seen: dict[str, Entry] = {}
         self.by_name: dict[str, Entry] = {}
         self.prefiltered: list[Entry] = []
@@ -266,6 +271,14 @@ class Scanner:
             self.reject(name, rejected.code, rejected.reason_codes)
             return None
         if entry is None:  # directorio: se ignora sin tocarlo
+            return None
+        # R1-01 de B5: un record con la misma clave y el mismo texto ya está en el snapshot: es un reintento
+        # ya comprometido. Va ANTES de resolver `--supersedes` (el target propio ya está `sustituida` y la
+        # resolución lo rechazaría con `invalid_supersede_target`): se borra sin evidencia en `rejected/`.
+        done = self.by_key.get(entry.key)
+        if done is not None and done.get("text") == entry.text:
+            self.to_delete.append(name)
+            self.run.already_committed.append({"entry": name, "record_id": str(done.get("id", ""))})
             return None
         try:
             self._resolve(entry)
@@ -519,9 +532,9 @@ def attempt(store: Any, run: Run, include: str | None, lock_wait: float) -> str:
     """``idle`` | ``progress`` | ``queued`` | ``aborted``. Un intento = un lote."""
 
     run.attempts += 1
-    if not _has_work(store):
-        return "idle"
     try:
+        if not _has_work(store):
+            return "idle"
         preflight = _mutation_preflight_with_context(store)
         store._make_layout()
         ensure_layout(store)
@@ -609,7 +622,10 @@ def drain(
             state = "aborted"
             break
         if (max_batches is not None and len(run.batches) >= max_batches) or clock() >= deadline:
-            state = "partial" if _has_work(store) else "drained"
+            try:
+                state = "partial" if _has_work(store) else "drained"
+            except _SETUP_ERRORS:
+                state = "partial"
             break
     run.ignored = count_ignored(store)
     return _result(run, state, "present")

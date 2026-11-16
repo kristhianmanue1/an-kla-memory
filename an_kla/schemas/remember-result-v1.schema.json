@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:an-kla:schema:remember-result:v1",
   "title": "AN-KLA Remember Result v1",
-  "description": "Resultado de `remember` (ADR-0063 D1). `state`: `committed` (con `revision`, salvo `already_committed: true` de un reintento sin lote propio), `rejected` (con `code` y `reason_codes`) o `queued` (la entrada está en la bandeja; con `drain_error` si el vaciado abortó con resultado conocido, con `outcome: unknown` si el commit quedó sin resultado firme —lo resuelve el paso 0 del vaciado siguiente—, y con `resolution: pending` cuando se pidió `--supersedes`: la resolución propia/ajena ocurre al vaciar). `disputed` o `superseded` sólo con `committed` (D3). `rejected` lista todos los rechazos que produjo el vaciado de esta invocación, también los de otras entradas. Reintentar con el mismo texto, `kind` y target es idempotente. `--idempotency-key` acepta texto libre de 1 a 256 caracteres: `sha256:<64 hex>` se usa tal cual y cualquier otro valor se convierte en `sha256:` + sha256 de su UTF-8; `idempotency_key` es siempre la forma final. Sólo nombres y códigos: nunca el texto del recuerdo ni rutas.",
+  "description": "Resultado de `remember` (ADR-0063 D1). `state`: `committed` (con `revision`, salvo `already_committed: true` de un reintento sin lote propio), `rejected` (con `code` y `reason_codes`) o `queued` (la entrada está en la bandeja; con `drain_error` si el vaciado abortó con resultado conocido, con `outcome: unknown` si el commit quedó sin resultado firme —lo resuelve el paso 0 del vaciado siguiente—, y con `resolution: pending` cuando se pidió `--supersedes`: la resolución propia/ajena ocurre al vaciar). `record_id` sólo con `committed` y `queued` (un rechazado no crea record). `disputed` o `superseded` sólo con `committed` (D3). `rejected` lista todos los rechazos que produjo el vaciado de esta invocación, también los de otras entradas. Reintentar con el mismo texto, `kind` y target es idempotente. `--idempotency-key` acepta texto libre de 1 a 256 caracteres: `sha256:<64 hex>` se usa tal cual y cualquier otro valor se convierte en `sha256:` + sha256 de su UTF-8; `idempotency_key` es siempre la forma final. Sólo nombres y códigos: nunca el texto del recuerdo ni rutas.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -55,6 +55,6 @@
   },
   "allOf": [
     {"if": {"properties": {"state": {"const": "committed"}}}, "then": {"required": ["record_id"]}},
-    {"if": {"properties": {"state": {"const": "rejected"}}}, "then": {"required": ["code", "reason_codes"]}}
+    {"if": {"properties": {"state": {"const": "rejected"}}}, "then": {"required": ["code", "reason_codes"], "not": {"required": ["record_id"]}}}
   ]
 }

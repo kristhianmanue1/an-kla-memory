@@ -82,7 +82,7 @@ class RememberConcurrencyTests(unittest.TestCase):
                 "duplicates": sum(1 for c in counts.values() if c > 1), "verify_ok": store.verify()["ok"],
                 "cas_conflicts": drain_errors.get("write_plan_base_changed", 0)
                 + sum(1 for r in rows if r.get("drain_error") == "write_plan_base_changed"),
-                "drain_write_lock_busy": drain_errors.get("write_lock_busy", 0),
+                "drain_write_lock_busy": drain_errors.get("write_lock_busy", 0), "drain_errors": dict(drain_errors),
                 "drain_queued_responses": sum(d["state"] == "queued" for d in drains + finals),
                 "drain_calls": len(drains), "drain_commits": sum(1 for d in drains if d.get("batches")),
                 "remember_p95_ms": round(p95, 1), "remember_p50_ms": round(latency[len(latency) // 2] * 1000, 1),
@@ -100,6 +100,10 @@ class RememberConcurrencyTests(unittest.TestCase):
         self.assertEqual((summary["lost"], summary["duplicates"]), ([], 0))
         self.assertTrue(summary["verify_ok"])
         self.assertEqual((summary["cas_conflicts"], summary["drain_write_lock_busy"]), (0, 0))
+        # R1-03: `queued` es un desenlace correcto (cada `remember` también vacía y compite por `write_lock`):
+        # se reporta, no se exige 0; lo que no puede haber es ningún `drain_error`.
+        self.assertEqual(summary["remember_drain_errors"], {})
+        self.assertEqual(summary["drain_errors"], {})
         self.assertEqual((summary["pending"], summary["rejected"], summary["tmp"], summary["inflight"]), (0, 0, 0, 0))
         self.assertEqual(summary["final_states"][-1], "drained")
 

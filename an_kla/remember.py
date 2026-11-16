@@ -95,7 +95,7 @@ def _enqueue(
     try:
         return enqueue(store, text, kind=kind, target_id=target_id, idempotency_key=key, env=env)
     except IdentityC0Error as exc:
-        field = f" ({exc.field})" if exc.field else ""
+        field = f" ({exc.field})" if exc.field and exc.code != "identity_env_missing" else ""
         raise RememberError(exc.code, _IDENTITY_HINTS.get(exc.code, "identidad C0 inválida") + field) from None
     except OSError:
         raise RememberError("storage_io_failed", _STORAGE_HINT) from None
@@ -128,8 +128,6 @@ def _result(queued: dict[str, Any], report: dict[str, Any], pending_resolution: 
         "outcome": report.get("outcome", "known"),
         "warnings": list(report.get("warnings", [])),
     }
-    if "record_id" in queued:
-        result["record_id"] = queued["record_id"]
     rejections = report["rejected"]["entries"]
     result["rejected"] = {"count": len(rejections), "entries": rejections}
     committed = _find(report["committed"]["entries"], name)
@@ -157,6 +155,8 @@ def _result(queued: dict[str, Any], report: dict[str, Any], pending_resolution: 
             result.update(record_id=sibling["record_id"], revision=sibling["revision"])
     else:
         result["state"] = "queued"
+        if "record_id" in queued:  # R1-06: sólo con `committed` y `queued`; un rechazado no tiene record
+            result["record_id"] = queued["record_id"]
         if report.get("drain_error"):
             result["drain_error"] = report["drain_error"]
         if pending_resolution:

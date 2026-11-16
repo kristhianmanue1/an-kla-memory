@@ -489,7 +489,8 @@ def build_parser() -> argparse.ArgumentParser:
             "Guarda un recuerdo en una invocación. La identidad del escritor (C0) y la hora de encolado "
             "las pone la herramienta: AN_KLA_AGENT_CLI es obligatoria; AN_KLA_AGENT_NAME, AN_KLA_AGENT_MODEL, "
             "AN_KLA_AGENT_ROLE y AN_KLA_SESSION_ID usan los centinelas sin-nombre, desconocido y "
-            "<cli>:sin-sesion si faltan. Exige un repo Git en --project-root. Reintentar es idempotente. "
+            "<cli>:sin-sesion si faltan. Exige un repo Git en --project-root. Reintentar es idempotente con el mismo texto, kind, target y session.id; desde otra sesión es otra intención: usa --idempotency-key estable. "
+            "Salida: rc 0 con committed o queued sin drain_error; rc 3 con rejected, queued + drain_error u outcome desconocido (JSON íntegro en stdout). "
             "Recomendado: --text-file - (--text pone el contenido en argv, visible para ps y el historial del shell)."
         ),
     )

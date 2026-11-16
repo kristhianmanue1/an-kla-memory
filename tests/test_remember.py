@@ -263,7 +263,8 @@ class OutcomeTests(CliCase):
         args = Namespace(command="remember")
         self.assertEqual(pending_outcome_reason(args, {"state": "queued", "outcome": "unknown"}), "remember_outcome_not_firm")
         self.assertEqual(pending_outcome_reason(args, {"state": "rejected", "outcome": "known"}), "remember_rejected")
-        for state in ({"state": "committed", "outcome": "known"}, {"state": "queued", "outcome": "known", "drain_error": "x"}):
+        self.assertEqual(pending_outcome_reason(args, {"state": "queued", "outcome": "known", "drain_error": "x"}), "remember_drain_error")
+        for state in ({"state": "committed", "outcome": "known"}, {"state": "queued", "outcome": "known"}):
             self.assertIsNone(pending_outcome_reason(args, state))
 
     def test_a_failure_of_the_drain_phase_after_enqueue_is_queued_never_a_trace(self) -> None:
