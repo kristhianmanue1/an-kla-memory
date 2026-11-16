@@ -280,7 +280,7 @@ class ScopeTests(RecallCase):
         self.assertNotIn("f-hueco", self.ids(self.ok("zorro")))
 
     def test_repo_scope_without_git_fails_and_never_degrades_to_all(self) -> None:
-        with tempfile.TemporaryDirectory(prefix="sin-git-", dir="/var/tmp") as raw:
+        with tempfile.TemporaryDirectory(prefix="sin-git-") as raw:
             plain = Path(raw).resolve()
             MemoryStore(plain).initialize()
             ceiling = {"GIT_CEILING_DIRECTORIES": str(plain.parent)}
@@ -351,6 +351,7 @@ class InboxTests(RecallCase):
         self.assertEqual(self.ids(out), ["f-uno"])  # una escritura cuenta cuando está comprometida
         self.assertEqual(self.ok("pangolin")["inbox"]["pending"], 2)
 
+    @unittest.skipIf(os.name == "nt", "enlaces simbólicos")
     def test_unsafe_inbox_still_answers(self) -> None:
         elsewhere = self.scratch("otra-bandeja")
         os.symlink(elsewhere, self.inbox)
@@ -368,6 +369,7 @@ class InboxTests(RecallCase):
         self.assertEqual(self.store.read_current(), current)
         self.assertEqual(self.snapshot_inbox(), listing)
 
+    @unittest.skipIf(os.name == "nt", "enlaces simbólicos")
     def test_unsafe_subdirectory_nulls_only_the_affected_count(self) -> None:
         inbox.enqueue(self.store, "el pangolín trepa", env=AGENT_ENV)
         pending = self.inbox / "pending"
