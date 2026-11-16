@@ -32,6 +32,7 @@ EXPECTED_CASES = [
     "init",
     "commit-write-plan",
     "inbox drain",
+    "remember",
     "subject namespace",
 ]
 

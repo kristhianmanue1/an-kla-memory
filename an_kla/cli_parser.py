@@ -482,6 +482,37 @@ def build_parser() -> argparse.ArgumentParser:
         "--budget-seconds", type=float, default=None,
         help="Presupuesto de tiempo entre lotes (por defecto 30 s); el lote en curso no se interrumpe.",
     )
+    remember_cmd = sub.add_parser(
+        "remember",
+        help="Guardar un recuerdo en una invocación (ADR-0063 D1): encola y vacía un lote; escribe en el store.",
+        description=(
+            "Guarda un recuerdo en una invocación. La identidad del escritor (C0) y la hora de encolado "
+            "las pone la herramienta: AN_KLA_AGENT_CLI es obligatoria; AN_KLA_AGENT_NAME, AN_KLA_AGENT_MODEL, "
+            "AN_KLA_AGENT_ROLE y AN_KLA_SESSION_ID usan los centinelas sin-nombre, desconocido y "
+            "<cli>:sin-sesion si faltan. Exige un repo Git en --project-root. Reintentar es idempotente. "
+            "Recomendado: --text-file - (--text pone el contenido en argv, visible para ps y el historial del shell)."
+        ),
+    )
+    remember_text = remember_cmd.add_mutually_exclusive_group(required=True)
+    remember_text.add_argument(
+        "--text", help="Texto del recuerdo (máx. 64 KiB UTF-8). Visible en argv: prefiere --text-file -."
+    )
+    remember_text.add_argument(
+        "--text-file", help="Archivo con el texto del recuerdo, o '-' para stdin (forma recomendada)."
+    )
+    remember_cmd.add_argument(
+        "--kind", choices=("fact", "decision", "state"), default=None,
+        help="fact (por defecto) y decision van a facts; state a episodes. Con --supersedes lo decide el target.",
+    )
+    remember_cmd.add_argument(
+        "--supersedes", metavar="ID", default=None,
+        help="Id del record que este recuerdo sustituye (propio) o disputa (ajeno, legado o sin-nombre).",
+    )
+    remember_cmd.add_argument(
+        "--idempotency-key", metavar="K", default=None,
+        help="Clave de idempotencia: texto libre de 1 a 256 caracteres; sha256:<64 hex> se usa tal cual, "
+        "cualquier otro valor se usa como sha256:<sha256 de su UTF-8>.",
+    )
     identity_cmd = sub.add_parser("identity", help="Inspeccionar o adoptar identidad local.")
     identity_sub = identity_cmd.add_subparsers(dest="identity_command", required=True)
     identity_status_cmd = identity_sub.add_parser("status")

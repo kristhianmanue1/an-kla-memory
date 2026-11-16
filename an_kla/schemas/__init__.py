@@ -65,6 +65,7 @@ SCHEMA_FILES = {
     "refute-policy-config-v1": "refute-policy-config-v1.schema.json",
     "refute-policy-transaction-v1": "refute-policy-transaction-v1.schema.json",
     "refute-proposal-v1": "refute-proposal-v1.schema.json",
+    "remember-result-v1": "remember-result-v1.schema.json",
     "revision-v2": "revision-v2.schema.json",
     "revision-v3": "revision-v3.schema.json",
     "retrieval-eval-query-v2": "retrieval-eval-query-v2.schema.json",
