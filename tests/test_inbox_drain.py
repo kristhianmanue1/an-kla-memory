@@ -181,7 +181,7 @@ class RejectionTests(DrainCase):
         self.assertIn("json", self.reasons()[corrupt]["reason_codes"])
         self.assertEqual(sorted(self.names(self.paths.pending)), sorted([folder, "nota.txt"]))
         self.assertTrue((self.paths.pending / folder).is_dir())
-        self.assertEqual(result["metrics"]["ignored"], 1)
+        self.assertEqual(result["metrics"]["ignored"], 2)  # el directorio y `nota.txt`
 
     def test_tampered_payload_digest_or_envelope_is_invalid(self) -> None:
         data = self.factory.entry("manipulada")
@@ -565,6 +565,148 @@ class LockOrderTests(DrainCase):
         with mock.patch.object(inbox_drain, "_locked_attempt", spy):
             self.drain()
         self.assertEqual(held_inside, [(lock_order.WRITE,)])
+
+
+class Step7OrderTests(DrainCase):
+    """R1-02: en el paso 7 se borran las entradas y DESPUÉS el marcador (ADR: orden obligatorio)."""
+
+    def spy(self):
+        events: list[str] = []
+        real_entries, real_marker = inbox_drain.delete_entries, inbox_drain.delete_marker
+
+        def entries(store, names):
+            events.append("entries")
+            real_entries(store, names)
+
+        def marker(store, txid):
+            events.append("marker")
+            real_marker(store, txid)
+
+        return events, mock.patch.multiple(inbox_drain, delete_entries=entries, delete_marker=marker)
+
+    def test_batch_deletes_entries_then_marker(self) -> None:
+        for index in range(3):
+            self.factory.write(f"hecho {index}")
+        events, patch = self.spy()
+        with patch:
+            self.drain()
+        self.assertEqual(events, ["entries", "marker"])
+
+    def test_last_resort_deletes_entries_then_marker_for_each_commit(self) -> None:
+        for index in range(3):
+            self.factory.write(f"hecho {index}")
+        real = self.store._assign_records
+
+        def assign(base, pending):
+            if len(pending["facts"]) > 1:
+                raise StoreError("duplicate_facts_id")
+            return real(base, pending)
+
+        events, patch = self.spy()
+        with patch, mock.patch.object(self.store, "_assign_records", assign):
+            self.drain()
+        self.assertEqual(events, ["marker"] + ["entries", "marker"] * 3)  # el lote fallido sólo borra su marcador
+
+    def test_replay_with_incomplete_durability_goes_through_settle_committed(self) -> None:
+        """R1-09: la rama de replay no borra sin el predicado de durabilidad completa."""
+
+        from an_kla.write_commit import _LockedCommit
+
+        self.factory.write("uno")
+        for state, settled in (("durability_incomplete", True), ("committed", False)):
+            with self.subTest(state=state):
+                final = {"committed": True, "revision": "sha256:" + "a" * 64, "outcome": {"state": state}}
+                with mock.patch.object(inbox_drain, "_commit_write_plan_locked", return_value=_LockedCommit(final=final)), \
+                        mock.patch.object(inbox_drain, "settle_committed") as settle, \
+                        mock.patch.object(inbox_drain, "delete_entries") as delete:
+                    result = self.drain(max_batches=1)  # el borrado simulado deja la entrada: un solo lote
+                self.assertEqual(settle.called, settled)
+                self.assertEqual(delete.called, not settled)
+                self.assertEqual(result["committed"]["count"], 1)
+                for path in list(self.paths.inflight.iterdir()):
+                    path.unlink()
+
+
+class IgnoredTests(DrainCase):
+    """R1-10: «entrada» = nombre que casa y NO es directorio; `ignored` cuenta directorios y nombres que no casan."""
+
+    def test_ignored_counts_directories_and_foreign_names_whatever_entry_names_does(self) -> None:
+        real = inbox_drain.entry_names
+        self.factory.write("uno")
+        folder = self.factory.fresh_name()
+        (self.paths.pending / folder).mkdir()
+        (self.paths.pending / "nota.txt").write_bytes(b"x")
+        self.paths.inflight.mkdir(parents=True, exist_ok=True)
+        (self.paths.inflight / "no-es-marcador").write_bytes(b"x")
+        without_dirs = lambda store: [n for n in real(store) if not (self.paths.pending / n).is_dir()]  # noqa: E731 - semántica de B4
+        for label, lister in (("cuenta directorios (B1)", real), ("excluye directorios (B4)", without_dirs)):
+            with self.subTest(label=label), mock.patch.object(inbox_drain, "entry_names", lister):
+                self.factory.write(f"otro {label}")
+                result = self.drain()
+                self.assertEqual(result["state"], "drained")
+                self.assertEqual(result["metrics"]["ignored"], 3)
+                self.assertTrue((self.paths.pending / folder).is_dir())
+
+
+class DrainExitCodeTests(DrainCase):
+    """R1-01: rc 3 (`inbox_drain_outcome_not_firm`) con `aborted`/`outcome != known`; 0 en el resto."""
+
+    def cli(self, *args: str) -> subprocess.CompletedProcess:
+        from tests.inbox_support import GIT_ENV
+
+        return subprocess.run(
+            [sys.executable, "-m", "an_kla", "--project-root", str(self.project), *args],
+            cwd=ROOT, capture_output=True, text=True,
+            env={**os.environ, **GIT_ENV, "AN_KLA_NO_UPDATE_CHECK": "1", "PYTHONDONTWRITEBYTECODE": "1"},
+        )
+
+    def test_matrix_function_by_state(self) -> None:
+        from argparse import Namespace
+
+        from an_kla.__main__ import pending_outcome_reason
+
+        args = Namespace(command="inbox", inbox_command="drain")
+        for result, expected in (
+            ({"state": "aborted", "outcome": "known"}, "inbox_drain_outcome_not_firm"),
+            ({"state": "aborted", "outcome": "unknown"}, "inbox_drain_outcome_not_firm"),
+            ({"state": "drained", "outcome": "unknown"}, "inbox_drain_outcome_not_firm"),
+            ({"state": "drained", "outcome": "known"}, None),
+            ({"state": "queued", "outcome": "known"}, None),
+            ({"state": "partial", "outcome": "known"}, None),
+        ):
+            with self.subTest(result=result):
+                self.assertEqual(pending_outcome_reason(args, result), expected)
+        self.assertIsNone(pending_outcome_reason(Namespace(command="inbox", inbox_command="status"), {"state": "aborted"}))
+
+    def test_cli_aborted_is_rc3_with_full_payload_and_empty_stderr(self) -> None:
+        self.factory.write("uno")
+        txid = "7b0f6a62-0f3e-5f6b-8d49-4a1d6a1c9a11"
+        self.paths.inflight.mkdir(parents=True, exist_ok=True)
+        os.mkfifo(self.paths.inflight / f"{txid}.json")
+        done = self.cli("inbox", "drain")
+        self.assertEqual(done.returncode, 3, done.stderr)
+        self.assertEqual(done.stderr, "")
+        body = json.loads(done.stdout)
+        validates(body)
+        self.assertEqual((body["state"], body["drain_error"]), ("aborted", "inflight_marker_unsafe"))
+
+    def test_cli_drained_queued_and_partial_are_rc0(self) -> None:
+        self.factory.write("uno")
+        holder = hold_flock(Path(self.store.root) / ".write.lock")
+        self.addCleanup(self.release, holder)
+        queued = self.cli("inbox", "drain")
+        self.assertEqual((queued.returncode, json.loads(queued.stdout)["state"]), (0, "queued"))
+        self.release(holder)
+        drained = self.cli("inbox", "drain")
+        self.assertEqual((drained.returncode, json.loads(drained.stdout)["state"]), (0, "drained"))
+        for index in range(3):
+            self.factory.write(f"otro {index}")
+        partial = self.cli("inbox", "drain", "--budget-seconds", "0.000001")
+        self.assertEqual(partial.returncode, 0, partial.stderr)
+
+    def test_capabilities_list_the_case(self) -> None:
+        pending = json.loads(self.cli("capabilities").stdout)["cli_error_surface"]["pending_outcome"]
+        self.assertIn("inbox drain", pending["cases"])
 
 
 class CliTests(unittest.TestCase):

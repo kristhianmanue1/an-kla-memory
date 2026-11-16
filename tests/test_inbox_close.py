@@ -213,7 +213,7 @@ class OtherBranchTests(CloseCase):
 
     def test_none_with_trace_aborts_and_keeps_everything(self) -> None:
         txid = "7b0f6a62-0f3e-5f6b-8d49-4a1d6a1c9a11"
-        for trace in ("journal", "directory"):
+        for trace in ("journal", "directory", "manifest"):
             with self.subTest(trace=trace):
                 self.tearDown_project()
                 name = self.factory.write(f"pendiente {trace}")
@@ -223,6 +223,17 @@ class OtherBranchTests(CloseCase):
                 )
                 if trace == "journal":
                     self.journal_path(txid).write_bytes(b"\x00corrupto")
+                elif trace == "manifest":
+                    # R1-05: sólo un manifiesto con ese `transaction_id`; sin journal ni directorio
+                    from an_kla.canonical import digest_bytes
+
+                    planted = dict(self.store._read_json_object("revisions", self.store.read_current()))
+                    planted["transaction_id"] = txid
+                    payload = canonical_json(planted)
+                    (self.root / "revisions" / "sha256" / (digest_bytes(payload)[7:] + ".json")).write_bytes(payload)
+                    self.assertFalse(self.journal_path(txid).exists())
+                    self.assertFalse((self.root / "transactions" / txid).exists())
+                    self.assertFalse(inbox_close.has_no_trace(self.store, txid))
                 else:
                     (self.root / "transactions" / txid).mkdir()
                 result = inbox_drain.drain(self.store)

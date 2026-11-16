@@ -23,6 +23,7 @@ nunca aquí.
 
 from __future__ import annotations
 
+import os
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -44,6 +45,8 @@ from .inbox import (
     ensure_layout,
     entry_names,
     inbox_paths,
+    is_entry_name,
+    is_marker_name,
     marker_names,
     root_state,
 )
@@ -68,7 +71,9 @@ RESULT_SCHEMA = "an-kla/inbox-drain-result-v1"
 # para saber qué journals son suyos (eso lo dice el marcador).
 NS_AN_KLA_INBOX = uuid.UUID("0e5e62b5-3b89-5866-8492-bf023b220a6c")
 MAX_BATCH_ENTRIES = 250
-MAX_DOCUMENT_NODES = 9000  # tope por documento (propuesta y plan); el del núcleo es 10.000
+# Tope de nodos POR DOCUMENTO (la propuesta y el plan, cada uno; ADR-0063 D1 paso 5): margen sobre el
+# `_MAX_JSON_NODES = 10_000` del núcleo, que también se aplica por documento.
+MAX_DOCUMENT_NODES = 9000
 DRAIN_LOCK_WAIT_SECONDS = 0.5
 DEFAULT_BUDGET_SECONDS = 30.0
 SCAN_CHUNK = 250
@@ -254,7 +259,6 @@ class Scanner:
             self.reject(name, rejected.code, rejected.reason_codes)
             return None
         if entry is None:  # directorio: se ignora sin tocarlo
-            self.run.ignored += 1
             return None
         try:
             self._resolve(entry)
@@ -345,7 +349,12 @@ def _classify(store: Any, txid: str, exc: Exception) -> Exception:
     if isinstance(exc, (WritePolicyError, *_KNOWN_INFRA)):
         delete_marker(store, txid)
         return DrainAbort(code)
-    return DrainAbort(code, unknown=True)  # sin clasificar: se conserva el marcador
+    # R1-04, conservador a propósito: una excepción de E/S lanzada DENTRO del commit (`OSError`,
+    # `StorageOperationError`) o cualquier otra sin clasificar no prueba que `commit_locked` no
+    # escribiera nada; es `unknown` y conserva el marcador. El paso 0 del vaciado siguiente lo resuelve
+    # (sin rastro / no comprometido / comprometido). Las E/S que `commit_locked` devuelve como
+    # resultado (`outcome.committed` false) sí son conocidas y borran el marcador (ver `commit_entries`).
+    return DrainAbort(code, unknown=True)
 
 
 def commit_entries(
@@ -369,7 +378,9 @@ def commit_entries(
         if locked.final.get("committed") is not True:  # `skip` del lote: nada se escribió
             delete_marker(store, txid)
             raise CommitTerminal("remember_policy_skip", locked.final.get("reason_codes"))
-        revision, state = locked.final["revision"], "committed"
+        revision = locked.final["revision"]
+        # R1-09: el replay pasa por el mismo predicado que la rama normal (durabilidad completa).
+        state = (locked.final.get("outcome") or {}).get("state", "committed")
     else:
         outcome = locked.outcome
         revision, state = locked.revision, outcome["state"]
@@ -430,15 +441,35 @@ def process_group(
 # --- un intento y el bucle ---------------------------------------------------
 
 
-def _has_work(store: Any) -> bool:
-    if marker_names(store):
-        return True
+def processable_names(store: Any) -> list[str]:
+    """«Entrada» = nombre que casa el patrón y NO es directorio (R1-10): con independencia de si
+    ``inbox.entry_names`` cuenta o no los directorios con nombre de entrada, el vaciado sólo procesa
+    archivos (regulares o no: los no seguros van a ``rejected/``)."""
+
     pending = inbox_paths(store).pending
-    return any(kind_of_path(pending / name) in ("ok", "unsafe") for name in entry_names(store))
+    return [name for name in entry_names(store) if kind_of_path(pending / name) in ("ok", "unsafe")]
+
+
+def count_ignored(store: Any) -> int:
+    """Lo que el vaciado no toca: directorios y nombres que no casan, en ``pending/`` e ``inflight/``."""
+
+    paths = inbox_paths(store)
+    total = 0
+    for directory, matches in ((paths.pending, is_entry_name), (paths.inflight, is_marker_name)):
+        try:
+            names = os.listdir(directory)
+        except OSError:
+            continue
+        total += sum(1 for n in names if not matches(n) or kind_of_path(directory / n) == "dir")
+    return total
+
+
+def _has_work(store: Any) -> bool:
+    return bool(marker_names(store)) or bool(processable_names(store))
 
 
 def _pending_names(store: Any, include: str | None) -> list[str]:
-    names = sorted(entry_names(store), key=age_key)
+    names = sorted(processable_names(store), key=age_key)
     if include in names:
         names.remove(include)
         names.insert(0, include)
@@ -547,6 +578,7 @@ def drain(
         if (max_batches is not None and len(run.batches) >= max_batches) or clock() >= deadline:
             state = "partial" if _has_work(store) else "drained"
             break
+    run.ignored = count_ignored(store)
     return _result(run, state, "present")
 
 
