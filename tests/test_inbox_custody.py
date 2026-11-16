@@ -533,6 +533,155 @@ class LockOrderCustodyTests(CustodyCase):
                 with inbox.custody_guard(self.store):
                     pass
 
+class RoundTwoTests(CustodyCase):
+    """Arreglos de la ronda 2 (R2-01 a R2-05)."""
+
+    def publish_in_the_window(self, module, store: MemoryStore):
+        """Sustituye `identity_lock` del módulo: justo antes de tomarlo, un encolado publica (orden inverso de R2-01)."""
+
+        real = module.identity_lock
+        calls: list[str] = []
+
+        def window(target, **kwargs):
+            if not calls:
+                calls.append(inbox.enqueue(store, "en la ventana", env=AGENT_ENV)["entry"])
+            return real(target, **kwargs)
+
+        return calls, mock.patch.object(module, "identity_lock", window)
+
+    def test_an_entry_published_between_the_guard_and_the_identity_lock_stops_the_relocation(self) -> None:
+        """R2-01 (ida): con la bandeja ausente al empezar, la reubicación relee `pending/` bajo identidad."""
+
+        self.assertFalse(self.inbox.exists())
+        plan = plan_relocation(self.store, self.vault)
+        calls, patch = self.publish_in_the_window(relocate, self.store)
+        with patch:
+            self.assert_code("inbox_pending", commit_relocation, self.store, plan, self.revision)
+        self.assertEqual(len(calls), 1)
+        self.assertFalse(self.vault.exists())
+        self.assertIsNone(read_pointer(self.project))
+        self.assertEqual(len(inbox.entry_names(self.store)), 1)  # la entrada sigue en el store vigente
+
+    def test_an_entry_published_in_the_window_stops_the_back_relocation(self) -> None:
+        """R2-01 (`--back`)."""
+
+        commit_relocation(self.store, plan_relocation(self.store, self.vault), self.revision)
+        external = MemoryStore(self.project, store_root=self.vault)
+        back = plan_back(external)
+        self.assertFalse(inbox.inbox_paths(external).root.exists())
+        calls, patch = self.publish_in_the_window(relocate_back, external)
+        with patch:
+            self.assert_code("inbox_pending", commit_relocation, external, back, self.revision)
+        self.assertEqual(len(calls), 1)
+        self.assertIsNotNone(read_pointer(self.project))
+        self.assertEqual(len(inbox.entry_names(external)), 1)
+
+    def test_a_marker_in_the_window_is_inbox_inflight(self) -> None:
+        plan = plan_relocation(self.store, self.vault)
+        real = relocate.identity_lock
+
+        def window(target, **kwargs):
+            paths = inbox.inbox_paths(self.store)
+            paths.inflight.mkdir(parents=True, exist_ok=True)
+            (paths.inflight / MARKER).write_bytes(b"{}")
+            return real(target, **kwargs)
+
+        with mock.patch.object(relocate, "identity_lock", window):
+            self.assert_code("inbox_inflight", commit_relocation, self.store, plan, self.revision)
+        self.assertFalse(self.vault.exists())
+
+    def relocated_external(self) -> MemoryStore:
+        commit_relocation(self.store, plan_relocation(self.store, self.vault), self.revision)
+        return MemoryStore(self.project, store_root=self.vault)
+
+    def break_identity_on_second_preflight(self, store: MemoryStore):
+        calls: list[int] = []
+
+        def preflight(target):
+            calls.append(1)
+            if len(calls) == 2:
+                (Path(target.store_root) / "memory" / "identity.json").write_bytes(b"")
+            return inbox._mutation_preflight_with_context(target)
+
+        return preflight
+
+    def test_a_corrupt_identity_with_the_custody_intact_stays_store_identity_invalid(self) -> None:
+        """R2-02: no se disfraza de `store_root_divergence` con sólo haber un puntero."""
+
+        external = self.relocated_external()
+        with self.assertRaises(Exception) as caught:
+            inbox.enqueue(external, "x", env=AGENT_ENV, preflight=self.break_identity_on_second_preflight(external))
+        self.assertEqual(str(caught.exception), "store_identity_invalid")
+        self.assertEqual(inbox.entry_names(external), [])
+
+    def test_a_changed_custody_still_reports_store_root_divergence(self) -> None:
+        """La custodia vista por el segundo preflight difiere de la del primero: sí se traduce."""
+
+        from an_kla.identity import IdentityError
+
+        calls = {"n": 0}
+
+        def preflight(target):
+            calls["n"] += 1
+            if calls["n"] == 2:
+                raise IdentityError("store_identity_invalid")
+            return inbox._mutation_preflight_with_context(target)
+
+        views = iter([None, {"store_root": "otro"}])
+        with mock.patch.object(inbox, "_custody_view", lambda store: next(views)):
+            with self.assertRaises(Exception) as caught:
+                inbox.enqueue(self.store, "x", env=AGENT_ENV, preflight=preflight)
+        self.assertEqual(str(caught.exception), "store_root_divergence")
+        self.assertEqual(inbox.entry_names(self.store), [])
+
+    def test_enqueue_waits_for_the_identity_lock_only_within_its_deadline(self) -> None:
+        """R2-03: `.identity.lock` ocupado por otro proceso; el encolado falla en plazo y no deja entrada."""
+
+        import subprocess, sys, time
+        from tests.inbox_support import HOLDER
+
+        self.queue()
+        self.drain_by_hand()
+        lock = Path(self.store.store_root) / ".identity.lock"
+        child = subprocess.Popen(
+            [sys.executable, "-I", "-c", HOLDER, str(lock), "ex"],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
+        )
+        self.addCleanup(self.release, child)
+        self.assertEqual(child.stdout.readline().strip(), "ready")
+        threading.Timer(4.0, child.stdin.close).start()  # el ajeno lo suelta a los 4 s
+        started = time.monotonic()
+        with self.assertRaises(Exception) as caught:
+            inbox.enqueue(self.store, "x", env=AGENT_ENV, wait_seconds=0.3)
+        self.assertEqual(str(caught.exception), "identity_lock_busy")
+        self.assertLess(time.monotonic() - started, 2.5)
+        self.assertEqual(inbox.entry_names(self.store), [])
+
+    def test_status_keeps_separate_ignored_sets_for_pending_and_inflight(self) -> None:
+        """R2-04: un nombre ignorado en `inflight/` no desaparece porque casa como entrada en `pending/`."""
+
+        entry = self.queue()
+        paths = inbox.inbox_paths(self.store)
+        (paths.inflight / entry).mkdir()
+        status = inbox.read_status(self.store)
+        self.assertEqual(status["pending"]["names"], [entry])
+        self.assertEqual(status["ignored"]["inflight"]["names"], [entry])
+        marker_dir = paths.pending / MARKER
+        marker_dir.write_bytes(b"x")
+        (paths.inflight / MARKER).write_bytes(b"{}")
+        status = inbox.read_status(self.store)
+        self.assertIn(MARKER, status["ignored"]["pending"]["names"])
+        self.assertEqual(status["inflight"]["names"], [MARKER])
+
+    def test_a_file_exactly_at_the_inbox_root_is_an_unsafe_root_for_the_custody(self) -> None:
+        """R2-05: `inbox_unsafe_path`, no `export_unrecognized_durable_path`; sin crear nada."""
+
+        (Path(self.store.root) / "inbox").write_bytes(b"x")
+        for kind in ("v1", "sealed"):
+            with self.subTest(kind=kind):
+                self.assert_code("inbox_unsafe_path", self.create, kind)
+                self.assertFalse(self.bundle.exists())
+
 
 if __name__ == "__main__":
     unittest.main()

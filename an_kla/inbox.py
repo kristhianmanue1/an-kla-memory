@@ -28,7 +28,7 @@ from typing import Any, Callable, Iterator, Mapping, NamedTuple
 
 from . import identity_c0, lock_order
 from .canonical import canonical_json, digest_json
-from .custody import check_custody
+from .custody import CustodyError, read_pointer
 from .identity import IdentityError, _mutation_preflight_with_context, identity_lock
 from .reader_gate import ReaderGateError
 from .storage_primitives import fsync_directory
@@ -391,23 +391,48 @@ def custody_guard(store: Any, *, wait_seconds: float | None = None) -> Iterator[
     al final. Exige ``pending/`` e ``inflight/`` vacíos (``pending/`` primero): si no, falla con
     ``inbox_pending`` o ``inbox_inflight`` (pista ``inbox drain``). Ocupado, ``inbox_busy``.
     Sin ``memory/inbox/`` no hace nada: no crea la bandeja ni el ``.lock`` y la orden recorre
-    el camino de hoy. Con una raíz insegura (enlace o no-directorio) tampoco: la orden la
-    rechaza como siempre (``export_unsafe_link``) al recorrer el ancla. Nunca crea la
+    el camino de hoy. Con una raíz enlazada tampoco: la orden la rechaza como siempre
+    (``export_unsafe_link``) al recorrer el ancla; con un archivo (no directorio ni enlace)
+    exactamente en ``memory/inbox`` falla con ``inbox_unsafe_path`` (R2-05). Nunca crea la
     estructura (R1-02): con la raíz presente sólo crea el ``.lock`` si falta, y un
     subdirectorio ausente cuenta como vacío.
     """
 
-    if root_state(store) != "present":
+    state = root_state(store)
+    if state == "unsafe" and _is_foreign_file(inbox_paths(store).root):
+        raise InboxError("inbox_unsafe_path")  # R2-05: algo que no es directorio ni enlace en `memory/inbox`
+    if state != "present":
         lock_order.require_inbox_allowed(store)
         yield
         return
     wait = CUSTODY_LOCK_WAIT_SECONDS if wait_seconds is None else wait_seconds
     with inbox_lock(store, exclusive=True, wait_seconds=wait, layout=False):
-        if not pending_is_empty(store):
-            raise InboxError("inbox_pending", "vacía la bandeja con `inbox drain` y reintenta")
-        if not inflight_is_empty(store):
-            raise InboxError("inbox_inflight", "hay un vaciado interrumpido; ejecuta `inbox drain` y reintenta")
+        require_empty(store)
         yield
+
+
+def _is_foreign_file(root: Path) -> bool:
+    try:
+        mode = os.lstat(root).st_mode
+    except OSError:
+        return False
+    return not stat.S_ISDIR(mode) and not stat.S_ISLNK(mode)
+
+
+def require_empty(store: Any) -> None:
+    """Falla con ``inbox_pending`` o ``inbox_inflight`` si la bandeja tiene entradas o marcadores.
+
+    Sólo lectura: sin bandeja (o raíz insegura) no hay nada que comprobar y no crea nada. La
+    repite ``relocate commit`` bajo ``identity_lock``: ``enqueue`` publica bajo ese mismo
+    candado, así que toda entrada es visible aquí o se publica después y su preflight falla (R2-01).
+    """
+
+    if root_state(store) != "present":
+        return
+    if not pending_is_empty(store):
+        raise InboxError("inbox_pending", "vacía la bandeja con `inbox drain` y reintenta")
+    if not inflight_is_empty(store):
+        raise InboxError("inbox_inflight", "hay un vaciado interrumpido; ejecuta `inbox drain` y reintenta")
 
 
 # --- recolector de tmp/ ------------------------------------------------------
@@ -546,7 +571,8 @@ def enqueue(
     """
 
     lock_order.require_inbox_allowed(store)
-    _custody_preflight(store, preflight)
+    preflight(store)
+    seen_custody = _custody_view(store)
     data_text = _validated_text(text)
     if target_id is not None and (
         not isinstance(target_id, str) or not 0 < len(target_id) <= MAX_TARGET_CHARS
@@ -561,12 +587,15 @@ def enqueue(
     else:
         raise InboxError("inbox_idempotency_key_invalid", "la clave debe ser sha256:<64 hex>")
     paths = inbox_paths(store)
+    started = time.monotonic()
     with inbox_lock(store, exclusive=False, wait_seconds=wait_seconds):
+        # R2-03: `identity_lock` espera dentro del mismo plazo; vencido, `identity_lock_busy` sin dejar entrada.
+        identity_wait = max(0.0, wait_seconds - (time.monotonic() - started))
         # R1-01: una reubicación en curso tiene `identity_lock` durante todo el cambio de custodia;
         # tomarlo aquí (bandeja -> identidad, orden permitido) bloquea la publicación y, al terminar,
         # el preflight repetido falla sin dejar entrada, también con la bandeja ausente al empezar ella.
-        with identity_lock(store):
-            _custody_preflight(store, preflight)  # la custodia pudo cambiar mientras se esperaba
+        with identity_lock(store, wait_seconds=identity_wait):
+            _custody_preflight(store, preflight, seen_custody)  # la custodia pudo cambiar mientras se esperaba
             envelope = identity_c0.build_envelope(identity, resolved_kind, key, clock)
             entry: dict[str, Any] = {
                 "schema": ENTRY_SCHEMA,
@@ -595,18 +624,28 @@ def enqueue(
     return result
 
 
-def _custody_preflight(store: Any, preflight: Callable[[Any], Any]) -> Any:
-    """El preflight gobernado, con el código de custodia cuando la identidad ya no está donde estaba.
+def _custody_view(store: Any) -> Any:
+    """La custodia tal como la ve un encolado: el puntero (o ``None``); sólo se compara, nunca se interpreta."""
 
-    Tras una reubicación el store obsoleto no ve su identidad (``store_identity_invalid``);
-    si el puntero o la bóveda local lo contradicen, el código estable es ``store_root_divergence``.
+    try:
+        return read_pointer(store.project_root)
+    except CustodyError:
+        return "unreadable"
+
+
+def _custody_preflight(store: Any, preflight: Callable[[Any], Any], seen_custody: Any) -> Any:
+    """El preflight repetido bajo el candado, con ``store_root_divergence`` si la custodia cambió de verdad.
+
+    Tras una reubicación el store obsoleto no ve su identidad (``store_identity_invalid``). Sólo se
+    traduce si el puntero ya no es el que vio el primer preflight de este mismo encolado; una
+    identidad corrupta con la custodia intacta sigue siendo ``store_identity_invalid`` (R2-02).
     """
 
     try:
         return preflight(store)
     except IdentityError as exc:
-        if str(exc) == "store_identity_invalid":
-            check_custody(store, binding=None)
+        if str(exc) == "store_identity_invalid" and _custody_view(store) != seen_custody:
+            raise CustodyError("store_root_divergence") from None
         raise
 
 
@@ -746,7 +785,7 @@ def read_status(store: Any) -> dict[str, Any]:
         rejected.append({"name": name, **_read_reason(paths.rejected, name)})
     pending_entries = _counted_names(paths.pending, names["pending"], is_entry_name)
     inflight_markers = _counted_names(paths.inflight, names["inflight"], is_marker_name)
-    counted = set(pending_entries) | set(inflight_markers)
+    counted_pending, counted_inflight = set(pending_entries), set(inflight_markers)
     return {
         "schema": STATUS_SCHEMA,
         "untrusted_memory_data": True,
@@ -761,8 +800,8 @@ def read_status(store: Any) -> dict[str, Any]:
         },
         "tmp": _listing(names["tmp"]),
         "ignored": {
-            "pending": _listing([n for n in names["pending"] if n not in counted]),
-            "inflight": _listing([n for n in names["inflight"] if n not in counted]),
+            "pending": _listing([n for n in names["pending"] if n not in counted_pending]),
+            "inflight": _listing([n for n in names["inflight"] if n not in counted_inflight]),
         },
     }
 
@@ -771,5 +810,5 @@ __all__ = [
     "ENTRY_SCHEMA", "InboxError", "InboxPaths", "KINDS", "MAX_TEXT_BYTES", "STATUS_SCHEMA",
     "collect_tmp", "custody_guard", "enqueue", "entry_names", "inbox_lock", "inbox_paths", "inflight_is_empty",
     "is_entry_name", "is_marker_name", "marker_names", "payload_digest", "pending_is_empty",
-    "read_status", "record_id", "resolve_kind", "root_state", "stream_for_kind",
+    "read_status", "record_id", "require_empty", "resolve_kind", "root_state", "stream_for_kind",
 ]
