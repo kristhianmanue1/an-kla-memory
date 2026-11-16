@@ -45,7 +45,7 @@ from an_kla.export_io import (
 # Política de enumeración/rutas de v1 reutilizada (fuente única; el sellado no la redefine).
 from an_kla.export_restore import _allowed, _export_anchor, _export_target, _files, _read_anchor
 from an_kla.identity import identity_lock
-from an_kla.inbox_custody import custody_guard
+from an_kla.inbox_custody import custody_guard, require_empty
 from an_kla.sealed.cek import generate_cek
 from an_kla.sealed.kdf import BUNDLE_ID_RAW_LENGTH, derive_subkeys
 
@@ -550,6 +550,7 @@ def create_sealed_bundle(store: Any, bundle: str | Path, runner: Any) -> dict:
         cek = generate_cek()
         subkeys = derive_subkeys(cek)
         with identity_lock(store):
+            require_empty(store)  # R4-01: con identidad tomada, antes de leer el store (el destino aún no existe)
             with store.write_lock():
                 source_verify = store.verify()
                 if source_verify["identity_status"] != "complete":

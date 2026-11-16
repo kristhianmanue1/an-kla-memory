@@ -13,7 +13,7 @@ from typing import Any
 
 from .canonical import bare_digest, canonical_json, digest_bytes, digest_json
 from .identity import identity_lock
-from .inbox_custody import custody_guard
+from .inbox_custody import custody_guard, require_empty
 from .custody import CustodyError, check_custody
 from .export_io import (
     ExportIOError, normalize_and_sync_tree, rename_noreplace, safe_read,
@@ -141,6 +141,7 @@ def _create_bundle(store: Any, target: Path, anchor: Path) -> dict[str, Any]:
         entries_dir = target / "entries"
         entries_dir.mkdir(mode=0o700)
         with identity_lock(store):
+            require_empty(store)  # R4-01: con identidad tomada, antes de leer el store; el except de abajo borra el mkdir
             with store.write_lock():
                 source_verify = store.verify()
                 if source_verify["identity_status"] != "complete":
