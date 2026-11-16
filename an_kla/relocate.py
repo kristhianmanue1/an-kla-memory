@@ -27,7 +27,7 @@ from .custody import (
 from .export_io import ExportIOError, normalize_and_sync_tree, rename_noreplace, safe_read
 from .export_restore import _allowed, _files
 from .identity import identity_lock, mutation_preflight, read_binding
-from .inbox import custody_guard
+from .inbox import custody_guard, require_empty
 from .reader_gate import ReaderGateError, exclusive_reader_gate
 from .store_locks import WRITE_LOCK_DEADLINE_SECONDS as _GATE_TIMEOUT
 from .relocation_receipts import _read_regular, write_relocation_receipt
@@ -497,6 +497,7 @@ def _commit_guarded(store: Any, plan: Any, core: Mapping[str, Any]) -> dict[str,
     target = Path(core["destination_store_root"])
     anchor = store.store_root
     with identity_lock(store):
+        require_empty(store)  # R2-01: con identidad tomada ya no se publica ningún encolado
         with store.write_lock():
             # A concurrent commit of the same plan may have finished while
             # this one waited for the locks: replay it, never redo it.
