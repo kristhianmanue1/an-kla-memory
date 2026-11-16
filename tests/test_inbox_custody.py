@@ -14,7 +14,7 @@ import threading
 import unittest
 from unittest import mock
 
-from an_kla import export_restore, inbox, lock_order, relocate, relocate_back
+from an_kla import export_restore, inbox, inbox_custody, lock_order, relocate, relocate_back
 from an_kla.compaction import commit_compaction, plan_compaction
 from an_kla.custody import read_pointer
 from an_kla.export_restore import create_export
@@ -119,7 +119,7 @@ class ExportCustodyTests(CustodyCase):
         self.queue()
         self.drain_by_hand()
         self.hold_lock("sh")
-        with mock.patch.object(inbox, "CUSTODY_LOCK_WAIT_SECONDS", 0.05):
+        with mock.patch.object(inbox_custody, "CUSTODY_LOCK_WAIT_SECONDS", 0.05):
             for kind in ("v1", "sealed"):
                 with self.subTest(kind=kind):
                     self.assert_code("inbox_busy", self.create, kind)
@@ -523,14 +523,14 @@ class LockOrderCustodyTests(CustodyCase):
             with self.subTest(inbox=self.inbox.exists()):
                 with identity_lock(self.store):
                     with self.assertRaises(lock_order.LockOrderError):
-                        with inbox.custody_guard(self.store):
+                        with inbox_custody.custody_guard(self.store):
                             pass
 
     def test_the_guard_fails_closed_under_write_lock(self) -> None:
         self.queue()
         with self.store.write_lock():
             with self.assertRaises(lock_order.LockOrderError):
-                with inbox.custody_guard(self.store):
+                with inbox_custody.custody_guard(self.store):
                     pass
 
 class RoundTwoTests(CustodyCase):

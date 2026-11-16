@@ -61,7 +61,6 @@ KINDS = ("fact", "decision", "state")
 MAX_TEXT_BYTES = 64 * 1024
 MAX_TARGET_CHARS = 256
 ENQUEUE_LOCK_WAIT_SECONDS = 2.0
-CUSTODY_LOCK_WAIT_SECONDS = 2.0
 _LOCK_BACKOFF_SECONDS = 0.01
 _NAME_ATTEMPTS = 16
 MAX_LISTED = 1000
@@ -381,58 +380,6 @@ def inbox_lock(
             _unlock(fd)
     finally:
         os.close(fd)
-
-
-@contextlib.contextmanager
-def custody_guard(store: Any, *, wait_seconds: float | None = None) -> Iterator[None]:
-    """Candado exclusivo de bandeja para ``export``, ``--seal`` y ``relocate commit`` (D1 «no es estado durable», punto 2).
-
-    Se toma al principio de la orden, antes de crear nada y de ``identity_lock``, y se suelta
-    al final. Exige ``pending/`` e ``inflight/`` vacíos (``pending/`` primero): si no, falla con
-    ``inbox_pending`` o ``inbox_inflight`` (pista ``inbox drain``). Ocupado, ``inbox_busy``.
-    Sin ``memory/inbox/`` no hace nada: no crea la bandeja ni el ``.lock`` y la orden recorre
-    el camino de hoy. Con una raíz enlazada tampoco: la orden la rechaza como siempre
-    (``export_unsafe_link``) al recorrer el ancla; con un archivo (no directorio ni enlace)
-    exactamente en ``memory/inbox`` falla con ``inbox_unsafe_path`` (R2-05). Nunca crea la
-    estructura (R1-02): con la raíz presente sólo crea el ``.lock`` si falta, y un
-    subdirectorio ausente cuenta como vacío.
-    """
-
-    state = root_state(store)
-    if state == "unsafe" and _is_foreign_file(inbox_paths(store).root):
-        raise InboxError("inbox_unsafe_path")  # R2-05: algo que no es directorio ni enlace en `memory/inbox`
-    if state != "present":
-        lock_order.require_inbox_allowed(store)
-        yield
-        return
-    wait = CUSTODY_LOCK_WAIT_SECONDS if wait_seconds is None else wait_seconds
-    with inbox_lock(store, exclusive=True, wait_seconds=wait, layout=False):
-        require_empty(store)
-        yield
-
-
-def _is_foreign_file(root: Path) -> bool:
-    try:
-        mode = os.lstat(root).st_mode
-    except OSError:
-        return False
-    return not stat.S_ISDIR(mode) and not stat.S_ISLNK(mode)
-
-
-def require_empty(store: Any) -> None:
-    """Falla con ``inbox_pending`` o ``inbox_inflight`` si la bandeja tiene entradas o marcadores.
-
-    Sólo lectura: sin bandeja (o raíz insegura) no hay nada que comprobar y no crea nada. La
-    repite ``relocate commit`` bajo ``identity_lock``: ``enqueue`` publica bajo ese mismo
-    candado, así que toda entrada es visible aquí o se publica después y su preflight falla (R2-01).
-    """
-
-    if root_state(store) != "present":
-        return
-    if not pending_is_empty(store):
-        raise InboxError("inbox_pending", "vacía la bandeja con `inbox drain` y reintenta")
-    if not inflight_is_empty(store):
-        raise InboxError("inbox_inflight", "hay un vaciado interrumpido; ejecuta `inbox drain` y reintenta")
 
 
 # --- recolector de tmp/ ------------------------------------------------------
@@ -808,7 +755,7 @@ def read_status(store: Any) -> dict[str, Any]:
 
 __all__ = [
     "ENTRY_SCHEMA", "InboxError", "InboxPaths", "KINDS", "MAX_TEXT_BYTES", "STATUS_SCHEMA",
-    "collect_tmp", "custody_guard", "enqueue", "entry_names", "inbox_lock", "inbox_paths", "inflight_is_empty",
+    "collect_tmp", "enqueue", "entry_names", "inbox_lock", "inbox_paths", "inflight_is_empty",
     "is_entry_name", "is_marker_name", "marker_names", "payload_digest", "pending_is_empty",
-    "read_status", "record_id", "require_empty", "resolve_kind", "root_state", "stream_for_kind",
+    "read_status", "record_id", "resolve_kind", "root_state", "stream_for_kind",
 ]

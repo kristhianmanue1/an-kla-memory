@@ -45,7 +45,7 @@ from an_kla.export_io import (
 # Política de enumeración/rutas de v1 reutilizada (fuente única; el sellado no la redefine).
 from an_kla.export_restore import _allowed, _export_anchor, _export_target, _files, _read_anchor
 from an_kla.identity import identity_lock
-from an_kla.inbox import custody_guard
+from an_kla.inbox_custody import custody_guard
 from an_kla.sealed.cek import generate_cek
 from an_kla.sealed.kdf import BUNDLE_ID_RAW_LENGTH, derive_subkeys
 

@@ -27,7 +27,7 @@ from .custody import (
 from .export_io import ExportIOError, normalize_and_sync_tree, rename_noreplace, safe_read
 from .export_restore import _allowed, _files
 from .identity import identity_lock, mutation_preflight, read_binding
-from .inbox import custody_guard, require_empty
+from .inbox_custody import custody_guard, require_empty
 from .reader_gate import ReaderGateError, exclusive_reader_gate
 from .store_locks import WRITE_LOCK_DEADLINE_SECONDS as _GATE_TIMEOUT
 from .relocation_receipts import _read_regular, write_relocation_receipt

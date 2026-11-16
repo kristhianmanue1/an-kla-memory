@@ -22,7 +22,7 @@ from .custody import (
 )
 from .export_io import ExportIOError, rename_noreplace
 from .identity import identity_lock, mutation_preflight, read_binding
-from .inbox import require_empty
+from .inbox_custody import require_empty
 from .relocation_receipts import write_relocation_receipt
 from . import relocate as forward
 from .relocate import RelocateError

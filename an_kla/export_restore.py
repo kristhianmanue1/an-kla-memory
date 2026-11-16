@@ -13,7 +13,7 @@ from typing import Any
 
 from .canonical import bare_digest, canonical_json, digest_bytes, digest_json
 from .identity import identity_lock
-from .inbox import custody_guard
+from .inbox_custody import custody_guard
 from .custody import CustodyError, check_custody
 from .export_io import (
     ExportIOError, normalize_and_sync_tree, rename_noreplace, safe_read,
