@@ -1,6 +1,9 @@
 # ADR-0064: Recuperar hechos con una orden nueva, léxica, ponderada y determinista
 
-- **Estado:** Propuesta
+- **Estado:** Aceptada por delegación del orquestador (mandato de E1.b:
+  el ADR se fusiona con su `proceed`), 2026-11-16, tras dos rondas
+  adversariales de otra familia (Gemini): r1 `fix-and-retry` (4 HIGH,
+  2 MEDIUM, 1 LOW, corregidos) y r2 `proceed`.
 - **Implementación:** No iniciada
 - **Fecha:** 2026-11-16
 - **Decide sobre:** la orden aditiva de CLI `recall`, que recupera hechos
