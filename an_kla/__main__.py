@@ -699,6 +699,11 @@ def pending_outcome_reason(args: Any, result: Any) -> str | None:
             and result["outcome"].get("committed") is not True
         ):
             return "commit_write_plan_outcome_not_firm"
+    if args.command == "inbox" and getattr(args, "inbox_command", None) == "drain":
+        # R1-01: un vaciado abortado o con resultado desconocido no es un estado terminal firme;
+        # `drained`, `queued` y el corte por presupuesto (`partial`) salen con 0.
+        if result.get("state") == "aborted" or result.get("outcome") != "known":
+            return "inbox_drain_outcome_not_firm"
     if args.command == "subject" and args.subject_command == "namespace":
         if result.get("result") == "namespace_unavailable":
             return "subject_namespace_unavailable"

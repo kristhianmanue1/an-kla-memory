@@ -364,6 +364,7 @@ def capabilities() -> dict[str, Any]:
                     "refute commit": "outcome.committed is not true",
                     "init": "outcome.committed is not true",
                     "commit-write-plan": "outcome.committed is not true",
+                    "inbox drain": "state == aborted u outcome != known (drained, queued y partial salen con 0)",
                     "subject namespace": "result == namespace_unavailable",
                 },
             },
