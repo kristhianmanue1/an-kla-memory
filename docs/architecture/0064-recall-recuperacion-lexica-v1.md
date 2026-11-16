@@ -5,7 +5,8 @@
   adversariales de otra familia (Gemini): r1 `fix-and-retry` (4 HIGH,
   2 MEDIUM, 1 LOW, corregidos) y r2 `proceed`.
 - **Implementación:** No iniciada
-- **Enmienda 1:** 2026-11-16, recencia, stub y explicación (ver «Enmienda 1»).
+- **Enmienda 1:** 2026-11-16, recencia, stub y explicación (ver «Enmienda 1»);
+  ronda 3 de otra familia (Gemini) `proceed` con 3 LOW, incorporados.
 - **Fecha:** 2026-11-16
 - **Decide sobre:** la orden aditiva de CLI `recall`, que recupera hechos
   por relevancia léxica ponderada (BM25 sobre texto plegado y reducido a su
@@ -251,8 +252,12 @@ se carga sin sobre y con presupuesto holgado.
      serializaciones de prueba, `excluded.budget` y `excluded.truncated`
      valen ambos el número total de candidatos, que acota sus valores
      finales. `used_bytes` sigue acotado por `--budget`.
-   - Así el mejor resultado sólo falta si ni su stub cabe, y entonces
-     tampoco cabe nada.
+   - Así el mejor resultado sólo falta si ni su stub cabe en lo que queda
+     del presupuesto. Puede entrar el stub de otro más corto (r3, R3-02).
+   - Un stub expone `disputed` (booleano) donde la entrada completa expone
+     `disputed_by` (lista): el esquema lo declara (r3, R3-01).
+   - `--min-terms` mayor que el número de `query_terms` es válido y da
+     `results: []` con `no_strong_match: true` (r3, R3-03).
 3. **Explicación y umbral opcional.**
    - La respuesta lleva `query_terms`: los términos de la consulta tras el
      analizador (plegados, reducidos, sin interrogativos ni duplicados), en
