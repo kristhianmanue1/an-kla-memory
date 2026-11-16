@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from functools import lru_cache
 
 VOWELS = frozenset("aeiou")  # tras plegar, `ü` es `u` y las vocales acentuadas son las llanas
 
@@ -204,8 +205,11 @@ def cut(text: str) -> list[str]:
     return _TOKEN.findall(fold(text))
 
 
+@lru_cache(maxsize=1 << 16)
 def reduce_term(token: str) -> str:
-    """Raíz de un término ya plegado; sólo si es alfabético y de 3 o más letras (R2-01), si no, tal cual."""
+    """Raíz de un término ya plegado; sólo si es alfabético y de 3 o más letras (R2-01), si no, tal cual.
+
+    Pura, así que se memoiza: el vocabulario de un store se repite y la raíz domina el coste de una consulta."""
 
     if len(token) >= MIN_STEM_LETTERS and token.isalpha():
         return stem(token)
