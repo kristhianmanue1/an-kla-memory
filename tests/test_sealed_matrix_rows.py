@@ -408,6 +408,10 @@ class Row15SuiteBothProfilesTests(unittest.TestCase):
                         # paso queda cubierto por pruebas unitarias
                         # (tests/test_ci_local_matriz.py).
                         "AN_KLA_CI_LOCAL_MATRIX": "0",
+                        # La matriz `kill -9` de la bandeja (ADR-0063, criterio 3)
+                        # es lenta y tiene su propio paso; se cubre en
+                        # tests/test_ci_local_kill9.py.
+                        "AN_KLA_CI_LOCAL_KILL9": "0",
                     },
                 )
                 self.assertEqual(

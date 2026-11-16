@@ -175,6 +175,12 @@ def _names(path: Path) -> list[str]:
         raise InboxError("inbox_unavailable") from None
 
 
+def subdir_names(store: Any, subdir: str) -> list[str]:
+    """Todos los nombres de un subdirectorio de la bandeja, sin filtrar (el vaciado clasifica con ``lstat``)."""
+
+    return _subdir_names(store, subdir)
+
+
 def _subdir_names(store: Any, subdir: str) -> list[str]:
     """Nombres de un subdirectorio vistos a través de ``root_state``: raíz ausente = vacío, insegura = error."""
 
@@ -258,6 +264,12 @@ def _ensure_layout(store: Any) -> None:
         for directory in (paths.root, paths.tmp, paths.pending, paths.inflight, paths.rejected):
             fsync_directory(directory)
         fsync_directory(paths.root.parent)
+
+
+def ensure_layout(store: Any) -> None:
+    """Crea (si faltan) ``tmp/``, ``pending/``, ``inflight/`` y ``rejected/``; nunca detrás de un enlace."""
+
+    _ensure_layout(store)
 
 
 def _open_lock_file(path: Path, flags: int) -> int:
@@ -350,8 +362,10 @@ def collect_tmp(store: Any) -> dict[str, Any]:
         return {"state": "absent", "removed": 0, "errors": 0}
     if state == "unsafe":
         raise InboxError("inbox_unsafe_path")
+    # R3-03: con la raíz presente y sin `.lock` (layout hecho a mano) se crea con las mismas garantías.
+    create = not os.path.lexists(paths.lock)
     try:
-        with inbox_lock(store, exclusive=True, wait_seconds=0.0, create=False):
+        with inbox_lock(store, exclusive=True, wait_seconds=0.0, create=create):
             return _remove_tmp_contents(paths.tmp)
     except InboxError as exc:
         if exc.code == "inbox_busy":
@@ -360,7 +374,10 @@ def collect_tmp(store: Any) -> dict[str, Any]:
 
 
 def _remove_tmp_contents(tmp: Path) -> dict[str, Any]:
-    if _dir_state(tmp) != "present":
+    state = _dir_state(tmp)
+    if state == "unsafe":  # R3-02: nunca se informa «recolectado» sin haber inspeccionado `tmp/`
+        raise InboxError("inbox_unsafe_path")
+    if state == "absent":
         return {"state": "collected", "removed": 0, "errors": 0}
     removed = errors = 0
     with os.scandir(tmp) as scan:
@@ -670,7 +687,7 @@ def read_status(store: Any) -> dict[str, Any]:
 
 __all__ = [
     "ENTRY_SCHEMA", "InboxError", "InboxPaths", "KINDS", "MAX_TEXT_BYTES", "STATUS_SCHEMA",
-    "collect_tmp", "enqueue", "entry_names", "inbox_lock", "inbox_paths", "inflight_is_empty",
+    "collect_tmp", "ensure_layout", "enqueue", "entry_names", "inbox_lock", "inbox_paths", "inflight_is_empty",
     "is_entry_name", "is_marker_name", "marker_names", "payload_digest", "pending_is_empty",
-    "read_status", "record_id", "resolve_kind", "root_state", "stream_for_kind",
+    "read_status", "record_id", "resolve_kind", "root_state", "stream_for_kind", "subdir_names",
 ]

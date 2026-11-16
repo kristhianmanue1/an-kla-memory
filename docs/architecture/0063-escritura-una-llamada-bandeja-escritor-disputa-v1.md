@@ -326,8 +326,8 @@ Con `write_lock` tomado:
    nada), con el candado tomado: `skip` → `rejected/` con
    `remember_policy_skip` y sus `reason_codes`; error terminal de política
    → `rejected/` con su código. Después arma lotes homogéneos sólo con las
-   entradas que pasaron, con presupuesto de nodos (propuesta + plan
-   ≤ 9.000) y como máximo 250 entradas;
+   entradas que pasaron, con presupuesto de nodos (≤ 9.000 por documento,
+   propuesta y plan, como el tope del núcleo) y como máximo 250 entradas;
 6. construye propuesta, autoridad `model_derived` (la plantilla de
    `emit_write_authority_template`) y plan con las funciones puras de
    política, y compromete por `_commit_write_plan_locked` con
