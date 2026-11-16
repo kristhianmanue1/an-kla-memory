@@ -4,7 +4,7 @@
   agéntica): D2, D3 y «Commit con el candado tomado» el 2026-11-14; D1 el
   2026-11-15, con el spike de recuperación y la ronda de cierre `proceed`.
   Ver «Partición del estado».
-- **Implementación:** Parcial (fase A en `main`; fase B en curso)
+- **Implementación:** Completa (fases A y B en `main`; cierra E1.a)
 - **Fecha:** 2026-11-14
 - **Decide sobre:** la orden aditiva de CLI `remember`, que guarda un
   recuerdo en una invocación sin perder ni pisar escrituras concurrentes,
