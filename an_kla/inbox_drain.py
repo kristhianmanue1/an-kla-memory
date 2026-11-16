@@ -80,6 +80,8 @@ SCAN_CHUNK = 250
 MAX_LISTED = 1000
 _TERMINAL_STORE_PREFIXES = ("duplicate_", "missing_")
 _KNOWN_INFRA = (LockBusyError, IdentityError, CustodyError, TransactionError, ReaderGateError)
+# Fallos de preparación (preflight, layout, recolección de `tmp/`): se informan como `drain_error`.
+_SETUP_ERRORS = (StoreError, IdentityError, TransactionError, ReaderGateError, InboxError, OSError)
 
 
 class BatchFail(Exception):
@@ -519,9 +521,13 @@ def attempt(store: Any, run: Run, include: str | None, lock_wait: float) -> str:
     run.attempts += 1
     if not _has_work(store):
         return "idle"
-    preflight = _mutation_preflight_with_context(store)
-    store._make_layout()
-    ensure_layout(store)
+    try:
+        preflight = _mutation_preflight_with_context(store)
+        store._make_layout()
+        ensure_layout(store)
+    except _SETUP_ERRORS as exc:  # R3-06 de B2: infraestructura, nunca traza; nada se tocó
+        run.drain_error = error_code(exc)
+        return "aborted"
     acquired = False
     started = 0.0
     try:
@@ -584,7 +590,12 @@ def drain(
         raise InboxError("inbox_unsafe_path")
     if top == "absent":
         return _result(run, "drained", "absent")
-    run.tmp = collect_tmp(store)
+    try:
+        run.tmp = collect_tmp(store)
+    except _SETUP_ERRORS as exc:  # R3-06 de B2: el vaciado informa `drain_error`, no una traza
+        run.drain_error = error_code(exc)
+        run.ignored = count_ignored(store)
+        return _result(run, "aborted", "present")
     deadline = clock() + budget_seconds
     state = "drained"
     while True:
