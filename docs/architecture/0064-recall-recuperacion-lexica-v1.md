@@ -5,6 +5,7 @@
   adversariales de otra familia (Gemini): r1 `fix-and-retry` (4 HIGH,
   2 MEDIUM, 1 LOW, corregidos) y r2 `proceed`.
 - **Implementación:** No iniciada
+- **Enmienda 1:** 2026-11-16, recencia, stub y explicación (ver «Enmienda 1»).
 - **Fecha:** 2026-11-16
 - **Decide sobre:** la orden aditiva de CLI `recall`, que recupera hechos
   por relevancia léxica ponderada (BM25 sobre texto plegado y reducido a su
@@ -215,6 +216,71 @@ an-kla [--project-root P] [--store-root S] recall --query <texto>
   `recall_budget_too_small`, `recall_scope_unavailable`,
   `unsupported_recall_stream`). Errores del store: los de siempre.
 
+### Enmienda 1 (2026-11-16): recencia, el mejor no desaparece, explicación
+
+Pedida por la primera medición de uso real de un consumidor (16 consultas
+de reanudación): ninguno de sus fallos era morfológico. Estos tres cambios
+entran en `recall-result-v1` antes de su primera publicación. **Prevalecen
+sobre lo anterior** donde chocan. No cambian el conjunto dorado: el corpus
+se carga sin sobre y con presupuesto holgado.
+
+1. **La recencia desempata** (criterio de orden declarado). El orden total
+   pasa a ser:
+   - puntuación exacta descendente;
+   - después, `enqueued_at` descendente: es el `enqueued_at` del sobre
+     válido, una cadena de formato fijo (`AAAA-MM-DDTHH:MM:SS.ffffffZ`), así
+     que su orden lexicográfico es el cronológico; un registro sin sobre
+     válido va detrás de todos los que lo tienen;
+   - después, `id` ascendente.
+
+   Sólo actúa con puntuaciones exactamente iguales y no cambia ninguna
+   puntuación. Es determinista porque usa un dato persistido, no el reloj.
+2. **El presupuesto no hace desaparecer a un resultado que cabría
+   resumido.**
+   - Cuando la entrada completa de un candidato no cabe, se prueba su
+     **stub**:
+     `{"rank", "id", "stream", "score", "enqueued_at", "scope_match",
+     "matched_terms", "truncated": true}`, sin `text`, `writer` ni
+     `disputed_by` (con `"disputed": true|false` en su lugar).
+   - Si el stub cabe, entra; si no, se salta como antes.
+   - Las entradas completas llevan `"truncated": false`.
+   - `excluded` gana `truncated`, el número de stubs entregados;
+     `excluded.budget` cuenta sólo los que no entraron ni como stub.
+   - Cota superior del algoritmo de presupuesto, que reemplaza a las dos
+     anteriores para los contadores que dependen del recorrido: en las
+     serializaciones de prueba, `excluded.budget` y `excluded.truncated`
+     valen ambos el número total de candidatos, que acota sus valores
+     finales. `used_bytes` sigue acotado por `--budget`.
+   - Así el mejor resultado sólo falta si ni su stub cabe, y entonces
+     tampoco cabe nada.
+3. **Explicación y umbral opcional.**
+   - La respuesta lleva `query_terms`: los términos de la consulta tras el
+     analizador (plegados, reducidos, sin interrogativos ni duplicados), en
+     orden.
+   - Cada resultado, completo o stub, lleva `matched_terms`: los de
+     `query_terms` presentes en el registro, en ese orden.
+   - Nueva opción `--min-terms <n>` (entero ≥ 1, por defecto 1, que es el
+     comportamiento anterior): un candidato con menos de `n` términos
+     distintos de la consulta presentes se excluye (`excluded.min_terms`).
+   - La respuesta lleva `no_strong_match`, que vale `true` si y sólo si
+     había candidatos con puntuación mayor que 0 y ninguno alcanzó
+     `--min-terms`.
+   - El umbral es una cuenta de términos de la consulta, no una puntuación
+     BM25: no depende del tamaño del store y no hay constante que ajustar.
+     El valor lo elige quien consulta.
+
+**Queda para la entrega siguiente (E1.d, «estado y anclas»):**
+- los filtros `--kind`, `--since`/`--until`, `--agent` y `--status`,
+  `--status superseded` incluido;
+- la casilla de estado (`kind: state` con `slot`);
+- la regla de que un `state` no sustituye un `fact` ni una `decision`;
+- `history <id>`;
+- `valid_until`;
+- las anclas.
+
+Los filtros cambian el conjunto candidato y, por tanto, el IDF, así que se
+diseñan junto con la casilla de estado.
+
 ### Índice
 
 No hay índice persistente en esta entrega. Cada consulta recorre el
@@ -372,6 +438,14 @@ Pruebas nuevas en `tests/test_recall*.py`:
 9. **No regresión:**
    - los goldens beta.35 de `retrieve` y del MCP pasan sin tocarlos;
    - `retrieval.py` y `mcp.py` sin diff.
+10. **Enmienda 1:**
+    - con puntuación igual, el más reciente primero, y el legado detrás;
+    - un mejor resultado mayor que el presupuesto sale como stub en `rank` 1
+      con `truncated: true`;
+    - `matched_terms` y `query_terms` exactos en un vector propio;
+    - `--min-terms 2` sobre un corpus en que todo casa con un solo término da
+      `results: []` y `no_strong_match: true`;
+    - `--min-terms 1` da los mismos bytes que sin la opción.
 
 ## Referencias
 
