@@ -476,6 +476,7 @@ def _run() -> None:
         result = recall(
             store, args.query, budget=args.budget, scope=args.scope,
             streams=tuple(item for item in args.streams.split(",")),
+            min_terms=args.min_terms,
         )
         sys.stdout.buffer.write(render_recall(result))
         return

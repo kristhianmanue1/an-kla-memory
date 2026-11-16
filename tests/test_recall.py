@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,7 @@ from tests.remember_support import ROOT, cli, remember
 A = {"AN_KLA_AGENT_NAME": "agente-a", "AN_KLA_SESSION_ID": "sesion-a-1"}
 B = {"AN_KLA_AGENT_NAME": "agente-b", "AN_KLA_SESSION_ID": "sesion-b-1"}
 OTHER_REPO = "github.com/otro/repo"
+NO_EXCLUDED = {"budget": 0, "invalid_envelope": 0, "min_terms": 0, "scope": 0, "truncated": 0}
 
 
 class RecallCase(InboxCase):
@@ -105,17 +107,18 @@ class ShapeTests(RecallCase):
     def test_response_shape_and_empty_results(self) -> None:
         out = self.ok("puertos")
         self.assertEqual(
-            set(out), {"schema", "untrusted_memory_data", "revision", "analyzer", "query", "scope", "streams",
-                       "budget_bytes", "used_bytes", "inbox", "excluded", "results"})
+            set(out), {"schema", "untrusted_memory_data", "revision", "analyzer", "query", "query_terms", "scope", "streams",
+                       "budget_bytes", "used_bytes", "inbox", "excluded", "no_strong_match", "results"})
         self.assertEqual((out["schema"], out["analyzer"], out["streams"], out["budget_bytes"]),
                          ("an-kla/recall-result-v1", "an-kla/lexico-es-v1", ["facts"], 4000))
         self.assertEqual(out["scope"]["mode"], "repo")
         self.assertEqual(out["scope"]["repo_id"], identity_c0.repo_id_for(self.project))
         self.assertEqual(set(out["results"][0]), {"rank", "id", "stream", "score", "text", "writer", "enqueued_at",
-                                                  "scope_match", "disputed_by", "disputes"})
+                                                  "scope_match", "matched_terms", "truncated", "disputed_by",
+                                                  "disputes"})
         self.assertEqual(round(out["results"][0]["score"], 6), out["results"][0]["score"])
         self.assertEqual(self.ok("zzzinexistente")["results"], [])
-        self.assertEqual(self.ok("zzzinexistente")["excluded"], {"budget": 0, "invalid_envelope": 0, "scope": 0})
+        self.assertEqual(self.ok("zzzinexistente")["excluded"], NO_EXCLUDED)
 
     def test_empty_store_returns_no_results(self) -> None:
         empty = self.scratch("vacio")
@@ -167,6 +170,7 @@ class BudgetTests(RecallCase):
             self.fact(f"f-{index}", f"el cuarzo número {index} aparece en la región {'norte ' * (index + 1)}")
         self.store = MemoryStore(self.project)
         self.floor = self.min_ok("cuarzo región")
+        self.stubs_seen = 0
 
     def min_ok(self, query: str) -> int:
         """El menor ``--budget`` con el que cabe la respuesta vacía de ``query`` (cuentan las cifras del presupuesto)."""
@@ -196,12 +200,15 @@ class BudgetTests(RecallCase):
         self.assertLessEqual(len(raw), budget, budget)
         self.assertEqual(out["used_bytes"], len(raw), budget)
         self.assertEqual(out["excluded"]["budget"] + len(out["results"]), 8, budget)
+        self.assertEqual(out["excluded"]["truncated"], sum(r["truncated"] for r in out["results"]), budget)
+        self.stubs_seen += out["excluded"]["truncated"]
 
     def test_len_stdout_fits_and_used_bytes_is_exact_around_digit_changes_and_to_20000(self) -> None:
         budgets = set(range(1, 21)) | set(range(95, 106)) | set(range(990, 1011)) | set(range(9990, 10011))
         budgets |= set(range(1, 20001, 331)) | {20000}
         for budget in sorted(budgets):
             self.check(budget)
+        self.assertGreater(self.stubs_seen, 0)  # el barrido pasa por presupuestos donde un resultado sale resumido
 
     def test_every_budget_in_the_window_where_results_start_to_fit(self) -> None:
         for budget in range(self.floor - 3, self.floor + 420):
@@ -216,23 +223,24 @@ class BudgetTests(RecallCase):
             self.assertEqual(parsed["used_bytes"], len(out.stdout.encode("utf-8")))
 
     def test_a_skipped_result_leaves_a_gap_in_rank(self) -> None:
-        self.fact("f-grande", "cuarzo cuarzo " + "z" * 900)
-        self.fact("f-corto", "cuarzo")
+        # El mejor candidato tiene un id enorme: ni su stub cabe donde sí cabe el de otro más corto.
+        self.fact("f-" + "i" * 700, "cuarzo cuarzo cuarzo")
         full = recall(self.store, "cuarzo", budget=50000, scope="all")
         ranks = {r["id"]: r["rank"] for r in full["results"]}
-        self.assertEqual(sorted(ranks.values()), list(range(1, 11)))
+        self.assertEqual(sorted(ranks.values()), list(range(1, 10)))
+        self.assertEqual(full["results"][0]["id"], "f-" + "i" * 700)
         floor = self.min_ok("cuarzo")
         for budget in range(floor, floor + 3000, 7):
             out = recall(self.store, "cuarzo", budget=budget, scope="all")
             present = [r["rank"] for r in out["results"]]
-            if present and present != list(range(1, len(present) + 1)):
+            if present and present[0] > 1:
                 break
         else:
             self.fail("ningún presupuesto deja un hueco en rank")
         self.assertGreaterEqual(out["excluded"]["budget"], 1)
         self.assertEqual({r["id"]: r["rank"] for r in out["results"]},
                          {r["id"]: ranks[r["id"]] for r in out["results"]})  # rank es el global, no el entregado
-        self.assertEqual(out["excluded"]["budget"] + len(out["results"]), 10)
+        self.assertEqual(out["excluded"]["budget"] + len(out["results"]), 9)
 
     def test_budget_below_the_empty_response_fails(self) -> None:
         with self.assertRaises(RecallError) as caught:
@@ -242,6 +250,123 @@ class BudgetTests(RecallCase):
         self.assertEqual((done.returncode, done.stdout), (1, ""))
         self.assertTrue(done.stderr.startswith("an-kla error: recall_budget_too_small"), done.stderr)
         self.assertEqual(recall(self.store, "cuarzo", budget=self.min_ok("cuarzo"), scope="all")["results"], [])
+
+
+class AmendmentTests(RecallCase):
+    """Enmienda 1 del ADR-0064: recencia, stubs, ``query_terms``/``matched_terms`` y ``--min-terms``."""
+
+    def stamped(self, record_id: str, text: str, enqueued: datetime | None, **env: str) -> None:
+        envelope = None
+        if enqueued is not None:
+            identity = identity_c0.build_identity(self.project, {**AGENT_ENV, **env})
+            digest = "sha256:" + hashlib.sha256(record_id.encode()).hexdigest()
+            envelope = identity_c0.build_envelope(identity, "fact", digest, clock=lambda: enqueued)
+        self.fact(record_id, text, **({"an_kla_envelope": envelope} if envelope else {}))
+
+    def test_equal_scores_break_by_recency_then_legacy_behind_then_id(self) -> None:
+        text = "el ocelote duerme en la rama"
+        at = lambda day: datetime(2026, 11, day, 9, 0, 0, tzinfo=timezone.utc)  # noqa: E731
+        self.stamped("f-a-viejo", text, at(1))
+        self.stamped("f-z-nuevo", text, at(9))
+        self.stamped("f-m-medio", text, at(5))
+        self.stamped("f-b-legado", text, None)
+        self.stamped("f-c-legado", text, None)
+        broken = self.envelope(OTHER_REPO, key="roto")
+        broken["enqueued_at"] = "manana"
+        self.fact("f-0-roto", text, an_kla_envelope=broken)
+        out = self.ok("ocelote rama", "--scope", "all")
+        self.assertEqual(self.ids(out), ["f-z-nuevo", "f-m-medio", "f-a-viejo", "f-0-roto", "f-b-legado", "f-c-legado"])
+        self.assertEqual(len({r["score"] for r in out["results"]}), 1)
+
+    def test_recency_never_overrides_a_higher_score(self) -> None:
+        self.stamped("f-viejo-fuerte", "ocelote ocelote ocelote", datetime(2020, 1, 1, tzinfo=timezone.utc))
+        self.stamped("f-nuevo-debil", "ocelote duerme tranquilo en la rama de arriba", datetime(2026, 11, 9, tzinfo=timezone.utc))
+        self.assertEqual(self.ids(self.ok("ocelote", "--scope", "all"))[0], "f-viejo-fuerte")
+
+    def test_a_best_result_larger_than_the_budget_comes_out_as_a_stub(self) -> None:
+        self.fact("f-grande", "cuarzo cuarzo " + "z" * 900)
+        self.fact("f-chico", "cuarzo y otras palabras sueltas sin mas")
+        store = MemoryStore(self.project)
+        big = recall(store, "cuarzo", budget=50000, scope="all")
+        self.assertEqual([r["id"] for r in big["results"]], ["f-grande", "f-chico"])
+        self.assertEqual({r["truncated"] for r in big["results"]}, {False})
+        budget = big["used_bytes"] - 400
+        out = recall(store, "cuarzo", budget=budget, scope="all")
+        first = out["results"][0]
+        self.assertEqual((first["rank"], first["id"], first["truncated"]), (1, "f-grande", True))
+        self.assertEqual(set(first), {"rank", "id", "stream", "score", "enqueued_at", "scope_match", "matched_terms",
+                                      "truncated", "disputed"})
+        self.assertIs(first["disputed"], False)
+        self.assertEqual(out["excluded"]["truncated"], 1)
+        self.assertEqual(out["excluded"]["budget"], 0)
+        self.assertLessEqual(len(render(out)), budget)
+        self.assertEqual(out["used_bytes"], len(render(out)))
+        self.assertEqual(out["results"][1]["truncated"], False)
+
+    def test_a_disputed_stub_says_so(self) -> None:
+        self.fact("f-x", "cuarzo " + "y" * 900)
+        remember(self.project, "el cuarzo es otra cosa", "--supersedes", "f-x", env=A)
+        store = MemoryStore(self.project)
+        full = recall(store, "cuarzo", budget=50000, scope="all")
+        target = next(r for r in full["results"] if r["id"] == "f-x")
+        self.assertEqual(len(target["disputed_by"]), 1)
+        others = sum(len(canonical_json(r)) for r in full["results"] if r["id"] != "f-x")
+        out = recall(store, "cuarzo", budget=others + 1300, scope="all")
+        stub = next(r for r in out["results"] if r["id"] == "f-x")
+        self.assertEqual((stub["truncated"], stub["disputed"]), (True, True))
+        self.assertNotIn("disputed_by", stub)
+
+    def test_query_terms_and_matched_terms_on_a_known_vector(self) -> None:
+        self.fact("f-1", "Los puertos del servidor escuchan en la red interna")
+        self.fact("f-2", "El servidor se reinicia cada noche")
+        self.fact("f-3", "Nada que ver con el tema")
+        out = self.ok("¿Qué puertos usa el servidor? Servidor, PUERTO")
+        self.assertEqual(out["query_terms"], ["puert", "usa", "el", "servidor"])
+        by_id = {r["id"]: r for r in out["results"]}
+        self.assertEqual(by_id["f-1"]["matched_terms"], ["puert", "servidor"])
+        self.assertEqual(by_id["f-2"]["matched_terms"], ["el", "servidor"])
+        self.assertIs(out["no_strong_match"], False)
+
+    def test_min_terms_2_with_only_single_term_matches_gives_no_strong_match(self) -> None:
+        for index in range(4):
+            self.fact(f"f-{index}", f"el cuarzo aparece en el lote {index}")
+        out = self.ok("cuarzo basalto", "--min-terms", "2")
+        self.assertEqual((out["results"], out["no_strong_match"]), ([], True))
+        self.assertEqual(out["excluded"]["min_terms"], 4)
+        self.assertEqual(out["query_terms"], ["cuarz", "basalt"])
+        loose = self.ok("cuarzo basalto")
+        self.assertEqual((len(loose["results"]), loose["no_strong_match"]), (4, False))
+
+    def test_min_terms_above_the_number_of_query_terms_is_valid(self) -> None:
+        self.fact("f-1", "el cuarzo es duro")
+        out = self.ok("cuarzo", "--min-terms", "5")
+        self.assertEqual((out["results"], out["no_strong_match"], out["excluded"]["min_terms"]), ([], True, 1))
+
+    def test_no_candidates_at_all_is_not_a_strong_match_failure(self) -> None:
+        self.fact("f-1", "el cuarzo es duro")
+        out = self.ok("zzzinexistente", "--min-terms", "2")
+        self.assertEqual((out["results"], out["no_strong_match"]), ([], False))
+
+    def test_min_terms_1_gives_the_same_bytes_as_no_option(self) -> None:
+        self.fact("f-1", "el cuarzo es duro")
+        self.fact("f-2", "el basalto es oscuro")
+        plain = cli(self.project, "recall", "--query", "cuarzo basalto").stdout
+        explicit = cli(self.project, "recall", "--query", "cuarzo basalto", "--min-terms", "1").stdout
+        self.assertEqual(plain, explicit)
+
+    def test_min_terms_must_be_an_integer_of_at_least_one(self) -> None:
+        for value in ("0", "-2"):
+            done = cli(self.project, "recall", "--query", "x", "--min-terms", value)
+            self.assertEqual((done.returncode, done.stdout), (1, ""), value)
+            self.assertTrue(done.stderr.startswith("an-kla error: recall_min_terms_invalid"), done.stderr)
+
+    def test_ranks_stay_contiguous_after_the_min_terms_filter(self) -> None:
+        self.fact("f-1", "cuarzo basalto juntos")
+        self.fact("f-2", "solo cuarzo aqui")
+        self.fact("f-3", "cuarzo y basalto de nuevo")
+        out = self.ok("cuarzo basalto", "--min-terms", "2")
+        self.assertEqual([r["rank"] for r in out["results"]], [1, 2])
+        self.assertEqual(out["excluded"]["min_terms"], 1)
 
 
 class ScopeTests(RecallCase):
@@ -261,7 +386,7 @@ class ScopeTests(RecallCase):
         self.assertEqual(set(self.ids(out)), {self.mine, "f-legado"})
         self.assertEqual({r["id"]: r["scope_match"] for r in out["results"]},
                          {self.mine: "repo", "f-legado": "legacy"})
-        self.assertEqual(out["excluded"], {"budget": 0, "invalid_envelope": 2, "scope": 1})
+        self.assertEqual(out["excluded"], {**NO_EXCLUDED, "invalid_envelope": 2, "scope": 1})
 
     def test_all_scope_includes_everything_and_marks_each(self) -> None:
         out = self.ok("zorro", "--scope", "all")
@@ -272,7 +397,7 @@ class ScopeTests(RecallCase):
         for name in ("f-legado", "f-roto", "f-hueco"):
             self.assertEqual((by_id[name]["writer"], by_id[name]["enqueued_at"]), (None, None), name)
         self.assertEqual(by_id["f-ajeno"]["writer"]["repo"]["id"], OTHER_REPO)
-        self.assertEqual(out["excluded"], {"budget": 0, "invalid_envelope": 0, "scope": 0})
+        self.assertEqual(out["excluded"], NO_EXCLUDED)
         self.assertEqual(out["scope"]["mode"], "all")
 
     def test_a_corrupt_envelope_of_another_repo_never_enters_repo_scope(self) -> None:

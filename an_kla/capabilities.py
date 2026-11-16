@@ -121,7 +121,7 @@ def capabilities() -> dict[str, Any]:
                 },
             },
             "recall": {
-                "command": "recall --query <texto> [--budget <bytes>] [--scope repo|all] [--streams facts[,episodes]]",
+                "command": "recall --query <texto> [--budget <bytes>] [--scope repo|all] [--streams facts[,episodes]] [--min-terms <n>]",
                 "schema": "an-kla/recall-result-v1",
                 "analyzer": "an-kla/lexico-es-v1",
                 "ranking": "bm25 k1=1.2 b=0.75 over the candidate set (no persistent index)",

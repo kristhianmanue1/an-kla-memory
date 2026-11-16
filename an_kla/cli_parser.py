@@ -520,7 +520,8 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Recupera hechos con BM25 sobre texto plegado y reducido a su raíz (an-kla/lexico-es-v1), con ámbito de "
             "repo, escritor y hora del sobre, disputas y estado de la bandeja. --budget acota la salida JSON completa "
-            "en bytes. Sólo lectura: no vacía la bandeja. Con --scope repo exige un repo Git en --project-root."
+            "en bytes; si la entrada completa de un resultado no cabe, sale su resumen (truncated: true, sin texto). Orden: "
+            "puntuación, después el más reciente, después id. Sólo lectura: no vacía la bandeja. Con --scope repo exige un repo Git en --project-root."
         ),
     )
     recall_cmd.add_argument("--query", required=True, help="Texto de la consulta.")
@@ -531,6 +532,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     recall_cmd.add_argument(
         "--streams", default="facts", help="facts (por defecto) y/o episodes, separados por comas."
+    )
+    recall_cmd.add_argument(
+        "--min-terms", type=int, default=1, metavar="N",
+        help="Excluye los candidatos con menos de N términos distintos de la consulta (entero >= 1; por defecto 1, "
+        "el comportamiento sin umbral). Si ninguno lo alcanza: results vacío y no_strong_match true.",
     )
     identity_cmd = sub.add_parser("identity", help="Inspeccionar o adoptar identidad local.")
     identity_sub = identity_cmd.add_subparsers(dest="identity_command", required=True)

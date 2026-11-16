@@ -5,10 +5,15 @@ media calculados sobre el conjunto candidato: los registros vigentes de los stre
 comparte puntuación con ``retrieve`` ni lo cambia. Lee un snapshot bajo el gate compartido de lectores y no persiste
 nada: cada consulta recorre el snapshot, así que no hay índice que pueda faltar o envejecer.
 
+Orden total (Enmienda 1): puntuación exacta descendente, después ``enqueued_at`` del sobre válido descendente (un registro
+sin sobre válido va detrás) y después ``id`` ascendente.
+
 El presupuesto acota la salida JSON completa, tal como se imprime. Se decide con la longitud exacta de la respuesta
-terminada en salto de línea, con dos cotas superiores en lugar de los contadores aún desconocidos (``used_bytes`` =
-el presupuesto, que tiene al menos tantas cifras como el real, y ``excluded.budget`` = los candidatos aún no
-incluidos, que sólo puede bajar): la respuesta final nunca mide más que la última comprobada.
+terminada en salto de línea, con cotas superiores en lugar de los contadores aún desconocidos (``used_bytes`` = el
+presupuesto, que tiene al menos tantas cifras como el real; ``excluded.budget`` y ``excluded.truncated`` = el número
+total de candidatos, que acota sus valores finales): la respuesta final nunca mide más que la última comprobada. Si la
+entrada completa de un candidato no cabe, se prueba su stub (sin texto, escritor ni ``disputed_by``); sólo si ni el
+stub cabe, se salta.
 """
 
 from __future__ import annotations
@@ -41,6 +46,7 @@ _HINTS = {
     "recall_scope_unavailable": "--scope repo necesita un repo Git en --project-root; usa --scope all para no filtrar por repo",
     "unsupported_recall_stream": "--streams admite facts y episodes, separados por comas",
     "unsupported_recall_scope": "--scope admite repo o all",
+    "recall_min_terms_invalid": "--min-terms es un entero mayor o igual que 1",
 }
 
 
@@ -116,8 +122,8 @@ def _inbox(store: Any) -> dict[str, Any]:
 
 def _bm25(
     terms: list[str], candidates: list[dict[str, Any]], tokens_by_index: list[list[str]]
-) -> list[tuple[float, int]]:
-    """``(puntuación, índice)`` de cada candidato con puntuación mayor que cero, sin ordenar."""
+) -> list[tuple[float, int, list[str]]]:
+    """``(puntuación, índice, términos de la consulta presentes)`` de cada candidato con puntuación mayor que cero."""
 
     count = len(candidates)
     lengths = [len(tokens) for tokens in tokens_by_index]
@@ -145,13 +151,14 @@ def _bm25(
             if freq:
                 score += idf[term] * freq * (K1 + 1) / (freq + norm)
         if score > 0:
-            scored.append((score, index))
+            scored.append((score, index, [t for t in terms if t in tf]))
     return scored
 
 
 def _body(
     query: str, revision: str, repo_id: str | None, scope: str, streams: tuple[str, ...], budget: int,
     inbox: dict[str, Any], excluded: Mapping[str, int], used: int, results: list[Any],
+    terms: list[str], no_strong_match: bool,
 ) -> dict[str, Any]:
     return {
         "schema": RESULT_SCHEMA,
@@ -165,6 +172,8 @@ def _body(
         "used_bytes": used,
         "inbox": inbox,
         "excluded": dict(excluded),
+        "query_terms": terms,
+        "no_strong_match": no_strong_match,
         "results": results,
     }
 
@@ -176,7 +185,7 @@ def render(result: Mapping[str, Any]) -> bytes:
 
 
 def _under_gate(
-    store: Any, query: str, budget: int, scope: str, streams: tuple[str, ...]
+    store: Any, query: str, budget: int, scope: str, streams: tuple[str, ...], min_terms: int
 ) -> dict[str, Any]:
     tokens, terms = query_terms(query)
     if not tokens:
@@ -189,7 +198,7 @@ def _under_gate(
         disputed_by.setdefault(item["target"]["id"], []).append(
             {k: item[k] for k in ("id", "text", "writer", "enqueued_at")}
         )
-    excluded = {"budget": 0, "invalid_envelope": 0, "scope": 0}
+    excluded = {"budget": 0, "invalid_envelope": 0, "min_terms": 0, "scope": 0, "truncated": 0}
     candidates: list[dict[str, Any]] = []
     for stream in streams:
         for record in snapshot.records[stream]:
@@ -213,36 +222,56 @@ def _under_gate(
                 "enqueued_at": enqueued_at, "scope_match": _scope_match(kind, envelope, repo_id),
                 "marked": marked,
             })
-    scored = _bm25(terms, candidates, [record_terms(c["text"]) for c in candidates]) if terms else []
-    scored.sort(key=lambda pair: (-pair[0], candidates[pair[1]]["id"]))
+    found = _bm25(terms, candidates, [record_terms(c["text"]) for c in candidates]) if terms else []
+    survivors = [row for row in found if len(row[2]) >= min_terms]
+    excluded["min_terms"] = len(found) - len(survivors)
+    no_strong_match = bool(found) and not survivors
+    # Orden total: puntuación exacta descendente, `enqueued_at` descendente (sin sobre válido, detrás) e `id`.
+    survivors.sort(key=lambda row: candidates[row[1]]["id"])
+    survivors.sort(key=lambda row: (candidates[row[1]]["enqueued_at"] is not None, candidates[row[1]]["enqueued_at"] or ""),
+                   reverse=True)
+    survivors.sort(key=lambda row: -row[0])
     inbox = _inbox(store)
+    total = len(survivors)
 
-    def size(used: int, skipped: int, items: int, items_bytes: int) -> int:
+    def size(used: int, skipped: int, truncated: int, items: int, items_bytes: int) -> int:
         shell = _body(query, snapshot.revision_id, repo_id, scope, streams, budget, inbox,
-                      {**excluded, "budget": skipped}, used, [])
+                      {**excluded, "budget": skipped, "truncated": truncated}, used, [], terms, no_strong_match)
         return len(render(shell)) + items_bytes + max(items - 1, 0)
 
-    if size(budget, len(scored), 0, 0) > budget:
+    if size(budget, total, total, 0, 0) > budget:
         raise RecallError("recall_budget_too_small")
     results: list[dict[str, Any]] = []
     items_bytes = 0
-    for rank, (score, index) in enumerate(scored, start=1):
+    stubs = 0
+    for rank, (score, index, matched) in enumerate(survivors, start=1):
         c = candidates[index]
-        item = {
+        disputed = disputed_by.get(c["id"], [])
+        full = {
             "rank": rank, "id": c["id"], "stream": c["stream"], "score": round(score, SCORE_DECIMALS),
             "text": c["text"], "writer": c["writer"], "enqueued_at": c["enqueued_at"],
-            "scope_match": c["scope_match"], "disputed_by": disputed_by.get(c["id"], []),
-            "disputes": _disputes_field(c["marked"]),
+            "scope_match": c["scope_match"], "matched_terms": matched, "truncated": False,
+            "disputed_by": disputed, "disputes": _disputes_field(c["marked"]),
         }
-        cost = len(canonical_json(item))
-        pending = len(scored) - len(results)
-        if size(budget, pending, len(results) + 1, items_bytes + cost) <= budget:
-            results.append(item)
-            items_bytes += cost
-    excluded["budget"] = len(scored) - len(results)
-    used = size(budget, excluded["budget"], len(results), items_bytes)
+        stub = {
+            "rank": rank, "id": c["id"], "stream": c["stream"], "score": round(score, SCORE_DECIMALS),
+            "enqueued_at": c["enqueued_at"], "scope_match": c["scope_match"], "matched_terms": matched,
+            "truncated": True, "disputed": bool(disputed),
+        }
+        for item in (full, stub):
+            cost = len(canonical_json(item))
+            # Cotas de prueba: `excluded.budget` y `excluded.truncated` valen el total de candidatos.
+            if size(budget, total, total, len(results) + 1, items_bytes + cost) <= budget:
+                results.append(item)
+                items_bytes += cost
+                stubs += item["truncated"]
+                break
+    excluded["truncated"] = stubs
+    excluded["budget"] = total - len(results)
+    used = size(budget, excluded["budget"], stubs, len(results), items_bytes)
     for _ in range(8):  # punto fijo: `used_bytes` es la longitud de la salida que lo contiene; sus cifras sólo bajan
-        out = _body(query, snapshot.revision_id, repo_id, scope, streams, budget, inbox, excluded, used, results)
+        out = _body(query, snapshot.revision_id, repo_id, scope, streams, budget, inbox, excluded, used, results,
+                    terms, no_strong_match)
         length = len(render(out))
         if length == used:
             return out
@@ -265,15 +294,20 @@ def recall(
     budget: int = DEFAULT_BUDGET,
     scope: str = "repo",
     streams: tuple[str, ...] | list[str] | None = None,
+    min_terms: int = 1,
 ) -> dict[str, Any]:
-    """``recall-result-v1`` de ``query``; los errores salen como :class:`RecallError` (o los del store)."""
+    """``recall-result-v1`` de ``query``; los errores salen como :class:`RecallError` (o los del store).
+
+    ``min_terms`` (entero ≥ 1) excluye a los candidatos con menos de ``min_terms`` términos distintos de la consulta."""
 
     selected = _streams(streams)
+    if not isinstance(min_terms, int) or isinstance(min_terms, bool) or min_terms < 1:
+        raise RecallError("recall_min_terms_invalid")
     if scope not in SCOPES:
         raise RecallError("unsupported_recall_scope")
     gate = shared_reader_gate(store) if hasattr(store, "root") else nullcontext()
     with gate:
-        return _under_gate(store, query, budget, scope, selected)
+        return _under_gate(store, query, budget, scope, selected, min_terms)
 
 
 __all__ = ["RESULT_SCHEMA", "RecallError", "recall", "render"]
