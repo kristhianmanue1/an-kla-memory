@@ -53,6 +53,8 @@ from .identity import (
 from .identity_relocation import record_project_relocation
 from .disputes import list_disputes
 from .inbox import read_status as inbox_status
+from .inbox_drain import DEFAULT_BUDGET_SECONDS as INBOX_DRAIN_BUDGET_SECONDS
+from .inbox_drain import drain as inbox_drain
 from .lock_order import LockOrderError
 from .inventory import DEFAULT_LIMIT as INVENTORY_DEFAULT_LIMIT
 from .inventory import MAX_LIMIT as INVENTORY_MAX_LIMIT
@@ -455,6 +457,11 @@ def _run() -> None:
     elif args.command == "inbox":
         if args.inbox_command == "status":
             result = inbox_status(store)
+        elif args.inbox_command == "drain":
+            budget = INBOX_DRAIN_BUDGET_SECONDS if args.budget_seconds is None else args.budget_seconds
+            if not 0 < budget <= 3600:
+                raise CliUsageError("invalid_budget_seconds")
+            result = inbox_drain(store, budget_seconds=budget)
         else:
             raise CliUsageError("inbox_command_unknown")
     elif args.command == "subject":
@@ -693,6 +700,11 @@ def pending_outcome_reason(args: Any, result: Any) -> str | None:
             and result["outcome"].get("committed") is not True
         ):
             return "commit_write_plan_outcome_not_firm"
+    if args.command == "inbox" and getattr(args, "inbox_command", None) == "drain":
+        # R1-01: un vaciado abortado o con resultado desconocido no es un estado terminal firme;
+        # `drained`, `queued` y el corte por presupuesto (`partial`) salen con 0.
+        if result.get("state") == "aborted" or result.get("outcome") != "known":
+            return "inbox_drain_outcome_not_firm"
     if args.command == "subject" and args.subject_command == "namespace":
         if result.get("result") == "namespace_unavailable":
             return "subject_namespace_unavailable"

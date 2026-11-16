@@ -26,7 +26,17 @@ INBOX = "inbox"
 IDENTITY = "identity"
 WRITE = "write"
 
-_HELD: ContextVar[tuple[str, ...]] = ContextVar("an_kla_held_locks", default=())
+class _Hold:
+    """Una tenencia registrada; ``active`` se apaga al cerrar, aunque se cierre en otro contexto."""
+
+    __slots__ = ("name", "active")
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+        self.active = True
+
+
+_HELD: ContextVar[tuple[_Hold, ...]] = ContextVar("an_kla_held_locks", default=())
 
 
 class LockOrderError(RuntimeError):
@@ -41,26 +51,34 @@ class LockOrderError(RuntimeError):
 
 
 def held() -> tuple[str, ...]:
-    return _HELD.get()
+    return tuple(hold.name for hold in _HELD.get() if hold.active)
 
 
 @contextmanager
 def holding(name: str) -> Iterator[None]:
     """Registra ``name`` como tomado mientras dure el bloque (por contexto de ejecución)."""
 
-    token = _HELD.set(_HELD.get() + (name,))
+    hold = _Hold(name)
+    token = _HELD.set(_HELD.get() + (hold,))
     try:
         yield
     finally:
-        _HELD.reset(token)
+        # R3-04: si el gestor se cierra en otro contexto, `reset` lanza `ValueError` y el contexto
+        # de origen conserva la entrada; apagada, `held()` ya no la ve.
+        hold.active = False
+        try:
+            _HELD.reset(token)
+        except ValueError:
+            pass
 
 
 def require_inbox_allowed(store: Any = None) -> None:
     """Falla cerrado si el contexto ya tiene ``identity_lock`` o ``write_lock``."""
 
-    later = tuple(name for name in _HELD.get() if name in (IDENTITY, WRITE))
+    later = tuple(name for name in held() if name in (IDENTITY, WRITE))
     if store is not None and getattr(store, "_active_write_lock", None) is not None:
         later += (WRITE,)
+    later = tuple(dict.fromkeys(later))  # R3-05: sin nombres repetidos
     if later:
         raise LockOrderError(INBOX, later)
 

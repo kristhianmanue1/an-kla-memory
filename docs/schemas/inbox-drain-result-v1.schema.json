@@ -1,0 +1,159 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:inbox-drain-result:v1",
+  "title": "AN-KLA Inbox Drain Result v1",
+  "description": "Resultado de `inbox drain` (ADR-0063 D1): lotes comprometidos, entradas comprometidas, rechazadas con motivo, `queued` (write_lock ocupado), `drain_error`, `outcome` (`unknown` cuando un commit quedó sin resultado firme y lo resuelve el paso 0 del vaciado siguiente), avisos y el tiempo máximo con `write_lock` tomado. `state`: `drained` (sin entradas procesables), `partial` (presupuesto de tiempo o de lotes agotado), `queued` (write_lock ocupado) o `aborted` (`drain_error` o `outcome: unknown`). Los listados se acotan a 1000 elementos (`truncated`). Sólo nombres y códigos: nunca texto de recuerdos.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "untrusted_memory_data", "state", "inbox", "outcome", "queued", "committed", "rejected",
+    "already_committed", "duplicates_removed", "batches", "closed_journals", "warnings", "tmp", "metrics"
+  ],
+  "properties": {
+    "schema": {"const": "an-kla/inbox-drain-result-v1"},
+    "untrusted_memory_data": {"const": true},
+    "state": {"enum": ["drained", "partial", "queued", "aborted"]},
+    "inbox": {"enum": ["absent", "present"]},
+    "outcome": {"enum": ["known", "unknown"]},
+    "queued": {"type": "boolean"},
+    "drain_error": {"type": "string", "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"},
+    "committed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["count", "entries", "truncated"],
+      "properties": {
+        "count": {"type": "integer", "minimum": 0},
+        "truncated": {"type": "boolean"},
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["entry", "record_id", "revision", "stream", "operation"],
+            "properties": {
+              "entry": {"type": "string"},
+              "record_id": {"type": "string"},
+              "revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"},
+              "stream": {"enum": ["facts", "events", "episodes"]},
+              "operation": {"enum": ["add", "supersede"]},
+              "disputed": {"type": "object"},
+              "superseded": {"type": "string"}
+            }
+          }
+        }
+      }
+    },
+    "rejected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["count", "entries", "truncated"],
+      "properties": {
+        "count": {"type": "integer", "minimum": 0},
+        "truncated": {"type": "boolean"},
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["entry", "rejected_as", "code", "reason_codes"],
+            "properties": {
+              "entry": {"type": "string"},
+              "rejected_as": {"type": "string"},
+              "code": {"type": "string", "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"},
+              "reason_codes": {
+                "type": "array",
+                "items": {"type": "string", "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "already_committed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["count", "entries", "truncated"],
+      "properties": {
+        "count": {"type": "integer", "minimum": 0},
+        "truncated": {"type": "boolean"},
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["entry", "record_id"],
+            "properties": {"entry": {"type": "string"}, "record_id": {"type": "string"}}
+          }
+        }
+      }
+    },
+    "duplicates_removed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["count", "names", "truncated"],
+      "properties": {
+        "count": {"type": "integer", "minimum": 0},
+        "truncated": {"type": "boolean"},
+        "names": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "batches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["transaction_id", "mode", "stream", "operation", "entries", "revision"],
+        "properties": {
+          "transaction_id": {"type": "string"},
+          "mode": {"enum": ["batch", "one_by_one"]},
+          "stream": {"enum": ["facts", "events", "episodes"]},
+          "operation": {"enum": ["add", "supersede"]},
+          "entries": {"type": "integer", "minimum": 1},
+          "revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}$"}
+        }
+      }
+    },
+    "closed_journals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["txid", "branch"],
+        "properties": {
+          "txid": {"type": "string"},
+          "branch": {"enum": ["committed", "not_committed", "no_trace"]},
+          "journal_closed": {"type": "boolean"}
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"}
+    },
+    "tmp": {
+      "type": "object",
+      "properties": {
+        "state": {"enum": ["absent", "busy", "collected"]},
+        "removed": {"type": "integer", "minimum": 0},
+        "errors": {"type": "integer", "minimum": 0}
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "attempts", "queued_attempts", "ignored", "entry_evaluations", "plan_evaluations",
+        "bisect_probes", "one_by_one_commits", "max_write_lock_seconds"
+      ],
+      "properties": {
+        "attempts": {"type": "integer", "minimum": 0},
+        "queued_attempts": {"type": "integer", "minimum": 0},
+        "ignored": {"type": "integer", "minimum": 0},
+        "entry_evaluations": {"type": "integer", "minimum": 0},
+        "plan_evaluations": {"type": "integer", "minimum": 0},
+        "bisect_probes": {"type": "integer", "minimum": 0},
+        "one_by_one_commits": {"type": "integer", "minimum": 0},
+        "max_write_lock_seconds": {"type": "number", "minimum": 0}
+      }
+    }
+  }
+}

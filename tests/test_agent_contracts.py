@@ -69,6 +69,7 @@ class InstalledSchemaTests(unittest.TestCase):
         "identity-intent-v1",
         "identity-operation-result-v1",
         "identity-status-v1",
+        "inbox-drain-result-v1",
         "inbox-entry-v1",
         "inbox-status-v1",
         "integration-status-v1",

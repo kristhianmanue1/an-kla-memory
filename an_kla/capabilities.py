@@ -100,6 +100,12 @@ def capabilities() -> dict[str, Any]:
                 "creates_nothing": True,
                 "mcp": False,
                 "decision": "ADR-0063 D1",
+                "drain": {
+                    "command": "inbox drain [--budget-seconds N]",
+                    "schema": "an-kla/inbox-drain-result-v1",
+                    "read_only": False,
+                    "mcp": False,
+                },
             },
             "disputes": {
                 "command": "disputes list [--target <id>]",
@@ -358,6 +364,7 @@ def capabilities() -> dict[str, Any]:
                     "refute commit": "outcome.committed is not true",
                     "init": "outcome.committed is not true",
                     "commit-write-plan": "outcome.committed is not true",
+                    "inbox drain": "state == aborted u outcome != known (drained, queued y partial salen con 0)",
                     "subject namespace": "result == namespace_unavailable",
                 },
             },
