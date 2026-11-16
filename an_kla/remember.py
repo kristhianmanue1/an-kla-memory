@@ -39,7 +39,7 @@ KEY_MAX_CHARS = 256
 _DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
 _STORAGE_HINT = "la escritura falló en disco; no se perdió nada confirmado: reintenta (es idempotente)"
 _IDENTITY_HINTS = {
-    "identity_env_missing": "define AN_KLA_AGENT_CLI en el lanzador (obligatorio); ver «Primer consumidor» en el ADR-0063 D2",
+    "identity_env_missing": "define AN_KLA_AGENT_CLI en el lanzador (obligatorio); `remember --help` lista las demás variables",
     "identity_env_invalid": "un valor de AN_KLA_AGENT_* o de la rama viola C0; nunca se corrige ni se sustituye",
     "identity_repo_unavailable": "remember exige un repo Git en --project-root; sin Git usa la receta plan-write",
 }
