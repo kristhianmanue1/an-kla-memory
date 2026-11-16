@@ -174,11 +174,10 @@ class UnsafeInodeTests(DrainCase):
             info = path.lstat()
             self.assertTrue(stat.S_ISREG(info.st_mode) and info.st_nlink == 1, path)
         validate_no_links(self.store)  # el recorrido de `compact` no falla por rejected/
-        # Con B4 el contenido de `memory/inbox/` no se exporta (se excluye tras los chequeos de enlace y
-        # de archivo especial): el recorrido no falla por `rejected/` y no lo lista; `export create` pasa
-        # con `pending/` e `inflight/` vacíos sin parchear nada.
+        self.assertTrue(self.names(self.paths.rejected))  # rejected/ poblado: el recorrido lo atraviesa sin enlaces ni especiales
         rows = export_restore._files(self.store.store_root)  # sin export_unsafe_link / export_unsafe_file
-        self.assertFalse(any("/inbox/" in relative for relative, _ in rows))
+        self.assertFalse([relative for relative, _ in rows if "/memory/inbox/" in relative])  # B4: la bandeja no se empaqueta
+        self.assertEqual(self.names(self.paths.pending), [])
         done = export_restore.create_export(self.store, self.project.parent / (self.project.name + "-bundle"))
         self.assertEqual(done["schema"], "an-kla/export-result-v1")
 

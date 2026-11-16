@@ -575,6 +575,8 @@ class RoundTwoTests(CustodyCase):
         self.assertEqual(len(calls), 1)
         self.assertIsNotNone(read_pointer(self.project))
         self.assertEqual(len(inbox.entry_names(external)), 1)
+        for unit in relocate_back._units(back["core"]["entries"]):  # R4-02: no se publicó nada en el ancla destino
+            self.assertFalse(os.path.lexists(Path(back["core"]["destination_store_root"]) / unit))
 
     def test_a_marker_in_the_window_is_inbox_inflight(self) -> None:
         plan = plan_relocation(self.store, self.vault)
@@ -736,7 +738,9 @@ class RoundThreeTests(CustodyCase):
                 plan = plan_back(external)
                 txid = self.cut_commit(external, plan, point)
                 self.queue(external)
+                stage = relocate._read_journal(self.project, txid)["stage"]
                 self.assert_code("inbox_pending", relocate.reconcile_relocation, self.project, txid)
+                self.assertEqual(relocate._read_journal(self.project, txid)["stage"], stage)  # R4-02: ni avanza el journal
                 self.assertIsNotNone(read_pointer(self.project))
                 self.assertEqual(len(inbox.entry_names(external)), 1)
                 self.drain_by_hand(external)
