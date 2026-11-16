@@ -59,16 +59,52 @@ este analizador y esta puntuación, versionados juntos como
 2. **Corte:** los términos son las secuencias maximales de letras o dígitos
    (`[^\W_]+` en `re.UNICODE`). `_`, `-`, `.`, `/` y todo signo cortan, así
    que un identificador técnico se parte en sus palabras.
-3. **Raíz:** el algoritmo **Snowball para español** (publicado, sin datos),
-   aplicado al término ya plegado, con sus listas de sufijos escritas sin
-   tilde. «puertos» = «puerto»; «lanzo» = «lanza». Sólo se reduce un término
-   alfabético de 3 o más letras; los dígitos y los mixtos quedan tal cual.
-   Plegar antes de reducir hace que el texto escrito sin tildes y el escrito
-   con ellas den la misma raíz. El precio es apartarse de la salida de
-   referencia de Snowball donde la tilde distinguía un sufijo. Se mide y se
-   declara (ver «Test de regresión»).
+3. **Raíz:** el programa **canónico de Snowball para español**
+   (snowballstem.org), con **dos cambios declarados y sólo dos**:
+   1. Opera sobre el término ya plegado: los sufijos de los pasos 0
+      (pronombre enclítico), 1 (sufijo estándar) y 2a (verbo en `y`) se
+      comparan en su forma plegada (`acion`, `logia`, `ucion`, `iendo`).
+   2. En los pasos 2b (verbo) y 3 (residual) **se omiten los sufijos que en
+      la referencia llevan tilde** (`ía`, `ían`, `ías`, `ió`, `ís`, `í`,
+      `aría`, `ería`, `iría` y sus formas, `éis`, `áis`, `íais`, `ábamos`,
+      `íamos`, `áramos`, `iéramos`, `iésemos`, `ásemos`). Plegados chocarían
+      con terminaciones nominales átonas que la referencia no toca
+      (historia, criterio, crisis, taxi).
+
+   Todo lo demás es el programa canónico:
+   - regiones RV, R1 y R2 marcadas una vez, al principio;
+   - en cada `among`, el sufijo más largo;
+   - en los pasos 2a y 2b, el más largo **dentro de RV** (`setlimit tomark pV`);
+   - en el paso 0, la desinencia verbal que precede al pronombre debe empezar
+     en RV;
+   - si el paso 1 halla sufijo pero falla su región, se intentan 2a y 2b.
+
+   Sólo se reduce un término alfabético de 3 o más letras; los dígitos y los
+   mixtos quedan tal cual. «puertos» = «puerto» y «lanzo» = «lanza».
+
+   **Medido contra el vocabulario de referencia de Snowball** (28.378
+   palabras):
+   - coincide **exactamente en las 22.894 palabras sin tilde**;
+   - en total coincide en el 95,60 % (`stem(fold(w)) == fold(ref(w))`);
+   - las 1.250 discrepancias son todas de palabras con tilde, por el cambio 2
+     (p. ej. `abarcaría` → `abarcari`, frente a `abarc` en la referencia).
 4. **Sin lista de palabras vacías.** Las frecuentes las descuenta el peso
    por rareza, medido sobre el propio store (ver «Por qué no»).
+5. **Interrogativos, sólo en la consulta.** De la consulta, no de los
+   registros, se quitan los interrogativos de la gramática, una clase
+   cerrada:
+   - español: qué, quién, quiénes, cuál, cuáles, cuánto, cuánta, cuántos,
+     cuántas, cómo, dónde, adónde, cuándo;
+   - inglés: what, who, whom, which, how, where, when, why;
+   - se comparan plegados, así que también caen «que», «como», «cuando» y
+     «donde» de la consulta.
+
+   **Razón:** una pregunta marca su tipo con ellos y un hecho es
+   declarativo. Con un store pequeño, un interrogativo que aparezca por azar
+   en un único hecho tendría el IDF máximo y lo subiría sin relación con la
+   pregunta (riesgo señalado por la ronda 1). **Medido:** no cambia el top-5
+   en ningún corpus y cambia primeros puestos en los dos sentidos (ver
+   «Medición»). Se adopta por la razón gramatical, no por la medida.
 
 ### Puntuación
 
@@ -81,6 +117,8 @@ este analizador y esta puntuación, versionados juntos como
 - La salida lleva `score` redondeado a 6 decimales. El orden se decide con
   el valor sin redondear.
 - Un registro con puntuación 0 no se devuelve.
+- Con el conjunto candidato vacío (`N = 0`) o sin ningún término (longitud
+  media 0), la respuesta lleva `results: []` y no se calcula nada.
 
 ### Orden `recall`
 
@@ -94,21 +132,41 @@ an-kla [--project-root P] [--store-root S] recall --query <texto>
 - **Ámbito (`--scope`, por defecto `repo`):**
   - el `repo.id` C0 del `--project-root` se deriva como lo hace `remember`
     (`identity_c0.repo_id_for`);
-  - entra un registro cuyo sobre válido declara ese `repo.id`, y un
-    registro sin sobre válido (legado), marcado `scope_match: "legacy"`,
-    porque vive en el store del proyecto y no declara otro repo;
-  - se excluye y se cuenta (`excluded.scope`) un registro con sobre de otro
-    repo;
-  - `--scope all` lo incluye todo y marca cada resultado con su repo;
+  - entra un registro cuyo sobre es válido (`identity_c0.validate_envelope`)
+    y declara ese `repo.id` (`scope_match: "repo"`);
+  - entra un registro **sin campo `an_kla_envelope`**, el legado anterior a
+    E1.a (`scope_match: "legacy"`): vive en el store del proyecto y no
+    declara otro repo;
+  - se excluye un registro con sobre válido de otro repo (cuenta en
+    `excluded.scope`);
+  - **se excluye un registro con `an_kla_envelope` presente e inválido**
+    (cuenta en `excluded.invalid_envelope`): no se sabe de qué repo es, y
+    asimilarlo a legado lo colaría en el ámbito;
+  - `--scope all` lo incluye todo y marca cada resultado: `repo` o `other`
+    con sobre válido, `legacy` sin sobre e `invalid_envelope` con sobre
+    inválido (en todos, `writer: null` si el sobre no es válido);
   - sin repo Git en `--project-root`, `--scope repo` falla con
     `recall_scope_unavailable` (rc 1, pista `--scope all`). **Nunca degrada
     en silencio a `all`.**
 - **Presupuesto (`--budget`, por defecto 4000):** cota de la **salida JSON
   completa** (UTF-8, tal como se imprime), no sólo de los textos.
-  - Se añaden resultados en orden mientras la salida serializada quepa. Uno
-    que no cabe se salta y se cuenta (`excluded.budget`), y se sigue con el
-    siguiente.
-  - Si ni la respuesta vacía cabe: `recall_budget_too_small`, rc 1.
+  - El algoritmo es exacto y no puede pasarse. Se recorren los candidatos
+    en orden. Para cada uno se serializa la respuesta **completa, con su
+    salto de línea final**, tal como quedaría si se añadiera, con dos cotas
+    superiores en lugar de los contadores aún desconocidos:
+    - `used_bytes` = el valor de `--budget`, que tiene al menos tantas
+      cifras como el real;
+    - `excluded.budget` = candidatos aún no incluidos, que sólo puede bajar.
+  - Si esa serialización cabe, el candidato entra; si no, se salta y se
+    sigue con el siguiente.
+  - La respuesta final, con los contadores reales, mide lo mismo o menos que
+    la última comprobada.
+  - `used_bytes` es la longitud real de la salida impresa, salto incluido.
+  - Si ni la respuesta vacía cabe con esas cotas: `recall_budget_too_small`,
+    rc 1.
+  - `rank` es la posición en el orden total, contada sobre todos los
+    candidatos, no sobre los entregados: un hueco en `rank` muestra un
+    resultado saltado por presupuesto.
 - **Respuesta `an-kla/recall-result-v1`**, de claves ordenadas, sin espacios
   sobrantes y terminada en un salto de línea:
 
@@ -118,10 +176,10 @@ an-kla [--project-root P] [--store-root S] recall --query <texto>
  "query": "…", "scope": {"mode": "repo", "repo_id": "…"},
  "streams": ["facts"], "budget_bytes": 4000, "used_bytes": 1234,
  "inbox": {"state": "present", "pending": 2, "inflight": 0},
- "excluded": {"budget": 0, "scope": 3},
+ "excluded": {"budget": 0, "invalid_envelope": 0, "scope": 3},
  "results": [{"rank": 1, "id": "…", "stream": "facts", "score": 7.214311,
    "text": "…", "writer": {…C0…} | null, "enqueued_at": "…" | null,
-   "scope_match": "repo" | "legacy" | "other",
+   "scope_match": "repo" | "legacy" | "other" | "invalid_envelope",
    "disputed_by": [{"id": "…", "text": "…", "writer": {…} | null,
                     "enqueued_at": "…" | null}],
    "disputes": {"stream": "…", "target_id": "…"} | null}]}
@@ -135,9 +193,15 @@ an-kla [--project-root P] [--store-root S] recall --query <texto>
   - un registro de disputa que aparece como resultado lleva `disputes`;
   - las disputas no cambian la puntuación de nadie.
 - **Bandeja:** `inbox` sale de `inbox.read_status` (sólo nombres, sin
-  candado y sin crear nada). Informa de cuántas escrituras están pendientes
-  o en vuelo y **no las busca**: una escritura cuenta cuando está
-  comprometida. `recall` nunca llama al vaciado.
+  candado y sin crear nada).
+  - Informa de cuántas escrituras están pendientes o en vuelo y **no las
+    busca**: una escritura cuenta cuando está comprometida.
+  - `recall` nunca llama al vaciado.
+  - `state` es el de `read_status`:
+    - `present`, con `pending` e `inflight` enteros;
+    - `absent` (store sin bandeja), con `0` y `0`;
+    - `unsafe` (raíz o subdirectorio inseguro), con `null` en el conteo
+      afectado. Nunca falla la consulta por la bandeja.
 - **Lectura:** bajo el gate compartido de lectores (`shared_reader_gate`),
   igual que `retrieve`, sobre un snapshot de `CURRENT`.
 - **Determinismo:** misma consulta, mismos argumentos, misma revisión y
@@ -179,43 +243,54 @@ implementación se mide de nuevo con el medidor del contrato.
   - Son reales, del mismo dominio, públicos y reproducibles, en proporción
     × 10.
 
-**Ablación**, cada componente medido. «T» es plegado y corte, «R» raíz,
-«V» lista de palabras vacías Snowball (español e inglés), «P» casar por
-prefijo de 5 letras y «B» BM25. «pos» es la posición del esperado por
-consulta (0 = fuera de los cinco):
+**Ablación**, cada componente medido con el stemmer ya validado. «T» es
+plegado y corte, «R» raíz, «Q» interrogativos fuera de la consulta, «V»
+lista de palabras vacías Snowball (español e inglés), «P» casar por prefijo
+de 5 letras y «B» BM25. «Pierde» compara con los aciertos de la línea base
+del contrato:
 
-| Variante | 40: top-5 | 40: 1.º | 440: top-5 | 440: 1.º | Pierde frente a la base |
+| Variante | 40: top-5 | 40: 1.º | 440: top-5 | 440: 1.º | Pierde |
 |---|---|---|---|---|---|
-| `retrieve` (hoy) | 12 | 5 | 11 | 5 | — |
-| B | 15 | 7 | 13 | 7 | `q-h07`, en 440 |
-| T+B | 15 | 8 | 13 | 8 | `q-h07`, en 440 |
-| **T+R+B (decidida)** | **15** | **9** | **15** | **9** | **ninguna** |
-| T+R+P+B | 15 | 10 | 15 | 9 | ninguna |
+| `retrieve` (hoy) | 12 | 5 | 11 | 5 | `q-h10` en 440 |
+| B | 15 | 7 | 13 | 7 | `q-h07`, `q-h10` en 440 |
+| T+B | 15 | 8 | 13 | 8 | `q-h07` en 440 |
+| T+R+B | 15 | 9 | 15 | 10 | ninguna |
+| **T+R+Q+B (decidida)** | **15** | **8** | **15** | **11** | **ninguna** |
+| T+R+P+B | 15 | 9 | 15 | 10 | ninguna |
 | V+B | 14 | 9 | 13 | 9 | `q-h07` |
 | T+V+R+B | 14 | 11 | 14 | 12 | `q-h14` |
 | T+V+R+P+B | 14 | 12 | 14 | 12 | `q-h14` |
 
-- **Decisión:** el conjunto mínimo de reglas que pasa el umbral en los dos
-  corpus sin pérdidas, que es T+R+B.
-- **P no entra:** su ganancia es un primer puesto en 40 y ninguna en 440, y
-  añade casamientos falsos posibles entre familias léxicas distintas. Queda
-  como deuda medible.
+- **Decisión:** T+R+B es el conjunto mínimo de reglas que pasa el umbral en
+  los dos corpus sin pérdidas, más Q por su razón gramatical (punto 5 del
+  analizador).
+- **P no entra:** con el stemmer validado no gana nada sobre T+R+B, y
+  añade casamientos falsos posibles entre familias léxicas distintas.
 - **V no entra:** ver «Por qué no».
-- **Reservadas:** no se han visto. Si T+R+B no sostiene la mejora sobre
-  ellas, la entrega no pasa (decisión del orquestador).
+- **Reservadas:** no se han visto. Si la mejora no se sostiene sobre ellas,
+  la entrega no pasa (decisión del orquestador).
+
+**Medidor.** `medir_ankla.py` del contrato sólo llama a `retrieve`. Para
+medir `recall` hace falta una opción `--orden recall`, que llame a `recall
+--scope all` (el proyecto desechable no es un repo Git) con el mismo
+presupuesto y que aborte si la respuesta no es `recall-result-v1` con este
+analizador. El contrato no es de este repo: se propone al custodio como
+errata, sin editarlo.
 
 ## Por qué no
 
 - **Cambiar `retrieve`.** Sus salidas son contrato público con goldens byte
   a byte y consumidores (MCP incluido). Una orden nueva se puede medir,
   versionar y retirar sin tocar a nadie.
-- **Lista de palabras vacías.** Medido: toda variante con lista pierde una
+- **Lista de palabras vacías completa.** Medido: toda variante con lista pierde una
   consulta que la base acertaba, porque la lista borra palabras que en un
   hecho sí distinguen («otro» en «otro agente»; «no», «sin»).
   - El IDF de BM25 ya descuenta lo frecuente y lo mide en el store real, en
     cualquier idioma: los hechos mezclan español, inglés e identificadores.
   - Una lista es una regla de idioma fija; el IDF es una propiedad del
     corpus.
+  - La excepción es Q: una clase gramatical cerrada, sólo en la consulta,
+    que no borra nada de los registros.
 - **Embeddings o LLM.** Prohibidos en esta entrega, y la medición muestra
   que no hacen falta para el umbral.
 - **Sinónimos.** Ajustarían al examen y no se justifican por el idioma.
@@ -223,9 +298,11 @@ consulta (0 = fuera de los cinco):
   Snowball ni corta `_` igual, y su ausencia o vejez ya degradó en silencio
   una medida de la línea base. Recorrer el snapshot elimina esa clase de
   fallo; el coste medido es aceptable a este tamaño.
-- **Snowball con tildes, tal cual la referencia.** El texto sin tildes («configuracion»)
-  y el acentuado darían raíces distintas, y rompería la prueba
-  «facturación»/«facturacion».
+- **Snowball con tildes, tal cual la referencia.** El texto sin tildes
+  («configuracion») y el acentuado darían raíces distintas, y rompería la
+  prueba «facturación»/«facturacion».
+- **Snowball plegado con todos los sufijos plegados.** Sobre-reduce nombres
+  átonos (`criterio` → `criter`, `taxi` → `tax`). Por eso existe el cambio 2.
 - **Prefijo (P).** Ver «Medición».
 
 ## Consecuencias
@@ -258,23 +335,33 @@ Pruebas nuevas en `tests/test_recall*.py`:
    - `NOMBRE_CONFIG` casa con «configuración»;
    - mismo ranking con y sin tildes en la consulta.
 2. **Analizador frente a la referencia Snowball:**
-   - una muestra declarada del vocabulario de referencia del algoritmo
-     (licencia BSD, con su origen);
-   - se mide y se fija la tasa de coincidencia `stem(fold(w)) ==
-     fold(referencia(w))`; las discrepancias deben ser todas de plegado.
+   - una muestra fija y declarada del vocabulario de referencia
+     (`snowball-data`, licencia BSD de 3 cláusulas, con su origen y su
+     licencia junto a la muestra);
+   - toda palabra sin tilde de la muestra coincide exactamente;
+   - toda discrepancia de la muestra es una palabra con tilde;
+   - nombres átonos sin sobre-reducir (`criterio`, `crisis`, `taxi`), y
+     enclíticos fuera de RV sin cortar (`darme`, `verlo`).
 3. **Determinismo:**
    - dos invocaciones, mismos bytes;
    - orden total con empates exactos resuelto por `id`.
 4. **Presupuesto:**
-   - `len(stdout) ≤ --budget` para presupuestos de 0 a 20.000 en saltos;
+   - `len(stdout) ≤ --budget` y `used_bytes == len(stdout)` para cada
+     presupuesto de 1 en 1 alrededor de los cambios de cifras (99/100,
+     999/1000, 9999/10000) y en saltos hasta 20.000;
+   - un hueco en `rank` cuando se salta un resultado;
+   - store vacío y consulta sin coincidencias: `results: []`;
    - `recall_budget_too_small` por debajo de la respuesta vacía.
 5. **Ámbito:**
-   - repo propio, legado y ajeno con `repo` y con `all`;
+   - repo propio, legado, ajeno y sobre inválido, con `repo` y con `all`;
+   - un registro de otro repo con sobre corrupto nunca entra en `repo`;
    - `recall_scope_unavailable` sin Git, sin degradar.
 6. **Disputa:** el hecho disputado sale vigente con `disputed_by`, y el de
    la disputa con `disputes`, por el CLI real tras `remember --supersedes`.
 7. **Bandeja:**
    - con entradas pendientes, `recall` informa de su número;
+   - store sin bandeja (`absent`) y bandeja insegura (`unsafe`): la consulta
+     responde;
    - `CURRENT` y el listado `(ruta, tamaño, mtime_ns, sha256)` de
      `memory/inbox/` quedan idénticos tras 10 `recall`.
 8. **Sobre:** `writer` y `enqueued_at` de un `remember`; `null` en legado y
