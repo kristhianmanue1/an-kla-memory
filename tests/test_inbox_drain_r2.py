@@ -174,12 +174,11 @@ class UnsafeInodeTests(DrainCase):
             info = path.lstat()
             self.assertTrue(stat.S_ISREG(info.st_mode) and info.st_nlink == 1, path)
         validate_no_links(self.store)  # el recorrido de `compact` no falla por rejected/
-        original = export_restore._allowed  # B4 excluye la bandeja; aquí se acepta para probar sólo el recorrido
-        with mock.patch.object(export_restore, "_allowed", lambda p: p.startswith("anchor/memory/inbox/") or original(p)):
-            rows = export_restore._files(self.store.store_root)  # sin export_unsafe_link / export_unsafe_file
-        self.assertTrue(any("/rejected/" in relative for relative, _ in rows))
-        with mock.patch.object(export_restore, "_allowed", lambda p: p.startswith("anchor/memory/inbox/") or original(p)):
-            done = export_restore.create_export(self.store, self.project.parent / (self.project.name + "-bundle"))
+        self.assertTrue(self.names(self.paths.rejected))  # rejected/ poblado: el recorrido lo atraviesa sin enlaces ni especiales
+        rows = export_restore._files(self.store.store_root)  # sin export_unsafe_link / export_unsafe_file
+        self.assertFalse([relative for relative, _ in rows if "/memory/inbox/" in relative])  # B4: la bandeja no se empaqueta
+        self.assertEqual(self.names(self.paths.pending), [])
+        done = export_restore.create_export(self.store, self.project.parent / (self.project.name + "-bundle"))
         self.assertEqual(done["schema"], "an-kla/export-result-v1")
 
 

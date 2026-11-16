@@ -74,9 +74,11 @@ class InboxLockTests(InboxCase):
         for directory in (paths.pending, paths.inflight):
             directory.mkdir(parents=True)
         (paths.pending / "algo.txt").write_bytes(b"")
-        (paths.pending / "1-2-0123456789abcdef-01234567.json").mkdir()  # el patrón es por nombre
+        (paths.pending / "1-2-0123456789abcdef-99999999.json").mkdir()  # R1-04: un directorio se ignora
+        (paths.pending / "1-2-0123456789abcdef-01234567.json").write_bytes(b"{}")
         (paths.pending / "1-2-0123456789abcdef-0123456.json").write_bytes(b"")  # un dígito corto: ignorado
         (paths.inflight / "no-es-uuid.json").write_bytes(b"")
+        (paths.inflight / "1a92bdfb-286a-44b5-8c24-8d7a1332c6b6.json").mkdir()  # tampoco un marcador-directorio
         self.assertEqual(inbox.entry_names(self.store), ["1-2-0123456789abcdef-01234567.json"])
         self.assertFalse(inbox.pending_is_empty(self.store))
         self.assertTrue(inbox.inflight_is_empty(self.store))

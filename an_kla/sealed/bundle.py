@@ -42,10 +42,10 @@ from an_kla.export_io import (
     rename_noreplace,
     safe_read,
 )
-# Política de enumeración/rutas de v1 reutilizada (fuente única; el camino
-# sellado NO redefine qué exporta el store ni modifica nada del camino v1).
-from an_kla.export_restore import _allowed, _export_anchor, _files, _read_anchor
+# Política de enumeración/rutas de v1 reutilizada (fuente única; el sellado no la redefine).
+from an_kla.export_restore import _allowed, _export_anchor, _export_target, _files, _read_anchor
 from an_kla.identity import identity_lock
+from an_kla.inbox_custody import custody_guard, require_empty
 from an_kla.sealed.cek import generate_cek
 from an_kla.sealed.kdf import BUNDLE_ID_RAW_LENGTH, derive_subkeys
 
@@ -545,133 +545,129 @@ def create_sealed_bundle(store: Any, bundle: str | Path, runner: Any) -> dict:
     """
     if not callable(getattr(runner, "wrap_cek", None)):
         raise ValueError("runner must provide wrap_cek(cek)")
-    target = Path(bundle).resolve()
-    anchor = _export_anchor(store)
-    if target.exists():
-        raise ExportIOError("export_destination_exists")
-    if target == anchor or anchor in target.parents:
-        raise ExportIOError("export_destination_inside_source")
+    target, anchor = _export_target(store, bundle)  # validaciones de sólo lectura, como v1
+    with custody_guard(store):  # bandeja exclusiva antes de la CEK, de identity_lock y de todo archivo
+        cek = generate_cek()
+        subkeys = derive_subkeys(cek)
+        with identity_lock(store):
+            require_empty(store)  # R4-01: con identidad tomada, antes de leer el store (el destino aún no existe)
+            with store.write_lock():
+                source_verify = store.verify()
+                if source_verify["identity_status"] != "complete":
+                    raise ExportIOError("export_source_identity_incomplete")
+                current = store.read_current()
+                rows = _files(anchor)
+                entries: list[dict[str, Any]] = []
+                ciphertexts: list[bytes] = []
+                for index, (relative, source) in enumerate(rows):
+                    if len(entries) >= MAX_FILES:
+                        raise ExportIOError("export_limits_exceeded")
+                    payload = _read_anchor(store, source)
+                    if len(payload) > MAX_ENTRY_BYTES:
+                        # Fail-closed ANTES de cifrar (§6): sin chunking.
+                        raise SealedEntryTooLargeError(
+                            f"sealed entry of {len(payload)} bytes exceeds "
+                            f"max_entry_bytes ({MAX_ENTRY_BYTES}); refusing to "
+                            "encrypt (sealed_entry_too_large)"
+                        )
+                    entry = {
+                        "path": relative, "size": len(payload),
+                        "content_sha256": digest_bytes(payload),
+                    }
+                    ciphertexts.append(encrypt_entry(
+                        subkeys.aead_key, entry_nonce(index), payload,
+                        entry_aad(subkeys.bundle_id_raw, entry),
+                    ))
+                    entries.append(entry)
+                if store.read_current() != current:
+                    raise ExportIOError("export_source_changed")
+                if [item[0] for item in _files(anchor)] != [item[0] for item in rows]:
+                    raise ExportIOError("export_source_changed")
+                final_verify = store.verify()
+                stable = (
+                    final_verify["revision"] == current
+                    and final_verify["identity_status"] == "complete"
+                )
+                if not stable:
+                    raise ExportIOError("export_source_changed")
 
-    cek = generate_cek()
-    subkeys = derive_subkeys(cek)
-    with identity_lock(store):
-        with store.write_lock():
-            source_verify = store.verify()
-            if source_verify["identity_status"] != "complete":
-                raise ExportIOError("export_source_identity_incomplete")
-            current = store.read_current()
-            rows = _files(anchor)
-            entries: list[dict[str, Any]] = []
-            ciphertexts: list[bytes] = []
-            for index, (relative, source) in enumerate(rows):
-                if len(entries) >= MAX_FILES:
-                    raise ExportIOError("export_limits_exceeded")
-                payload = _read_anchor(store, source)
-                if len(payload) > MAX_ENTRY_BYTES:
-                    # Fail-closed ANTES de cifrar (§6): sin chunking.
-                    raise SealedEntryTooLargeError(
-                        f"sealed entry of {len(payload)} bytes exceeds "
-                        f"max_entry_bytes ({MAX_ENTRY_BYTES}); refusing to "
-                        "encrypt (sealed_entry_too_large)"
-                    )
-                entry = {
-                    "path": relative, "size": len(payload),
-                    "content_sha256": digest_bytes(payload),
-                }
-                ciphertexts.append(encrypt_entry(
-                    subkeys.aead_key, entry_nonce(index), payload,
-                    entry_aad(subkeys.bundle_id_raw, entry),
-                ))
-                entries.append(entry)
-            if store.read_current() != current:
-                raise ExportIOError("export_source_changed")
-            if [item[0] for item in _files(anchor)] != [item[0] for item in rows]:
-                raise ExportIOError("export_source_changed")
-            final_verify = store.verify()
-            stable = (
-                final_verify["revision"] == current
-                and final_verify["identity_status"] == "complete"
-            )
-            if not stable:
-                raise ExportIOError("export_source_changed")
-
-    total = sum(item["size"] for item in entries)
-    if total > MAX_BUNDLE_BYTES:
-        raise ExportIOError("export_limits_exceeded")
-    by_path = {item["path"]: item for item in entries}
-    prefixes = ("anchor/memory/revisions/", "anchor/memory/checkpoints/")
-    for required in (
-        "anchor/project-identity.json",
-        "anchor/memory/identity.json",
-        "anchor/memory/refs/CURRENT",
-    ):
-        if required not in by_path:
+        total = sum(item["size"] for item in entries)
+        if total > MAX_BUNDLE_BYTES:
+            raise ExportIOError("export_limits_exceeded")
+        by_path = {item["path"]: item for item in entries}
+        prefixes = ("anchor/memory/revisions/", "anchor/memory/checkpoints/")
+        for required in (
+            "anchor/project-identity.json",
+            "anchor/memory/identity.json",
+            "anchor/memory/refs/CURRENT",
+        ):
+            if required not in by_path:
+                raise ExportIOError("export_required_entry_missing")
+        if not all(
+            any(item["path"].startswith(p) for item in entries) for p in prefixes
+        ):
             raise ExportIOError("export_required_entry_missing")
-    if not all(
-        any(item["path"].startswith(p) for item in entries) for p in prefixes
-    ):
-        raise ExportIOError("export_required_entry_missing")
 
-    core = {
-        "current_revision": current,
-        "project_identity_sha256": by_path["anchor/project-identity.json"][
-            "content_sha256"],
-        "store_identity_sha256": by_path["anchor/memory/identity.json"][
-            "content_sha256"],
-        "entry_count": len(entries),
-        "total_bytes": total,
-        "entries": entries,
-    }
-    manifest_sha256 = digest_json(core)
+        core = {
+            "current_revision": current,
+            "project_identity_sha256": by_path["anchor/project-identity.json"][
+                "content_sha256"],
+            "store_identity_sha256": by_path["anchor/memory/identity.json"][
+                "content_sha256"],
+            "entry_count": len(entries),
+            "total_bytes": total,
+            "entries": entries,
+        }
+        manifest_sha256 = digest_json(core)
 
-    wrapped = runner.wrap_cek(cek)
-    wrapped_cek = wrapped.wrapped_cek
-    if not isinstance(wrapped_cek, str) or len(wrapped_cek) > _WRAPPED_CEK_MAX_CHARS:
-        raise ExportIOError("sealing_adapter_error")
-    adapter_id = _validated_adapter_id(wrapped.adapter_id)
+        wrapped = runner.wrap_cek(cek)
+        wrapped_cek = wrapped.wrapped_cek
+        if not isinstance(wrapped_cek, str) or len(wrapped_cek) > _WRAPPED_CEK_MAX_CHARS:
+            raise ExportIOError("sealing_adapter_error")
+        adapter_id = _validated_adapter_id(wrapped.adapter_id)
 
-    seal_without_mac = {
-        "algorithm": "aes-256-gcm", "kdf": "hkdf-sha256",
-        "adapter_id": adapter_id, "wrapped_cek": wrapped_cek,
-        "bundle_id": subkeys.bundle_id_raw.hex(),
-    }
-    manifest_mac = compute_manifest_mac(
-        subkeys.mac_key,
-        manifest_transcript(seal_without_mac, core, manifest_sha256),
-    )
-    manifest = {
-        "schema": MANIFEST_SCHEMA, "profile": SEALED_PROFILE,
-        "seal": {**seal_without_mac, "manifest_mac": manifest_mac},
-        "core": core, "manifest_sha256": manifest_sha256,
-    }
-
-    staging = Path(tempfile.mkdtemp(
-        prefix=f".{target.name}.seal-staging-", dir=target.parent))
-    try:
-        entries_dir = staging / "entries"
-        entries_dir.mkdir(mode=0o700)
-        for entry, ciphertext in zip(entries, ciphertexts):
-            dest = entries_dir / entry["path"]
-            dest.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-            dest.write_bytes(ciphertext)
-            dest.chmod(0o600)
-        manifest_path = staging / "manifest.json"
-        manifest_path.write_bytes(canonical_json(manifest))
-        manifest_path.chmod(0o600)
-        normalize_and_sync_tree(
-            staging, [p for p in staging.rglob("*") if p.is_file()]
+        seal_without_mac = {
+            "algorithm": "aes-256-gcm", "kdf": "hkdf-sha256",
+            "adapter_id": adapter_id, "wrapped_cek": wrapped_cek,
+            "bundle_id": subkeys.bundle_id_raw.hex(),
+        }
+        manifest_mac = compute_manifest_mac(
+            subkeys.mac_key,
+            manifest_transcript(seal_without_mac, core, manifest_sha256),
         )
-        rename_noreplace(staging, target)
-    except Exception:
-        shutil.rmtree(staging, ignore_errors=True)
-        raise
-    return {
-        "schema": "an-kla/export-result-v2", "created": True,
-        "bundle": str(target.resolve()),
-        "bundle_id": seal_without_mac["bundle_id"],
-        "manifest_sha256": manifest_sha256, "current_revision": current,
-        "warnings": [SEALED_WARNING],
-    }
+        manifest = {
+            "schema": MANIFEST_SCHEMA, "profile": SEALED_PROFILE,
+            "seal": {**seal_without_mac, "manifest_mac": manifest_mac},
+            "core": core, "manifest_sha256": manifest_sha256,
+        }
+
+        staging = Path(tempfile.mkdtemp(
+            prefix=f".{target.name}.seal-staging-", dir=target.parent))
+        try:
+            entries_dir = staging / "entries"
+            entries_dir.mkdir(mode=0o700)
+            for entry, ciphertext in zip(entries, ciphertexts):
+                dest = entries_dir / entry["path"]
+                dest.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+                dest.write_bytes(ciphertext)
+                dest.chmod(0o600)
+            manifest_path = staging / "manifest.json"
+            manifest_path.write_bytes(canonical_json(manifest))
+            manifest_path.chmod(0o600)
+            normalize_and_sync_tree(
+                staging, [p for p in staging.rglob("*") if p.is_file()]
+            )
+            rename_noreplace(staging, target)
+        except Exception:
+            shutil.rmtree(staging, ignore_errors=True)
+            raise
+        return {
+            "schema": "an-kla/export-result-v2", "created": True,
+            "bundle": str(target.resolve()),
+            "bundle_id": seal_without_mac["bundle_id"],
+            "manifest_sha256": manifest_sha256, "current_revision": current,
+            "warnings": [SEALED_WARNING],
+        }
 
 
 # verify sellado (§8: con clave / sin clave)
