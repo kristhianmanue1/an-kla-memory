@@ -72,32 +72,49 @@ Hoy `state` ya es un `kind` de `remember`: va al stream `episodes` (`KIND_STREAM
 - `fact`/`decision` con `--supersedes <state>`: `remember_kind_mismatch`,
   como hoy.
 
-### 3. Idempotencia de `state` (contra la cabeza, no contra la historia)
+### 3. Idempotencia de `state` (contra el último del mismo escritor en la casilla)
 
-La clave de ADR-0063 (texto, kind, target, `session.id`) deduplica contra
-**cualquier** registro previo: con ella, S1 → S2 → S1 del mismo escritor
-respondería `already_committed` y dejaría S2 como actual. Para `state`:
+La clave de ADR-0063 (`derive_idempotency_key`: repo, agente, sesión,
+kind, texto y target) deduplica contra **cualquier** registro previo: con
+ella, S1 → S2 → S1 del mismo escritor y la misma sesión respondería
+`already_committed` y dejaría S2 como actual. Deduplicar sólo contra la
+cabeza tampoco basta: un reintento tardío de S1 tras un corte, cuando otro
+agente ya escribió X, reactivaría S1 sobre X (pisada). Para `state`:
 
-- **Regla:** al vaciar, bajo el candado, una entrada `state` es la misma
-  intención si y sólo si la **cabeza actual** de su casilla tiene el mismo
-  escritor (`repo.id` + `agent.name`), el mismo `slot` y el mismo texto.
-  Entonces responde `already_committed` con el id de la cabeza y no
-  escribe nada. Si no, se aplica.
-- **Casos:** reintento tras un corte posterior al commit → la cabeza es el
-  propio registro → `already_committed`, sin duplicado. Dos copias
-  pendientes de la misma entrada → la segunda ve la primera como cabeza →
-  `already_committed`. S1 → S2 → S1 → la cabeza es S2 → se aplica y S1 es
-  de nuevo el actual.
-- **Id del registro:** se deriva de la clave de la entrada y del id de la
-  cabeza jubilada (o `none`), resueltos bajo el candado: dos S1 en
-  momentos distintos tienen ids distintos y el mismo reintento, el mismo.
-  Por eso una entrada `state` que **queda en cola** no anuncia
-  `record_id` (lo declara `resolution: pending`); con vaciado en la misma
-  invocación, sí.
+- **Clave:** la de ADR-0063 con `slot` añadido (`derive_idempotency_key`
+  recibe `slot` para `kind: state`; el mismo texto en dos casillas son dos
+  intenciones).
+- **Regla, al vaciar y bajo el candado:** una entrada `state` es la misma
+  intención si y sólo si el **último `state` comprometido por el mismo
+  escritor** (`repo.id` + `agent.name`) **en esa casilla**, vigente o
+  jubilado, lleva la misma clave. Entonces responde `already_committed`
+  con el id de ese registro (y `retired_by` si ya no es la cabeza) y no
+  escribe nada. Si no, se aplica y jubila la cabeza.
+- **Casos:**
+  - reintento tras un corte posterior al commit → su último es el propio
+    registro → `already_committed`, aunque otro haya escrito después: no
+    pisa a nadie, y `retired_by` le dice que ya no es el actual;
+  - dos copias pendientes de la misma entrada → la segunda ve la primera →
+    `already_committed`;
+  - S1 → S2 → S1 → su último es S2 → se aplica; S1 vuelve a ser el actual;
+  - límite declarado: repetir a propósito el mismo texto en la misma
+    sesión cuando su último ya es ese texto (otro escribió en medio) es
+    indistinguible de un reintento y responde `already_committed` con
+    `retired_by`. Para reafirmarlo se usa otra `--idempotency-key`.
+- **Id del registro:** `ep-r-` + los 24 primeros hex de
+  `sha256(clave + ":" + (id de la cabeza jubilada o "none"))`, resuelto
+  bajo el candado. Dos S1 en momentos distintos tienen ids distintos; el
+  mismo reintento, el mismo. Por eso una entrada `state` que **queda en
+  cola** no anuncia `record_id` (`resolution: pending`); con vaciado en la
+  misma invocación, sí.
 - **Orden entre escritores:** gana el último **encolado** (orden de la
-  bandeja). No hay comparación de base ni rechazo por concurrencia: la
-  casilla es una pizarra y lo jubilado queda en `history` con
-  `retired_by`.
+  bandeja). No hay rechazo por concurrencia: la casilla es una pizarra y
+  lo jubilado queda en `history` con `retired_by`.
+- **Bandeja:** `inbox-entry-v1` no admite campos extra
+  (`additionalProperties: false`), así que una entrada con `slot` usa
+  `an-kla/inbox-entry-v2` (v1 más `slot` opcional). v1 se sigue
+  aceptando. Un binario anterior no lee v2: la regla de la nota de release
+  («`inbox drain` y pendientes 0 antes de bajar de versión») lo cubre.
 
 ### 4. `state show [--slot <s> | --all-slots] [--scope repo|all] [--budget <n>]` (sólo lectura)
 
@@ -117,7 +134,7 @@ respondería `already_committed` y dejaría S2 como actual. Para `state`:
   completa de una casilla no cabe, sale su **stub** `{slot, id,
   enqueued_at, truncated: true}`; si ni el stub cabe, se cuenta en
   `excluded.budget`. Por debajo de la respuesta vacía:
-  `state_budget_too_small`.
+  `state_budget_too_small` (rc 1, como los errores de `recall`).
 
 ### 5. Cuándo puede haber dos vigentes en una casilla
 
@@ -144,6 +161,7 @@ elige en silencio.
   `id`, `kind`, `stream`, `slot`, `writer`, `enqueued_at` y `status`
   (`active|superseded|refuted`). `edges` como `{from, to, type}`, ordenadas
   por `(from, to, type)`.
+- `edges` sólo contiene aristas con sus dos extremos en `nodes`.
 - Presupuesto con las reglas de §4.
 
 
@@ -157,7 +175,7 @@ elige en silencio.
 - **Superficie aditiva:**
   - `--help`, `capabilities` y `schema list`;
   - `remember-result` con los campos nuevos opcionales `retired`, `retired_by` y `conflict_remaining`; una entrada `state` en cola no anuncia `record_id` (§3);
-  - `slot` como campo de primer nivel del registro: `record-envelope-v1` sin cambio. Un lector anterior lo ignora como ignora `disputes`.
+  - `slot` como campo de primer nivel del registro: `record-envelope-v1` sin cambio; `inbox-entry-v2` nuevo para entradas con `slot` (§3). Un lector anterior lo ignora como ignora `disputes`.
 
 ## Aceptación (de `03-plan-entregas`, E1.d1)
 
@@ -189,7 +207,8 @@ elige en silencio.
 ## Test de regresión
 
 - Los puntos 1–4 y 6 de «Aceptación», con stores desechables en un temporal.
-- Idempotencia contra la cabeza: corte antes y después del commit (arnés kill -9 de D1), dos copias pendientes, S1 → S2 → S1.
+- Idempotencia contra el último del mismo escritor: corte antes y después del commit (arnés kill -9 de D1), dos copias pendientes, S1 → S2 → S1, y reintento tardío de S1 tras un X de otro agente (X sigue vigente).
+- Mismo texto en dos casillas: dos registros.
 - Vaciado con tres `state` de la misma casilla y uno de otra: tres transacciones, último encolado vigente, `retired_by` en los dos primeros.
 - `history` con un ciclo creado por `plan-write`: termina y lo recorre una vez; mismo resultado en dos invocaciones.
 - `state show` sobre una casilla con dos vigentes creados por `plan-write`: `conflict` con los dos ids.
