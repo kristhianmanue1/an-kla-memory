@@ -62,6 +62,7 @@ from .inbox_close import (
 )
 from .inbox_entries import Entry, Reject, age_key, kind_of_path, load_entry, reject_entry, safe_codes
 from .reader_gate import ReaderGateError
+from .state_slot import StateAlready, resolve_state
 from .store import STREAMS
 from .store_errors import LockBusyError, StoreError
 from .transaction_attempts import TransactionError
@@ -245,6 +246,8 @@ class Scanner:
         self.prefiltered: list[Entry] = []
         self.accepted: list[Entry] = []
         self.to_delete: list[str] = []
+        self.touched_slots: set[str] = set()  # ADR-0065 §1: un `state` por casilla y transacción
+        self.stop = False
 
     def reject(self, name: str, code: str, reason_codes: list[str] | None = None) -> None:
         final = reject_entry(self.store, name, code, reason_codes)
@@ -266,6 +269,34 @@ class Scanner:
     def _target_exists(self, target_id: str) -> bool:
         return any(str(row.get("id", "")) == target_id for stream in STREAMS for row in self.snapshot.raw_records[stream])
 
+    def _prepare_state(self, entry: Entry) -> Entry | None:
+        """Un ``state`` (ADR-0065): su casilla decide qué jubila y si es un reintento; no pasa por D3."""
+
+        if entry.slot in self.touched_slots:
+            # Segundo `state` de una casilla ya tocada en este lote: el vaciado parte aquí. Lo acumulado se
+            # compromete y este (y lo que le sigue) se resuelve en el intento siguiente, contra la cabeza nueva.
+            self.stop = True
+            return None
+        try:
+            outcome = resolve_state(
+                self.snapshot, envelope=entry.envelope, text=entry.text, key=entry.key, slot=entry.slot,
+                target_id=entry.target_id,
+            )
+        except WritePolicyError as exc:
+            self.reject(entry.name, exc.code, [exc.detail] if exc.detail else [])
+            return None
+        if isinstance(outcome, StateAlready):
+            self.to_delete.append(entry.name)
+            item = {"entry": entry.name, "record_id": outcome.record_id}
+            if outcome.retired_by is not None:
+                item["retired_by"] = outcome.retired_by
+            self.run.already_committed.append(item)
+            return None
+        entry.op = outcome
+        self.touched_slots.add(entry.slot)
+        self.by_name[entry.name] = entry
+        return entry
+
     def _prepare(self, name: str) -> Entry | None:
         try:
             entry = load_entry(self.store, name)
@@ -274,6 +305,8 @@ class Scanner:
             return None
         if entry is None:  # directorio: se ignora sin tocarlo
             return None
+        if entry.data["kind"] == "state":
+            return self._prepare_state(entry)
         # R1-01 de B5: un record con la misma clave y el mismo texto ya está en el snapshot: es un reintento
         # ya comprometido. Va ANTES de resolver `--supersedes` (el target propio ya está `sustituida` y la
         # resolución lo rechazaría con `invalid_supersede_target`): se borra sin evidencia en `rejected/`.
@@ -346,7 +379,13 @@ class Scanner:
 
     def scan(self, names: list[str]) -> list[Entry]:
         for start in range(0, len(names), SCAN_CHUNK):
-            candidates = [entry for entry in (self._prepare(n) for n in names[start:start + SCAN_CHUNK]) if entry]
+            candidates = []
+            for candidate_name in names[start:start + SCAN_CHUNK]:
+                prepared = self._prepare(candidate_name)
+                if prepared:
+                    candidates.append(prepared)
+                if self.stop:
+                    break
             if self.to_delete:
                 delete_entries(self.store, self.to_delete)
                 self.to_delete = []
@@ -363,7 +402,7 @@ class Scanner:
                     kept.append(entry)
             self.prefiltered = [e for p, e in enumerate(combined) if p not in repeated]
             self.accepted += kept
-            if self.accepted and self._first_group_full():
+            if self.stop or (self.accepted and self._first_group_full()):
                 break
         return self.accepted
 
@@ -534,9 +573,21 @@ def _has_work(store: Any) -> bool:
     return bool(marker_names(store)) or bool(processable_names(store))
 
 
+def _include_is_state(store: Any, include: str | None) -> bool:
+    """Un ``state`` no se adelanta en la cola: gana el último encolado, en orden de la bandeja (ADR-0065 §3)."""
+
+    if include is None:
+        return False
+    try:
+        entry = load_entry(store, include)
+    except Reject:
+        return False
+    return entry is not None and entry.data["kind"] == "state"
+
+
 def _pending_names(store: Any, include: str | None) -> list[str]:
     names = sorted(processable_names(store), key=age_key)
-    if include in names:
+    if include in names and not _include_is_state(store, include):
         names.remove(include)
         names.insert(0, include)
     return names
@@ -673,6 +724,13 @@ def drain(
     return _result(run, state, "present")
 
 
+def _with_retired_by(committed: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """``retired_by``: el ``state`` de este mismo vaciado que jubiló a cada uno de los comprometidos (ADR-0065 §1)."""
+
+    retirers = {c["retired"]["id"]: c["record_id"] for c in committed if "retired" in c}
+    return [{**c, "retired_by": retirers[c["record_id"]]} if c["record_id"] in retirers else c for c in committed]
+
+
 def _capped(items: list[dict[str, Any]]) -> dict[str, Any]:
     return {"count": len(items), "entries": items[:MAX_LISTED], "truncated": len(items) > MAX_LISTED}
 
@@ -685,7 +743,7 @@ def _result(run: Run, state: str, inbox: str) -> dict[str, Any]:
         "inbox": inbox,
         "outcome": "unknown" if run.unknown else "known",
         "queued": state == "queued" or run.queued_attempts > 0,
-        "committed": _capped(run.committed),
+        "committed": _capped(_with_retired_by(run.committed)),
         "rejected": _capped(run.rejected),
         "already_committed": _capped(run.already_committed),
         "duplicates_removed": {
