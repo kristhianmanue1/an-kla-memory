@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:history-result:v1",
+  "title": "AN-KLA History Result v1",
+  "description": "Resultado de `history <id>` (ADR-0065 §6), sólo lectura y datos no confiables. Grafo de la revisión vigente: nodos = registros, aristas dirigidas `supersedes` (nuevo → antiguo, incluida la jubilación por casilla) y `disputes` (disputa → target). Se recorre en anchura desde `root` por las aristas en los dos sentidos, con visitados (un ciclo se recorre una vez), hasta `--limit` nodos. `nodes` va ordenado por `enqueued_at` ascendente, los legados (sin sobre válido: `enqueued_at`, `writer` y `slot` nulos) después, y por `id`; `edges` por `(from, to, type)`, y sólo con los dos extremos en `nodes`. `truncated` es true si el límite o `--budget` podaron nodos (del final del orden, con sus aristas). `used_bytes` es la longitud exacta de la salida, con su salto de línea final.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "untrusted_memory_data",
+    "revision",
+    "root",
+    "nodes",
+    "edges",
+    "truncated",
+    "used_bytes"
+  ],
+  "properties": {
+    "schema": {
+      "const": "an-kla/history-result-v1"
+    },
+    "untrusted_memory_data": {
+      "const": true
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "kind",
+          "stream",
+          "slot",
+          "writer",
+          "enqueued_at",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string"
+          },
+          "stream": {
+            "enum": [
+              "facts",
+              "events",
+              "episodes"
+            ]
+          },
+          "slot": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "writer": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "urn:an-kla:schema:record-envelope:v1#/$defs/identity"
+              }
+            ]
+          },
+          "enqueued_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "enum": [
+              "active",
+              "superseded",
+              "refuted"
+            ]
+          }
+        }
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to",
+          "type"
+        ],
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "to": {
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "supersedes",
+              "disputes"
+            ]
+          }
+        }
+      }
+    },
+    "truncated": {
+      "type": "boolean"
+    },
+    "used_bytes": {
+      "type": "integer",
+      "minimum": 1
+    }
+  }
+}

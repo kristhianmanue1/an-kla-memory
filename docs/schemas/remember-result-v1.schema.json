@@ -2,59 +2,226 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:an-kla:schema:remember-result:v1",
   "title": "AN-KLA Remember Result v1",
-  "description": "Resultado de `remember` (ADR-0063 D1). `state`: `committed` (con `revision`, salvo `already_committed: true` de un reintento sin lote propio), `rejected` (con `code` y `reason_codes`) o `queued` (la entrada está en la bandeja; con `drain_error` si el vaciado abortó con resultado conocido, con `outcome: unknown` si el commit quedó sin resultado firme —lo resuelve el paso 0 del vaciado siguiente—, y con `resolution: pending` cuando se pidió `--supersedes`: la resolución propia/ajena ocurre al vaciar). `record_id` sólo con `committed` y `queued` (un rechazado no crea record). `disputed` o `superseded` sólo con `committed` (D3). `rejected` lista todos los rechazos que produjo el vaciado de esta invocación, también los de otras entradas. Reintentar con el mismo texto, `kind` y target es idempotente. `--idempotency-key` acepta texto libre de 1 a 256 caracteres: `sha256:<64 hex>` se usa tal cual y cualquier otro valor se convierte en `sha256:` + sha256 de su UTF-8; `idempotency_key` es siempre la forma final. Sólo nombres y códigos: nunca el texto del recuerdo ni rutas.",
+  "description": "Resultado de `remember` (ADR-0063 D1). `state`: `committed` (con `revision`, salvo `already_committed: true` de un reintento sin lote propio), `rejected` (con `code` y `reason_codes`) o `queued` (la entrada está en la bandeja; con `drain_error` si el vaciado abortó con resultado conocido, con `outcome: unknown` si el commit quedó sin resultado firme —lo resuelve el paso 0 del vaciado siguiente—, y con `resolution: pending` cuando se pidió `--supersedes`: la resolución propia/ajena ocurre al vaciar). `record_id` sólo con `committed` y `queued` (un rechazado no crea record). `disputed` o `superseded` sólo con `committed` (D3). `rejected` lista todos los rechazos que produjo el vaciado de esta invocación, también los de otras entradas. Reintentar con el mismo texto, `kind` y target es idempotente. `--idempotency-key` acepta texto libre de 1 a 256 caracteres: `sha256:<64 hex>` se usa tal cual y cualquier otro valor se convierte en `sha256:` + sha256 de su UTF-8; `idempotency_key` es siempre la forma final. Sólo nombres y códigos: nunca el texto del recuerdo ni rutas. ADR-0065: un `state` lleva `slot` y jubila sólo la cabeza de su casilla: `retired` ({id, writer, enqueued_at}) dice a quién, `retired_by` (también con `already_committed`) qué `state` posterior lo jubiló a él y `conflict_remaining` los demás vigentes de la casilla (sólo por `plan-write`, restauración o `relocate`). Un `state` en cola no anuncia `record_id` (su id depende de la cabeza que jubila) y queda con `resolution: pending`. Rechazos propios: `remember_state_over_fact` y `remember_state_slot_mismatch`.",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schema", "untrusted_memory_data", "state", "entry", "kind", "idempotency_key", "enqueued_at", "outcome",
-    "warnings", "rejected"
+    "schema",
+    "untrusted_memory_data",
+    "state",
+    "entry",
+    "kind",
+    "idempotency_key",
+    "enqueued_at",
+    "outcome",
+    "warnings",
+    "rejected"
   ],
   "properties": {
-    "schema": {"const": "an-kla/remember-result-v1"},
-    "untrusted_memory_data": {"const": true},
-    "state": {"enum": ["committed", "rejected", "queued"]},
-    "entry": {"type": "string"},
-    "kind": {"enum": ["fact", "decision", "state"]},
-    "idempotency_key": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"},
-    "enqueued_at": {"type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z(?![\\s\\S])"},
-    "outcome": {"enum": ["known", "unknown"]},
-    "record_id": {"type": "string"},
-    "revision": {"type": "string", "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"},
-    "stream": {"enum": ["facts", "events", "episodes"]},
-    "operation": {"enum": ["add", "supersede"]},
-    "already_committed": {"const": true},
-    "disputed": {"type": "object"},
-    "superseded": {"type": "string"},
-    "code": {"type": "string", "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"},
-    "reason_codes": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"}},
-    "drain_error": {"type": "string", "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"},
-    "resolution": {"const": "pending"},
-    "warnings": {"type": "array", "items": {"type": "string"}},
+    "schema": {
+      "const": "an-kla/remember-result-v1"
+    },
+    "untrusted_memory_data": {
+      "const": true
+    },
+    "state": {
+      "enum": [
+        "committed",
+        "rejected",
+        "queued"
+      ]
+    },
+    "entry": {
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "fact",
+        "decision",
+        "state"
+      ]
+    },
+    "idempotency_key": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "enqueued_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z(?![\\s\\S])"
+    },
+    "outcome": {
+      "enum": [
+        "known",
+        "unknown"
+      ]
+    },
+    "record_id": {
+      "type": "string"
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "stream": {
+      "enum": [
+        "facts",
+        "events",
+        "episodes"
+      ]
+    },
+    "operation": {
+      "enum": [
+        "add",
+        "supersede"
+      ]
+    },
+    "already_committed": {
+      "const": true
+    },
+    "disputed": {
+      "type": "object"
+    },
+    "superseded": {
+      "type": "string"
+    },
+    "code": {
+      "type": "string",
+      "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"
+    },
+    "reason_codes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"
+      }
+    },
+    "drain_error": {
+      "type": "string",
+      "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"
+    },
+    "resolution": {
+      "const": "pending"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "rejected": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["count", "entries"],
+      "required": [
+        "count",
+        "entries"
+      ],
       "properties": {
-        "count": {"type": "integer", "minimum": 0},
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        },
         "entries": {
           "type": "array",
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["entry", "rejected_as", "code", "reason_codes"],
+            "required": [
+              "entry",
+              "rejected_as",
+              "code",
+              "reason_codes"
+            ],
             "properties": {
-              "entry": {"type": "string"},
-              "rejected_as": {"type": "string"},
-              "code": {"type": "string", "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"},
-              "reason_codes": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"}}
+              "entry": {
+                "type": "string"
+              },
+              "rejected_as": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"
+              },
+              "reason_codes": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"
+                }
+              }
             }
           }
         }
       }
+    },
+    "slot": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,31}(?![\\s\\S])"
+    },
+    "retired": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "writer",
+        "enqueued_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "writer": {
+          "type": "object"
+        },
+        "enqueued_at": {
+          "type": "string"
+        }
+      }
+    },
+    "retired_by": {
+      "type": "string"
+    },
+    "conflict_remaining": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "allOf": [
-    {"if": {"properties": {"state": {"const": "committed"}}}, "then": {"required": ["record_id"]}},
-    {"if": {"properties": {"state": {"const": "rejected"}}}, "then": {"required": ["code", "reason_codes"], "not": {"required": ["record_id"]}}}
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "committed"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "record_id"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "rejected"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "code",
+          "reason_codes"
+        ],
+        "not": {
+          "required": [
+            "record_id"
+          ]
+        }
+      }
+    }
   ]
 }

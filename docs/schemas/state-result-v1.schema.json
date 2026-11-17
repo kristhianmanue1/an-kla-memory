@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:state-result:v1",
+  "title": "AN-KLA State Result v1",
+  "description": "Resultado de `state show` (ADR-0065 §4-5), sólo lectura y datos no confiables. Un registro por casilla: la cabeza (el `state` vigente con sobre válido de mayor `enqueued_at` y después mayor `id`) del repo actual, o de todos con `--scope all` (entonces cada entrada lleva `repo_id`). `retired_count` son los estados que la casilla ha jubilado; `pending_states`, los de la bandeja sin vaciar. Con más de un vigente en la casilla, `conflict` lista todos sus ids: nunca se elige en silencio. `truncated: true` marca el stub (sólo `slot`, `id`, `enqueued_at`) de una casilla cuya entrada completa no cabe en `--budget`; `excluded.budget` cuenta las casillas que ni el stub cabe. `used_bytes` es la longitud exacta de la salida, con su salto de línea final, y nunca supera `--budget`. `empty` es true si no hay ninguna casilla vigente que mostrar.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "untrusted_memory_data",
+    "revision",
+    "scope",
+    "inbox",
+    "slots",
+    "excluded",
+    "used_bytes",
+    "empty"
+  ],
+  "properties": {
+    "schema": {
+      "const": "an-kla/state-result-v1"
+    },
+    "untrusted_memory_data": {
+      "const": true
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "scope": {
+      "enum": [
+        "repo",
+        "all"
+      ]
+    },
+    "inbox": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "pending"
+      ],
+      "properties": {
+        "pending": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "slots": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "slot",
+              "id",
+              "text",
+              "writer",
+              "enqueued_at",
+              "retired_count",
+              "pending_states"
+            ],
+            "properties": {
+              "slot": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{0,31}$"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "text": {
+                "type": "string"
+              },
+              "writer": {
+                "$ref": "urn:an-kla:schema:record-envelope:v1#/$defs/identity"
+              },
+              "enqueued_at": {
+                "type": "string"
+              },
+              "retired_count": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pending_states": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "repo_id": {
+                "type": "string"
+              },
+              "conflict": {
+                "type": "array",
+                "minItems": 2,
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "slot",
+              "id",
+              "enqueued_at",
+              "truncated"
+            ],
+            "properties": {
+              "slot": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]{0,31}$"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "enqueued_at": {
+                "type": "string"
+              },
+              "repo_id": {
+                "type": "string"
+              },
+              "truncated": {
+                "const": true
+              }
+            }
+          }
+        ]
+      }
+    },
+    "excluded": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "budget"
+      ],
+      "properties": {
+        "budget": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "used_bytes": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "empty": {
+      "type": "boolean"
+    }
+  }
+}
