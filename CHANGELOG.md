@@ -10,6 +10,10 @@ El formato de cada entrada sigue [Keep a Changelog](https://keepachangelog.com/e
 por intención, y el proyecto usa [versionado semántico](https://semver.org/lang/es/)
 en fase de pre-release `0.1.0`.
 
+## Sin publicar
+
+- `remember` ya no falla con `identity_lock_busy` entre encoladores concurrentes: el encolado toma `identity_lock` en compartido y, ante un cambio de custodia o de identidad en curso, responde `identity_lock_busy` reintentable (`remember-error-v1`, `retryable: true`, rc 3, sin entrada) (#226).
+
 ## [v0.1.0-beta.35]
 
 **Idempotencia de hook-runs, vigencia coherente y runner de CI optativo**: el

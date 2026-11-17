@@ -205,11 +205,9 @@ lento, igual de correcto); hay prueba por plataforma.
 1. Ejecuta el preflight de la escritura gobernada
    (`_mutation_preflight_with_context`, que incluye `_custody_guard`,
    `identity.py:60, 670`) **antes de crear nada** en `memory/inbox/`.
-2. Toma el candado de bandeja en compartido con plazo corto; si está
-   ocupado (un `export` o `relocate commit` en curso), falla con
-   `inbox_busy` y pista de reintento, sin escribir.
-3. Con él, repite el preflight; si la custodia cambió, falla con su código
-   (`store_root_divergence` o `store_identity_changed`) y no deja entrada.
+2. Toma el candado de bandeja en compartido con plazo corto; si está ocupado (un `export` o
+   `relocate commit` en curso), falla con `inbox_busy` y pista de reintento, sin escribir.
+3. Con él, toma `identity_lock` en compartido (POSIX; exclusivo en Windows) con plazo propio y repite el preflight; si la custodia cambió, falla con su código (`store_root_divergence` o `store_identity_changed`) y no deja entrada. Con un cambio de custodia o de identidad en curso (#226) falla con `identity_lock_busy`, reintentable (`remember-error-v1`, `retryable: true`, rc 3), sin entrada: `remember` siempre encola, salvo entonces.
 4. Escribe la entrada `an-kla/inbox-entry-v1` en `memory/inbox/tmp/`
    (`O_EXCL`, fsync del archivo). Antes de publicar hace `lstat` del
    destino en `pending/`: si el nombre existe, regenera `<aleatorio8>` y
