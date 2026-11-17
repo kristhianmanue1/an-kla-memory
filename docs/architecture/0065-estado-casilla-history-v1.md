@@ -1,6 +1,10 @@
 # ADR-0065: Estado de una casilla, `history` y lectura del estado (E1.d1)
 
-- **Estado:** Propuesta
+- **Estado:** Aceptada por delegación del orquestador (mandato 10: fusión del
+  ADR con su `proceed`), 2026-11-16, tras tres rondas adversariales de otra
+  familia (Gemini): r1 `fix-and-retry` (2 BLOCKER, 4 HIGH, 2 MEDIUM, 1 LOW),
+  r2 `fix-and-retry` (3 HIGH, 1 MEDIUM, 2 LOW), r3 `proceed` (2 LOW,
+  incorporados); todos corregidos.
 - **Implementación:** No iniciada
 - **Fecha:** 2026-11-16
 - **Decide sobre:**
@@ -118,7 +122,8 @@ agente ya escribió X, reactivaría S1 sobre X (pisada). Para `state`:
 
 ### 4. `state show [--slot <s> | --all-slots] [--scope repo|all] [--budget <n>]` (sólo lectura)
 
-- Un registro por casilla: la cabeza (§1) del repo actual; con
+- Un registro por casilla: la cabeza (§1) del repo actual. Sin `--slot` ni
+  `--all-slots`, la casilla es `main`; con
   `--all-slots`, todas las casillas del repo, en orden de `slot`.
 - Cada uno lleva `id`, `slot`, `text`, `writer`, `enqueued_at`,
   `retired_count` (estados que esa casilla ha jubilado) y, si la casilla
@@ -146,7 +151,7 @@ se repara solo:** `supersede` tiene un único destino por registro y un
 (`conflict_remaining`), y se retiran por el camino antiguo. Nunca se
 elige en silencio.
 
-### 6. `history <id> [--limit <n>]` (sólo lectura)
+### 6. `history <id> [--limit <n>] [--budget <n>]` (sólo lectura)
 
 - **Grafo:** nodos = registros; aristas dirigidas `supersedes` (de
   `supersedes_map`, nuevo → antiguo, incluida la jubilación por casilla) y
@@ -162,7 +167,7 @@ elige en silencio.
   (`active|superseded|refuted`). `edges` como `{from, to, type}`, ordenadas
   por `(from, to, type)`.
 - `edges` sólo contiene aristas con sus dos extremos en `nodes`.
-- Presupuesto con las reglas de §4.
+- Presupuesto con las reglas de §4: si la salida no cabe, se podan nodos del final del orden (y sus aristas) con `truncated: true`; por debajo de la respuesta vacía, `history_budget_too_small` (rc 1).
 
 
 ## Compatibilidad
