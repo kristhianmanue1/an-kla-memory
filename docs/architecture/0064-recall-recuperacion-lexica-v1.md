@@ -4,9 +4,11 @@
   el ADR se fusiona con su `proceed`), 2026-11-16, tras dos rondas
   adversariales de otra familia (Gemini): r1 `fix-and-retry` (4 HIGH,
   2 MEDIUM, 1 LOW, corregidos) y r2 `proceed`.
-- **Implementación:** No iniciada
+- **Implementación:** en la rama de E1.b, sin fusionar (espera la medición
+  de las reservadas sobre el candidato de la enmienda 2).
 - **Enmienda 1:** 2026-11-16, recencia, stub y explicación (ver «Enmienda 1»);
   ronda 3 de otra familia (Gemini) `proceed` con 3 LOW, incorporados.
+- **Enmienda 2:** 2026-11-16, la cobertura ordena primero (ver «Enmienda 2»).
 - **Fecha:** 2026-11-16
 - **Decide sobre:** la orden aditiva de CLI `recall`, que recupera hechos
   por relevancia léxica ponderada (BM25 sobre texto plegado y reducido a su
@@ -286,6 +288,81 @@ se carga sin sobre y con presupuesto holgado.
 Los filtros cambian el conjunto candidato y, por tanto, el IDF, así que se
 diseñan junto con la casilla de estado.
 
+### Enmienda 2 (2026-11-16): la cobertura ordena primero
+
+**Por qué.** Sobre las consultas reservadas, el candidato de la enmienda 1
+acertó 2 de 5 frente a 3 de 5 de `retrieve`: 0 ganadas y 1 perdida (medida
+del orquestador, sin identificar la consulta). Para encontrar la clase sin
+ver las reservadas se escribió un **tercer banco** con un modelo de otra
+familia que sólo veía el corpus: 30 consultas variadas (`directa`,
+`parafrasis`, `corta`, `contexto`) y 30 difíciles (sólo `parafrasis` y
+`contexto`), validadas con `puntuar.py --validar`.
+
+- En el banco difícil, el orden de la enmienda 1 reproduce el patrón: 25 de
+  30 frente a 18 de `retrieve`, con 8 ganadas y **1 perdida**.
+- **La clase de la perdida:** la consulta es una frase larga de contexto.
+  El hecho correcto sólo comparte con ella palabras frecuentes y un nombre
+  de herramienta.
+  - `retrieve` lo ponía cuarto por **cobertura**, es decir, por el número
+    de términos distintos de la consulta presentes. Empataba con otros seis
+    y ganaba el desempate por `id`.
+  - BM25 suma el peso de rareza de cada término y deja delante a hechos que
+    cubren menos términos de la consulta pero comparten uno más raro.
+- **Lo que no es la causa** (medido, no argumentado):
+  - la raíz que funde palabras distintas: hay fusiones falsas en 25
+    consultas, como `como`/`comando` o `plan`/`plano`, y deshacerlas no
+    mejora ninguna;
+  - el corte de interrogativos: no quita un término discriminante que cruce
+    el top-5 en ninguna de las 51 consultas que los tienen;
+  - el tamaño del corpus: con 45, 60 y 440 hechos las perdidas no cambian.
+
+**Decisión.** El orden total de `recall` pasa a ser:
+
+1. **cobertura** descendente: el número de términos distintos de la
+   consulta presentes en el registro, tras el análisis (es
+   `len(matched_terms)`, el campo de la enmienda 1);
+2. puntuación BM25 exacta descendente;
+3. `enqueued_at` descendente (enmienda 1);
+4. `id` ascendente.
+
+- La puntuación BM25 no cambia, ni el analizador ni el esquema; `score` y
+  `rank` siguen como estaban.
+- Es el principio de `retrieve` (un hecho que cubre más de lo pedido va
+  antes) sobre el texto analizado. BM25 decide dentro de cada nivel de
+  cobertura, que es donde `retrieve` decidía por `id`.
+- Es el orden por niveles de coordinación de la literatura clásica de
+  recuperación, no una regla escrita a partir de las consultas.
+- **Descartado, con dato:**
+  - cobertura sólo sobre términos de peso RSJ positivo (`df < N/2`): vuelve
+    a perder la misma consulta;
+  - fusión por rango recíproco con `retrieve`;
+  - intercalado;
+  - «guarda», que obliga a que los cinco primeros de `retrieve` estén entre
+    los 10 primeros de `recall`.
+
+  Todas pierden alguna o ganan menos.
+
+**«Nunca peor que `retrieve`» en el top-5 no se puede garantizar con
+ganancias.** Un orden que asegure que todo acierto de `retrieve` entre sus
+cinco primeros sigue entre los cinco primeros tiene que conservar esos
+cinco, porque no sabe cuál es el acierto. Entonces sus cinco primeros son
+los de `retrieve` y no gana nada. Lo que sí se exige es la propiedad
+**medida**: 0 perdidas frente a `retrieve` en desarrollo y en el tercer
+banco, con 40, 45, 60 y 440 hechos. Se mide fuera del repo (punto 11 del
+test de regresión).
+
+**Medición** (orden de la enmienda 2 frente a `retrieve`, mismo corpus):
+
+| Banco | `retrieve` top-5 | Enmienda 1 top-5 / perdidas | **Enmienda 2 top-5 / 1.º / perdidas** |
+|---|---|---|---|
+| Desarrollo (15) | 12 | 15 / 0 | **15 / 7 / 0** |
+| Tercer banco, variado (30) | 28 | 30 / 0 | **30 / 27 / 0** |
+| Tercer banco, difícil (30) | 18 | 25 / 1 | **23 / 12 / 0** |
+
+El coste es de 2 ganadas y algún primer puesto en el banco difícil. La
+ablación por piezas con este orden muestra que la raíz, los interrogativos
+y la rareza son necesarios: quitar cualquiera produce perdidas.
+
 ### Índice
 
 No hay índice persistente en esta entrega. Cada consulta recorre el
@@ -451,6 +528,17 @@ Pruebas nuevas en `tests/test_recall*.py`:
     - `--min-terms 2` sobre un corpus en que todo casa con un solo término da
       `results: []` y `no_strong_match: true`;
     - `--min-terms 1` da los mismos bytes que sin la opción.
+11. **Enmienda 2:**
+    - un registro con más términos distintos de la consulta va antes que
+      otro con mayor BM25 y menos términos, en un vector propio;
+    - a igual cobertura, decide BM25;
+    - un vector propio con el patrón de la clase (consulta larga de
+      contexto; el hecho correcto cubre más términos frecuentes y otro
+      comparte un término raro): queda por delante el de más cobertura.
+
+    La propiedad sobre el corpus dorado y el tercer banco se mide fuera del
+    repo: contienen rutas locales y datos de otros proyectos, y el repo es
+    público.
 
 ## Referencias
 
