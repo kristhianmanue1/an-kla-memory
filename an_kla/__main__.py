@@ -381,7 +381,11 @@ def _run() -> None:
     elif args.command == "disputes":
         if args.target == "":
             raise CliUsageError("invalid_disputes_target")
-        result = list_disputes(store.snapshot(), target=args.target)
+        try:
+            snapshot = store.snapshot()
+        except OSError:  # #218: nunca el mensaje crudo del SO (lleva la ruta); código estable, rc 1
+            raise StoreError("storage_io_failed") from None
+        result = list_disputes(snapshot, target=args.target)
     elif args.command == "export":
         # Dispatcher dual ADR-0042 §2/§3/§8 (T5): sin --seal el camino es
         # EXACTAMENTE export/v1 (delega en create_export/verify_export/
