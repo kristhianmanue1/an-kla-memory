@@ -263,6 +263,9 @@ class Scanner:
             )
         entry.op = build_remember_op(entry.envelope, entry.text, entry.data["kind"], target)
 
+    def _target_exists(self, target_id: str) -> bool:
+        return any(str(row.get("id", "")) == target_id for stream in STREAMS for row in self.snapshot.raw_records[stream])
+
     def _prepare(self, name: str) -> Entry | None:
         try:
             entry = load_entry(self.store, name)
@@ -281,7 +284,16 @@ class Scanner:
         done = self.by_stream[stream].get(record_id_of(stream, entry.key))
         if done is not None:
             envelope = done.get("an_kla_envelope")
-            if isinstance(envelope, dict) and envelope.get("idempotency_key") == entry.key and done.get("text") == entry.text:
+            same_key = isinstance(envelope, dict) and envelope.get("idempotency_key") == entry.key and done.get("text") == entry.text
+            if same_key and envelope.get("kind") != entry.data["kind"]:
+                # #218 R3-01: `fact` y `decision` comparten stream y, con la misma clave, el mismo id; el `kind`
+                # es parte de la intención y reutilizar la clave con otro es un rechazo, no un reintento.
+                self.reject(name, "remember_id_collision", ["idempotency_key_other_kind"])
+            elif same_key and entry.target_id is not None and not self._target_exists(entry.target_id):
+                # #218 R3-03: el target es parte de la intención; uno inexistente responde lo que respondería
+                # sin el registro previo.
+                self.reject(name, "invalid_supersede_target", ["target_missing"])
+            elif same_key:
                 self.to_delete.append(name)
                 self.run.already_committed.append({"entry": name, "record_id": str(done.get("id", ""))})
             else:
@@ -508,6 +520,16 @@ def count_ignored(store: Any) -> int:
     return total
 
 
+def _safe_ignored(store: Any, run: Run) -> int:
+    """``count_ignored`` fuera de los manejadores de error (#218 R3-04): su fallo es `drain_error`, no una línea."""
+
+    try:
+        return count_ignored(store)
+    except _SETUP_ERRORS as exc:
+        run.drain_error = run.drain_error or error_code(exc)
+        return 0
+
+
 def _has_work(store: Any) -> bool:
     return bool(marker_names(store)) or bool(processable_names(store))
 
@@ -568,6 +590,11 @@ def attempt(store: Any, run: Run, include: str | None, lock_wait: float) -> str:
             raise
         run.queued_attempts += 1
         return "queued"
+    except _SETUP_ERRORS as exc:  # #218 R3-02: el candado no se pudo abrir (o soltar): `drain_error`, sin ruta
+        if acquired:
+            raise
+        run.drain_error = error_code(exc)
+        return "aborted"
     finally:
         _finish_commits(store, run)
     return "progress" if progress else "idle"
@@ -619,7 +646,7 @@ def drain(
         run.tmp = collect_tmp(store)
     except _SETUP_ERRORS as exc:  # R3-06 de B2: el vaciado informa `drain_error`, no una traza
         run.drain_error = error_code(exc)
-        run.ignored = count_ignored(store)
+        run.ignored = _safe_ignored(store, run)
         return _result(run, "aborted", "present")
     deadline = clock() + budget_seconds
     state = "drained"
@@ -640,7 +667,9 @@ def drain(
                 run.drain_error = error_code(exc)
                 state = "aborted"
             break
-    run.ignored = count_ignored(store)
+    run.ignored = _safe_ignored(store, run)
+    if run.drain_error is not None:
+        state = "aborted"
     return _result(run, state, "present")
 
 
