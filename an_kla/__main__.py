@@ -55,7 +55,7 @@ from .disputes import list_disputes
 from .inbox import read_status as inbox_status
 from .inbox_drain import DEFAULT_BUDGET_SECONDS as INBOX_DRAIN_BUDGET_SECONDS
 from .inbox_drain import drain as inbox_drain
-from .remember import read_text_file, remember
+from .remember import RememberError, error_result, read_text_file, remember
 from .lock_order import LockOrderError
 from .inventory import DEFAULT_LIMIT as INVENTORY_DEFAULT_LIMIT
 from .inventory import MAX_LIMIT as INVENTORY_MAX_LIMIT
@@ -471,10 +471,16 @@ def _run() -> None:
             raise CliUsageError("inbox_command_unknown")
     elif args.command == "remember":
         text = args.text if args.text_file is None else read_text_file(args.text_file)
-        result = remember(
-            store, text, kind=args.kind, supersedes=args.supersedes,
-            idempotency_key=args.idempotency_key,
-        )
+        try:
+            result = remember(
+                store, text, kind=args.kind, supersedes=args.supersedes,
+                idempotency_key=args.idempotency_key,
+            )
+        except RememberError as exc:
+            if not exc.retryable:
+                raise
+            sys.stdout.buffer.write(canonical_json(error_result(exc)))  # #226: sin entrada, reintentable, rc=3
+            raise SystemExit(3)
     elif args.command == "subject":
         result = resolve_namespace(store)
     elif args.command == "view":

@@ -43,6 +43,8 @@ _IDENTITY_HINTS = {
     "identity_env_invalid": "un valor de AN_KLA_AGENT_* o de la rama viola C0; nunca se corrige ni se sustituye",
     "identity_repo_unavailable": "remember exige un repo Git en --project-root; sin Git usa la receta plan-write",
 }
+_IDENTITY_LOCK_HINT = "cambio de custodia o de identidad en curso; no quedó entrada, reintenta en unos segundos"
+ERROR_SCHEMA = "an-kla/remember-error-v1"
 # Fallos de la fase de vaciado de `remember` que no deshacen el encolado: `queued` + `drain_error`.
 _DRAIN_ERRORS = (StoreError, IdentityError, TransactionError, ReaderGateError, InboxError, OSError)
 
@@ -50,10 +52,11 @@ _DRAIN_ERRORS = (StoreError, IdentityError, TransactionError, ReaderGateError, I
 class RememberError(ValueError):
     """Error estable de ``remember``; ``str(error)`` es el código y ``detail`` la pista (el CLI la imprime)."""
 
-    def __init__(self, code: str, detail: str | None = None) -> None:
+    def __init__(self, code: str, detail: str | None = None, *, retryable: bool = False) -> None:
         super().__init__(code)
         self.code = code
         self.detail = detail
+        self.retryable = retryable  # #226: sin entrada y reintentar es seguro (idempotente)
 
 
 def normalize_idempotency_key(value: str) -> str:
@@ -97,6 +100,10 @@ def _enqueue(
     except IdentityC0Error as exc:
         field = f" ({exc.field})" if exc.field and exc.code != "identity_env_missing" else ""
         raise RememberError(exc.code, _IDENTITY_HINTS.get(exc.code, "identidad C0 inválida") + field) from None
+    except IdentityError as exc:
+        if str(exc) != "identity_lock_busy":
+            raise
+        raise RememberError("identity_lock_busy", _IDENTITY_LOCK_HINT, retryable=True) from None
     except OSError:
         raise RememberError("storage_io_failed", _STORAGE_HINT) from None
 
@@ -164,6 +171,19 @@ def _result(queued: dict[str, Any], report: dict[str, Any], pending_resolution: 
     return result
 
 
+def error_result(error: RememberError) -> dict[str, Any]:
+    """``remember-error-v1``: el error reintentable que no dejó entrada (#226)."""
+
+    return {
+        "schema": ERROR_SCHEMA,
+        "untrusted_memory_data": True,
+        "ok": False,
+        "code": error.code,
+        "retryable": error.retryable,
+        "hint": error.detail,
+    }
+
+
 def remember(
     store: Any,
     text: str,
@@ -183,4 +203,4 @@ def remember(
     return result
 
 
-__all__ = ["RESULT_SCHEMA", "RememberError", "normalize_idempotency_key", "read_text_file", "remember"]
+__all__ = ["ERROR_SCHEMA", "RESULT_SCHEMA", "RememberError", "error_result", "normalize_idempotency_key", "read_text_file", "remember"]

@@ -61,6 +61,10 @@ KINDS = ("fact", "decision", "state")
 MAX_TEXT_BYTES = 64 * 1024
 MAX_TARGET_CHARS = 256
 ENQUEUE_LOCK_WAIT_SECONDS = 2.0
+# Plazo propio de la espera de `identity_lock` al encolar (#226): no se descuenta de la espera de la
+# bandeja. El encolado lo toma en compartido, así que sólo vence ante un tenedor exclusivo de verdad
+# (reubicación, compactación, export/restore, identidad); entonces `remember` es reintentable.
+ENQUEUE_IDENTITY_WAIT_SECONDS = 2.0
 _LOCK_BACKOFF_SECONDS = 0.01
 _NAME_ATTEMPTS = 16
 MAX_LISTED = 1000
@@ -520,6 +524,7 @@ def enqueue(
     env: Mapping[str, str] | None = None,
     clock: Callable[[], datetime] | None = None,
     wait_seconds: float = ENQUEUE_LOCK_WAIT_SECONDS,
+    identity_wait_seconds: float = ENQUEUE_IDENTITY_WAIT_SECONDS,
     time_ns: Callable[[], int] = time.time_ns,
     token: Callable[[], str] = lambda: secrets.token_hex(4),
     replace: Callable[[Any, Any], None] = os.replace,
@@ -551,14 +556,13 @@ def enqueue(
     else:
         raise InboxError("inbox_idempotency_key_invalid", "la clave debe ser sha256:<64 hex>")
     paths = inbox_paths(store)
-    started = time.monotonic()
     with inbox_lock(store, exclusive=False, wait_seconds=wait_seconds):
-        # R2-03: `identity_lock` espera dentro del mismo plazo; vencido, `identity_lock_busy` sin dejar entrada.
-        identity_wait = max(0.0, wait_seconds - (time.monotonic() - started))
+        # R2-03/#226: `identity_lock` espera su propio plazo; vencido, `identity_lock_busy` sin dejar entrada.
         # R1-01: una reubicación en curso tiene `identity_lock` durante todo el cambio de custodia;
         # tomarlo aquí (bandeja -> identidad, orden permitido) bloquea la publicación y, al terminar,
         # el preflight repetido falla sin dejar entrada, también con la bandeja ausente al empezar ella.
-        with identity_lock(store, wait_seconds=identity_wait):
+        # #226: en compartido, los encoladores no se excluyen entre sí; sólo un exclusivo los frena.
+        with identity_lock(store, wait_seconds=identity_wait_seconds, shared=True):
             _custody_preflight(store, preflight, seen_custody)  # la custodia pudo cambiar mientras se esperaba
             envelope = identity_c0.build_envelope(identity, resolved_kind, key, clock)
             entry: dict[str, Any] = {
