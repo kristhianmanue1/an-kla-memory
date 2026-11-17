@@ -514,6 +514,35 @@ def build_parser() -> argparse.ArgumentParser:
         help="Clave de idempotencia: texto libre de 1 a 256 caracteres; sha256:<64 hex> se usa tal cual, "
         "cualquier otro valor se usa como sha256:<sha256 de su UTF-8>.",
     )
+    remember_cmd.add_argument(
+        "--slot", metavar="S", default=None,
+        help="Casilla del estado (sólo --kind state; [a-z][a-z0-9_-]{0,31}, por defecto main): un state nuevo "
+        "jubila sólo la cabeza vigente de su casilla (ADR-0065).",
+    )
+    state_cmd = sub.add_parser(
+        "state", help="Estado vigente de las casillas (ADR-0065), sólo lectura: no vacía la bandeja."
+    )
+    state_sub = state_cmd.add_subparsers(dest="state_command", required=True)
+    state_show_cmd = state_sub.add_parser(
+        "show", help="Un registro por casilla: la cabeza vigente del repo actual (main por defecto)."
+    )
+    state_slots = state_show_cmd.add_mutually_exclusive_group()
+    state_slots.add_argument("--slot", metavar="S", default=None, help="La casilla pedida (por defecto main).")
+    state_slots.add_argument("--all-slots", action="store_true", help="Todas las casillas, en orden de slot.")
+    state_show_cmd.add_argument("--scope", choices=("repo", "all"), default="repo", help="repo (por defecto) o todos los repos.")
+    state_show_cmd.add_argument(
+        "--budget", type=int, default=4000, metavar="N",
+        help="Bytes máximos de la salida JSON, con su salto de línea final (por defecto 4000).",
+    )
+    history_cmd = sub.add_parser(
+        "history", help="Cadena de sustituciones y disputas de un registro (ADR-0065), sólo lectura."
+    )
+    history_cmd.add_argument("id", help="Id del registro desde el que se recorre el grafo.")
+    history_cmd.add_argument("--limit", type=int, default=200, metavar="N", help="Nodos máximos (por defecto 200).")
+    history_cmd.add_argument(
+        "--budget", type=int, default=16000, metavar="N",
+        help="Bytes máximos de la salida JSON, con su salto de línea final (por defecto 16000).",
+    )
     identity_cmd = sub.add_parser("identity", help="Inspeccionar o adoptar identidad local.")
     identity_sub = identity_cmd.add_subparsers(dest="identity_command", required=True)
     identity_status_cmd = identity_sub.add_parser("status")
