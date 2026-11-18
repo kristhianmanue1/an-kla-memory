@@ -378,12 +378,18 @@ def build_identity(
 
 
 def derive_idempotency_key(
-    identity: Mapping[str, Any], kind: str, text: str, supersedes: str | None = None, slot: str | None = None
+    identity: Mapping[str, Any],
+    kind: str,
+    text: str,
+    supersedes: str | None = None,
+    slot: str | None = None,
+    extra: Mapping[str, Any] | None = None,
 ) -> str:
     """Default key: sha256 of the canonical JSON of the writer, kind, text and target (D1 "Idempotencia").
 
     ``slot`` (ADR-0065 §3) joins the digest only for ``kind: state``: the same text in two slots is two
-    intentions. Without it the key is byte-identical to the one before ADR-0065.
+    intentions. Without it the key is byte-identical to the one before ADR-0065.  ``extra`` (ADR-0066: the
+    anchors' sources and quote hashes, a dispute's ``verdict``) joins only when given, so the same holds.
     """
 
     material = {
@@ -396,6 +402,8 @@ def derive_idempotency_key(
     }
     if slot is not None:
         material["slot"] = slot
+    if extra:
+        material.update(extra)
     return digest_json(material)
 
 

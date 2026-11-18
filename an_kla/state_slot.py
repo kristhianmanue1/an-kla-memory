@@ -168,6 +168,7 @@ def resolve_state(
     key: str,
     slot: str,
     target_id: str | None,
+    fields: Mapping[str, Any] | None = None,
 ) -> RememberOp | StateAlready:
     """Qué hace un ``state`` nuevo contra la casilla ``slot`` del repo del sobre (ADR-0065 §1-3).
 
@@ -193,6 +194,8 @@ def resolve_state(
     if last is not None and last.key == key:
         if last.text != text:
             raise WritePolicyError("remember_id_collision", "idempotency_key_other_payload")
+        if (last.row.get("anchors") or None) != ((fields or {}).get("anchors") or None):  # ADR-0066 §2
+            raise WritePolicyError("remember_id_collision", "idempotency_key_other_anchors")
         retired_by = None if last.active else superseded_by(snapshot).get((STATE_STREAM, last.id))
         return StateAlready(last.id, retired_by)
     if target_id is not None:
@@ -200,7 +203,7 @@ def resolve_state(
     new_id = state_record_id(key, head.id if head is not None else None)
     if any(str(r.get("id", "")) == new_id for r in snapshot.raw_records[STATE_STREAM]):
         raise WritePolicyError("remember_id_collision", "id_exists_in_snapshot")
-    record: dict[str, Any] = {"id": new_id, "text": text, "an_kla_envelope": deepcopy(dict(envelope)), "slot": slot}
+    record: dict[str, Any] = {"id": new_id, "text": text, "an_kla_envelope": deepcopy(dict(envelope)), "slot": slot, **(fields or {})}
     if head is None:
         return RememberOp(STATE_STREAM, "add", record)
     retired = {"id": head.id, "writer": deepcopy(dict(head.writer)), "enqueued_at": head.enqueued_at}
