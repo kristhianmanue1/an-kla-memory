@@ -10,6 +10,27 @@ El formato de cada entrada sigue [Keep a Changelog](https://keepachangelog.com/e
 por intención, y el proyecto usa [versionado semántico](https://semver.org/lang/es/)
 en fase de pre-release `0.1.0`.
 
+## [Sin publicar]
+
+**Estado de una casilla, `state show` e `history` (ADR-0065, E1.d1)**:
+`remember --kind state [--slot <s>]` escribe en una casilla (repo, slot;
+`main` por defecto) y, al vaciar la bandeja, jubila sólo la cabeza vigente de
+esa casilla, sea de quien sea y sin disputa (un `state` por casilla y
+transacción: el vaciado parte el lote). Un `state` nunca sustituye a un `fact`
+ni a una `decision` (`remember_state_over_fact`, `remember_state_slot_mismatch`).
+Idempotencia de `state` contra el último del mismo escritor en la casilla.
+Nuevas órdenes de sólo lectura `state show [--slot | --all-slots] [--budget]`
+e `history <id> [--limit] [--budget]`, con presupuesto exacto
+(`state_budget_too_small`, `history_budget_too_small`, rc 1). Esquemas nuevos
+`state-result-v1`, `history-result-v1` e `inbox-entry-v2`; `remember-result-v1`
+e `inbox-drain-result-v1` añaden `retired`, `retired_by` y `conflict_remaining`.
+**Cambia una conducta**: `remember --kind state` sin `--slot` antes guardaba un
+estado más; ahora jubila el anterior de `main`. Una bandeja con entradas
+`inbox-entry-v2` no la lee un binario anterior: `inbox drain` y pendientes 0
+antes de bajar de versión. `retrieve`, el MCP y el formato del store no
+cambian. Detalle en
+[`docs/architecture/0065-estado-casilla-history-v1.md`](docs/architecture/0065-estado-casilla-history-v1.md).
+
 ## [v0.1.0-beta.36]
 
 **Escritura por bandeja (E1.a, ADR-0063)**: `remember` guarda una memoria sin

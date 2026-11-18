@@ -22,10 +22,13 @@ from typing import Any, Mapping
 from . import identity_c0
 from .canonical import canonical_json, digest_json
 from .inbox import (
+    DEFAULT_SLOT,
     ENTRY_SCHEMA,
+    ENTRY_SCHEMA_V2,
     KINDS,
     MAX_TEXT_BYTES,
     REASON_SUFFIX,
+    SLOT_PATTERN,
     InboxPaths,
     inbox_paths,
     payload_digest,
@@ -86,6 +89,12 @@ class Entry:
     def target_id(self) -> str | None:
         return self.data.get("target_id")
 
+    @property
+    def slot(self) -> str | None:
+        """Casilla de un ``state`` (v1 sin ``slot`` = ``main``, ADR-0065 §1); ``None`` para los demás ``kind``."""
+
+        return self.data.get("slot", DEFAULT_SLOT) if self.data["kind"] == "state" else None
+
 
 def age_key(name: str) -> tuple[int, str]:
     """Orden de vaciado: ``<tiempo_ns>`` numérico y luego el nombre (no es orden causal entre relojes)."""
@@ -129,11 +138,15 @@ def _validate(data: Any) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise Reject(INVALID, ["not_object"])
     keys = set(data)
-    if not _REQUIRED <= keys or not keys <= _REQUIRED | {"target_id"}:
+    v2 = data.get("schema") == ENTRY_SCHEMA_V2
+    if not _REQUIRED <= keys or not keys <= _REQUIRED | {"target_id"} | ({"slot"} if v2 else set()):
         raise Reject(INVALID, ["keys"])
-    if data["schema"] != ENTRY_SCHEMA:
+    if data["schema"] not in (ENTRY_SCHEMA, ENTRY_SCHEMA_V2):
         raise Reject(INVALID, ["schema"])
     text, kind, target = data["text"], data["kind"], data.get("target_id")
+    slot = data.get("slot")
+    if v2 and (kind != "state" or not isinstance(slot, str) or not SLOT_PATTERN.fullmatch(slot)):
+        raise Reject(INVALID, ["slot"])
     if not isinstance(text, str) or not text:
         raise Reject(INVALID, ["text"])
     try:
@@ -154,7 +167,7 @@ def _validate(data: Any) -> dict[str, Any]:
     envelope = data["envelope"]
     if envelope["idempotency_key"] != data["idempotency_key"] or envelope["kind"] != kind:
         raise Reject(INVALID, ["envelope_mismatch"])
-    if data["payload_sha256"] != payload_digest(text, kind, target):
+    if data["payload_sha256"] != payload_digest(text, kind, target, slot):
         raise Reject(INVALID, ["payload_sha256_mismatch"])
     return data
 

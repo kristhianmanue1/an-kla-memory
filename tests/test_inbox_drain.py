@@ -271,9 +271,10 @@ class RejectionTests(DrainCase):
         missing = self.factory.write("sin objetivo", target_id="f-no-existe")
         mismatch = self.factory.write("estado", kind="state", target_id=target, kind_explicit=True)
         result = self.drain()
+        # ADR-0065 §2: un `state` sobre un `fact` ya no es el genérico kind_mismatch sino su rechazo tipado.
         self.assertEqual(
             {item["entry"]: item["code"] for item in result["rejected"]["entries"]},
-            {missing: "invalid_supersede_target", mismatch: "remember_kind_mismatch"},
+            {missing: "invalid_supersede_target", mismatch: "remember_state_over_fact"},
         )
         self.assertEqual(self.reasons()[missing]["reason_codes"], ["target_missing"])
         self.assertEqual(result["committed"]["count"], 0)

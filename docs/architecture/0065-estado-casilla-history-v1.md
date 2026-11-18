@@ -5,7 +5,7 @@
   familia (Gemini): r1 `fix-and-retry` (2 BLOCKER, 4 HIGH, 2 MEDIUM, 1 LOW),
   r2 `fix-and-retry` (3 HIGH, 1 MEDIUM, 2 LOW), r3 `proceed` (2 LOW,
   incorporados); todos corregidos.
-- **Implementación:** No iniciada
+- **Implementación:** Código y pruebas dirigidas en la rama `feat/e1d1-casilla` (sin fusionar; pendiente de la suite del capitán)
 - **Fecha:** 2026-11-16
 - **Decide sobre:**
   - `remember --kind state [--slot <s>]`, que jubila sola la casilla (repo, slot);
@@ -48,7 +48,10 @@ Hoy `state` ya es un `kind` de `remember`: va al stream `episodes` (`KIND_STREAM
   el vaciado **parte el lote**: al encontrar, en orden de la bandeja
   (nombre de archivo: tiempo y sufijo), un segundo `state` de una casilla
   ya tocada en el lote en curso, compromete lo acumulado y abre una
-  transacción nueva, en la misma invocación y con el candado tomado. Cada
+  transacción nueva en la misma invocación; entre una transacción y otra
+  suelta el candado de escritura, como cualquier lote de ADR-0063 D1, y cada
+  intento relee `CURRENT`, así que la cabeza se resuelve siempre bajo el
+  candado del intento que la jubila. Cada
   `state` jubila la cabeza que dejó el anterior; el último encolado queda
   vigente. Es determinista (orden de la bandeja) y declara su coste: una
   transacción más por cada `state` repetido de una casilla en un vaciado.

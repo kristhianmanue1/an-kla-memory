@@ -15,6 +15,7 @@ el [README](../README.md); este documento la complementa.
   - [Verificación no bloqueante de versiones](#verificación-no-bloqueante-de-versiones)
   - [Actualización gobernada del proyecto](#actualización-gobernada-del-proyecto)
   - [Recuperación y escritura](#recuperación-y-escritura)
+  - [Estado de una casilla e historia](#estado-de-una-casilla-e-historia)
   - [Respaldo sellado (opcional)](#respaldo-sellado-opcional)
 
 ## Actualizar desde otra beta
@@ -286,6 +287,53 @@ La continuidad operacional usa acceso exacto, no búsqueda por similitud:
 .venv/bin/python -m an_kla --project-root . transaction inspect UUID
 .venv/bin/python -m an_kla --project-root . export verify --bundle RESPALDO
 ```
+
+### Estado de una casilla e historia
+
+Un agente que reanuda trabajo necesita **el estado actual**, no una búsqueda
+(ADR-0065). `remember --kind state` escribe en una **casilla** —el par
+(`repo.id`, `slot`); `main` por defecto— y, al vaciar la bandeja, jubila sólo
+la cabeza vigente de esa casilla, la haya escrito quien la haya escrito y sin
+abrir disputa. Dos agentes que trabajan a la vez en cosas distintas del mismo
+repo usan `--slot` distintos; con `main` para todos gana el último que escribe.
+
+```bash
+.venv/bin/python -m an_kla --project-root . remember --kind state --slot e1d1 \
+  --text-file - <<< "Implementado el vaciado; faltan los presupuestos."
+.venv/bin/python -m an_kla --project-root . state show                 # casilla main
+.venv/bin/python -m an_kla --project-root . state show --slot e1d1
+.venv/bin/python -m an_kla --project-root . state show --all-slots --budget 2000
+.venv/bin/python -m an_kla --project-root . history ID_DE_LA_CABEZA --limit 50
+```
+
+- `state show` es de sólo lectura: **no vacía la bandeja** (informa de
+  `inbox.pending` y, por casilla, de `pending_states`) y no depende de
+  `recall`. Devuelve una cabeza por casilla con `retired_count`; si una casilla
+  tiene más de un vigente (sólo por `plan-write`, restauración o `relocate`)
+  sirve la cabeza y declara el resto en `conflict`: nunca elige en silencio. Si
+  no hay ningún `state` vigente, responde `empty: true`.
+- `--budget` (4000 por defecto en `state show`, 16000 en `history`) acota la
+  salida completa en bytes, con su salto de línea final. Una casilla que no
+  cabe sale como stub (`truncated: true`); por debajo de la respuesta vacía el
+  comando falla con `state_budget_too_small` / `history_budget_too_small`
+  (rc 1).
+- `history <id>` recorre en anchura, en los dos sentidos, las aristas
+  `supersedes` y `disputes` desde el registro dado, con `--limit` nodos
+  (`truncated` si corta). Nodos en orden total (`enqueued_at`, legados al
+  final, `id`) y aristas `{from, to, type}` sólo con ambos extremos presentes.
+- `remember --kind state --supersedes <id>` nunca sustituye un `fact` ni una
+  `decision`: responde `rejected` con `remember_state_over_fact` (rc 3) y el
+  registro sigue vigente. Un `--supersedes` de un `state` de otra casilla, o de
+  uno que no es la cabeza, da `remember_state_slot_mismatch`. Los estados
+  escritos antes como `fact` no se jubilan con un `state`: se retiran por el
+  camino antiguo antes de adoptar la casilla.
+- Reintentar es idempotente contra el último `state` del mismo escritor en la
+  casilla: un reintento tardío no pisa a otro agente (`already_committed` con
+  `retired_by`). Para reafirmar a propósito el mismo texto, otra
+  `--idempotency-key`. Un `state` en cola no anuncia `record_id`.
+- Las entradas con casilla se encolan como `inbox-entry-v2`; un binario anterior
+  no las lee: ejecuta `inbox drain` y comprueba `pending` 0 antes de bajar de
+  versión.
 
 ### Respaldo sellado (opcional)
 

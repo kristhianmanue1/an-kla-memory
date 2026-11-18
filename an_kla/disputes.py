@@ -75,12 +75,21 @@ class RememberOp:
     operation: str
     record: dict[str, Any]
     supersedes: str | None = None
+    # ADR-0065: a ``state`` retiring the head of its slot says whom (``retired``) and which other vigent
+    # states stay in conflict (``conflict_remaining``); both stay ``None`` for every other op.
+    retired: dict[str, Any] | None = None
+    conflict_remaining: list[str] | None = None
 
     def result_fields(self) -> dict[str, Any]:
-        """Keys ``remember-result-v1`` adds for the target: ``disputed`` or ``superseded``."""
+        """Keys ``remember-result-v1`` adds for the target: ``disputed`` or ``superseded`` (+ ``retired``)."""
 
         if self.supersedes is not None:
-            return {"superseded": self.supersedes}
+            fields: dict[str, Any] = {"superseded": self.supersedes}
+            if self.retired is not None:
+                fields["retired"] = deepcopy(self.retired)
+            if self.conflict_remaining:
+                fields["conflict_remaining"] = list(self.conflict_remaining)
+            return fields
         disputes = self.record.get("disputes")
         return {"disputed": deepcopy(disputes)} if disputes is not None else {}
 
