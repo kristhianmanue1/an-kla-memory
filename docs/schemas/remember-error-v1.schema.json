@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:remember-error:v1",
+  "title": "AN-KLA Remember Error v1",
+  "description": "Error reintentable de `remember` que no dejó entrada (ADR-0063 D1 «Encolar», #226): `identity_lock_busy`, porque hay un cambio de custodia o de identidad en curso (reubicación, compactación, export/restore, identidad). Reintentar es idempotente. Sale en stdout con rc=3. Sólo códigos y pistas: nunca el texto del recuerdo ni rutas.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "untrusted_memory_data", "ok", "code", "retryable", "hint"],
+  "properties": {
+    "schema": {"const": "an-kla/remember-error-v1"},
+    "untrusted_memory_data": {"const": true},
+    "ok": {"const": false},
+    "code": {"const": "identity_lock_busy"},
+    "retryable": {"const": true},
+    "hint": {"type": "string"}
+  }
+}

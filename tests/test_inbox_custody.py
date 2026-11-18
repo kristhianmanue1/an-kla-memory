@@ -654,7 +654,7 @@ class RoundTwoTests(CustodyCase):
         threading.Timer(4.0, child.stdin.close).start()  # el ajeno lo suelta a los 4 s
         started = time.monotonic()
         with self.assertRaises(Exception) as caught:
-            inbox.enqueue(self.store, "x", env=AGENT_ENV, wait_seconds=0.3)
+            inbox.enqueue(self.store, "x", env=AGENT_ENV, identity_wait_seconds=0.3)
         self.assertEqual(str(caught.exception), "identity_lock_busy")
         self.assertLess(time.monotonic() - started, 2.5)
         self.assertEqual(inbox.entry_names(self.store), [])

@@ -227,15 +227,20 @@ def verify_manifest_link(store: Any, manifest: Mapping[str, Any]) -> None:
 
 
 @contextmanager
-def identity_lock(store: Any, *, wait_seconds: float | None = None) -> Iterator[None]:
+def identity_lock(
+    store: Any, *, wait_seconds: float | None = None, shared: bool = False
+) -> Iterator[None]:
     # Se registra para el invariante de orden de candados (ADR-0063 D1). Con `wait_seconds`
-    # (POSIX) espera ese plazo y falla con `identity_lock_busy`; sin él, espera sin plazo.
-    with holding(IDENTITY), _identity_flock(store, wait_seconds):
+    # (POSIX) espera ese plazo y falla con `identity_lock_busy`; sin él, espera sin plazo. `shared`
+    # (#226, sólo el encolado) no excluye a otros compartidos; en Windows queda exclusivo.
+    with holding(IDENTITY), _identity_flock(store, wait_seconds, shared):
         yield
 
 
 @contextmanager
-def _identity_flock(store: Any, wait_seconds: float | None = None) -> Iterator[None]:
+def _identity_flock(
+    store: Any, wait_seconds: float | None = None, shared: bool = False
+) -> Iterator[None]:
     paths = _paths(store)
     _reject_symlink_path(paths["lock"], store.custody_walk_root)
     paths["anchor"].mkdir(parents=True, exist_ok=True)
@@ -269,13 +274,14 @@ def _identity_flock(store: Any, wait_seconds: float | None = None) -> Iterator[N
                 except OSError:
                     pass
             return
+        mode = fcntl.LOCK_SH if shared else fcntl.LOCK_EX
         if wait_seconds is None:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+            fcntl.flock(handle.fileno(), mode)
         else:
             end = time.monotonic() + wait_seconds
             while True:
                 try:
-                    fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    fcntl.flock(handle.fileno(), mode | fcntl.LOCK_NB)
                     break
                 except BlockingIOError as exc:
                     if time.monotonic() >= end:

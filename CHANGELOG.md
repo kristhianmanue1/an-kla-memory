@@ -31,6 +31,12 @@ antes de bajar de versión. `retrieve`, el MCP y el formato del store no
 cambian. Detalle en
 [`docs/architecture/0065-estado-casilla-history-v1.md`](docs/architecture/0065-estado-casilla-history-v1.md).
 
+**Candado de identidad compartido al encolar (#226)**: `remember` ya no falla
+con `identity_lock_busy` entre encoladores concurrentes; el encolado toma
+`identity_lock` en compartido y con plazo propio. Ante un cambio de custodia o
+de identidad en curso responde `identity_lock_busy` reintentable
+(`remember-error-v1`, `retryable: true`, rc 3, sin entrada).
+
 ## [v0.1.0-beta.36]
 
 **Escritura por bandeja (E1.a, ADR-0063)**: `remember` guarda una memoria sin
