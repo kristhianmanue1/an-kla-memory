@@ -137,9 +137,9 @@ Los reportes son evidencia experimental, no decisiones de ranking.
 de publicación. Cumplen el rol de `CHANGELOG.md`.
 
 La release documentada más reciente es
-[`v0.1.0-beta.36`](releases/v0.1.0-beta.36.md), con su
-[ronda adversarial](releases/v0.1.0-beta.36-adversarial.md); la anterior
-con ronda cerrada es [`v0.1.0-beta.35`](releases/v0.1.0-beta.35.md).
+[`v0.1.0-beta.37`](releases/v0.1.0-beta.37.md), con su
+[ronda adversarial](releases/v0.1.0-beta.37-adversarial.md); la anterior
+con ronda cerrada es [`v0.1.0-beta.36`](releases/v0.1.0-beta.36.md).
 
 ### Planificación y respuestas históricas
 

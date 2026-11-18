@@ -38,7 +38,7 @@ por separado el contrato de contexto:
 
 ```bash
 .venv/bin/python -m pip install --upgrade \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.36"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.37"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . context status
 .venv/bin/python -m an_kla --project-root . context plan --operation update
@@ -49,7 +49,7 @@ git diff -- AGENTS.md AN-KLA.md
 ```
 
 Con el CLI global instalado con uv, el primer paso es
-`uv tool install --force "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.36"`
+`uv tool install --force "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.37"`
 y los siguientes usan `an-kla --project-root .` en lugar de
 `.venv/bin/python -m an_kla --project-root .`. Comprueba con `--version` que
 responde la instalación que acabas de actualizar.
@@ -198,7 +198,7 @@ puede inspeccionar la actualización de la integración sin mutar el proyecto:
 
 ```bash
 .venv/bin/python -m an_kla --project-root . upgrade inspect \
-  --target v0.1.0-beta.36 > RUTA_EFIMERA_NUEVA
+  --target v0.1.0-beta.37 > RUTA_EFIMERA_NUEVA
 ```
 
 El agente debe conservar por separado el `plan_fingerprint` devuelto, revisar
@@ -210,7 +210,7 @@ bytes del upgrade:
 .venv/bin/python -m an_kla --project-root . upgrade apply \
   <plan_fingerprint> --plan RUTA_EFIMERA_NUEVA
 .venv/bin/python -m an_kla --project-root . upgrade verify \
-  --target v0.1.0-beta.36
+  --target v0.1.0-beta.37
 git diff -- AGENTS.md AN-KLA.md
 ```
 

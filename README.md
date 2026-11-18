@@ -1,6 +1,6 @@
 # AN-KLA Memory
 
-[![Version](https://img.shields.io/badge/version-0.1.0--beta.36-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.36)
+[![Version](https://img.shields.io/badge/version-0.1.0--beta.37-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.37)
 [![Python](https://img.shields.io/badge/python-3.9%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 [![Beta](https://img.shields.io/badge/status-local%20beta-orange)](https://github.com/kristhianmanue1/an-kla-memory/releases)
@@ -12,10 +12,10 @@ un plan verificable.
 
 La beta se distribuye desde GitHub, no desde PyPI. Usa siempre una etiqueta
 exacta: no instales `main` ni otra referencia móvil. La versión del código es
-`0.1.0b36` y su etiqueta de distribución es `v0.1.0-beta.36`. El contexto
+`0.1.0b37` y su etiqueta de distribución es `v0.1.0-beta.37`. El contexto
 gestionado y la plantilla administrada (`TEMPLATE_VERSION`) son un eje
 **separado** de la versión del paquete — `0.1.0-beta.33` (sin cambios en
-beta.36; antes `0.1.0-beta.35`, `0.1.0-beta.34`, `0.1.0-beta.32` y `0.1.0-beta.26`); `context status` distingue ambos
+beta.37; antes `0.1.0-beta.36`, `0.1.0-beta.35`, `0.1.0-beta.34`, `0.1.0-beta.32` y `0.1.0-beta.26`); `context status` distingue ambos
 (`template_version` vs `current_template_version` y `runtime_version`) y avisa
 con `runtime_older_than_context_template` cuando el intérprete es más antiguo
 que la plantilla del proyecto. Los hooks gobernados del host (`host-hooks/v1`,
@@ -41,7 +41,7 @@ intérprete del entorno virtual.
 
 ## Estado actual
 
-La beta pública más reciente es **`v0.1.0-beta.36`** (`0.1.0b36`),
+La beta pública más reciente es **`v0.1.0-beta.37`** (`0.1.0b37`),
 instalable mediante su etiqueta Git exacta. AN-KLA no se distribuye desde
 PyPI; el wheel de la release se publica como asset de la etiqueta y la
 instalación canónica sigue siendo `pip install` fijado a la etiqueta exacta.
@@ -50,6 +50,11 @@ No instales `main` como sustituto de una versión.
 Las últimas betas, de la más reciente a la más antigua (detalle en
 [CHANGELOG](CHANGELOG.md) y [`docs/releases/`](docs/releases/)):
 
+- **beta.37**: estado de una casilla (E1.d1, ADR-0065): `remember --kind state
+  [--slot]`, `state show` e `history`, y candado de identidad compartido al
+  encolar (#226; `identity_lock_busy` reintentable, rc 3). **Cambia una
+  conducta**: `remember --kind state` sin `--slot` jubila el anterior de
+  `main`. **No incluye** `recall` (ADR-0064) ni las anclas.
 - **beta.36**: escritura por bandeja (E1.a, ADR-0063): `remember`,
   `inbox status|drain` y `disputes list`, con custodia de la bandeja en
   `export` y `relocate`; errores de `remember` con código y sin ruta (#218).
@@ -102,7 +107,7 @@ P0–P2 del plan llegaron en beta.31 y la paginación en origen de
 Hasta beta.30 las betas se marcaban como prerelease en GitHub; desde beta.31
 se publican como release normal, así que GitHub muestra la más reciente como
 “Latest”. El update-check de AN-KLA no depende de ese distintivo: consulta el
-índice de releases, incluye prereleases y descubre beta.36.
+índice de releases, incluye prereleases y descubre beta.37.
 **Limitación conocida**: el soporte de Windows permanece diferido por
 decisión del operador (el protocolo de anclaje y partes de la suite son
 POSIX; la candidata se declara procedible para macOS/Linux) — ver la
@@ -116,7 +121,7 @@ verificación canónica es la CI local — suite, wheel aislado, upgrades por
 etiqueta y gates de tamaños/registro, con ronda adversarial `proceed` antes
 de cada tag (la evidencia de beta.18 está en su
 [ronda REL](docs/releases/v0.1.0-beta.18-adversarial.md)). Para instalar
-usa el comando fijado a beta.36 de la sección siguiente; para actualizar
+usa el comando fijado a beta.37 de la sección siguiente; para actualizar
 entre betas, consulta
 [Uso diario y mantenimiento](docs/uso-diario.md#actualizar-desde-otra-beta).
 
@@ -170,7 +175,7 @@ Desde la raíz del proyecto consumidor en macOS o Linux:
 python3.12 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
 .venv/bin/python -m pip install \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.36"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.37"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . init
 .venv/bin/python -m an_kla --project-root . context plan --operation install
