@@ -51,8 +51,9 @@ class AdrRegistryTests(unittest.TestCase):
         # extracción en el mandato 4; D1 tras el spike, mandato 5.
         # 0064 (recall, E1.b) aceptada por delegación del orquestador tras r2 proceed.
         # 0065 (estado de una casilla, E1.d1) aceptada por delegación del orquestador tras r3 proceed.
+        # 0066 (anclas de C3, E1.d2) aceptada por delegación del orquestador tras r3 proceed.
         self.assertEqual(states["Propuesta"], 5)
-        self.assertEqual(states["Aceptada"], 60)
+        self.assertEqual(states["Aceptada"], 61)
 
     def test_detects_gap_and_state_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
