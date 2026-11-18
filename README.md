@@ -51,10 +51,8 @@ Las últimas betas, de la más reciente a la más antigua (detalle en
 [CHANGELOG](CHANGELOG.md) y [`docs/releases/`](docs/releases/)):
 
 - **beta.37**: estado de una casilla (E1.d1, ADR-0065): `remember --kind state
-  [--slot]`, `state show` e `history`, y candado de identidad compartido al
-  encolar (#226; `identity_lock_busy` reintentable, rc 3). **Cambia una
-  conducta**: `remember --kind state` sin `--slot` jubila el anterior de
-  `main`. **No incluye** `recall` (ADR-0064) ni las anclas.
+  [--slot]` (sin `--slot` jubila el anterior de `main`), `state show`, `history`
+  e `identity_lock` compartido (#226). **No incluye** `recall` ni las anclas.
 - **beta.36**: escritura por bandeja (E1.a, ADR-0063): `remember`,
   `inbox status|drain` y `disputes list`, con custodia de la bandeja en
   `export` y `relocate`; errores de `remember` con código y sin ruta (#218).
