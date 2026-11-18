@@ -14,11 +14,12 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
+from .anchors_read import DEFAULT_ANCHOR_LIMIT, AnchorServer
 from .canonical import canonical_json
 from .identity_c0 import DEFAULT_SLOT, SLOT_PATTERN, IdentityC0Error, repo_id_for
 from .inbox import entry_names
 from .inbox_entries import Reject, load_entry
-from .state_slot import StateRow, active_by_slot, state_rows
+from .state_slot import STATE_STREAM, StateRow, active_by_slot, state_rows
 
 RESULT_SCHEMA = "an-kla/state-result-v1"
 DEFAULT_BUDGET = 4000
@@ -68,7 +69,9 @@ def pending_states(store: Any, repo_id: str) -> tuple[int, dict[str, int]]:
     return len(names), per_slot
 
 
-def _entry(head: StateRow, actives: list[StateRow], retired_count: int, pending: int, with_repo: bool) -> dict[str, Any]:
+def _entry(
+    head: StateRow, actives: list[StateRow], retired_count: int, pending: int, with_repo: bool, served: Mapping[str, Any]
+) -> dict[str, Any]:
     item: dict[str, Any] = {
         "slot": head.slot,
         "id": head.id,
@@ -82,6 +85,7 @@ def _entry(head: StateRow, actives: list[StateRow], retired_count: int, pending:
         item["repo_id"] = head.repo_id
     if len(actives) > 1:
         item["conflict"] = [m.id for m in actives]
+    item.update(served)  # ADR-0066: disputed, anchors with their freshness, coverage
     return item
 
 
@@ -94,9 +98,10 @@ def _stub(item: Mapping[str, Any]) -> dict[str, Any]:
 
 def _response(
     revision: str, scope: str, slots: list[dict[str, Any]], excluded: int, inbox_pending: int,
-    used: int, empty: bool,
+    used: int, empty: bool, declared: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
+        **(declared or {}),
         "schema": RESULT_SCHEMA,
         "untrusted_memory_data": True,
         "revision": revision,
@@ -110,31 +115,32 @@ def _response(
 
 
 def fit_budget(
-    revision: str, scope: str, items: list[dict[str, Any]], inbox_pending: int, budget: int, empty: bool
+    revision: str, scope: str, items: list[dict[str, Any]], inbox_pending: int, budget: int, empty: bool,
+    declared: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Respuesta que cabe en ``budget`` bytes: entrada completa, si no su stub, si no ``excluded.budget``."""
 
     total = len(items)
     # Cotas superiores mientras los contadores no se conocen (used_bytes = presupuesto; excluded = todas).
-    floor = _response(revision, scope, [], total, inbox_pending, budget, empty)
+    floor = _response(revision, scope, [], total, inbox_pending, budget, empty, declared)
     if serialized_size(floor) > budget:
         raise StateReadError("state_budget_too_small", f"la respuesta vacía necesita {serialized_size(floor)} bytes")
     kept: list[dict[str, Any]] = []
     for item in items:
         for candidate in (item, _stub(item)):
-            trial = _response(revision, scope, kept + [candidate], total, inbox_pending, budget, empty)
+            trial = _response(revision, scope, kept + [candidate], total, inbox_pending, budget, empty, declared)
             if serialized_size(trial) <= budget:
                 kept.append(candidate)
                 break
     excluded = total - len(kept)
     used = budget
     for _ in range(8):  # punto fijo: used_bytes es la longitud de la salida que lo contiene
-        result = _response(revision, scope, kept, excluded, inbox_pending, used, empty)
+        result = _response(revision, scope, kept, excluded, inbox_pending, used, empty, declared)
         size = serialized_size(result)
         if size == used:
             return result
         used = size
-    return _response(revision, scope, kept, excluded, inbox_pending, budget, empty)
+    return _response(revision, scope, kept, excluded, inbox_pending, budget, empty, declared)
 
 
 def state_show(
@@ -145,6 +151,7 @@ def state_show(
     scope: str = "repo",
     budget: int = DEFAULT_BUDGET,
     repo_id: str | None = None,
+    anchor_limit: int = DEFAULT_ANCHOR_LIMIT,
 ) -> dict[str, Any]:
     """``state-result-v1`` de la revisión vigente. ``slot`` y ``all_slots`` son excluyentes (``main`` por defecto)."""
 
@@ -165,6 +172,7 @@ def state_show(
     inbox_pending, per_slot = pending_states(store, repo)
     wanted = None if all_slots else (slot or DEFAULT_SLOT)
     items: list[dict[str, Any]] = []
+    server = AnchorServer(store, snapshot, anchor_limit)
     # Con scope `all` una casilla es (repo, slot): se agrupa por ambos y se ordena por slot y repo.
     groups: dict[tuple[str, str], list[StateRow]] = {}
     for member in rows:
@@ -177,8 +185,11 @@ def state_show(
             continue
         retired = sum(1 for m in members if not m.active)
         pending = per_slot.get(group_slot, 0) if group_repo == repo else 0
-        items.append(_entry(actives[-1], actives, retired, pending, scope == "all"))
-    return fit_budget(snapshot.revision_id, scope, items, inbox_pending, budget, not items)
+        head = actives[-1]
+        items.append(_entry(head, actives, retired, pending, scope == "all", server.serve(STATE_STREAM, head.row)))
+    with server:
+        declared = server.declare()
+    return fit_budget(snapshot.revision_id, scope, items, inbox_pending, budget, not items, declared)
 
 
 __all__ = ["DEFAULT_BUDGET", "RESULT_SCHEMA", "StateReadError", "render", "serialized_size", "state_show"]

@@ -96,6 +96,9 @@ class GitRepo:
                     proc.wait(timeout=_TIMEOUT)
                 except (OSError, subprocess.SubprocessError):
                     proc.kill()
+                    proc.wait()
+                finally:
+                    proc.stdout.close()  # type: ignore[union-attr]
         self._batch = self._check = None
 
     def _run(self, args: list[str], cwd: Path | None = None, stdin: bytes | None = None):

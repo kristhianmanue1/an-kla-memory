@@ -20,7 +20,7 @@ from an_kla.anchors_document import check_document
 from an_kla.anchors_freshness import derive_freshness
 from an_kla.anchors_search import find_quote
 
-from anchors_c3_support import REPO_ID, load_vectors
+from tests.anchors_c3_support import REPO_ID, load_vectors
 
 COUNTS: dict[str, dict[str, int]] = {}
 DOC_SHA = "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323"

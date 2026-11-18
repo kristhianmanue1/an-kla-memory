@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 
+from . import anchors_cli
 from .context_view import DEFAULT_BUDGET_BYTES, DEFAULT_LIMIT, PROJECTIONS
 from .index import INDEX_PROFILE
 from .inventory import DEFAULT_LIMIT as INVENTORY_DEFAULT_LIMIT
@@ -534,6 +535,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--budget", type=int, default=4000, metavar="N",
         help="Bytes máximos de la salida JSON, con su salto de línea final (por defecto 4000).",
     )
+    state_show_cmd.add_argument(
+        "--anchor-limit", type=int, default=32, metavar="N",
+        help="Anclas comprobadas como máximo al servir (ADR-0066; por defecto 32): el resto sale unverified/anchor_limit.",
+    )
     history_cmd = sub.add_parser(
         "history", help="Cadena de sustituciones y disputas de un registro (ADR-0065), sólo lectura."
     )
@@ -543,6 +548,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--budget", type=int, default=16000, metavar="N",
         help="Bytes máximos de la salida JSON, con su salto de línea final (por defecto 16000).",
     )
+    history_cmd.add_argument(
+        "--anchor-limit", type=int, default=32, metavar="N",
+        help="Anclas comprobadas como máximo al servir (ADR-0066; por defecto 32): el resto sale unverified/anchor_limit.",
+    )
+    anchors_cli.add_parsers(sub, remember_cmd)  # ADR-0066: remember --anchor-*, dispute, anchors verify
     identity_cmd = sub.add_parser("identity", help="Inspeccionar o adoptar identidad local.")
     identity_sub = identity_cmd.add_subparsers(dest="identity_command", required=True)
     identity_status_cmd = identity_sub.add_parser("status")

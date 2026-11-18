@@ -36,6 +36,8 @@ SOURCE_SCHEMAS = ROOT / "docs" / "schemas"
 
 class InstalledSchemaTests(unittest.TestCase):
     expected_names = (
+        "anchor-resolution-v1",
+        "anchors-verify-v1",
         "attest-receipt-v1",
         "checkpoint-authority-v1",
         "checkpoint-decision-v1",
@@ -73,6 +75,7 @@ class InstalledSchemaTests(unittest.TestCase):
         "inbox-drain-result-v1",
         "inbox-entry-v1",
         "inbox-entry-v2",
+        "inbox-entry-v3",
         "inbox-status-v1",
         "integration-status-v1",
         "integration-status-v2",

@@ -335,6 +335,69 @@ repo usan `--slot` distintos; con `main` para todos gana el último que escribe.
   no las lee: ejecuta `inbox drain` y comprueba `pending` 0 antes de bajar de
   versión.
 
+### Anclas, frescura y disputa
+
+Un recuerdo sin fuente no se puede comprobar. Con **anclas** (C3,
+`memoria/ancla/v1`; ADR-0066) un `remember` cita su fuente y quien lo lee ve,
+sin fiarse de quien lo escribió y sin ningún modelo, si la cita sigue ahí.
+
+```bash
+# Atajo: un hecho, una afirmación, una cita literal (8 a 300 bytes).
+.venv/bin/python -m an_kla --project-root . remember --text-file - \
+  --anchor-path docs/config.md --anchor-quote "El servidor usa port = 8081" <<< "El servidor usa el puerto 8080"
+# Forma completa: lista JSON de 0 a 16 anclas (repo y session los pone la herramienta).
+.venv/bin/python -m an_kla --project-root . remember --text-file - --anchor-file anclas.json <<< "..."
+.venv/bin/python -m an_kla --project-root . anchors verify ID          # volver a comprobar (auditoría)
+.venv/bin/python -m an_kla --project-root . anchors verify --all --anchor-limit 32
+.venv/bin/python -m an_kla --project-root . dispute ID --verdict contradicted --text-file - <<< "la cita no lo respalda"
+```
+
+- **Tres comprobaciones, nunca un booleano**: `source` (¿la fuente existe donde se
+  mira?), `quote` (¿la cita está?) e `integrity` (¿la fuente es la observada?),
+  cada una `verified`, `not_found` o `unverifiable` con un `reason` de
+  vocabulario cerrado, más `at`, `match` y `matched_text`. De ellas sale la
+  `freshness`: `fresh`, `stale`, `broken`, `unverified` o `pending`. **`fresh`
+  significa que la cita sigue ahí, no que el hecho sea cierto.**
+- **Al escribir** se comprueba una sola vez, al encolar, con la fuente delante: un
+  `state` en el árbol de trabajo; un `fact` o una `decision` en el `commit`
+  declarado (el atajo toma el `HEAD`). Una comprobación `not_found` rechaza el
+  recuerdo entero, sin entrada y sin cambio en el store (`anchor_source_not_found`,
+  `anchor_quote_not_found`, `anchor_integrity_not_found`); un `unverifiable` se
+  acepta. Otros rechazos: `anchor_too_many` (más de 16), `anchor_schema_invalid`,
+  `anchor_quote_not_normalized`, `anchor_quote_too_short`, `anchor_quote_too_long`,
+  `anchor_path_invalid`, `anchor_input_invalid` (JSON mal formado).
+  `--anchor-file -` no puede coincidir con `--text-file -`.
+- **Cobertura determinista** (`fact-checks-rules/v1`): `coverage`, `missing` y
+  `missing_total` comparan los elementos del texto (identificadores entre
+  comillas invertidas, rutas y URL, versiones y números) con la **cita guardada**.
+  «El servidor usa el puerto 8080» con una cita que dice 8081 da `level: none` y
+  `missing: [{type: number, value: "8080"}]`. El registro siempre se guarda y
+  ningún nivel afirma respaldo: sólo `none` es un aviso. Un hecho anclado, una
+  afirmación; el estado de trabajo, que mezcla cifras, suele ir sin ancla.
+- **Al leer** (`state show`, `history`, `anchors verify`) se vuelve a comprobar
+  con el estado de ahora: el `HEAD` de la rama por defecto y, si no basta, la
+  rama del sobre. La rama por defecto no se adivina: `AN_KLA_DEFAULT_BRANCH`
+  (vacía = no hay) o la clave `default_branch` de `<store>/config.json` (que
+  esta versión sólo lee); sin ninguna, `origin/HEAD`; sin eso, `no_default_branch`.
+  Sólo se comprueban `--anchor-limit` anclas (32), en orden de servicio; el
+  resto sale `unverified`/`anchor_limit` y la salida declara cuántas se
+  comprobaron. No hay tope de tiempo. Leer nunca arranca un custodio.
+  `anchors_freshness` de un registro es la peor de sus anclas. `retrieve` no cambia.
+- **`conversation` y `document`**: un ancla de conversación nace `pending` y se
+  guarda siempre así; hasta que exista el resolutor de C2 no hay orden que la
+  resuelva (el esquema `anchor-resolution-v1` y su vista ya están). Un `document`
+  bien formado se guarda intacto y responde `unverified`/`kind_not_supported`.
+- **`dispute`**: guarda un dictamen externo (`contradicted` o `insufficient`; un
+  `supported` o `not_reviewed` da `dispute_verdict_invalid`) como una disputa con
+  la forma de ADR-0063 D3. El objetivo sigue vigente, también un `state`: nunca se
+  sustituye ni se jubila. `disputes list`, `state show` e `history` muestran el
+  veredicto más reciente de cada escritor. El dictamen es dato no confiable.
+- **Idempotencia**: las anclas (y el veredicto) forman parte de la clave derivada.
+  Una `--idempotency-key` explícita reutilizada con otras anclas da
+  `remember_id_collision` (`idempotency_key_other_anchors`).
+- Las entradas con anclas se encolan como `inbox-entry-v3`; un binario anterior no
+  las lee: `inbox drain` y `pending` 0 antes de bajar de versión.
+
 ### Respaldo sellado (opcional)
 
 El perfil `sealed-export/v1` (ADR-0042) cifra el respaldo en reposo

@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:anchor-resolution:v1",
+  "title": "AN-KLA Anchor Resolution v1",
+  "description": "Anotación que resuelve un ancla de conversación (ADR-0066 §6bis). Un store que sólo añade no muta un ancla: la resolución es un registro nuevo del stream `events`, y la vista de lectura aplica la última de cada ancla (`enqueued_at`, luego id). Invariantes, validadas al vaciar (`anchor_resolution_invalid`): el registro objetivo existe; `anchor_index` es menor que su número de anclas; el ancla de ese índice es `conversation` y su `quote_sha256` coincide; `resolved` lleva `turn_id` y `seal` no nulos y `not_found` los dos nulos. Esta versión sólo define el esquema y la vista: no hay orden pública que escriba resoluciones (las escribirá el resolutor de C2).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "target",
+    "resolution",
+    "turn_id",
+    "seal"
+  ],
+  "properties": {
+    "schema": {
+      "const": "an-kla/anchor-resolution-v1"
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stream",
+        "record_id",
+        "anchor_index",
+        "quote_sha256"
+      ],
+      "properties": {
+        "stream": {
+          "enum": [
+            "facts",
+            "events",
+            "episodes"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "anchor_index": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 15
+        },
+        "quote_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "resolution": {
+      "enum": [
+        "resolved",
+        "not_found"
+      ]
+    },
+    "turn_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "seal": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "resolution": {
+          "const": "resolved"
+        },
+        "turn_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "seal": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    {
+      "properties": {
+        "resolution": {
+          "const": "not_found"
+        },
+        "turn_id": {
+          "type": "null"
+        },
+        "seal": {
+          "type": "null"
+        }
+      }
+    }
+  ]
+}

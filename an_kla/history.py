@@ -15,6 +15,7 @@ from __future__ import annotations
 from collections import deque
 from typing import Any, Mapping
 
+from .anchors_read import AnchorServer
 from .disputes import _valid_disputes
 from .identity_c0 import validate_envelope
 from .state_show import StateReadError, serialized_size
@@ -105,9 +106,11 @@ def _walk(nodes: dict[Node, dict[str, Any]], edges: set[tuple[Node, Node, str]],
 
 
 def _response(
-    revision: str, root: str, nodes: list[dict[str, Any]], edges: list[dict[str, str]], truncated: bool, used: int
+    revision: str, root: str, nodes: list[dict[str, Any]], edges: list[dict[str, str]], truncated: bool, used: int,
+    declared: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     return {
+        **(declared or {}),
         "schema": RESULT_SCHEMA,
         "untrusted_memory_data": True,
         "revision": revision,
@@ -125,7 +128,8 @@ def _edges_among(kept: set[Node], edges: set[tuple[Node, Node, str]]) -> list[di
 
 
 def history(
-    snapshot: Any, record_id: str, *, limit: int = DEFAULT_LIMIT, budget: int = DEFAULT_BUDGET
+    snapshot: Any, record_id: str, *, limit: int = DEFAULT_LIMIT, budget: int = DEFAULT_BUDGET,
+    anchors: AnchorServer | None = None,
 ) -> dict[str, Any]:
     """``history-result-v1`` de ``record_id``: nodos y aristas de su componente, acotados por ``limit`` y ``budget``."""
 
@@ -144,12 +148,18 @@ def history(
     visited, truncated = _walk(nodes, edges, starts[0], limit)
     ordered = sorted(visited, key=lambda n: _order(nodes[n]))
     revision = snapshot.revision_id
+    declared: dict[str, int] = {}
+    if anchors is not None:  # ADR-0066 §4: freshness of the anchors of what is served, in serving order
+        rows = {(s, str(r.get("id", ""))): r for s in STREAMS for r in snapshot.records[s]}
+        for node in ordered:
+            nodes[node].update(anchors.serve(node[0], rows[node]))
+        declared = anchors.declare()
 
     def build(count: int, used: int) -> dict[str, Any]:
         kept = ordered[:count]
         return _response(
             revision, record_id, [nodes[n] for n in kept], _edges_among(set(kept), edges),
-            truncated or count < len(ordered), used,
+            truncated or count < len(ordered), used, declared,
         )
 
     if serialized_size(build(0, budget)) > budget:

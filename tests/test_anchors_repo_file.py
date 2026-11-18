@@ -10,7 +10,7 @@ from an_kla.anchors import AnchorRejected, validate_anchor
 from an_kla.anchors_git import GitRepo
 from an_kla.anchors_repo_file import ABSENT, ReadContext, verify_repo_file, write_rejection
 
-from anchors_c3_support import full_anchor, load_vectors, materialize
+from tests.anchors_c3_support import full_anchor, load_vectors, materialize
 
 CHECKED = (
     "source", "source_reason", "quote", "quote_reason", "integrity", "integrity_reason",
