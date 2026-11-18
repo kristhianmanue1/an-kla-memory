@@ -55,7 +55,7 @@ from .disputes import list_disputes
 from .inbox import read_status as inbox_status
 from .inbox_drain import DEFAULT_BUDGET_SECONDS as INBOX_DRAIN_BUDGET_SECONDS
 from .inbox_drain import drain as inbox_drain
-from .remember import read_text_file, remember
+from .remember import RememberError, error_result, read_text_file, remember
 from .state_cli import run as state_cli_run
 from .lock_order import LockOrderError
 from .inventory import DEFAULT_LIMIT as INVENTORY_DEFAULT_LIMIT
@@ -388,10 +388,8 @@ def _run() -> None:
             raise StoreError("storage_io_failed") from None
         result = list_disputes(snapshot, target=args.target)
     elif args.command == "export":
-        # Dispatcher dual ADR-0042 §2/§3/§8 (T5): sin --seal el camino es
-        # EXACTAMENTE export/v1 (delega en create_export/verify_export/
-        # restore_export sin cambios); con --seal sealed-export/v1 exige
-        # adaptador y usa la capa sellada de T4.
+        # Dispatcher dual ADR-0042 §2/§3/§8 (T5): sin --seal, EXACTAMENTE export/v1;
+        # con --seal, sealed-export/v1 con adaptador y la capa sellada de T4.
         if args.export_command == "create":
             result = dispatch_export_create(
                 store, args.bundle,
@@ -472,10 +470,16 @@ def _run() -> None:
             raise CliUsageError("inbox_command_unknown")
     elif args.command == "remember":
         text = args.text if args.text_file is None else read_text_file(args.text_file)
-        result = remember(
-            store, text, kind=args.kind, supersedes=args.supersedes,
-            idempotency_key=args.idempotency_key, slot=args.slot,
-        )
+        try:
+            result = remember(
+                store, text, kind=args.kind, supersedes=args.supersedes,
+                idempotency_key=args.idempotency_key, slot=args.slot,
+            )
+        except RememberError as exc:
+            if not exc.retryable:
+                raise
+            sys.stdout.buffer.write(canonical_json(error_result(exc)))  # #226: sin entrada, reintentable, rc=3
+            raise SystemExit(3)
     elif args.command in ("state", "history"):
         sys.stdout.buffer.write(state_cli_run(store, args))
         return
@@ -657,10 +661,8 @@ def _run() -> None:
         and "record_without_indexable_text"
         in (result.get("outcome") or {}).get("warnings", [])
     ):
-        # Issue #111 (P1): el warning vive en el outcome JSON, pero un
-        # integrador lo pasó por alto; se replica en stderr sin tocar el
-        # stdout programático. La decisión de escribir sin texto indexable
-        # sigue siendo del caller.
+        # Issue #111 (P1): el warning del outcome se replica en stderr sin tocar el stdout
+        # programático; escribir sin texto indexable sigue siendo decisión del caller.
         record_id = (proposal.get("record") or {}).get("id", "<unknown>")
         print(
             f"warning: record_without_indexable_text (id={record_id}): "

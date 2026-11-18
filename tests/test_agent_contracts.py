@@ -96,6 +96,7 @@ class InstalledSchemaTests(unittest.TestCase):
         "refute-policy-config-v1",
         "refute-policy-transaction-v1",
         "refute-proposal-v1",
+        "remember-error-v1",
         "remember-result-v1",
         "restore-result-v1",
         "resume-evidence-v1",
