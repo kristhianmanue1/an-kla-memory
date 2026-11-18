@@ -10,7 +10,7 @@ El formato de cada entrada sigue [Keep a Changelog](https://keepachangelog.com/e
 por intención, y el proyecto usa [versionado semántico](https://semver.org/lang/es/)
 en fase de pre-release `0.1.0`.
 
-## [v0.1.0-beta.37]
+## [Sin publicar]
 
 **Anclas de C3, frescura al recuperar y disputa nativa (ADR-0066, E1.d2)**:
 `remember` acepta anclas `memoria/ancla/v1` (`--anchor-file` o
@@ -40,6 +40,8 @@ Una bandeja con entradas `inbox-entry-v3` no la lee un binario anterior:
 formato del store no cambian; los registros sin anclas son idénticos byte a
 byte. Detalle en
 [`docs/architecture/0066-anclas-c3-v1.md`](docs/architecture/0066-anclas-c3-v1.md).
+
+## [v0.1.0-beta.37]
 
 **Estado de una casilla, `state show` e `history` (ADR-0065, E1.d1)**:
 `remember --kind state [--slot <s>]` escribe en una casilla (repo, slot;
