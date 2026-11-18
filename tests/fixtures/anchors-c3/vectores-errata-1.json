@@ -1,0 +1,230 @@
+{
+ "cita": [
+  {
+   "expect": {
+    "reject": "anchor_quote_too_short",
+    "stored": null
+   },
+   "id": "Q25",
+   "input": "a                                                                                                                                                                                                                                                                                                            b",
+   "kind": "repo-file",
+   "note": "302 bytes y 2 \u00fatiles: primero se comprueba el m\u00ednimo, despu\u00e9s el m\u00e1ximo"
+  }
+ ],
+ "conversation": [
+  {
+   "anchor": {
+    "kind": "conversation",
+    "quote": "manda renovar de manera indefinida",
+    "resolution": "pending",
+    "turn_id": null
+   },
+   "expect": {
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "ws-nfc/v1",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "resolution": "resolved",
+    "source": "verified",
+    "source_reason": null,
+    "turn_id": "t2"
+   },
+   "id": "S12",
+   "note": "un turno purgado no impide resolver si otro turno contiene la cita",
+   "resolver": true,
+   "session": {
+    "state": "sealed",
+    "turns": [
+     {
+      "id": "t1",
+      "purged": true,
+      "text": "revisa las p\u00f3lizas vencidas"
+     },
+     {
+      "id": "t2",
+      "text": "adelante y manda renovar de manera\nindefinida con el consumidor"
+     }
+    ]
+   }
+  },
+  {
+   "anchor": {
+    "kind": "conversation",
+    "quote": "manda renovar de manera indefinida",
+    "resolution": "resolved",
+    "turn_id": "t9"
+   },
+   "expect": {
+    "freshness": "broken",
+    "integrity": "unverifiable",
+    "integrity_reason": "turn_purged",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "turn_purged",
+    "resolution": "resolved",
+    "source": "not_found",
+    "source_reason": "turn_purged",
+    "turn_id": "t9"
+   },
+   "id": "S13",
+   "note": "turno resuelto que no est\u00e1 en la sesi\u00f3n: igual que purgado",
+   "resolver": true,
+   "session": {
+    "state": "sealed",
+    "turns": [
+     {
+      "id": "t1",
+      "text": "revisa las p\u00f3lizas vencidas"
+     },
+     {
+      "id": "t2",
+      "text": "adelante y manda renovar de manera\nindefinida con el consumidor"
+     }
+    ]
+   }
+  }
+ ],
+ "document": [
+  {
+   "anchor": {
+    "kind": "document",
+    "locator": {
+     "item_id": "i-1",
+     "page": 188
+    },
+    "modality": "native_text",
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones"
+   },
+   "copy": "ok",
+   "custodian": "unknown_document",
+   "derived_text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas\nde vacaciones al a\u00f1o.",
+   "expect": {
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "document_unknown",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "document_unknown",
+    "reason": "document_unknown",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "D18",
+   "manifest_ok": true,
+   "moment": "audit",
+   "note": "copia correcta y custodio en marcha que no conoce el documento: nunca fresh",
+   "supported": true
+  }
+ ],
+ "errata": 1,
+ "fecha": "2026-11-18",
+ "repo_file": [
+  {
+   "anchor": {
+    "commit": null,
+    "kind": "repo-file",
+    "path": "docs/nuevo.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "worktree",
+    "freshness": "fresh",
+    "integrity": "unverifiable",
+    "integrity_reason": "working_tree",
+    "match": "literal",
+    "matched_text": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "W24",
+   "moment": "write",
+   "note": "state: archivo nuevo sin a\u00f1adir al \u00edndice y no ignorado; cuenta",
+   "record_type": "state",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "op": "write",
+     "path": "docs/nuevo.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "default",
+    "freshness": "broken",
+    "integrity": "not_found",
+    "integrity_reason": "commit_blob_lacks_quote",
+    "match": "literal",
+    "matched_text": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": "commit_blob_lacks_quote",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "R26",
+   "moment": "read",
+   "note": "en el commit declarado la ruta era un enlace simb\u00f3lico: no se sigue",
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "README.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "op": "symlink",
+     "path": "docs/a.md",
+     "target": "../README.md"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "op": "delete",
+     "path": "docs/a.md"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c2",
+     "op": "commit"
+    }
+   ]
+  }
+ ],
+ "schema": "memoria/ancla/v1-vectores"
+}
