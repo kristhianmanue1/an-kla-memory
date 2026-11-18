@@ -67,6 +67,15 @@ se regenera en cada prueba. Los goldens se calculan también con el código de
 - Las respuestas MCP se piden en una sola sesión stdio con `protocolVersion`
   fijo; se hashea cada respuesta cruda.
 
+## Regeneración de la beta.36
+
+`store.tar` no cambia (su digest en `goldens.json` es el mismo). Sólo cambian
+`cli.status` y `mcp.initialize`, que muestran la versión del paquete; se
+recalcularon con `python tests/legacy_store_goldens.py --write` sobre el
+candidato a release. Antes se comprobó que su material crudo con b36 es el de
+b35 con la versión sustituida, y que con `VERSION = "0.1.0b35"` el mismo árbol
+reproduce los 24 goldens anteriores.
+
 ## Lo que los goldens no cubren
 
 Al extraerse en otro directorio, el store se abre siempre **reubicado**: los
