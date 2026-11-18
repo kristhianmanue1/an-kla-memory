@@ -60,11 +60,20 @@ class EnqueueTests(InboxCase):
         except ImportError:
             self.skipTest("jsonschema no instalado (extra de test)")
         validator = Draft202012Validator(schema_document("inbox-entry-v1"))
-        for kwargs in ({}, {"kind": "state"}, {"target_id": "f-x"}):
+        for kwargs in ({}, {"target_id": "f-x"}):
             with self.subTest(kwargs=kwargs):
                 name = enqueue(self.store, **kwargs)["entry"]
                 self.assertEqual(list(validator.iter_errors(read_entry(self, name))), [])
         self.assertTrue(list(validator.iter_errors({"schema": "an-kla/inbox-entry-v1"})))
+        # ADR-0065 §3: un `state` lleva casilla y se encola como inbox-entry-v2 (v1 no admite `slot`).
+        v2 = Draft202012Validator(schema_document("inbox-entry-v2"))
+        for kwargs in ({"kind": "state"}, {"kind": "state", "slot": "lateral"}):
+            with self.subTest(kwargs=kwargs):
+                name = enqueue(self.store, **kwargs)["entry"]
+                entry = read_entry(self, name)
+                self.assertEqual(list(v2.iter_errors(entry)), [])
+                self.assertEqual(entry["slot"], kwargs.get("slot", "main"))
+        self.assertTrue(list(v2.iter_errors({"schema": "an-kla/inbox-entry-v2"})))
 
     def test_name_collision_regenerates_and_never_overwrites(self) -> None:
         pid = os.getpid()
@@ -300,7 +309,9 @@ class KindResolutionTests(InboxCase):
                 self.assertEqual(entry["envelope"]["kind"], kind)
                 self.assertEqual(
                     entry["idempotency_key"],
-                    c0.derive_idempotency_key(identity, kind, "recuerdo sobre quetzal", target),
+                    c0.derive_idempotency_key(
+                        identity, kind, "recuerdo sobre quetzal", target, "main" if kind == "state" else None
+                    ),
                 )
 
     def test_explicit_kind_wins_over_the_target(self) -> None:

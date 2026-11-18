@@ -30,7 +30,9 @@ from . import identity_c0, lock_order
 from .canonical import canonical_json, digest_json
 from .custody import CustodyError, read_pointer
 from .identity import IdentityError, _mutation_preflight_with_context, identity_lock
+from .identity_c0 import DEFAULT_SLOT, SLOT_PATTERN
 from .reader_gate import ReaderGateError
+from .state_slot import target_slot
 from .storage_primitives import fsync_directory
 from .store import PREFIXES
 from .store_errors import StoreError
@@ -46,6 +48,7 @@ except ImportError:  # pragma: no cover - plataforma con fcntl
     msvcrt = None  # type: ignore[assignment]
 
 ENTRY_SCHEMA = "an-kla/inbox-entry-v1"
+ENTRY_SCHEMA_V2 = "an-kla/inbox-entry-v2"  # ADR-0065 §3: v1 más `slot` opcional; la usan las entradas `state`
 STATUS_SCHEMA = "an-kla/inbox-status-v1"
 INBOX_DIRNAME = "inbox"
 LOCK_NAME = ".lock"
@@ -61,9 +64,7 @@ KINDS = ("fact", "decision", "state")
 MAX_TEXT_BYTES = 64 * 1024
 MAX_TARGET_CHARS = 256
 ENQUEUE_LOCK_WAIT_SECONDS = 2.0
-# Plazo propio de la espera de `identity_lock` al encolar (#226): no se descuenta de la espera de la
-# bandeja. El encolado lo toma en compartido, así que sólo vence ante un tenedor exclusivo de verdad
-# (reubicación, compactación, export/restore, identidad); entonces `remember` es reintentable.
+# #226: plazo propio de `identity_lock` al encolar (compartido); sólo vence ante un exclusivo real.
 ENQUEUE_IDENTITY_WAIT_SECONDS = 2.0
 _LOCK_BACKOFF_SECONDS = 0.01
 _NAME_ATTEMPTS = 16
@@ -494,8 +495,10 @@ def resolve_kind(store: Any, kind: str | None, target_id: str | None) -> tuple[s
     return _STREAM_DEFAULT_KIND.get(stream, "fact"), False
 
 
-def payload_digest(text: str, kind: str, target_id: str | None) -> str:
-    return digest_json({"text": text, "kind": kind, "target": target_id})
+def payload_digest(text: str, kind: str, target_id: str | None, slot: str | None = None) -> str:
+    """Digest de una entrada; ``slot`` (sólo ``state``) entra únicamente si existe, así v1 no cambia."""
+
+    return digest_json({"text": text, "kind": kind, "target": target_id, **({"slot": slot} if slot is not None else {})})
 
 
 def _entry_name(time_ns: int, pid: int, key: str, token: str) -> str:
@@ -521,6 +524,7 @@ def enqueue(
     kind: str | None = None,
     target_id: str | None = None,
     idempotency_key: str | None = None,
+    slot: str | None = None,
     env: Mapping[str, str] | None = None,
     clock: Callable[[], datetime] | None = None,
     wait_seconds: float = ENQUEUE_LOCK_WAIT_SECONDS,
@@ -548,34 +552,40 @@ def enqueue(
     ):
         raise InboxError("inbox_target_invalid")
     resolved_kind, explicit = resolve_kind(store, kind, target_id)
+    if slot is not None and (not isinstance(slot, str) or not SLOT_PATTERN.fullmatch(slot)):
+        raise InboxError("inbox_slot_invalid", "slot: [a-z][a-z0-9_-]{0,31}")
+    if slot is not None and resolved_kind != "state":
+        raise InboxError("inbox_slot_requires_state", "--slot sólo aplica a --kind state")
+    # La casilla (ADR-0065 §1-2): la pedida; si no, la del target `state` (sin --kind); si no, `main`.
+    entry_slot = (slot or (target_slot(store, target_id) if not explicit else None) or DEFAULT_SLOT) if resolved_kind == "state" else None
     identity = identity_c0.build_identity(store.project_root, env)
     if idempotency_key is None:
-        key = identity_c0.derive_idempotency_key(identity, resolved_kind, data_text, target_id)
+        key = identity_c0.derive_idempotency_key(identity, resolved_kind, data_text, target_id, entry_slot)
     elif isinstance(idempotency_key, str) and _DIGEST.fullmatch(idempotency_key):
         key = idempotency_key
     else:
         raise InboxError("inbox_idempotency_key_invalid", "la clave debe ser sha256:<64 hex>")
     paths = inbox_paths(store)
     with inbox_lock(store, exclusive=False, wait_seconds=wait_seconds):
-        # R2-03/#226: `identity_lock` espera su propio plazo; vencido, `identity_lock_busy` sin dejar entrada.
-        # R1-01: una reubicación en curso tiene `identity_lock` durante todo el cambio de custodia;
-        # tomarlo aquí (bandeja -> identidad, orden permitido) bloquea la publicación y, al terminar,
-        # el preflight repetido falla sin dejar entrada, también con la bandeja ausente al empezar ella.
-        # #226: en compartido, los encoladores no se excluyen entre sí; sólo un exclusivo los frena.
+        # R2-03/#226: `identity_lock` en compartido (los encoladores no se excluyen) y con plazo propio;
+        # vencido, `identity_lock_busy` sin dejar entrada. R1-01: una reubicación lo tiene exclusivo todo
+        # el cambio de custodia; el preflight repetido bajo el candado falla sin dejar entrada.
         with identity_lock(store, wait_seconds=identity_wait_seconds, shared=True):
             _custody_preflight(store, preflight, seen_custody)  # la custodia pudo cambiar mientras se esperaba
             envelope = identity_c0.build_envelope(identity, resolved_kind, key, clock)
             entry: dict[str, Any] = {
-                "schema": ENTRY_SCHEMA,
+                "schema": ENTRY_SCHEMA if entry_slot is None else ENTRY_SCHEMA_V2,
                 "text": data_text,
                 "kind": resolved_kind,
                 "kind_explicit": explicit,
                 "envelope": envelope,
                 "idempotency_key": key,
-                "payload_sha256": payload_digest(data_text, resolved_kind, target_id),
+                "payload_sha256": payload_digest(data_text, resolved_kind, target_id, entry_slot),
             }
             if target_id is not None:
                 entry["target_id"] = target_id
+            if entry_slot is not None:
+                entry["slot"] = entry_slot
             payload = canonical_json(entry)
             entry_name = _publish(paths, payload, key, time_ns, token, replace)
     result: dict[str, Any] = {
@@ -587,7 +597,9 @@ def enqueue(
         "payload_sha256": entry["payload_sha256"],
         "enqueued_at": envelope["enqueued_at"],
     }
-    if target_id is None:
+    if entry_slot is not None:
+        result["slot"] = entry_slot  # un `state` en cola no anuncia `record_id`: su id depende de la cabeza (§3)
+    elif target_id is None:
         result["record_id"] = record_id(stream_for_kind(resolved_kind), key)
     return result
 
@@ -781,7 +793,7 @@ def read_status(store: Any) -> dict[str, Any]:
 
 
 __all__ = [
-    "ENTRY_SCHEMA", "InboxError", "InboxPaths", "KINDS", "MAX_TEXT_BYTES", "STATUS_SCHEMA",
+    "DEFAULT_SLOT", "ENTRY_SCHEMA", "ENTRY_SCHEMA_V2", "SLOT_PATTERN", "InboxError", "InboxPaths", "KINDS", "MAX_TEXT_BYTES", "STATUS_SCHEMA",
     "collect_tmp", "ensure_layout", "enqueue", "entry_names", "inbox_lock", "inbox_paths", "inflight_is_empty",
     "is_entry_name", "is_marker_name", "marker_names", "payload_digest", "pending_is_empty",
     "read_status", "record_id", "resolve_kind", "root_state", "stream_for_kind", "subdir_names",

@@ -14,6 +14,16 @@ del historial: extrae `5c5750a` (`git archive`) en un directorio temporal,
 copia el arnés de HEAD, regenera en otro directorio y compara con `diff -r`
 contra este; sólo debe diferir este `README.md`.
 
+**Regeneración de la beta.36.** Con `VERSION = "0.1.0b36"` estos goldens se
+regeneraron con el código del candidato a release, porque la versión del
+paquete entra en `project-identity.json` al `init` y de ahí en todos los
+digests encadenados. Antes se comprobó que la versión es la única diferencia:
+el mismo árbol con `VERSION = "0.1.0b35"` reproduce byte a byte los goldens
+anteriores; dos corridas con b36 dan lo mismo (salvo `attest.key`, aleatoria);
+fichero a fichero, los stores b35 y b36 sólo difieren en la cadena de versión
+o en digests derivados; y las salidas comparadas, con los digests
+enmascarados, son iguales.
+
 **Regenerar** (sólo si el comportamiento cambia a propósito; la fase A exige
 que no cambie). Crea un worktree desechable de `main`, copia allí
 `tests/write_commit_scenarios.py` y ejecuta, con el intérprete 3.12 del

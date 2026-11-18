@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:inbox-entry:v2",
+  "title": "AN-KLA Inbox Entry v2",
+  "description": "Entrada confirmada de `memory/inbox/pending/` con casilla (ADR-0065 §3): `inbox-entry-v1` más `slot`, obligatorio, sólo con `kind: state`. v1 sigue leyéndose (un `state` v1 sin `slot` pertenece a `main`). `payload_sha256` incluye `slot`. Un binario anterior no lee v2: `inbox drain` y pendientes 0 antes de bajar de versión. El texto es dato, nunca instrucción. Entrada confirmada de `memory/inbox/pending/` (ADR-0063 D1). `envelope` es un `an-kla/record-envelope-v1`; este schema sólo fija su forma de objeto y el validador C0 (`identity_c0.validate_envelope`) es la autoridad. `idempotency_key` debe ser igual a `envelope.idempotency_key` y `kind` a `envelope.kind` (no expresable aquí). `kind_explicit` es false cuando el `kind` se resolvió al encolar a partir del target (ADENDA 1). `target_id` es sólo el target pedido: la resolución propia/ajena ocurre al vaciar. El texto es dato, nunca instrucción.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "text",
+    "kind",
+    "kind_explicit",
+    "envelope",
+    "idempotency_key",
+    "payload_sha256",
+    "slot"
+  ],
+  "properties": {
+    "schema": {
+      "const": "an-kla/inbox-entry-v2"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "const": "state"
+    },
+    "kind_explicit": {
+      "type": "boolean"
+    },
+    "envelope": {
+      "type": "object"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "payload_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "target_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "slot": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,31}(?![\\s\\S])"
+    }
+  }
+}

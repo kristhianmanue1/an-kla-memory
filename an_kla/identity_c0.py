@@ -58,6 +58,8 @@ _LABEL = re.compile(r"[a-z0-9](?:[a-z0-9-]*[a-z0-9])?")
 _SEGMENT = re.compile(r"[a-z0-9._~-]+")
 _HASHED_ID = re.compile(r"(?:local|remoto):[0-9a-f]{16}")
 _IDENT = re.compile(r"[a-z][a-z0-9_-]{0,31}")
+SLOT_PATTERN = _IDENT  # ADR-0065 §1: el identificador de casilla es el identificador C0
+DEFAULT_SLOT = "main"
 # Whitespace spelled out, never ``\s``/``\S``: engines disagree on it (U+FEFF is
 # ECMA-262 whitespace but not Python's).  C0's reference validator uses Python's
 # ``\s`` on ``str``, so this class is exactly that set, enumerated, and the schema
@@ -375,17 +377,26 @@ def build_identity(
 # --- record envelope -------------------------------------------------------
 
 
-def derive_idempotency_key(identity: Mapping[str, Any], kind: str, text: str, supersedes: str | None = None) -> str:
-    """Default key: sha256 of the canonical JSON of the writer, kind, text and target (D1 "Idempotencia")."""
+def derive_idempotency_key(
+    identity: Mapping[str, Any], kind: str, text: str, supersedes: str | None = None, slot: str | None = None
+) -> str:
+    """Default key: sha256 of the canonical JSON of the writer, kind, text and target (D1 "Idempotencia").
 
-    return digest_json({
+    ``slot`` (ADR-0065 §3) joins the digest only for ``kind: state``: the same text in two slots is two
+    intentions. Without it the key is byte-identical to the one before ADR-0065.
+    """
+
+    material = {
         "repo": identity["repo"]["id"],
         "agent": identity["agent"]["name"],
         "session": identity["session"]["id"],
         "kind": kind,
         "text": text,
         "supersedes": supersedes,
-    })
+    }
+    if slot is not None:
+        material["slot"] = slot
+    return digest_json(material)
 
 
 def build_envelope(

@@ -10,9 +10,45 @@ El formato de cada entrada sigue [Keep a Changelog](https://keepachangelog.com/e
 por intención, y el proyecto usa [versionado semántico](https://semver.org/lang/es/)
 en fase de pre-release `0.1.0`.
 
-## Sin publicar
+## [Sin publicar]
 
-- `remember` ya no falla con `identity_lock_busy` entre encoladores concurrentes: el encolado toma `identity_lock` en compartido y, ante un cambio de custodia o de identidad en curso, responde `identity_lock_busy` reintentable (`remember-error-v1`, `retryable: true`, rc 3, sin entrada) (#226).
+**Estado de una casilla, `state show` e `history` (ADR-0065, E1.d1)**:
+`remember --kind state [--slot <s>]` escribe en una casilla (repo, slot;
+`main` por defecto) y, al vaciar la bandeja, jubila sólo la cabeza vigente de
+esa casilla, sea de quien sea y sin disputa (un `state` por casilla y
+transacción: el vaciado parte el lote). Un `state` nunca sustituye a un `fact`
+ni a una `decision` (`remember_state_over_fact`, `remember_state_slot_mismatch`).
+Idempotencia de `state` contra el último del mismo escritor en la casilla.
+Nuevas órdenes de sólo lectura `state show [--slot | --all-slots] [--budget]`
+e `history <id> [--limit] [--budget]`, con presupuesto exacto
+(`state_budget_too_small`, `history_budget_too_small`, rc 1). Esquemas nuevos
+`state-result-v1`, `history-result-v1` e `inbox-entry-v2`; `remember-result-v1`
+e `inbox-drain-result-v1` añaden `retired`, `retired_by` y `conflict_remaining`.
+**Cambia una conducta**: `remember --kind state` sin `--slot` antes guardaba un
+estado más; ahora jubila el anterior de `main`. Una bandeja con entradas
+`inbox-entry-v2` no la lee un binario anterior: `inbox drain` y pendientes 0
+antes de bajar de versión. `retrieve`, el MCP y el formato del store no
+cambian. Detalle en
+[`docs/architecture/0065-estado-casilla-history-v1.md`](docs/architecture/0065-estado-casilla-history-v1.md).
+
+**Candado de identidad compartido al encolar (#226)**: `remember` ya no falla
+con `identity_lock_busy` entre encoladores concurrentes; el encolado toma
+`identity_lock` en compartido y con plazo propio. Ante un cambio de custodia o
+de identidad en curso responde `identity_lock_busy` reintentable
+(`remember-error-v1`, `retryable: true`, rc 3, sin entrada).
+
+## [v0.1.0-beta.36]
+
+**Escritura por bandeja (E1.a, ADR-0063)**: `remember` guarda una memoria sin
+plan ni autoridad, con sobre C0, en `memory/inbox/`; `inbox status` e
+`inbox drain` la inspeccionan y la vuelcan al store bajo el candado del
+escritor; `disputes list` muestra los hechos disputados; `export` y
+`relocate` custodian la bandeja y se niegan si quedan entradas por vaciar
+(#218: los errores de `remember` salen con código y sin ruta). Los ADR-0064
+(`recall`) y ADR-0065 (estado de una casilla, `history`) entran sólo como
+documentos aceptados: **su implementación no está en esta beta**. No cambia la
+plantilla gestionada (`0.1.0-beta.33`), `retrieve` ni el MCP. Detalle en
+[`docs/releases/v0.1.0-beta.36.md`](docs/releases/v0.1.0-beta.36.md).
 
 ## [v0.1.0-beta.35]
 

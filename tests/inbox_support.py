@@ -126,20 +126,22 @@ class EntryFactory:
 
     def entry(
         self, text: str, *, kind: str = "fact", target_id: str | None = None, kind_explicit: bool | None = None,
-        key: str | None = None,
+        key: str | None = None, slot: str | None = None,
     ) -> dict[str, Any]:
         from an_kla import inbox
 
-        key = key or self.identity_c0.derive_idempotency_key(self.identity, kind, text, target_id)
+        key = key or self.identity_c0.derive_idempotency_key(self.identity, kind, text, target_id, slot)
         envelope = self.identity_c0.build_envelope(self.identity, kind, key)
         data: dict[str, Any] = {
-            "schema": inbox.ENTRY_SCHEMA, "text": text, "kind": kind,
+            "schema": inbox.ENTRY_SCHEMA if slot is None else inbox.ENTRY_SCHEMA_V2, "text": text, "kind": kind,
             "kind_explicit": bool(kind_explicit),
             "envelope": envelope, "idempotency_key": key,
-            "payload_sha256": inbox.payload_digest(text, kind, target_id),
+            "payload_sha256": inbox.payload_digest(text, kind, target_id, slot),
         }
         if target_id is not None:
             data["target_id"] = target_id
+        if slot is not None:
+            data["slot"] = slot  # ADR-0065 §3: inbox-entry-v2
         return data
 
     def name_for(self, data: dict[str, Any]) -> str:

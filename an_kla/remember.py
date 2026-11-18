@@ -93,10 +93,11 @@ def read_text_file(path: str, stdin: BinaryIO | None = None) -> str:
 
 
 def _enqueue(
-    store: Any, text: str, kind: str | None, target_id: str | None, key: str | None, env: Mapping[str, str] | None
+    store: Any, text: str, kind: str | None, target_id: str | None, key: str | None, env: Mapping[str, str] | None,
+    slot: str | None = None,
 ) -> dict[str, Any]:
     try:
-        return enqueue(store, text, kind=kind, target_id=target_id, idempotency_key=key, env=env)
+        return enqueue(store, text, kind=kind, target_id=target_id, idempotency_key=key, slot=slot, env=env)
     except IdentityC0Error as exc:
         field = f" ({exc.field})" if exc.field and exc.code != "identity_env_missing" else ""
         raise RememberError(exc.code, _IDENTITY_HINTS.get(exc.code, "identidad C0 inválida") + field) from None
@@ -135,6 +136,8 @@ def _result(queued: dict[str, Any], report: dict[str, Any], pending_resolution: 
         "outcome": report.get("outcome", "known"),
         "warnings": list(report.get("warnings", [])),
     }
+    if "slot" in queued:
+        result["slot"] = queued["slot"]
     rejections = report["rejected"]["entries"]
     result["rejected"] = {"count": len(rejections), "entries": rejections}
     committed = _find(report["committed"]["entries"], name)
@@ -146,7 +149,7 @@ def _result(queued: dict[str, Any], report: dict[str, Any], pending_resolution: 
             state="committed", record_id=committed["record_id"], revision=committed["revision"],
             stream=committed["stream"], operation=committed["operation"],
         )
-        for field in ("disputed", "superseded"):
+        for field in ("disputed", "superseded", "retired", "retired_by", "conflict_remaining"):
             if field in committed:
                 result[field] = committed[field]
     elif rejected is not None:
@@ -155,9 +158,14 @@ def _result(queued: dict[str, Any], report: dict[str, Any], pending_resolution: 
         # Un reintento: otra entrada con la misma clave ya está (o acaba de quedar) comprometida.
         result.update(state="committed", already_committed=True)
         suffix = "-r-" + queued["idempotency_key"][len("sha256:"):][:24]
-        sibling = next((c for c in report["committed"]["entries"] if c["record_id"].endswith(suffix)), None)
+        # El id de un `state` depende de la cabeza que jubila (§3): no hay gemela por sufijo de clave.
+        sibling = None if queued["kind"] == "state" else next(
+            (c for c in report["committed"]["entries"] if c["record_id"].endswith(suffix)), None
+        )
         if already is not None:
             result["record_id"] = already["record_id"]
+            if "retired_by" in already:
+                result["retired_by"] = already["retired_by"]
         if sibling is not None:
             result.update(record_id=sibling["record_id"], revision=sibling["revision"])
     else:
@@ -191,15 +199,16 @@ def remember(
     kind: str | None = None,
     supersedes: str | None = None,
     idempotency_key: str | None = None,
+    slot: str | None = None,
     env: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Guarda ``text`` y devuelve ``remember-result-v1``. Los errores previos al encolado salen como ``RememberError``
     (o con el código de la bandeja, la custodia o la identidad): en ellos no queda ninguna entrada."""
 
     key = None if idempotency_key is None else normalize_idempotency_key(idempotency_key)
-    queued = _enqueue(store, text, kind, supersedes, key, env)
+    queued = _enqueue(store, text, kind, supersedes, key, env, slot)
     report = _drain(store, queued["entry"])
-    result = _result(queued, report, supersedes is not None)
+    result = _result(queued, report, supersedes is not None or queued["kind"] == "state")
     return result
 
 
