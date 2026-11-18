@@ -13,7 +13,7 @@ import unittest
 from typing import Any
 
 from an_kla.anchors import (
-    AnchorRejected, normalize_quote, prepare_quote, quote_sha256, validate_anchor, validate_anchors,
+    WHITE_SPACE, AnchorRejected, normalize_quote, prepare_quote, quote_sha256, validate_anchor, validate_anchors,
 )
 from an_kla.anchors_conversation import ConversationVerifier, TurnView, apply_resolution, check_conversation
 from an_kla.anchors_document import check_document
@@ -157,6 +157,14 @@ class QuoteVectors(unittest.TestCase):
                 )
                 _check(self, "frescura", str(index), {"freshness": fresh, "decided_by": decided},
                        {"freshness": case["freshness"], "decided_by": case["decided_by"]})
+
+    def test_white_space(self) -> None:
+        # The 25 code points of Unicode ``White_Space``, exactly; U+001C..U+001F and U+200B are not in it.
+        wanted = load_vectors("vectores.json")["white_space"]
+        self.assertEqual(len(wanted), 25)
+        self.assertEqual(sorted(f"U+{ord(ch):04X}" for ch in WHITE_SPACE), wanted)
+        for cp in (0x1C, 0x1D, 0x1E, 0x1F, 0x200B):
+            self.assertNotIn(chr(cp), WHITE_SPACE)
 
 
 class ConversationVectors(unittest.TestCase):

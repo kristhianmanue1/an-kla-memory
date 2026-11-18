@@ -4,7 +4,7 @@
   rondas adversariales de otra familia (Gemini): r1 `fix-and-retry` (4 HIGH, 3 MEDIUM, 1 LOW),
   r2 `proceed` (2 MEDIUM, 2 LOW, incorporados), r3 `proceed` sobre lo añadido después, incluida la
   errata 3 de C3 (1 LOW, incorporado). Las nueve ambigüedades las decidió el orquestador (§9).
-- **Implementación:** No iniciada
+- **Implementación:** En la rama `feat/e1d2-anclas` (PR de E1.d2, sin integrar): 240 de 257 vectores pasan y 17 no aplican (`document` con custodio); 0 discrepancias con el verificador de agora
 - **Fecha:** 2026-11-18
 - **Decide sobre:**
   - `remember --anchor`, con las tres comprobaciones de C3 al escribir y sus rechazos;
