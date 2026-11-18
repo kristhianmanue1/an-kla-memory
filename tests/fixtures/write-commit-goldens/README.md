@@ -24,6 +24,14 @@ fichero a fichero, los stores b35 y b36 sólo difieren en la cadena de versión
 o en digests derivados; y las salidas comparadas, con los digests
 enmascarados, son iguales.
 
+**Regeneración de la beta.37.** Con `VERSION = "0.1.0b37"` se regeneraron
+con el código del candidato a release, por la misma razón. Antes se comprobó
+que la versión es la única diferencia: el mismo árbol con
+`VERSION = "0.1.0b36"` reproduce byte a byte los goldens anteriores; dos
+corridas con b37 dan lo mismo (goldens y stores, salvo `attest.key`); los 14
+goldens b36/b37, con digests y versión enmascarados, son iguales; y los stores
+fichero a fichero sólo difieren en la cadena de versión o en digests derivados.
+
 **Regenerar** (sólo si el comportamiento cambia a propósito; la fase A exige
 que no cambie). Crea un worktree desechable de `main`, copia allí
 `tests/write_commit_scenarios.py` y ejecuta, con el intérprete 3.12 del

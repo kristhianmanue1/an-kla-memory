@@ -76,6 +76,14 @@ candidato a release. Antes se comprobó que su material crudo con b36 es el de
 b35 con la versión sustituida, y que con `VERSION = "0.1.0b35"` el mismo árbol
 reproduce los 24 goldens anteriores.
 
+## Regeneración de la beta.37
+
+`store.tar` no cambia. Sólo cambian `cli.status` y `mcp.initialize`, que
+muestran la versión del paquete; se recalcularon con
+`python tests/legacy_store_goldens.py --write` sobre el candidato a release.
+Antes se comprobó que con `VERSION = "0.1.0b36"` el mismo árbol reproduce los
+24 goldens anteriores (`tests.test_legacy_store_byte_identity`, 7 pruebas OK).
+
 ## Lo que los goldens no cubren
 
 Al extraerse en otro directorio, el store se abre siempre **reubicado**: los
