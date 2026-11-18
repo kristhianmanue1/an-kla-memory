@@ -5,7 +5,7 @@
   familia (Gemini): r1 `fix-and-retry` (2 BLOCKER, 4 HIGH, 2 MEDIUM, 1 LOW),
   r2 `fix-and-retry` (3 HIGH, 1 MEDIUM, 2 LOW), r3 `proceed` (2 LOW,
   incorporados); todos corregidos.
-- **Implementación:** Código y pruebas dirigidas en la rama `feat/e1d1-casilla` (sin fusionar; pendiente de la suite del capitán)
+- **Implementación:** Implementada (PR #228, fusionado; entra en v0.1.0-beta.37)
 - **Fecha:** 2026-11-16
 - **Decide sobre:**
   - `remember --kind state [--slot <s>]`, que jubila sola la casilla (repo, slot);

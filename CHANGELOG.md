@@ -10,7 +10,7 @@ El formato de cada entrada sigue [Keep a Changelog](https://keepachangelog.com/e
 por intención, y el proyecto usa [versionado semántico](https://semver.org/lang/es/)
 en fase de pre-release `0.1.0`.
 
-## [Sin publicar]
+## [v0.1.0-beta.37]
 
 **Anclas de C3, frescura al recuperar y disputa nativa (ADR-0066, E1.d2)**:
 `remember` acepta anclas `memoria/ancla/v1` (`--anchor-file` o
@@ -65,6 +65,10 @@ con `identity_lock_busy` entre encoladores concurrentes; el encolado toma
 `identity_lock` en compartido y con plazo propio. Ante un cambio de custodia o
 de identidad en curso responde `identity_lock_busy` reintentable
 (`remember-error-v1`, `retryable: true`, rc 3, sin entrada).
+
+No entran `recall` (ADR-0064) ni las anclas. No cambia la plantilla gestionada
+(`0.1.0-beta.33`). Detalle en
+[`docs/releases/v0.1.0-beta.37.md`](docs/releases/v0.1.0-beta.37.md).
 
 ## [v0.1.0-beta.36]
 
