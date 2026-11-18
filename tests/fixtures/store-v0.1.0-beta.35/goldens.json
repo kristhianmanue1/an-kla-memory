@@ -7,7 +7,7 @@
     "cli.retrieve": "ac67a430aef2b019b8467f8c949177404846fd08431de70cfae368e67b35de6a",
     "cli.retrieve_fresh": "b887d3407f7b94c1779db69b020f41707900f884fc612bdcca14fd82e4ac7a12",
     "cli.retrieve_streams": "fb92e7c6e5b2002505f8e84614b92940e1caa26e59225cbeef9fbb39227b810f",
-    "cli.status": "e7f547cb7b1f374791d295243b1e400d61862a9907e270e49cf073f0a0ad0b88",
+    "cli.status": "45f19f1221007aabb5827ac6dc1327e592f6948ba0720496989eb2e9a26275e5",
     "cli.verify": "f5760b2e3a3127adf60a811754679f2b0bfff146ac585a3d48660eafa12ac83d",
     "export.entries_count": "58",
     "export.entries_sha256": "ce2418777e10ab50d067c4e5d339a210121583b482a1b28b57a3e57bd022270a",
@@ -20,7 +20,7 @@
     "mcp.an_kla_status": "5e6492a5ed968b1f0743d1be4c7c2d53f851833f0d3ef41b36154d5e9af69af0",
     "mcp.an_kla_verify": "179381397943c019354bcaa8692cc0b2af03ef29ba479fbfbb7587466b499d37",
     "mcp.an_kla_view_context": "18d14cd3a125ba845090dc39a36da5897ffcc3ba150b86c5588597edf96de54a",
-    "mcp.initialize": "dc070a4c8da57c839d87c0ad5cbf974e51c05d199b0767a6f15b0566d9c2e2d1",
+    "mcp.initialize": "7261db4664d6edb9c633019d4f8761bf147c31ef3598bf86edb7058d9dbd27a8",
     "mcp.tools_list": "5526f07f9905687b7da65b5d4fbd7f2b744e44ee2ed1d9e41c6b0d9a2d1677d1",
     "policy_fingerprint": "sha256:4c5b287374d8a809fd2d73daa46f4de1c297605b94a0c1814d8c6d9178028027",
     "store.revision": "sha256:3ca274978cc46f958605448dbd35e3647e4eec6e465bedc4cbd179b48780a898"

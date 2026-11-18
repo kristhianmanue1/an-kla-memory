@@ -10,6 +10,19 @@ El formato de cada entrada sigue [Keep a Changelog](https://keepachangelog.com/e
 por intención, y el proyecto usa [versionado semántico](https://semver.org/lang/es/)
 en fase de pre-release `0.1.0`.
 
+## [v0.1.0-beta.36]
+
+**Escritura por bandeja (E1.a, ADR-0063)**: `remember` guarda una memoria sin
+plan ni autoridad, con sobre C0, en `memory/inbox/`; `inbox status` e
+`inbox drain` la inspeccionan y la vuelcan al store bajo el candado del
+escritor; `disputes list` muestra los hechos disputados; `export` y
+`relocate` custodian la bandeja y se niegan si quedan entradas por vaciar
+(#218: los errores de `remember` salen con código y sin ruta). Los ADR-0064
+(`recall`) y ADR-0065 (estado de una casilla, `history`) entran sólo como
+documentos aceptados: **su implementación no está en esta beta**. No cambia la
+plantilla gestionada (`0.1.0-beta.33`), `retrieve` ni el MCP. Detalle en
+[`docs/releases/v0.1.0-beta.36.md`](docs/releases/v0.1.0-beta.36.md).
+
 ## [v0.1.0-beta.35]
 
 **Idempotencia de hook-runs, vigencia coherente y runner de CI optativo**: el
