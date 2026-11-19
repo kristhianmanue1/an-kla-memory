@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import unittest
 from types import SimpleNamespace
@@ -258,6 +259,16 @@ class PaginationTests(unittest.TestCase):
                 list_records(self.snap, after=bad, limit=2, **options)
             self.assertEqual(str(raised.exception), "list_cursor_invalid")
         self.assertIsNotNone(list_records(self.snap, limit=5, after=page["next"])["items"])  # el tamaño de página sí puede cambiar
+
+    def test_a_forged_cursor_without_key_is_invalid(self) -> None:
+        # L-01: un cursor con `k: null` (que `list` nunca emite) reiniciaría el listado; se rechaza.
+        page = list_records(self.snap, limit=2)
+        raw = json.loads(base64.urlsafe_b64decode(page["next"] + "=" * (-len(page["next"]) % 4)))
+        raw["k"] = None
+        forged = base64.urlsafe_b64encode(json.dumps(raw, sort_keys=True, separators=(",", ":")).encode()).decode().rstrip("=")
+        with self.assertRaises(StateReadError) as raised:
+            list_records(self.snap, after=forged, limit=2)
+        self.assertEqual(str(raised.exception), "list_cursor_invalid")
 
 
 class ValidationTests(unittest.TestCase):

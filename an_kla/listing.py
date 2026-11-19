@@ -95,16 +95,16 @@ def decode_cursor(cursor: Any, filters: Mapping[str, Any]) -> tuple[str, tuple[i
     revision, scope, key = data["r"], data["f"], data["k"]
     if not (isinstance(revision, str) and revision.startswith(_REVISION)) or scope != _cursor_scope(filters):
         raise invalid
-    if key is not None:
-        ok = (
-            isinstance(key, list) and len(key) == 4 and isinstance(key[0], int) and not isinstance(key[0], bool)
-            and key[1] in (0, 1) and isinstance(key[2], str) and isinstance(key[3], str)
-            and 0 <= key[0] < len(filters["streams"])
-        )
-        if not ok:
-            raise invalid
-        key = (key[0], key[1], key[2], key[3])
-    return revision, key
+    # L-01: `list` nunca emite un cursor sin clave (un `next` sólo existe tras devolver algún registro);
+    # uno con `k: null` es fabricado y reiniciaría el listado, así que se rechaza.
+    ok = (
+        isinstance(key, list) and len(key) == 4 and isinstance(key[0], int) and not isinstance(key[0], bool)
+        and key[1] in (0, 1) and isinstance(key[2], str) and isinstance(key[3], str)
+        and 0 <= key[0] < len(filters["streams"])
+    )
+    if not ok:
+        raise invalid
+    return revision, (key[0], key[1], key[2], key[3])
 
 
 def _superseded_by(snapshot: Any) -> dict[tuple[str, str], str]:
