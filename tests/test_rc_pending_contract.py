@@ -32,6 +32,9 @@ EXPECTED_CASES = [
     "init",
     "commit-write-plan",
     "inbox drain",
+    # ADR-0068 (#234): rc 3 con write_lock_busy/identity_lock_busy, y la purga con copias fallidas.
+    "inbox purge-rejected",
+    "inbox requeue",
     "remember",
     "subject namespace",
 ]
