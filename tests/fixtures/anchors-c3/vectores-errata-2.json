@@ -1,0 +1,20 @@
+{
+ "schema": "memoria/ancla/v1-vectores",
+ "errata": 2,
+ "fecha": "2026-11-18",
+ "nota": "Rechazos de forma, previos a toda comprobación. `anchor_ok` es un ancla repo-file válida cualquiera (por ejemplo la de W01). Escritos a mano: no dependen del modelo de referencia.",
+ "registro": [
+  {"id": "F01", "anchors": "16 x anchor_ok", "expect": {"reject": null}, "note": "16 anclas: el máximo"},
+  {"id": "F02", "anchors": "17 x anchor_ok", "expect": {"reject": "anchor_too_many"}, "note": "se rechaza el registro entero, sin comprobar ninguna"},
+  {"id": "F03", "anchors": "16 x anchor_ok + 1 ancla con cita de 3 bytes", "expect": {"reject": "anchor_too_many"}, "note": "el número se comprueba antes que cada ancla"}
+ ],
+ "forma": [
+  {"id": "F10", "anchor": {"schema": "memoria/ancla/v1", "source": {"kind": "repo-file", "repo": "github.com/ejemplo/repo", "path": "docs/a.md"}, "quote": "El servidor usa port = 8080"}, "record_type": "fact", "expect": {"reject": "anchor_schema_invalid"}, "note": "repo-file de un fact sin `commit`"},
+  {"id": "F11", "anchor": {"schema": "memoria/ancla/v1", "source": {"kind": "repo-file", "repo": "github.com/ejemplo/repo", "commit": null, "path": "docs/a.md"}, "quote": "El servidor usa port = 8080"}, "record_type": "state", "expect": {"reject": null}, "note": "en un state, `commit` puede ser null: la forma es válida"},
+  {"id": "F12", "anchor": {"schema": "memoria/ancla/v1", "source": {"kind": "wiki-page", "url": "https://ejemplo.invalid/p"}, "quote": "El servidor usa port = 8080"}, "record_type": "fact", "expect": {"reject": "anchor_schema_invalid"}, "note": "`kind` fuera del conjunto cerrado"},
+  {"id": "F13", "anchor": {"schema": "memoria/ancla/v1", "source": {"kind": "document", "derivation": {"custodian": "skopos", "derivation_id": "d1", "manifest_sha256": "m1", "modality": "native_text"}, "locator": "unknown"}, "quote": "El personal de base tendrá derecho a veinte días de vacaciones"}, "record_type": "fact", "expect": {"reject": "anchor_schema_invalid"}, "note": "document sin `document_sha256`"},
+  {"id": "F14", "anchor": {"schema": "memoria/ancla/v1", "source": {"kind": "document", "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323", "derivation": {"custodian": "skopos", "derivation_id": "d1", "manifest_sha256": "m1", "modality": "audio"}, "locator": "unknown"}, "quote": "El personal de base tendrá derecho a veinte días de vacaciones"}, "record_type": "fact", "expect": {"reject": "anchor_schema_invalid"}, "note": "`modality` fuera del conjunto cerrado"},
+  {"id": "F15", "anchor": {"schema": "memoria/ancla/v1", "source": {"kind": "document", "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323", "derivation": {"custodian": "skopos", "derivation_id": "d1", "manifest_sha256": "m1", "modality": "native_text"}, "locator": "unknown"}, "quote": "port = 8080"}, "record_type": "fact", "expect": {"reject": "anchor_quote_too_short"}, "note": "forma válida y cita corta para document: gana el código de la cita (igual que Q24)"},
+  {"id": "F16", "anchor": {"schema": "memoria/ancla/v2", "source": {"kind": "repo-file", "repo": "github.com/ejemplo/repo", "commit": "0000000000000000000000000000000000000001", "path": "docs/a.md"}, "quote": "El servidor usa port = 8080"}, "record_type": "fact", "expect": {"reject": "anchor_schema_invalid"}, "note": "`schema` desconocido"}
+ ]
+}

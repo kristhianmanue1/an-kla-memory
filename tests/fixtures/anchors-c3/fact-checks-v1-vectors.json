@@ -1,0 +1,1147 @@
+{
+  "schema": "agora/fact-checks-vectors/v1-experimental",
+  "rules": "fact-checks-rules/v1",
+  "cases": [
+    {
+      "id": "port-missing",
+      "note": "ejemplo del puerto: la cita no menciona 8080",
+      "text": "el puerto es 8080",
+      "quotes": [
+        "el puerto se configura en config.toml"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "8080",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "8080"
+        }
+      ]
+    },
+    {
+      "id": "port-present",
+      "note": "el puerto sí aparece",
+      "text": "el puerto es 8080",
+      "quotes": [
+        "El servicio escucha en el puerto 8080."
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "8080",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "port-english",
+      "note": "mismo caso en inglés",
+      "text": "the port is 8080",
+      "quotes": [
+        "the port is configured in config.toml"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "8080",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "8080"
+        }
+      ]
+    },
+    {
+      "id": "no-elements",
+      "note": "hecho sin elementos extraíbles",
+      "text": "el servicio arranca sin errores",
+      "quotes": [
+        "El servicio arranca."
+      ],
+      "elements": [],
+      "missing": []
+    },
+    {
+      "id": "no-elements-english",
+      "note": "hecho sin elementos, en inglés",
+      "text": "the service starts cleanly",
+      "quotes": [
+        "It starts."
+      ],
+      "elements": [],
+      "missing": []
+    },
+    {
+      "id": "identifier-present",
+      "note": "identificador presente",
+      "text": "usa `max_retries` por defecto",
+      "quotes": [
+        "El parámetro max_retries vale 3."
+      ],
+      "elements": [
+        {
+          "type": "identifier",
+          "value": "max_retries",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "identifier-absent",
+      "note": "identificador ausente",
+      "text": "usa `max_retries` por defecto",
+      "quotes": [
+        "El parámetro retries vale 3."
+      ],
+      "elements": [
+        {
+          "type": "identifier",
+          "value": "max_retries",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "identifier",
+          "value": "max_retries"
+        }
+      ]
+    },
+    {
+      "id": "identifier-spaces-trimmed",
+      "note": "los espacios extremos del span se recortan",
+      "text": "llama a ` run() ` al inicio",
+      "quotes": [
+        "Se llama a run() al inicio."
+      ],
+      "elements": [
+        {
+          "type": "identifier",
+          "value": "run()",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "identifier-empty-ignored",
+      "note": "un span sólo de espacios se ignora (pero se enmascara)",
+      "text": "valor `  ` aquí 5",
+      "quotes": [
+        "nada de 5"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "5",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "identifier-multiple-spans",
+      "note": "dos spans distintos y repetidos se deduplican",
+      "text": "`a.b` y `c_d` y `a.b`",
+      "quotes": [
+        "a.b c_d"
+      ],
+      "elements": [
+        {
+          "type": "identifier",
+          "value": "a.b",
+          "present": true
+        },
+        {
+          "type": "identifier",
+          "value": "c_d",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "identifier-case-sensitive",
+      "note": "sin plegado de mayúsculas",
+      "text": "usa `Config`",
+      "quotes": [
+        "Se usa config en el arranque."
+      ],
+      "elements": [
+        {
+          "type": "identifier",
+          "value": "Config",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "identifier",
+          "value": "Config"
+        }
+      ]
+    },
+    {
+      "id": "identifier-masks-digits",
+      "note": "una cifra dentro de un identificador no se vuelve a contar",
+      "text": "ejecuta `build-42` ahora",
+      "quotes": [
+        "Ejecuta build-42 ahora."
+      ],
+      "elements": [
+        {
+          "type": "identifier",
+          "value": "build-42",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "identifier-masks-version",
+      "note": "una versión dentro de un identificador no se cuenta aparte",
+      "text": "instala `pkg==1.2.3`",
+      "quotes": [
+        "pkg==1.2.3 fijado"
+      ],
+      "elements": [
+        {
+          "type": "identifier",
+          "value": "pkg==1.2.3",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "identifier-masks-path",
+      "note": "una ruta dentro de un identificador no se cuenta aparte",
+      "text": "abre `src/agora/x.py`",
+      "quotes": [
+        "abre src/agora/x.py"
+      ],
+      "elements": [
+        {
+          "type": "identifier",
+          "value": "src/agora/x.py",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "identifier-unclosed",
+      "note": "un backtick sin cierre no es span",
+      "text": "el símbolo ` suelto 7",
+      "quotes": [
+        "7 símbolos"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "7",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "identifier-newline-breaks",
+      "note": "un span no cruza saltos de línea",
+      "text": "a `x\ny` b",
+      "quotes": [
+        "x y"
+      ],
+      "elements": [],
+      "missing": []
+    },
+    {
+      "id": "code-span-only-in-quote",
+      "note": "una cifra presente sólo dentro de un span de código de la cita cuenta",
+      "text": "el límite es 100",
+      "quotes": [
+        "El límite se fija en `100` solicitudes."
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "100",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "path-present",
+      "note": "ruta presente",
+      "text": "edita src/agora/split_review.py",
+      "quotes": [
+        "Archivo: src/agora/split_review.py (revisión)."
+      ],
+      "elements": [
+        {
+          "type": "path",
+          "value": "src/agora/split_review.py",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "path-absent",
+      "note": "ruta ausente",
+      "text": "edita src/agora/split_review.py",
+      "quotes": [
+        "Archivo: src/agora/evidence_review.py"
+      ],
+      "elements": [
+        {
+          "type": "path",
+          "value": "src/agora/split_review.py",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "path",
+          "value": "src/agora/split_review.py"
+        }
+      ]
+    },
+    {
+      "id": "path-trailing-comma",
+      "note": "ruta con coma final",
+      "text": "revisa docs/estado-actual.md, luego sigue",
+      "quotes": [
+        "docs/estado-actual.md"
+      ],
+      "elements": [
+        {
+          "type": "path",
+          "value": "docs/estado-actual.md",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "path-trailing-period",
+      "note": "ruta con punto final",
+      "text": "ver ./scripts/run.sh.",
+      "quotes": [
+        "ejecutar ./scripts/run.sh con cuidado"
+      ],
+      "elements": [
+        {
+          "type": "path",
+          "value": "./scripts/run.sh",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "path-home",
+      "note": "ruta con tilde",
+      "text": "usa ~/data/store.db siempre",
+      "quotes": [
+        "usa ~/data/store.db"
+      ],
+      "elements": [
+        {
+          "type": "path",
+          "value": "~/data/store.db",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "path-trailing-slash",
+      "note": "ruta con barra final",
+      "text": "lista el directorio tests/fixtures/",
+      "quotes": [
+        "el directorio tests/fixtures/ existe"
+      ],
+      "elements": [
+        {
+          "type": "path",
+          "value": "tests/fixtures/",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "url-trailing-period",
+      "note": "URL con punto final",
+      "text": "ver https://example.org/docs/a.html.",
+      "quotes": [
+        "Enlace: https://example.org/docs/a.html"
+      ],
+      "elements": [
+        {
+          "type": "path",
+          "value": "https://example.org/docs/a.html",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "url-with-port",
+      "note": "URL con puerto: el puerto no se cuenta aparte",
+      "text": "llama a http://127.0.0.1:8080/api/chat ahora",
+      "quotes": [
+        "POST http://127.0.0.1:8080/api/chat"
+      ],
+      "elements": [
+        {
+          "type": "path",
+          "value": "http://127.0.0.1:8080/api/chat",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "url-absent",
+      "note": "URL ausente",
+      "text": "ver https://example.org/a",
+      "quotes": [
+        "ver https://example.org/b"
+      ],
+      "elements": [
+        {
+          "type": "path",
+          "value": "https://example.org/a",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "path",
+          "value": "https://example.org/a"
+        }
+      ]
+    },
+    {
+      "id": "path-no-letters-not-path",
+      "note": "12/15 no es ruta: son dos números",
+      "text": "el cociente es 12/15",
+      "quotes": [
+        "resultado 12 de 15"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "12",
+          "present": true
+        },
+        {
+          "type": "number",
+          "value": "15",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "path-no-letters-fraction-absent",
+      "note": "12/15 descompuesto, un número ausente",
+      "text": "la razón es 12/15",
+      "quotes": [
+        "había 12 casos"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "12",
+          "present": true
+        },
+        {
+          "type": "number",
+          "value": "15",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "15"
+        }
+      ]
+    },
+    {
+      "id": "path-mid-word-slash",
+      "note": "y/o con letras se trata como ruta",
+      "text": "se puede usar a/b",
+      "quotes": [
+        "se usa a/b"
+      ],
+      "elements": [
+        {
+          "type": "path",
+          "value": "a/b",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "path-masks-digits",
+      "note": "dígitos dentro de la ruta no se cuentan aparte",
+      "text": "mira data/v2/run3.csv",
+      "quotes": [
+        "data/v2/run3.csv"
+      ],
+      "elements": [
+        {
+          "type": "path",
+          "value": "data/v2/run3.csv",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "version-pre-release",
+      "note": "0.1.0b34 es versión",
+      "text": "requiere 0.1.0b34",
+      "quotes": [
+        "Versión 0.1.0b34 instalada"
+      ],
+      "elements": [
+        {
+          "type": "version",
+          "value": "0.1.0b34",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "version-three-parts",
+      "note": "3.15.2 es versión (dos puntos)",
+      "text": "corre en 3.15.2",
+      "quotes": [
+        "Python 3.15.2"
+      ],
+      "elements": [
+        {
+          "type": "version",
+          "value": "3.15.2",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "version-vs-number",
+      "note": "3.12 no es versión: es número",
+      "text": "usa 3.12",
+      "quotes": [
+        "Python 3.12"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "3.12",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "version-vs-number-absent",
+      "note": "3.12 como número ausente cuando la cita tiene 3.15.2",
+      "text": "usa 3.12",
+      "quotes": [
+        "Python 3.15.2"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "3.12",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "3.12"
+        }
+      ]
+    },
+    {
+      "id": "version-v-prefix",
+      "note": "v1.2 es versión por la v",
+      "text": "pasó a v1.2",
+      "quotes": [
+        "la release v1.2 salió"
+      ],
+      "elements": [
+        {
+          "type": "version",
+          "value": "v1.2",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "version-v-prefix-absent",
+      "note": "v1.2 exige la v en la cita",
+      "text": "pasó a v1.2",
+      "quotes": [
+        "la release 1.2 salió"
+      ],
+      "elements": [
+        {
+          "type": "version",
+          "value": "v1.2",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "version",
+          "value": "v1.2"
+        }
+      ]
+    },
+    {
+      "id": "version-rc",
+      "note": "sufijo rc",
+      "text": "probado con 2.0rc1",
+      "quotes": [
+        "2.0rc1 es candidata"
+      ],
+      "elements": [
+        {
+          "type": "version",
+          "value": "2.0rc1",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "version-dash-suffix",
+      "note": "sufijo con guion",
+      "text": "publica 1.4-beta.2",
+      "quotes": [
+        "tag 1.4-beta.2"
+      ],
+      "elements": [
+        {
+          "type": "version",
+          "value": "1.4-beta.2",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "number-thousands-dot",
+      "note": "6.729 y 6729 coinciden",
+      "text": "hay 6.729 registros",
+      "quotes": [
+        "Se contaron 6729 registros."
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "6729",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "number-thousands-reverse",
+      "note": "6729 en el hecho y 6.729 en la cita",
+      "text": "hay 6729 registros",
+      "quotes": [
+        "Se contaron 6.729 registros."
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "6729",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "number-thousands-comma",
+      "note": "1,500 es 1500",
+      "text": "pagó 1,500 pesos",
+      "quotes": [
+        "un pago de 1500 pesos"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "1500",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "number-decimal-comma",
+      "note": "3,5 y 3.5 coinciden",
+      "text": "mide 3,5 metros",
+      "quotes": [
+        "la longitud es 3.5 m"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "3.5",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "number-decimal-different",
+      "note": "3,5 frente a 3.6",
+      "text": "mide 3,5 metros",
+      "quotes": [
+        "la longitud es 3.6 m"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "3.5",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "3.5"
+        }
+      ]
+    },
+    {
+      "id": "number-mixed",
+      "note": "1.234,5 es 1234.5",
+      "text": "total 1.234,5 unidades",
+      "quotes": [
+        "total: 1,234.5 unidades"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "1234.5",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "number-two-decimals",
+      "note": "1.25 es decimal",
+      "text": "tasa de 1.25",
+      "quotes": [
+        "la tasa es 1,25"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "1.25",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "number-leading-zeros",
+      "note": "ceros a la izquierda se conservan",
+      "text": "el código es 007",
+      "quotes": [
+        "el código 7"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "007",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "007"
+        }
+      ]
+    },
+    {
+      "id": "number-leading-zero-thousands",
+      "note": "0.500 cuenta como miles por la regla",
+      "text": "valor 0.500",
+      "quotes": [
+        "valor 0500"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "0500",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "number-integer-vs-decimal",
+      "note": "8 no es 8.5",
+      "text": "hay 8 nodos",
+      "quotes": [
+        "hay 8.5 nodos"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "8",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "8"
+        }
+      ]
+    },
+    {
+      "id": "number-glued-to-letters",
+      "note": "E3, x86 y q-h01 se ignoran",
+      "text": "sigue la etapa E3 en x86 con q-h01",
+      "quotes": [
+        "etapa E3 en x86 con q-h01"
+      ],
+      "elements": [],
+      "missing": []
+    },
+    {
+      "id": "number-letter-backtrack",
+      "note": "3.5kg: el retroceso deja 3 como número",
+      "text": "pesa 3.5kg",
+      "quotes": [
+        "pesa 3 kg"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "3",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "date-iso",
+      "note": "una fecha ISO son tres números",
+      "text": "ocurrió el 2026-11-16",
+      "quotes": [
+        "fecha 2026-11-16"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "2026",
+          "present": true
+        },
+        {
+          "type": "number",
+          "value": "11",
+          "present": true
+        },
+        {
+          "type": "number",
+          "value": "16",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "date-iso-wrong-day",
+      "note": "fecha con día distinto",
+      "text": "ocurrió el 2026-11-16",
+      "quotes": [
+        "fecha 2026-11-17"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "2026",
+          "present": true
+        },
+        {
+          "type": "number",
+          "value": "11",
+          "present": true
+        },
+        {
+          "type": "number",
+          "value": "16",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "16"
+        }
+      ]
+    },
+    {
+      "id": "nfc-identifier",
+      "note": "é compuesta en el hecho, descompuesta en la cita",
+      "text": "usa `canción`",
+      "quotes": [
+        "la cancio\u0301n"
+      ],
+      "elements": [
+        {
+          "type": "identifier",
+          "value": "canción",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "nfc-identifier-reverse",
+      "note": "é descompuesta en el hecho, compuesta en la cita",
+      "text": "usa `cancio\u0301n`",
+      "quotes": [
+        "la canción"
+      ],
+      "elements": [
+        {
+          "type": "identifier",
+          "value": "canción",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "case-differs",
+      "note": "mayúsculas distintas no coinciden",
+      "text": "usa `README`",
+      "quotes": [
+        "lee el readme"
+      ],
+      "elements": [
+        {
+          "type": "identifier",
+          "value": "README",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "identifier",
+          "value": "README"
+        }
+      ]
+    },
+    {
+      "id": "multi-quote-union",
+      "note": "unión de varias citas",
+      "text": "el puerto es 8080 y usa `tls`",
+      "quotes": [
+        "escucha en 8080",
+        "activa tls"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "8080",
+          "present": true
+        },
+        {
+          "type": "identifier",
+          "value": "tls",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "multi-quote-partial",
+      "note": "una cita basta pero otra falta el elemento",
+      "text": "el puerto es 8080 y usa `tls`",
+      "quotes": [
+        "escucha en 8080",
+        "sin cifrado"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "8080",
+          "present": true
+        },
+        {
+          "type": "identifier",
+          "value": "tls",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "identifier",
+          "value": "tls"
+        }
+      ]
+    },
+    {
+      "id": "order-by-position",
+      "note": "orden por primera aparición en el hecho",
+      "text": "en 3 pasos usa `x` y luego 2",
+      "quotes": [
+        "3 pasos con x y luego 2"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "3",
+          "present": true
+        },
+        {
+          "type": "identifier",
+          "value": "x",
+          "present": true
+        },
+        {
+          "type": "number",
+          "value": "2",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "dedupe-numbers",
+      "note": "números repetidos se deduplican",
+      "text": "8080, 8080 y 8080",
+      "quotes": [
+        "8080"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "8080",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "spanish-mixed",
+      "note": "texto en español con tres tipos",
+      "text": "la versión v2.1 expone `/health` en 9090",
+      "quotes": [
+        "La versión v2.1 expone /health en 9090."
+      ],
+      "elements": [
+        {
+          "type": "version",
+          "value": "v2.1",
+          "present": true
+        },
+        {
+          "type": "identifier",
+          "value": "/health",
+          "present": true
+        },
+        {
+          "type": "number",
+          "value": "9090",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "english-mixed",
+      "note": "texto en inglés con tres tipos",
+      "text": "release 1.4.0 listens on `0.0.0.0` at 443",
+      "quotes": [
+        "Release 1.4.0 listens on 0.0.0.0 at port 443."
+      ],
+      "elements": [
+        {
+          "type": "version",
+          "value": "1.4.0",
+          "present": true
+        },
+        {
+          "type": "identifier",
+          "value": "0.0.0.0",
+          "present": true
+        },
+        {
+          "type": "number",
+          "value": "443",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "number-in-quote-code-masked-not",
+      "note": "los canónicos de la cita no se enmascaran",
+      "text": "usa 42",
+      "quotes": [
+        "el valor `x42` y también 42"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "42",
+          "present": true
+        }
+      ],
+      "missing": []
+    },
+    {
+      "id": "number-only-in-glued-quote",
+      "note": "un número pegado a letras en la cita no cuenta",
+      "text": "usa 42",
+      "quotes": [
+        "el valor x42 aquí"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "42",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "42"
+        }
+      ]
+    }
+  ]
+}

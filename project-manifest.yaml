@@ -69,6 +69,9 @@ publica:
   - { tipo: contrato, id: an-kla/disputes-list-v1 }
   - { tipo: contrato, id: an-kla/inbox-entry-v1 }
   - { tipo: contrato, id: an-kla/inbox-entry-v2 }
+  - { tipo: contrato, id: an-kla/inbox-entry-v3 }
+  - { tipo: contrato, id: an-kla/anchor-resolution-v1 }
+  - { tipo: contrato, id: an-kla/anchors-verify-v1 }
   - { tipo: contrato, id: an-kla/inbox-status-v1 }
   - { tipo: contrato, id: an-kla/state-result-v1 }
   - { tipo: contrato, id: an-kla/history-result-v1 }

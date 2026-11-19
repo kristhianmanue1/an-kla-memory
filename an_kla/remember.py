@@ -26,6 +26,7 @@ import re
 import sys
 from typing import Any, BinaryIO, Mapping
 
+from .anchors import AnchorRejected
 from .identity import IdentityError
 from .identity_c0 import IdentityC0Error
 from .inbox import MAX_TEXT_BYTES, InboxError, enqueue
@@ -94,10 +95,12 @@ def read_text_file(path: str, stdin: BinaryIO | None = None) -> str:
 
 def _enqueue(
     store: Any, text: str, kind: str | None, target_id: str | None, key: str | None, env: Mapping[str, str] | None,
-    slot: str | None = None,
+    slot: str | None = None, **anchored: Any,
 ) -> dict[str, Any]:
     try:
-        return enqueue(store, text, kind=kind, target_id=target_id, idempotency_key=key, slot=slot, env=env)
+        return enqueue(store, text, kind=kind, target_id=target_id, idempotency_key=key, slot=slot, env=env, **anchored)
+    except AnchorRejected as exc:  # ADR-0066 §2: nothing was queued; the record is not saved halfway
+        raise RememberError(exc.code, None if exc.anchor_index is None else f"anchor {exc.anchor_index}") from None
     except IdentityC0Error as exc:
         field = f" ({exc.field})" if exc.field and exc.code != "identity_env_missing" else ""
         raise RememberError(exc.code, _IDENTITY_HINTS.get(exc.code, "identidad C0 inválida") + field) from None
@@ -138,6 +141,9 @@ def _result(queued: dict[str, Any], report: dict[str, Any], pending_resolution: 
     }
     if "slot" in queued:
         result["slot"] = queued["slot"]
+    for field in ("anchors", "coverage", "missing", "missing_total", "verdict"):
+        if field in queued:
+            result[field] = queued[field]  # ADR-0066: what the three checks said at enqueue
     rejections = report["rejected"]["entries"]
     result["rejected"] = {"count": len(rejections), "entries": rejections}
     committed = _find(report["committed"]["entries"], name)
@@ -200,15 +206,18 @@ def remember(
     supersedes: str | None = None,
     idempotency_key: str | None = None,
     slot: str | None = None,
+    anchors: Any = None,
+    verdict: str | None = None,
+    operation: str = "remember",
     env: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Guarda ``text`` y devuelve ``remember-result-v1``. Los errores previos al encolado salen como ``RememberError``
     (o con el código de la bandeja, la custodia o la identidad): en ellos no queda ninguna entrada."""
 
     key = None if idempotency_key is None else normalize_idempotency_key(idempotency_key)
-    queued = _enqueue(store, text, kind, supersedes, key, env, slot)
+    queued = _enqueue(store, text, kind, supersedes, key, env, slot, anchors=anchors, verdict=verdict, operation=operation)
     report = _drain(store, queued["entry"])
-    result = _result(queued, report, supersedes is not None or queued["kind"] == "state")
+    result = _result(queued, report, (supersedes is not None and operation == "remember") or queued["kind"] == "state")
     return result
 
 

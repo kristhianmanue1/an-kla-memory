@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:an-kla:schema:remember-result:v1",
   "title": "AN-KLA Remember Result v1",
-  "description": "Resultado de `remember` (ADR-0063 D1). `state`: `committed` (con `revision`, salvo `already_committed: true` de un reintento sin lote propio), `rejected` (con `code` y `reason_codes`) o `queued` (la entrada está en la bandeja; con `drain_error` si el vaciado abortó con resultado conocido, con `outcome: unknown` si el commit quedó sin resultado firme —lo resuelve el paso 0 del vaciado siguiente—, y con `resolution: pending` cuando se pidió `--supersedes`: la resolución propia/ajena ocurre al vaciar). `record_id` sólo con `committed` y `queued` (un rechazado no crea record). `disputed` o `superseded` sólo con `committed` (D3). `rejected` lista todos los rechazos que produjo el vaciado de esta invocación, también los de otras entradas. Reintentar con el mismo texto, `kind` y target es idempotente. `--idempotency-key` acepta texto libre de 1 a 256 caracteres: `sha256:<64 hex>` se usa tal cual y cualquier otro valor se convierte en `sha256:` + sha256 de su UTF-8; `idempotency_key` es siempre la forma final. Sólo nombres y códigos: nunca el texto del recuerdo ni rutas. ADR-0065: un `state` lleva `slot` y jubila sólo la cabeza de su casilla: `retired` ({id, writer, enqueued_at}) dice a quién, `retired_by` (también con `already_committed`) qué `state` posterior lo jubiló a él y `conflict_remaining` los demás vigentes de la casilla (sólo por `plan-write`, restauración o `relocate`). Un `state` en cola no anuncia `record_id` (su id depende de la cabeza que jubila) y queda con `resolution: pending`. Rechazos propios: `remember_state_over_fact` y `remember_state_slot_mismatch`.",
+  "description": "Resultado de `remember` (ADR-0063 D1). `state`: `committed` (con `revision`, salvo `already_committed: true` de un reintento sin lote propio), `rejected` (con `code` y `reason_codes`) o `queued` (la entrada está en la bandeja; con `drain_error` si el vaciado abortó con resultado conocido, con `outcome: unknown` si el commit quedó sin resultado firme —lo resuelve el paso 0 del vaciado siguiente—, y con `resolution: pending` cuando se pidió `--supersedes`: la resolución propia/ajena ocurre al vaciar). `record_id` sólo con `committed` y `queued` (un rechazado no crea record). `disputed` o `superseded` sólo con `committed` (D3). `rejected` lista todos los rechazos que produjo el vaciado de esta invocación, también los de otras entradas. Reintentar con el mismo texto, `kind` y target es idempotente. `--idempotency-key` acepta texto libre de 1 a 256 caracteres: `sha256:<64 hex>` se usa tal cual y cualquier otro valor se convierte en `sha256:` + sha256 de su UTF-8; `idempotency_key` es siempre la forma final. Sólo nombres y códigos: nunca el texto del recuerdo ni rutas. ADR-0065: un `state` lleva `slot` y jubila sólo la cabeza de su casilla: `retired` ({id, writer, enqueued_at}) dice a quién, `retired_by` (también con `already_committed`) qué `state` posterior lo jubiló a él y `conflict_remaining` los demás vigentes de la casilla (sólo por `plan-write`, restauración o `relocate`). Un `state` en cola no anuncia `record_id` (su id depende de la cabeza que jubila) y queda con `resolution: pending`. Rechazos propios: `remember_state_over_fact` y `remember_state_slot_mismatch`. ADR-0066: con anclas, `anchors` lleva por cada una las tres comprobaciones que hizo `remember` al encolar (nunca se vuelven a hacer al vaciar), y `coverage`, `missing` y `missing_total` la cobertura determinista del texto contra la cita guardada (sólo `none` se sirve como aviso; el registro siempre se guarda). `verdict` sólo en `dispute`. Rechazos de ancla (`anchor_*`, `dispute_*`) salen sin entrada y sin cambio en el store.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -186,6 +186,250 @@
       "items": {
         "type": "string"
       }
+    },
+    "anchors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "index",
+          "kind",
+          "quote_sha256",
+          "source",
+          "source_reason",
+          "quote",
+          "quote_reason",
+          "integrity",
+          "integrity_reason",
+          "match",
+          "matched_text",
+          "freshness",
+          "reason"
+        ],
+        "properties": {
+          "index": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "repo-file",
+              "conversation",
+              "document"
+            ]
+          },
+          "quote_sha256": {
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "verified",
+              "not_found",
+              "unverifiable"
+            ]
+          },
+          "source_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              null,
+              "anchor_limit",
+              "commit_not_in_clone",
+              "commit_not_on_default_branch",
+              "copy_missing",
+              "custodian_offline",
+              "document_unknown",
+              "kind_not_supported",
+              "no_default_branch",
+              "no_git",
+              "no_verifier",
+              "path_missing",
+              "repo_unavailable",
+              "resolution_pending",
+              "session_lacks_quote",
+              "turn_purged"
+            ]
+          },
+          "quote": {
+            "enum": [
+              "verified",
+              "not_found",
+              "unverifiable"
+            ]
+          },
+          "quote_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              null,
+              "anchor_limit",
+              "binary",
+              "commit_not_in_clone",
+              "commit_not_on_default_branch",
+              "custodian_offline",
+              "derived_modality",
+              "document_unknown",
+              "kind_not_supported",
+              "not_utf8",
+              "quote_absent",
+              "source_not_verified",
+              "too_large"
+            ]
+          },
+          "integrity": {
+            "enum": [
+              "verified",
+              "not_found",
+              "unverifiable"
+            ]
+          },
+          "integrity_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              null,
+              "anchor_limit",
+              "binary",
+              "commit_blob_lacks_quote",
+              "commit_not_in_clone",
+              "copy_sha_mismatch",
+              "custodian_offline",
+              "document_unknown",
+              "kind_not_supported",
+              "manifest_mismatch",
+              "no_verifier",
+              "not_utf8",
+              "raw_lost",
+              "resolution_pending",
+              "seal_mismatch",
+              "session_lacks_quote",
+              "source_not_verified",
+              "too_large",
+              "turn_purged",
+              "working_tree"
+            ]
+          },
+          "at": {
+            "enum": [
+              "default",
+              "branch",
+              "commit",
+              "worktree",
+              null
+            ]
+          },
+          "match": {
+            "enum": [
+              "literal",
+              "ws-nfc/v1",
+              "ws-nfc-accents/v1",
+              null
+            ]
+          },
+          "matched_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "freshness": {
+            "enum": [
+              "broken",
+              "stale",
+              "unverified",
+              "pending",
+              "fresh"
+            ]
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "resolution": {
+            "enum": [
+              "pending",
+              "resolved",
+              "not_found"
+            ]
+          },
+          "turn_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "required": [
+        "total",
+        "present",
+        "level"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "present": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "level": {
+          "enum": [
+            "none",
+            "partial",
+            "full",
+            "unchecked"
+          ]
+        }
+      }
+    },
+    "missing": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "required": [
+          "type",
+          "value"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "enum": [
+              "identifier",
+              "path",
+              "version",
+              "number"
+            ]
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "missing_total": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "verdict": {
+      "enum": [
+        "contradicted",
+        "insufficient"
+      ]
     }
   },
   "allOf": [

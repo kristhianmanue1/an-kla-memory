@@ -10,6 +10,37 @@ El formato de cada entrada sigue [Keep a Changelog](https://keepachangelog.com/e
 por intención, y el proyecto usa [versionado semántico](https://semver.org/lang/es/)
 en fase de pre-release `0.1.0`.
 
+## [Sin publicar]
+
+**Anclas de C3, frescura al recuperar y disputa nativa (ADR-0066, E1.d2)**:
+`remember` acepta anclas `memoria/ancla/v1` (`--anchor-file` o
+`--anchor-path/--anchor-quote/--anchor-commit`), las comprueba una vez al
+encolar (`source`, `quote`, `integrity`; implementación propia de C3 con sus
+erratas 0 a 3) y rechaza el recuerdo entero, sin entrada ni cambio, ante un
+`not_found` (`anchor_source_not_found`, `anchor_quote_not_found`,
+`anchor_integrity_not_found`) o una ancla mal formada (`anchor_too_many`,
+`anchor_schema_invalid`, `anchor_quote_not_normalized`,
+`anchor_quote_too_short`, `anchor_quote_too_long`, `anchor_path_invalid`,
+`anchor_input_invalid`). Cobertura determinista (`coverage`, `missing`,
+`missing_total`, `fact-checks-rules/v1`) contra la cita guardada: el 8080 con
+una cita que dice 8081 da `none`. `state show` e `history` sirven la frescura de
+las anclas con tope `--anchor-limit` (32) y `anchors_freshness`; nueva orden de
+sólo lectura `anchors verify <id> | --all`; nueva orden `dispute <id> --verdict
+contradicted|insufficient` (dictamen externo como disputa de ADR-0063 D3: el
+objetivo, también un `state`, sigue vigente) y `disputes list` muestra el
+`verdict`. Las anclas entran en la clave de idempotencia
+(`remember_id_collision` con `idempotency_key_other_anchors`). Esquemas nuevos
+`inbox-entry-v3`, `anchor-resolution-v1` (sin orden pública: la escribirá el
+resolutor de C2) y `anchors-verify-v1`; `remember-result-v1`, `state-result-v1`,
+`history-result-v1` y `disputes-list-v1` añaden campos opcionales. La rama por
+defecto sale de `AN_KLA_DEFAULT_BRANCH` o de `<store>/config.json`
+(`default_branch`, sólo lectura en esta versión) y, sin ellas, de `origin/HEAD`.
+Una bandeja con entradas `inbox-entry-v3` no la lee un binario anterior:
+`inbox drain` y pendientes 0 antes de bajar de versión. `retrieve`, el MCP y el
+formato del store no cambian; los registros sin anclas son idénticos byte a
+byte. Detalle en
+[`docs/architecture/0066-anclas-c3-v1.md`](docs/architecture/0066-anclas-c3-v1.md).
+
 ## [v0.1.0-beta.37]
 
 **Estado de una casilla, `state show` e `history` (ADR-0065, E1.d1)**:

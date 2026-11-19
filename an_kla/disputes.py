@@ -383,6 +383,7 @@ def list_disputes(snapshot: Any, *, target: str | None = None) -> dict[str, Any]
                     },
                     "writer": deepcopy(envelope["writer"]) if valid else None,
                     "enqueued_at": envelope["enqueued_at"] if valid else None,
+                    **({"verdict": row["verdict"]} if row.get("verdict") in ("contradicted", "insufficient") else {}),
                 }
             )
     return {

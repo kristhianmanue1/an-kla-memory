@@ -60,7 +60,9 @@ from .inbox_close import (
     settle_committed,
     write_marker,
 )
+from .inbox_anchors import record_fields
 from .inbox_entries import Entry, Reject, age_key, kind_of_path, load_entry, reject_entry, safe_codes
+from .inbox_ops import build_dispute_op, build_resolution_op, intent_mismatch
 from .reader_gate import ReaderGateError
 from .state_slot import StateAlready, resolve_state
 from .store import STREAMS
@@ -258,6 +260,11 @@ class Scanner:
             self.reject(twin, code, reason_codes)
 
     def _resolve(self, entry: Entry) -> None:
+        operation = entry.data.get("operation", "remember")
+        if operation != "remember":
+            build = build_dispute_op if operation == "dispute" else build_resolution_op
+            entry.op = build(self.snapshot, entry.envelope, entry.data)
+            return
         target = None
         if entry.target_id is not None:
             target = resolve_supersede_target(
@@ -265,6 +272,7 @@ class Scanner:
                 kind_explicit=entry.data["kind_explicit"], envelope=entry.envelope,
             )
         entry.op = build_remember_op(entry.envelope, entry.text, entry.data["kind"], target)
+        entry.op.record.update(record_fields(entry.data))  # ADR-0066: anchors and coverage; nothing for a plain entry
 
     def _target_exists(self, target_id: str) -> bool:
         return any(str(row.get("id", "")) == target_id for stream in STREAMS for row in self.snapshot.raw_records[stream])
@@ -280,7 +288,7 @@ class Scanner:
         try:
             outcome = resolve_state(
                 self.snapshot, envelope=entry.envelope, text=entry.text, key=entry.key, slot=entry.slot,
-                target_id=entry.target_id,
+                target_id=entry.target_id, fields=record_fields(entry.data),
             )
         except WritePolicyError as exc:
             self.reject(entry.name, exc.code, [exc.detail] if exc.detail else [])
@@ -322,6 +330,8 @@ class Scanner:
                 # #218 R3-01: `fact` y `decision` comparten stream y, con la misma clave, el mismo id; el `kind`
                 # es parte de la intención y reutilizar la clave con otro es un rechazo, no un reintento.
                 self.reject(name, "remember_id_collision", ["idempotency_key_other_kind"])
+            elif same_key and intent_mismatch(done, entry.data):
+                self.reject(name, "remember_id_collision", [intent_mismatch(done, entry.data)])  # ADR-0066 §2
             elif same_key and entry.target_id is not None and not self._target_exists(entry.target_id):
                 # #218 R3-03: el target es parte de la intención; uno inexistente responde lo que respondería
                 # sin el registro previo.
@@ -358,7 +368,11 @@ class Scanner:
         if existing is not None:
             envelope = existing.get("an_kla_envelope")
             same = isinstance(envelope, dict) and envelope.get("idempotency_key") == entry.key and existing.get("text") == entry.text
-            if same:
+            if same and intent_mismatch(existing, entry.data):
+                reason = [intent_mismatch(existing, entry.data)]
+                entry.extra["fate"] = ("rejected", "remember_id_collision", reason)
+                self.reject(name, "remember_id_collision", reason)
+            elif same:
                 entry.extra["fate"] = ("already",)
                 self.to_delete.append(name)
                 self.run.already_committed.append({"entry": name, "record_id": record_id})

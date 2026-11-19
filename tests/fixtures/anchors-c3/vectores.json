@@ -1,0 +1,4883 @@
+{
+ "absent_commit": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+ "busqueda": [
+  {
+   "expect": {
+    "match": "literal",
+    "matched_text": null
+   },
+   "id": "M01",
+   "note": null,
+   "quote": "port = 8080",
+   "source_text": "El servidor usa port = 8080.\n"
+  },
+  {
+   "expect": {
+    "match": "ws-nfc/v1",
+    "matched_text": "hasta\n    confirmarse el commit"
+   },
+   "id": "M02",
+   "note": "salto de l\u00ednea y sangrado",
+   "quote": "hasta confirmarse el commit",
+   "source_text": "hasta\n    confirmarse el commit"
+  },
+  {
+   "expect": {
+    "match": "ws-nfc/v1",
+    "matched_text": "hasta\r\nconfirmarse"
+   },
+   "id": "M03",
+   "note": null,
+   "quote": "hasta confirmarse",
+   "source_text": "hasta\r\nconfirmarse"
+  },
+  {
+   "expect": {
+    "match": "ws-nfc/v1",
+    "matched_text": "clave\tvalor final"
+   },
+   "id": "M04",
+   "note": null,
+   "quote": "clave valor final",
+   "source_text": "clave\tvalor final"
+  },
+  {
+   "expect": {
+    "match": "ws-nfc/v1",
+    "matched_text": "clave valor final"
+   },
+   "id": "M05",
+   "note": "los espacios de m\u00e1s est\u00e1n en la cita",
+   "quote": "clave  valor   final",
+   "source_text": "clave valor final"
+  },
+  {
+   "expect": {
+    "match": "ws-nfc/v1",
+    "matched_text": "10\u00a0000 pesos netos"
+   },
+   "id": "M06",
+   "note": "U+00A0 es espacio",
+   "quote": "10 000 pesos netos",
+   "source_text": "10\u00a0000 pesos netos"
+  },
+  {
+   "expect": {
+    "match": "ws-nfc/v1",
+    "matched_text": "uno\u2028dos\u3000tres"
+   },
+   "id": "M07",
+   "note": null,
+   "quote": "uno dos tres",
+   "source_text": "uno\u2028dos\u3000tres"
+  },
+  {
+   "expect": {
+    "match": null,
+    "matched_text": null
+   },
+   "id": "M08",
+   "note": "U+200B no es espacio",
+   "quote": "uno dos tres",
+   "source_text": "uno\u200bdos tres"
+  },
+  {
+   "expect": {
+    "match": null,
+    "matched_text": null
+   },
+   "id": "M09",
+   "note": "U+001F no es espacio",
+   "quote": "uno dos tres",
+   "source_text": "uno\u001fdos tres"
+  },
+  {
+   "expect": {
+    "match": "literal",
+    "matched_text": null
+   },
+   "id": "M10",
+   "note": "fuente en NFD: se compara en NFC",
+   "quote": "renovaci\u00f3n indefinida",
+   "source_text": "renovacio\u0301n indefinida"
+  },
+  {
+   "expect": {
+    "match": "ws-nfc-accents/v1",
+    "matched_text": "renovacion indefinida"
+   },
+   "id": "M11",
+   "note": "fuente sin tildes",
+   "quote": "renovaci\u00f3n indefinida",
+   "source_text": "renovacion indefinida"
+  },
+  {
+   "expect": {
+    "match": "ws-nfc-accents/v1",
+    "matched_text": "renovaci\u00f3n\n indefinida"
+   },
+   "id": "M12",
+   "note": "tilde y salto a la vez",
+   "quote": "renovacion indefinida",
+   "source_text": "renovaci\u00f3n\n indefinida"
+  },
+  {
+   "expect": {
+    "match": "ws-nfc-accents/v1",
+    "matched_text": "el a\u00f1o fiscal 2026"
+   },
+   "id": "M13",
+   "note": "consecuencia declarada: \u00f1 pierde su marca; `match` lo deja a la vista",
+   "quote": "el ano fiscal 2026",
+   "source_text": "el a\u00f1o fiscal 2026"
+  },
+  {
+   "expect": {
+    "match": null,
+    "matched_text": null
+   },
+   "id": "M14",
+   "note": "nunca se pliegan may\u00fasculas",
+   "quote": "Art\u00edculo 123 constitucional",
+   "source_text": "ART\u00cdCULO 123 constitucional"
+  },
+  {
+   "expect": {
+    "match": "ws-nfc-accents/v1",
+    "matched_text": "ARTICULO 123"
+   },
+   "id": "M15",
+   "note": null,
+   "quote": "ART\u00cdCULO 123",
+   "source_text": "ARTICULO 123"
+  },
+  {
+   "expect": {
+    "match": null,
+    "matched_text": null
+   },
+   "id": "M16",
+   "note": "los identificadores distinguen",
+   "quote": "port = 8080",
+   "source_text": "Port = 8080"
+  },
+  {
+   "expect": {
+    "match": "ws-nfc/v1",
+    "matched_text": "b  c  d e"
+   },
+   "id": "M17",
+   "note": "primera aparici\u00f3n bajo el perfil",
+   "quote": "b c d e",
+   "source_text": "a b c d\na  b  c  d e f"
+  },
+  {
+   "expect": {
+    "match": "literal",
+    "matched_text": null
+   },
+   "id": "M18",
+   "note": "si hay literal, no se prueba otro perfil",
+   "quote": "port = 8080",
+   "source_text": "x port = 8080 y port =\n8080"
+  },
+  {
+   "expect": {
+    "match": "literal",
+    "matched_text": null
+   },
+   "id": "M19",
+   "note": null,
+   "quote": "inicio del texto",
+   "source_text": "  inicio del texto"
+  },
+  {
+   "expect": {
+    "match": "ws-nfc/v1",
+    "matched_text": "fin de\nl\u00ednea"
+   },
+   "id": "M20",
+   "note": null,
+   "quote": "fin de l\u00ednea",
+   "source_text": "fin de\nl\u00ednea  "
+  },
+  {
+   "expect": {
+    "match": null,
+    "matched_text": null
+   },
+   "id": "M21",
+   "note": "fuente vac\u00eda",
+   "quote": "port = 8080",
+   "source_text": ""
+  },
+  {
+   "expect": {
+    "match": "ws-nfc-accents/v1",
+    "matched_text": "sesi\u00f3n \ud55c\uae00 abierta"
+   },
+   "id": "M23",
+   "note": "Hangul: el perfil no recompone, y coincide igual",
+   "quote": "sesion \ud55c\uae00 abierta",
+   "source_text": "sesi\u00f3n \ud55c\uae00 abierta"
+  },
+  {
+   "expect": {
+    "match": "ws-nfc-accents/v1",
+    "matched_text": "caf\u00e9 \u0915\u094b\u0921 final"
+   },
+   "id": "M24",
+   "note": "devanagari: U+094B es Mc, no Mn, y se conserva",
+   "quote": "cafe \u0915\u094b\u0921 final",
+   "source_text": "caf\u00e9 \u0915\u094b\u0921 final"
+  },
+  {
+   "expect": {
+    "match": "ws-nfc-accents/v1",
+    "matched_text": "x\u0301yz = 1234"
+   },
+   "id": "M25",
+   "note": "marca suelta, sin forma compuesta: se quita igual",
+   "quote": "xyz = 1234",
+   "source_text": "x\u0301yz = 1234"
+  },
+  {
+   "expect": {
+    "match": null,
+    "matched_text": null
+   },
+   "id": "M22",
+   "note": "JSON: no se desescapa",
+   "quote": "dijo \"renovar indefinida\" ayer",
+   "source_text": "dijo \\\"renovar indefinida\\\" ayer"
+  }
+ ],
+ "cita": [
+  {
+   "expect": {
+    "quote_sha256": "50c553f28ae2ae09405cf4b4bef69b0e5372d7922ccdb207516e75f16c890512",
+    "reject": null,
+    "stored": "port = 8080",
+    "stored_bytes": 11,
+    "stored_hex": "706f7274203d2038303830"
+   },
+   "id": "Q01",
+   "input": "port = 8080",
+   "kind": "repo-file",
+   "note": "9 bytes \u00fatiles"
+  },
+  {
+   "expect": {
+    "reject": "anchor_quote_too_short",
+    "stored": null
+   },
+   "id": "Q02",
+   "input": "ab=8080",
+   "kind": "repo-file",
+   "note": "7 bytes"
+  },
+  {
+   "expect": {
+    "quote_sha256": "e2b212f5702db0962c11ef6f3135fbdbbff237ed388111b09f55b9f997f9de2c",
+    "reject": null,
+    "stored": "abc=8080",
+    "stored_bytes": 8,
+    "stored_hex": "6162633d38303830"
+   },
+   "id": "Q03",
+   "input": "abc=8080",
+   "kind": "repo-file",
+   "note": "8 bytes: el m\u00ednimo"
+  },
+  {
+   "expect": {
+    "reject": "anchor_quote_too_short",
+    "stored": null
+   },
+   "id": "Q04",
+   "input": "a   b   c",
+   "kind": "repo-file",
+   "note": "3 \u00fatiles"
+  },
+  {
+   "expect": {
+    "reject": "anchor_quote_too_short",
+    "stored": null
+   },
+   "id": "Q05",
+   "input": "a  b  c  d e",
+   "kind": "repo-file",
+   "note": "12 bytes, 5 \u00fatiles"
+  },
+  {
+   "expect": {
+    "reject": "anchor_quote_too_short",
+    "stored": null
+   },
+   "id": "Q06",
+   "input": "a\u00f1o = 12",
+   "kind": "repo-file",
+   "note": "7 \u00fatiles: \u00f1 son 2 bytes"
+  },
+  {
+   "expect": {
+    "quote_sha256": "64867c455823fa5e8220d4996a0587cf2323cf840ea2d16930498e3c6a07727e",
+    "reject": null,
+    "stored": "ni\u00f1o = 12",
+    "stored_bytes": 10,
+    "stored_hex": "6e69c3b16f203d203132"
+   },
+   "id": "Q07",
+   "input": "ni\u00f1o = 12",
+   "kind": "repo-file",
+   "note": "8 \u00fatiles"
+  },
+  {
+   "expect": {
+    "quote_sha256": "50c553f28ae2ae09405cf4b4bef69b0e5372d7922ccdb207516e75f16c890512",
+    "reject": null,
+    "stored": "port = 8080",
+    "stored_bytes": 11,
+    "stored_hex": "706f7274203d2038303830"
+   },
+   "id": "Q08",
+   "input": "  port = 8080\n",
+   "kind": "repo-file",
+   "note": "se recortan los extremos"
+  },
+  {
+   "expect": {
+    "quote_sha256": "74144362a90f90e16a712ca480997e1a98f57ae616fc3ad6f8d53c4248ddf21b",
+    "reject": null,
+    "stored": "renovaci\u00f3n ya",
+    "stored_bytes": 14,
+    "stored_hex": "72656e6f76616369c3b36e207961"
+   },
+   "id": "Q09",
+   "input": "renovacio\u0301n ya",
+   "kind": "repo-file",
+   "note": "entra en NFD, se guarda en NFC"
+  },
+  {
+   "expect": {
+    "reject": "anchor_quote_too_short",
+    "stored": null
+   },
+   "id": "Q10",
+   "input": "abc\u00a0\u00a0def",
+   "kind": "repo-file",
+   "note": "U+00A0 es espacio: 6 \u00fatiles"
+  },
+  {
+   "expect": {
+    "quote_sha256": "a97fc0b2d996e386c9d6b11136b85632476935d5c2a1a0ec42d31fd5667d561f",
+    "reject": null,
+    "stored": "abc\u001fdefg",
+    "stored_bytes": 8,
+    "stored_hex": "6162631f64656667"
+   },
+   "id": "Q11",
+   "input": "abc\u001fdefg",
+   "kind": "repo-file",
+   "note": "U+001F no es White_Space: cuenta"
+  },
+  {
+   "expect": {
+    "quote_sha256": "dc55ad9c1e98edeba65b6324954ba9f0f039f69c982ff9d60471603031bfd089",
+    "reject": null,
+    "stored": "abc\u200bde",
+    "stored_bytes": 8,
+    "stored_hex": "616263e2808b6465"
+   },
+   "id": "Q12",
+   "input": "abc\u200bde",
+   "kind": "repo-file",
+   "note": "U+200B no es White_Space: 3+3+2 bytes"
+  },
+  {
+   "expect": {
+    "quote_sha256": "9835fa6bf4e20a9b9ea812506302e98982721a6cf8d2cae67af57129bf21ae90",
+    "reject": null,
+    "stored": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "stored_bytes": 300,
+    "stored_hex": null
+   },
+   "id": "Q13",
+   "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "kind": "repo-file",
+   "note": "300 bytes: el m\u00e1ximo"
+  },
+  {
+   "expect": {
+    "reject": "anchor_quote_too_long",
+    "stored": null
+   },
+   "id": "Q14",
+   "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "kind": "repo-file",
+   "note": null
+  },
+  {
+   "expect": {
+    "quote_sha256": "d8539454ee4ac512f8e4f10026899b66a903487d8c348551a93917e436beec5e",
+    "reject": null,
+    "stored": "\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1",
+    "stored_bytes": 300,
+    "stored_hex": null
+   },
+   "id": "Q15",
+   "input": "\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1",
+   "kind": "repo-file",
+   "note": "300 bytes en 150 caracteres"
+  },
+  {
+   "expect": {
+    "reject": "anchor_quote_too_long",
+    "stored": null
+   },
+   "id": "Q16",
+   "input": "\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1a",
+   "kind": "repo-file",
+   "note": null
+  },
+  {
+   "expect": {
+    "quote_sha256": "d8539454ee4ac512f8e4f10026899b66a903487d8c348551a93917e436beec5e",
+    "reject": null,
+    "stored": "\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1\u00f1",
+    "stored_bytes": 300,
+    "stored_hex": null
+   },
+   "id": "Q17",
+   "input": "n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303n\u0303",
+   "kind": "repo-file",
+   "note": "450 bytes en NFD, 300 en NFC: se mide lo guardado"
+  },
+  {
+   "expect": {
+    "quote_sha256": "9835fa6bf4e20a9b9ea812506302e98982721a6cf8d2cae67af57129bf21ae90",
+    "reject": null,
+    "stored": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "stored_bytes": 300,
+    "stored_hex": null
+   },
+   "id": "Q18",
+   "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \n",
+   "kind": "repo-file",
+   "note": "se mide tras recortar"
+  },
+  {
+   "expect": {
+    "reject": "anchor_quote_too_short",
+    "stored": null
+   },
+   "id": "Q19",
+   "input": "",
+   "kind": "repo-file",
+   "note": null
+  },
+  {
+   "expect": {
+    "reject": "anchor_quote_too_short",
+    "stored": null
+   },
+   "id": "Q20",
+   "input": " \t\n\u2028 ",
+   "kind": "repo-file",
+   "note": null
+  },
+  {
+   "expect": {
+    "quote_sha256": "c23f0efe24274b4fc9c1e01e593b86d323e74ebdf9cb20eb5f1d491ee36d8a28",
+    "reject": null,
+    "stored": "manda renovar de manera indefinida",
+    "stored_bytes": 34,
+    "stored_hex": "6d616e64612072656e6f766172206465206d616e65726120696e646566696e696461"
+   },
+   "id": "Q21",
+   "input": "manda renovar de manera indefinida",
+   "kind": "conversation",
+   "note": null
+  },
+  {
+   "expect": {
+    "reject": "anchor_quote_too_short",
+    "stored": null
+   },
+   "id": "Q22",
+   "input": "abcde abcde abcde abcde abcde abcde abcde abcd",
+   "kind": "document",
+   "note": "document: 39 \u00fatiles"
+  },
+  {
+   "expect": {
+    "quote_sha256": "53f56e34051a2068b810294a06bd2969f682f77dd6622bedf43a020783df319f",
+    "reject": null,
+    "stored": "abcde abcde abcde abcde abcde abcde abcde abcde",
+    "stored_bytes": 47,
+    "stored_hex": "6162636465206162636465206162636465206162636465206162636465206162636465206162636465206162636465"
+   },
+   "id": "Q23",
+   "input": "abcde abcde abcde abcde abcde abcde abcde abcde",
+   "kind": "document",
+   "note": "document: 40 \u00fatiles"
+  },
+  {
+   "expect": {
+    "reject": "anchor_quote_too_short",
+    "stored": null
+   },
+   "id": "Q24",
+   "input": "port = 8080",
+   "kind": "document",
+   "note": "el m\u00ednimo de 8 no vale para document"
+  }
+ ],
+ "cobertura": [
+  {
+   "elements": [],
+   "expect": {
+    "coverage": {
+     "level": "unchecked",
+     "present": 0,
+     "total": 0
+    },
+    "missing": [],
+    "missing_total": 0
+   },
+   "id": "C01",
+   "note": "texto sin elementos comprobables"
+  },
+  {
+   "elements": [
+    {
+     "present": true,
+     "type": "number",
+     "value": "8080"
+    },
+    {
+     "present": true,
+     "type": "path",
+     "value": "docs/a.md"
+    }
+   ],
+   "expect": {
+    "coverage": {
+     "level": "full",
+     "present": 2,
+     "total": 2
+    },
+    "missing": [],
+    "missing_total": 0
+   },
+   "id": "C02",
+   "note": null
+  },
+  {
+   "elements": [
+    {
+     "present": false,
+     "type": "number",
+     "value": "8080"
+    }
+   ],
+   "expect": {
+    "coverage": {
+     "level": "none",
+     "present": 0,
+     "total": 1
+    },
+    "missing": [
+     {
+      "type": "number",
+      "value": "8080"
+     }
+    ],
+    "missing_total": 1
+   },
+   "id": "C03",
+   "note": "el \u00fanico nivel que se sirve como aviso"
+  },
+  {
+   "elements": [
+    {
+     "present": false,
+     "type": "number",
+     "value": "8080"
+    },
+    {
+     "present": false,
+     "type": "path",
+     "value": "docs/a.md"
+    },
+    {
+     "present": true,
+     "type": "number",
+     "value": "3"
+    },
+    {
+     "present": false,
+     "type": "identifier",
+     "value": "retired_by"
+    },
+    {
+     "present": false,
+     "type": "version",
+     "value": "v0.1.0"
+    }
+   ],
+   "expect": {
+    "coverage": {
+     "level": "partial",
+     "present": 1,
+     "total": 5
+    },
+    "missing": [
+     {
+      "type": "identifier",
+      "value": "retired_by"
+     },
+     {
+      "type": "path",
+      "value": "docs/a.md"
+     },
+     {
+      "type": "version",
+      "value": "v0.1.0"
+     },
+     {
+      "type": "number",
+      "value": "8080"
+     }
+    ],
+    "missing_total": 4
+   },
+   "id": "C04",
+   "note": "orden: identifier, path, version, number"
+  },
+  {
+   "elements": [
+    {
+     "present": false,
+     "type": "number",
+     "value": "7"
+    },
+    {
+     "present": false,
+     "type": "number",
+     "value": "5"
+    },
+    {
+     "present": true,
+     "type": "number",
+     "value": "6"
+    }
+   ],
+   "expect": {
+    "coverage": {
+     "level": "partial",
+     "present": 1,
+     "total": 3
+    },
+    "missing": [
+     {
+      "type": "number",
+      "value": "7"
+     },
+     {
+      "type": "number",
+      "value": "5"
+     }
+    ],
+    "missing_total": 2
+   },
+   "id": "C05",
+   "note": "dentro de un tipo, orden de aparici\u00f3n"
+  },
+  {
+   "elements": [
+    {
+     "present": false,
+     "type": "number",
+     "value": "1"
+    },
+    {
+     "present": false,
+     "type": "number",
+     "value": "2"
+    },
+    {
+     "present": false,
+     "type": "number",
+     "value": "3"
+    },
+    {
+     "present": false,
+     "type": "number",
+     "value": "4"
+    },
+    {
+     "present": false,
+     "type": "number",
+     "value": "5"
+    },
+    {
+     "present": false,
+     "type": "number",
+     "value": "6"
+    },
+    {
+     "present": false,
+     "type": "number",
+     "value": "7"
+    },
+    {
+     "present": false,
+     "type": "number",
+     "value": "8"
+    },
+    {
+     "present": false,
+     "type": "number",
+     "value": "9"
+    },
+    {
+     "present": false,
+     "type": "number",
+     "value": "10"
+    },
+    {
+     "present": false,
+     "type": "path",
+     "value": "docs/a.md"
+    },
+    {
+     "present": false,
+     "type": "identifier",
+     "value": "retired_by"
+    }
+   ],
+   "expect": {
+    "coverage": {
+     "level": "none",
+     "present": 0,
+     "total": 12
+    },
+    "missing": [
+     {
+      "type": "identifier",
+      "value": "retired_by"
+     },
+     {
+      "type": "path",
+      "value": "docs/a.md"
+     },
+     {
+      "type": "number",
+      "value": "1"
+     },
+     {
+      "type": "number",
+      "value": "2"
+     },
+     {
+      "type": "number",
+      "value": "3"
+     },
+     {
+      "type": "number",
+      "value": "4"
+     },
+     {
+      "type": "number",
+      "value": "5"
+     },
+     {
+      "type": "number",
+      "value": "6"
+     }
+    ],
+    "missing_total": 12
+   },
+   "id": "C06",
+   "note": "como mucho 8 entradas; el total va aparte"
+  }
+ ],
+ "conversation": [
+  {
+   "anchor": {
+    "kind": "conversation",
+    "quote": "manda renovar de manera indefinida",
+    "resolution": "pending",
+    "turn_id": null
+   },
+   "expect": {
+    "freshness": "pending",
+    "integrity": "unverifiable",
+    "integrity_reason": "resolution_pending",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "resolution_pending",
+    "resolution": "pending",
+    "source": "unverifiable",
+    "source_reason": "resolution_pending",
+    "turn_id": null
+   },
+   "id": "S01",
+   "note": "sin resolutor instalado",
+   "resolver": false,
+   "session": {
+    "state": "sealed",
+    "turns": [
+     {
+      "id": "t1",
+      "text": "revisa las p\u00f3lizas vencidas"
+     },
+     {
+      "id": "t2",
+      "text": "adelante y manda renovar de manera\nindefinida con el consumidor"
+     }
+    ]
+   }
+  },
+  {
+   "anchor": {
+    "kind": "conversation",
+    "quote": "manda renovar de manera indefinida",
+    "resolution": "pending",
+    "turn_id": null
+   },
+   "expect": {
+    "freshness": "pending",
+    "integrity": "unverifiable",
+    "integrity_reason": "resolution_pending",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "resolution_pending",
+    "resolution": "pending",
+    "source": "unverifiable",
+    "source_reason": "resolution_pending",
+    "turn_id": null
+   },
+   "id": "S02",
+   "note": "sesi\u00f3n desconocida",
+   "resolver": true,
+   "session": {
+    "state": "unknown",
+    "turns": []
+   }
+  },
+  {
+   "anchor": {
+    "kind": "conversation",
+    "quote": "manda renovar de manera indefinida",
+    "resolution": "pending",
+    "turn_id": null
+   },
+   "expect": {
+    "freshness": "pending",
+    "integrity": "unverifiable",
+    "integrity_reason": "resolution_pending",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "resolution_pending",
+    "resolution": "pending",
+    "source": "unverifiable",
+    "source_reason": "resolution_pending",
+    "turn_id": null
+   },
+   "id": "S03",
+   "note": "sesi\u00f3n sin sellar: a\u00fan puede llegar el turno",
+   "resolver": true,
+   "session": {
+    "state": "unsealed",
+    "turns": [
+     {
+      "id": "t1",
+      "text": "revisa las p\u00f3lizas vencidas"
+     },
+     {
+      "id": "t2",
+      "text": "adelante y manda renovar de manera\nindefinida con el consumidor"
+     }
+    ]
+   }
+  },
+  {
+   "anchor": {
+    "kind": "conversation",
+    "quote": "manda renovar de manera indefinida",
+    "resolution": "pending",
+    "turn_id": null
+   },
+   "expect": {
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "ws-nfc/v1",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "resolution": "resolved",
+    "source": "verified",
+    "source_reason": null,
+    "turn_id": "t2"
+   },
+   "id": "S04",
+   "note": "se resuelve y se comprueba",
+   "resolver": true,
+   "session": {
+    "state": "sealed",
+    "turns": [
+     {
+      "id": "t1",
+      "text": "revisa las p\u00f3lizas vencidas"
+     },
+     {
+      "id": "t2",
+      "text": "adelante y manda renovar de manera\nindefinida con el consumidor"
+     }
+    ]
+   }
+  },
+  {
+   "anchor": {
+    "kind": "conversation",
+    "quote": "manda renovar de manera indefinida",
+    "resolution": "pending",
+    "turn_id": null
+   },
+   "expect": {
+    "freshness": "broken",
+    "integrity": "unverifiable",
+    "integrity_reason": "session_lacks_quote",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "session_lacks_quote",
+    "resolution": "not_found",
+    "source": "unverifiable",
+    "source_reason": "session_lacks_quote",
+    "turn_id": null
+   },
+   "id": "S05",
+   "note": "sellada entera y sin la cita",
+   "resolver": true,
+   "session": {
+    "state": "sealed",
+    "turns": [
+     {
+      "id": "t1",
+      "text": "revisa las p\u00f3lizas vencidas"
+     }
+    ]
+   }
+  },
+  {
+   "anchor": {
+    "kind": "conversation",
+    "quote": "manda renovar de manera indefinida",
+    "resolution": "pending",
+    "turn_id": null
+   },
+   "expect": {
+    "freshness": "pending",
+    "integrity": "unverifiable",
+    "integrity_reason": "resolution_pending",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "resolution_pending",
+    "resolution": "pending",
+    "source": "unverifiable",
+    "source_reason": "resolution_pending",
+    "turn_id": null
+   },
+   "id": "S06",
+   "note": "hay un turno purgado: no se puede afirmar que la cita no estaba",
+   "resolver": true,
+   "session": {
+    "state": "sealed",
+    "turns": [
+     {
+      "id": "t1",
+      "text": "revisa las p\u00f3lizas vencidas"
+     },
+     {
+      "id": "t2",
+      "purged": true,
+      "text": "adelante y manda renovar de manera\nindefinida con el consumidor"
+     }
+    ]
+   }
+  },
+  {
+   "anchor": {
+    "kind": "conversation",
+    "quote": "manda renovar de manera indefinida",
+    "resolution": "resolved",
+    "turn_id": "t2"
+   },
+   "expect": {
+    "freshness": "broken",
+    "integrity": "unverifiable",
+    "integrity_reason": "turn_purged",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "turn_purged",
+    "resolution": "resolved",
+    "source": "not_found",
+    "source_reason": "turn_purged",
+    "turn_id": "t2"
+   },
+   "id": "S07",
+   "note": "resuelta y despu\u00e9s purgada",
+   "resolver": true,
+   "session": {
+    "state": "sealed",
+    "turns": [
+     {
+      "id": "t1",
+      "text": "revisa las p\u00f3lizas vencidas"
+     },
+     {
+      "id": "t2",
+      "purged": true,
+      "text": "adelante y manda renovar de manera\nindefinida con el consumidor"
+     }
+    ]
+   }
+  },
+  {
+   "anchor": {
+    "kind": "conversation",
+    "quote": "manda renovar de manera indefinida",
+    "resolution": "resolved",
+    "turn_id": "t2"
+   },
+   "expect": {
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "raw_lost",
+    "match": "ws-nfc/v1",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": "raw_lost",
+    "resolution": "resolved",
+    "source": "verified",
+    "source_reason": null,
+    "turn_id": "t2"
+   },
+   "id": "S08",
+   "note": "crudo perdido: nunca fresh",
+   "resolver": true,
+   "session": {
+    "state": "sealed",
+    "turns": [
+     {
+      "id": "t1",
+      "text": "revisa las p\u00f3lizas vencidas"
+     },
+     {
+      "id": "t2",
+      "raw": false,
+      "text": "adelante y manda renovar de manera\nindefinida con el consumidor"
+     }
+    ]
+   }
+  },
+  {
+   "anchor": {
+    "kind": "conversation",
+    "quote": "manda renovar de manera indefinida",
+    "resolution": "resolved",
+    "turn_id": "t2"
+   },
+   "expect": {
+    "freshness": "broken",
+    "integrity": "not_found",
+    "integrity_reason": "seal_mismatch",
+    "match": "ws-nfc/v1",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": "seal_mismatch",
+    "resolution": "resolved",
+    "source": "verified",
+    "source_reason": null,
+    "turn_id": "t2"
+   },
+   "id": "S09",
+   "note": "s\u00f3lo falla integrity",
+   "resolver": true,
+   "session": {
+    "state": "sealed",
+    "turns": [
+     {
+      "id": "t1",
+      "text": "revisa las p\u00f3lizas vencidas"
+     },
+     {
+      "id": "t2",
+      "seal_ok": false,
+      "text": "adelante y manda renovar de manera\nindefinida con el consumidor"
+     }
+    ]
+   }
+  },
+  {
+   "anchor": {
+    "kind": "conversation",
+    "quote": "manda renovar de manera indefinida",
+    "resolution": "resolved",
+    "turn_id": "t2"
+   },
+   "expect": {
+    "freshness": "broken",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": null,
+    "quote": "not_found",
+    "quote_reason": "quote_absent",
+    "reason": "quote_absent",
+    "resolution": "resolved",
+    "source": "verified",
+    "source_reason": null,
+    "turn_id": "t2"
+   },
+   "id": "S10",
+   "note": "s\u00f3lo falla quote: lo dicho no cambia",
+   "resolver": true,
+   "session": {
+    "state": "sealed",
+    "turns": [
+     {
+      "id": "t1",
+      "text": "revisa las p\u00f3lizas vencidas"
+     },
+     {
+      "id": "t2",
+      "text": "otro texto del mismo turno"
+     }
+    ]
+   }
+  },
+  {
+   "anchor": {
+    "kind": "conversation",
+    "quote": "manda renovar de manera indefinida",
+    "resolution": "resolved",
+    "turn_id": "t2"
+   },
+   "expect": {
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "no_verifier",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "no_verifier",
+    "resolution": "resolved",
+    "source": "unverifiable",
+    "source_reason": "no_verifier",
+    "turn_id": "t2"
+   },
+   "id": "S11",
+   "note": "resuelta, le\u00edda donde no hay verificador",
+   "resolver": false,
+   "session": {
+    "state": "sealed",
+    "turns": [
+     {
+      "id": "t1",
+      "text": "revisa las p\u00f3lizas vencidas"
+     },
+     {
+      "id": "t2",
+      "text": "adelante y manda renovar de manera\nindefinida con el consumidor"
+     }
+    ]
+   }
+  }
+ ],
+ "document": [
+  {
+   "anchor": {
+    "kind": "document",
+    "locator": {
+     "item_id": "i-1",
+     "page": 188
+    },
+    "modality": "native_text",
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones"
+   },
+   "copy": "ok",
+   "custodian": "online",
+   "derived_text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas\nde vacaciones al a\u00f1o.",
+   "expect": {
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "ws-nfc/v1",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "D01",
+   "manifest_ok": true,
+   "moment": "write",
+   "note": "copia correcta, custodio en marcha, texto nativo",
+   "supported": true
+  },
+  {
+   "anchor": {
+    "kind": "document",
+    "locator": {
+     "item_id": "i-1",
+     "page": 188
+    },
+    "modality": "native_text",
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones"
+   },
+   "copy": "bad_sha",
+   "custodian": "online",
+   "derived_text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas\nde vacaciones al a\u00f1o.",
+   "expect": {
+    "reject": "anchor_integrity_not_found"
+   },
+   "id": "D02",
+   "manifest_ok": true,
+   "moment": "write",
+   "note": "el sha de la copia no es el declarado",
+   "supported": true
+  },
+  {
+   "anchor": {
+    "kind": "document",
+    "locator": {
+     "item_id": "i-1",
+     "page": 188
+    },
+    "modality": "native_text",
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones"
+   },
+   "copy": "ok",
+   "custodian": "offline",
+   "derived_text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas\nde vacaciones al a\u00f1o.",
+   "expect": {
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "custodian_offline",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "custodian_offline",
+    "reason": "custodian_offline",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "D03",
+   "manifest_ok": true,
+   "moment": "write",
+   "note": "custodio apagado al escribir: se acepta sin comprobar",
+   "supported": true
+  },
+  {
+   "anchor": {
+    "kind": "document",
+    "locator": {
+     "item_id": "i-1",
+     "page": 188
+    },
+    "modality": "native_text",
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones"
+   },
+   "copy": "ok",
+   "custodian": "online",
+   "derived_text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas\nde vacaciones al a\u00f1o.",
+   "expect": {
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "custodian_offline",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "custodian_offline",
+    "reason": "custodian_offline",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "D04",
+   "manifest_ok": true,
+   "moment": "read",
+   "note": "leer nunca consulta al custodio, aunque est\u00e9 en marcha",
+   "supported": true
+  },
+  {
+   "anchor": {
+    "kind": "document",
+    "locator": {
+     "item_id": "i-1",
+     "page": 188
+    },
+    "modality": "native_text",
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones"
+   },
+   "copy": "ok",
+   "custodian": "online",
+   "derived_text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas\nde vacaciones al a\u00f1o.",
+   "expect": {
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "ws-nfc/v1",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "D05",
+   "manifest_ok": true,
+   "moment": "audit",
+   "note": "la auditor\u00eda expl\u00edcita s\u00ed consulta",
+   "supported": true
+  },
+  {
+   "anchor": {
+    "kind": "document",
+    "locator": {
+     "item_id": "i-1",
+     "page": 188
+    },
+    "modality": "ocr_text",
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones"
+   },
+   "copy": "ok",
+   "custodian": "online",
+   "derived_text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas\nde vacaciones al a\u00f1o.",
+   "expect": {
+    "freshness": "unverified",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "ws-nfc/v1",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": "derived_modality",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "D06",
+   "manifest_ok": true,
+   "moment": "audit",
+   "note": "s\u00f3lo OCR: nunca fresh",
+   "supported": true
+  },
+  {
+   "anchor": {
+    "kind": "document",
+    "locator": {
+     "item_id": "i-1",
+     "page": 188
+    },
+    "modality": "visual",
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones"
+   },
+   "copy": "ok",
+   "custodian": "online",
+   "derived_text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas\nde vacaciones al a\u00f1o.",
+   "expect": {
+    "freshness": "unverified",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "derived_modality",
+    "reason": "derived_modality",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "D07",
+   "manifest_ok": true,
+   "moment": "audit",
+   "note": "visual: la cita no se puede comprobar",
+   "supported": true
+  },
+  {
+   "anchor": {
+    "kind": "document",
+    "locator": {
+     "item_id": "i-1",
+     "page": 188
+    },
+    "modality": "native_text",
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones"
+   },
+   "copy": "ok",
+   "custodian": "online",
+   "derived_text": "Cl\u00e1usula 47. Derogada.",
+   "expect": {
+    "freshness": "broken",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": null,
+    "quote": "not_found",
+    "quote_reason": "quote_absent",
+    "reason": "quote_absent",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "D08",
+   "manifest_ok": true,
+   "moment": "audit",
+   "note": "cita ausente del derivado: broken, no stale",
+   "supported": true
+  },
+  {
+   "anchor": {
+    "kind": "document",
+    "locator": {
+     "item_id": "i-1",
+     "page": 188
+    },
+    "modality": "native_text",
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones"
+   },
+   "copy": "ok",
+   "custodian": "online",
+   "derived_text": "Cl\u00e1usula 47. Derogada.",
+   "expect": {
+    "reject": "anchor_quote_not_found"
+   },
+   "id": "D09",
+   "manifest_ok": true,
+   "moment": "write",
+   "note": "cita ausente al escribir",
+   "supported": true
+  },
+  {
+   "anchor": {
+    "kind": "document",
+    "locator": "unknown",
+    "modality": "native_text",
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones"
+   },
+   "copy": "ok",
+   "custodian": "online",
+   "derived_text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas\nde vacaciones al a\u00f1o.",
+   "expect": {
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "ws-nfc/v1",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "D10",
+   "manifest_ok": true,
+   "moment": "audit",
+   "note": "localizador desconocido: v\u00e1lido",
+   "supported": true
+  },
+  {
+   "anchor": {
+    "kind": "document",
+    "locator": {
+     "item_id": "i-1",
+     "page": 188
+    },
+    "modality": "native_text",
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones"
+   },
+   "copy": "bad_sha",
+   "custodian": "offline",
+   "derived_text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas\nde vacaciones al a\u00f1o.",
+   "expect": {
+    "freshness": "broken",
+    "integrity": "not_found",
+    "integrity_reason": "copy_sha_mismatch",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "custodian_offline",
+    "reason": "copy_sha_mismatch",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "D11",
+   "manifest_ok": true,
+   "moment": "read",
+   "note": "s\u00f3lo falla integrity, y se ve sin custodio",
+   "supported": true
+  },
+  {
+   "anchor": {
+    "kind": "document",
+    "locator": {
+     "item_id": "i-1",
+     "page": 188
+    },
+    "modality": "native_text",
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones"
+   },
+   "copy": "missing",
+   "custodian": "offline",
+   "derived_text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas\nde vacaciones al a\u00f1o.",
+   "expect": {
+    "freshness": "broken",
+    "integrity": "unverifiable",
+    "integrity_reason": "source_not_verified",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "copy_missing",
+    "reject": null,
+    "source": "not_found",
+    "source_reason": "copy_missing"
+   },
+   "id": "D12",
+   "manifest_ok": true,
+   "moment": "read",
+   "note": "la copia declarada ya no est\u00e1",
+   "supported": true
+  },
+  {
+   "anchor": {
+    "kind": "document",
+    "locator": {
+     "item_id": "i-1",
+     "page": 188
+    },
+    "modality": "native_text",
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones"
+   },
+   "copy": "none",
+   "custodian": "offline",
+   "derived_text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas\nde vacaciones al a\u00f1o.",
+   "expect": {
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "source_not_verified",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "custodian_offline",
+    "reject": null,
+    "source": "unverifiable",
+    "source_reason": "custodian_offline"
+   },
+   "id": "D13",
+   "manifest_ok": true,
+   "moment": "read",
+   "note": "sin copia declarada y sin custodio: nunca broken",
+   "supported": true
+  },
+  {
+   "anchor": {
+    "kind": "document",
+    "locator": {
+     "item_id": "i-1",
+     "page": 188
+    },
+    "modality": "native_text",
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones"
+   },
+   "copy": "none",
+   "custodian": "online",
+   "derived_text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas\nde vacaciones al a\u00f1o.",
+   "expect": {
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "ws-nfc/v1",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "D14",
+   "manifest_ok": true,
+   "moment": "audit",
+   "note": "sin copia: el custodio responde por el documento",
+   "supported": true
+  },
+  {
+   "anchor": {
+    "kind": "document",
+    "locator": {
+     "item_id": "i-1",
+     "page": 188
+    },
+    "modality": "native_text",
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones"
+   },
+   "copy": "none",
+   "custodian": "unknown_document",
+   "derived_text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas\nde vacaciones al a\u00f1o.",
+   "expect": {
+    "freshness": "broken",
+    "integrity": "unverifiable",
+    "integrity_reason": "source_not_verified",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "document_unknown",
+    "reject": null,
+    "source": "not_found",
+    "source_reason": "document_unknown"
+   },
+   "id": "D15",
+   "manifest_ok": true,
+   "moment": "audit",
+   "note": "el custodio no conoce el documento",
+   "supported": true
+  },
+  {
+   "anchor": {
+    "kind": "document",
+    "locator": {
+     "item_id": "i-1",
+     "page": 188
+    },
+    "modality": "native_text",
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones"
+   },
+   "copy": "ok",
+   "custodian": "online",
+   "derived_text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas\nde vacaciones al a\u00f1o.",
+   "expect": {
+    "freshness": "broken",
+    "integrity": "not_found",
+    "integrity_reason": "manifest_mismatch",
+    "match": "ws-nfc/v1",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": "manifest_mismatch",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "D16",
+   "manifest_ok": false,
+   "moment": "audit",
+   "note": "el manifiesto no coincide",
+   "supported": true
+  },
+  {
+   "anchor": {
+    "kind": "document",
+    "locator": {
+     "item_id": "i-1",
+     "page": 188
+    },
+    "modality": "native_text",
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones"
+   },
+   "copy": "ok",
+   "custodian": "online",
+   "derived_text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas\nde vacaciones al a\u00f1o.",
+   "expect": {
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "kind_not_supported",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "kind_not_supported",
+    "reason": "kind_not_supported",
+    "reject": null,
+    "source": "unverifiable",
+    "source_reason": "kind_not_supported"
+   },
+   "id": "D17",
+   "manifest_ok": true,
+   "moment": "write",
+   "note": "implementaci\u00f3n sin soporte: guarda intacto, no rechaza",
+   "supported": false
+  }
+ ],
+ "estado": "congelado",
+ "frescura": [
+  {
+   "decided_by": null,
+   "freshness": "fresh",
+   "integrity": "verified",
+   "kind": "repo-file",
+   "quote": "verified",
+   "source": "verified"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "repo-file",
+   "quote": "verified",
+   "source": "verified"
+  },
+  {
+   "decided_by": null,
+   "freshness": "fresh",
+   "integrity": "unverifiable",
+   "kind": "repo-file",
+   "quote": "verified",
+   "source": "verified"
+  },
+  {
+   "decided_by": "quote",
+   "freshness": "stale",
+   "integrity": "verified",
+   "kind": "repo-file",
+   "quote": "not_found",
+   "source": "verified"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "repo-file",
+   "quote": "not_found",
+   "source": "verified"
+  },
+  {
+   "decided_by": "quote",
+   "freshness": "stale",
+   "integrity": "unverifiable",
+   "kind": "repo-file",
+   "quote": "not_found",
+   "source": "verified"
+  },
+  {
+   "decided_by": "quote",
+   "freshness": "unverified",
+   "integrity": "verified",
+   "kind": "repo-file",
+   "quote": "unverifiable",
+   "source": "verified"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "repo-file",
+   "quote": "unverifiable",
+   "source": "verified"
+  },
+  {
+   "decided_by": "quote",
+   "freshness": "unverified",
+   "integrity": "unverifiable",
+   "kind": "repo-file",
+   "quote": "unverifiable",
+   "source": "verified"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "verified",
+   "kind": "repo-file",
+   "quote": "verified",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "repo-file",
+   "quote": "verified",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "unverifiable",
+   "kind": "repo-file",
+   "quote": "verified",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "verified",
+   "kind": "repo-file",
+   "quote": "not_found",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "repo-file",
+   "quote": "not_found",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "unverifiable",
+   "kind": "repo-file",
+   "quote": "not_found",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "verified",
+   "kind": "repo-file",
+   "quote": "unverifiable",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "repo-file",
+   "quote": "unverifiable",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "unverifiable",
+   "kind": "repo-file",
+   "quote": "unverifiable",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "verified",
+   "kind": "repo-file",
+   "quote": "verified",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "repo-file",
+   "quote": "verified",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "unverifiable",
+   "kind": "repo-file",
+   "quote": "verified",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "verified",
+   "kind": "repo-file",
+   "quote": "not_found",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "repo-file",
+   "quote": "not_found",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "unverifiable",
+   "kind": "repo-file",
+   "quote": "not_found",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "verified",
+   "kind": "repo-file",
+   "quote": "unverifiable",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "repo-file",
+   "quote": "unverifiable",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "unverifiable",
+   "kind": "repo-file",
+   "quote": "unverifiable",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": null,
+   "freshness": "fresh",
+   "integrity": "verified",
+   "kind": "conversation",
+   "quote": "verified",
+   "resolution": "resolved",
+   "source": "verified"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "conversation",
+   "quote": "verified",
+   "resolution": "resolved",
+   "source": "verified"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "unverified",
+   "integrity": "unverifiable",
+   "kind": "conversation",
+   "quote": "verified",
+   "resolution": "resolved",
+   "source": "verified"
+  },
+  {
+   "decided_by": "quote",
+   "freshness": "broken",
+   "integrity": "verified",
+   "kind": "conversation",
+   "quote": "not_found",
+   "resolution": "resolved",
+   "source": "verified"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "conversation",
+   "quote": "not_found",
+   "resolution": "resolved",
+   "source": "verified"
+  },
+  {
+   "decided_by": "quote",
+   "freshness": "broken",
+   "integrity": "unverifiable",
+   "kind": "conversation",
+   "quote": "not_found",
+   "resolution": "resolved",
+   "source": "verified"
+  },
+  {
+   "decided_by": "quote",
+   "freshness": "unverified",
+   "integrity": "verified",
+   "kind": "conversation",
+   "quote": "unverifiable",
+   "resolution": "resolved",
+   "source": "verified"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "conversation",
+   "quote": "unverifiable",
+   "resolution": "resolved",
+   "source": "verified"
+  },
+  {
+   "decided_by": "quote",
+   "freshness": "unverified",
+   "integrity": "unverifiable",
+   "kind": "conversation",
+   "quote": "unverifiable",
+   "resolution": "resolved",
+   "source": "verified"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "verified",
+   "kind": "conversation",
+   "quote": "verified",
+   "resolution": "resolved",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "conversation",
+   "quote": "verified",
+   "resolution": "resolved",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "unverifiable",
+   "kind": "conversation",
+   "quote": "verified",
+   "resolution": "resolved",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "verified",
+   "kind": "conversation",
+   "quote": "not_found",
+   "resolution": "resolved",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "conversation",
+   "quote": "not_found",
+   "resolution": "resolved",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "unverifiable",
+   "kind": "conversation",
+   "quote": "not_found",
+   "resolution": "resolved",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "verified",
+   "kind": "conversation",
+   "quote": "unverifiable",
+   "resolution": "resolved",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "conversation",
+   "quote": "unverifiable",
+   "resolution": "resolved",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "unverifiable",
+   "kind": "conversation",
+   "quote": "unverifiable",
+   "resolution": "resolved",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "verified",
+   "kind": "conversation",
+   "quote": "verified",
+   "resolution": "resolved",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "conversation",
+   "quote": "verified",
+   "resolution": "resolved",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "unverifiable",
+   "kind": "conversation",
+   "quote": "verified",
+   "resolution": "resolved",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "verified",
+   "kind": "conversation",
+   "quote": "not_found",
+   "resolution": "resolved",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "conversation",
+   "quote": "not_found",
+   "resolution": "resolved",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "unverifiable",
+   "kind": "conversation",
+   "quote": "not_found",
+   "resolution": "resolved",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "verified",
+   "kind": "conversation",
+   "quote": "unverifiable",
+   "resolution": "resolved",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "conversation",
+   "quote": "unverifiable",
+   "resolution": "resolved",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "unverifiable",
+   "kind": "conversation",
+   "quote": "unverifiable",
+   "resolution": "resolved",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": null,
+   "freshness": "fresh",
+   "integrity": "verified",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "verified",
+   "source": "verified"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "verified",
+   "source": "verified"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "unverified",
+   "integrity": "unverifiable",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "verified",
+   "source": "verified"
+  },
+  {
+   "decided_by": "quote",
+   "freshness": "broken",
+   "integrity": "verified",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "not_found",
+   "source": "verified"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "not_found",
+   "source": "verified"
+  },
+  {
+   "decided_by": "quote",
+   "freshness": "broken",
+   "integrity": "unverifiable",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "not_found",
+   "source": "verified"
+  },
+  {
+   "decided_by": "quote",
+   "freshness": "unverified",
+   "integrity": "verified",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "unverifiable",
+   "source": "verified"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "unverifiable",
+   "source": "verified"
+  },
+  {
+   "decided_by": "quote",
+   "freshness": "unverified",
+   "integrity": "unverifiable",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "unverifiable",
+   "source": "verified"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "verified",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "verified",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "verified",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "unverifiable",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "verified",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "verified",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "not_found",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "not_found",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "unverifiable",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "not_found",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "verified",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "unverifiable",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "unverifiable",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "unverifiable",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "unverifiable",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "verified",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "verified",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "verified",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "unverifiable",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "verified",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "verified",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "not_found",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "not_found",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "unverifiable",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "not_found",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "verified",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "unverifiable",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "unverifiable",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "unverifiable",
+   "kind": "document",
+   "modality": "native_text",
+   "quote": "unverifiable",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "modality",
+   "freshness": "unverified",
+   "integrity": "verified",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "verified",
+   "source": "verified"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "verified",
+   "source": "verified"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "unverified",
+   "integrity": "unverifiable",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "verified",
+   "source": "verified"
+  },
+  {
+   "decided_by": "quote",
+   "freshness": "broken",
+   "integrity": "verified",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "not_found",
+   "source": "verified"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "not_found",
+   "source": "verified"
+  },
+  {
+   "decided_by": "quote",
+   "freshness": "broken",
+   "integrity": "unverifiable",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "not_found",
+   "source": "verified"
+  },
+  {
+   "decided_by": "quote",
+   "freshness": "unverified",
+   "integrity": "verified",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "unverifiable",
+   "source": "verified"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "unverifiable",
+   "source": "verified"
+  },
+  {
+   "decided_by": "quote",
+   "freshness": "unverified",
+   "integrity": "unverifiable",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "unverifiable",
+   "source": "verified"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "verified",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "verified",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "verified",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "unverifiable",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "verified",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "verified",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "not_found",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "not_found",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "unverifiable",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "not_found",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "verified",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "unverifiable",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "unverifiable",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "broken",
+   "integrity": "unverifiable",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "unverifiable",
+   "source": "not_found"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "verified",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "verified",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "verified",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "unverifiable",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "verified",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "verified",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "not_found",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "not_found",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "unverifiable",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "not_found",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "verified",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "unverifiable",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "integrity",
+   "freshness": "broken",
+   "integrity": "not_found",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "unverifiable",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "source",
+   "freshness": "unverified",
+   "integrity": "unverifiable",
+   "kind": "document",
+   "modality": "ocr_text",
+   "quote": "unverifiable",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "resolution",
+   "freshness": "pending",
+   "integrity": "unverifiable",
+   "kind": "conversation",
+   "quote": "unverifiable",
+   "resolution": "pending",
+   "source": "unverifiable"
+  },
+  {
+   "decided_by": "resolution",
+   "freshness": "broken",
+   "integrity": "unverifiable",
+   "kind": "conversation",
+   "quote": "unverifiable",
+   "resolution": "not_found",
+   "source": "unverifiable"
+  }
+ ],
+ "repo_file": [
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "commit",
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "literal",
+    "matched_text": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "W01",
+   "moment": "write",
+   "note": null,
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "Nada se borra de la bandeja hasta confirmarse el commit"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "commit",
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "ws-nfc/v1",
+    "matched_text": "Nada se borra de la bandeja hasta\n    confirmarse el commit",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "W02",
+   "moment": "write",
+   "note": null,
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8081"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "reject": "anchor_quote_not_found"
+   },
+   "id": "W03",
+   "moment": "write",
+   "note": null,
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/no-existe.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "reject": "anchor_source_not_found"
+   },
+   "id": "W04",
+   "moment": "write",
+   "note": null,
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/../docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "reject": "anchor_path_invalid"
+   },
+   "id": "W05",
+   "moment": "write",
+   "note": null,
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "/etc/hosts",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "reject": "anchor_path_invalid"
+   },
+   "id": "W06",
+   "moment": "write",
+   "note": null,
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "enlace/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "reject": "anchor_path_invalid"
+   },
+   "id": "W07",
+   "moment": "write",
+   "note": "un componente de la ruta es enlace simb\u00f3lico, apunte adonde apunte",
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "op": "symlink",
+     "path": "enlace",
+     "target": "docs"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "fuera.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "reject": "anchor_path_invalid"
+   },
+   "id": "W08",
+   "moment": "write",
+   "note": null,
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "op": "symlink",
+     "path": "fuera.md",
+     "target": "/etc/hosts"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c2",
+    "kind": "repo-file",
+    "path": "local/nota.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "reject": "anchor_source_not_found"
+   },
+   "id": "W09",
+   "moment": "write",
+   "note": "ignorado por Git y presente en local: no es un repo-file",
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "op": "ignore",
+     "path": "local/nota.md"
+    },
+    {
+     "op": "write",
+     "path": "local/nota.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c2",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": null,
+    "kind": "repo-file",
+    "path": "local/nota.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "reject": "anchor_source_not_found"
+   },
+   "id": "W10",
+   "moment": "write",
+   "note": "tampoco para un state",
+   "record_type": "state",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "op": "ignore",
+     "path": "local/nota.md"
+    },
+    {
+     "op": "write",
+     "path": "local/nota.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": null,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "commit_not_in_clone",
+    "match": null,
+    "matched_text": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "commit_not_in_clone",
+    "reject": null,
+    "source": "unverifiable",
+    "source_reason": "commit_not_in_clone"
+   },
+   "id": "W11",
+   "moment": "write",
+   "note": null,
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": null,
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "L\u00edmite nuevo: 64 anclas"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "worktree",
+    "freshness": "fresh",
+    "integrity": "unverifiable",
+    "integrity_reason": "working_tree",
+    "match": "literal",
+    "matched_text": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "W12",
+   "moment": "write",
+   "note": "cambio sin confirmar: fresh sin integridad",
+   "record_type": "state",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\nL\u00edmite nuevo: 64 anclas.\n"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "L\u00edmite nuevo: 64 anclas"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "reject": "anchor_quote_not_found"
+   },
+   "id": "W13",
+   "moment": "write",
+   "note": "un fact se mira en el commit declarado, no en el \u00e1rbol de trabajo",
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\nL\u00edmite nuevo: 64 anclas.\n"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "commit",
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "binary",
+    "match": null,
+    "matched_text": null,
+    "quote": "unverifiable",
+    "quote_reason": "binary",
+    "reason": "binary",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "W14",
+   "moment": "write",
+   "note": "NUL en el byte 8000 (\u00edndice 7999)",
+   "record_type": "fact",
+   "setup": [
+    {
+     "nul_at": 7999,
+     "op": "write",
+     "pad_to": 9000,
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "commit",
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "literal",
+    "matched_text": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "W15",
+   "moment": "write",
+   "note": "NUL en el byte 8001: no es binario",
+   "record_type": "fact",
+   "setup": [
+    {
+     "nul_at": 8000,
+     "op": "write",
+     "pad_to": 9000,
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "commit",
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "literal",
+    "matched_text": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "W16",
+   "moment": "write",
+   "note": "4 MiB justos: se lee",
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "pad_to": 4194304,
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "commit",
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "too_large",
+    "match": null,
+    "matched_text": null,
+    "quote": "unverifiable",
+    "quote_reason": "too_large",
+    "reason": "too_large",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "W17",
+   "moment": "write",
+   "note": null,
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "pad_to": 4194305,
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "usa puerto 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "commit",
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "not_utf8",
+    "match": null,
+    "matched_text": null,
+    "quote": "unverifiable",
+    "quote_reason": "not_utf8",
+    "reason": "not_utf8",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "W18",
+   "moment": "write",
+   "note": "Latin-1: no se adivina la codificaci\u00f3n",
+   "record_type": "fact",
+   "setup": [
+    {
+     "hex": "456c207365727669646f72207573612070756572746f20383038302c20736567fa6e",
+     "op": "write",
+     "path": "docs/a.md"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "datos.json",
+    "quote": "dijo \"renovar indefinida\" ayer"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "reject": "anchor_quote_not_found"
+   },
+   "id": "W19",
+   "moment": "write",
+   "note": "JSON: se compara con los bytes",
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "datos.json",
+     "text": "{\"nota\": \"dijo \\\"renovar indefinida\\\" ayer\"}\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "datos.json",
+    "quote": "dijo \\\"renovar indefinida\\\" ayer"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "commit",
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "literal",
+    "matched_text": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "W20",
+   "moment": "write",
+   "note": null,
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "datos.json",
+     "text": "{\"nota\": \"dijo \\\"renovar indefinida\\\" ayer\"}\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "Art\u00edculo 123 constitucional"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "reject": "anchor_quote_not_found"
+   },
+   "id": "W21",
+   "moment": "write",
+   "note": null,
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "ART\u00cdCULO 123 constitucional\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "renovaci\u00f3n indefinida de custodia"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "commit",
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "ws-nfc-accents/v1",
+    "matched_text": "renovacion indefinida de custodia",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "W22",
+   "moment": "write",
+   "note": null,
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "renovacion indefinida de custodia\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "commit",
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "literal",
+    "matched_text": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "W23",
+   "moment": "write",
+   "note": "decision se trata como fact",
+   "record_type": "decision",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "default",
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "literal",
+    "matched_text": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "R01",
+   "moment": "read",
+   "note": null,
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "default",
+    "freshness": "stale",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": null,
+    "matched_text": null,
+    "quote": "not_found",
+    "quote_reason": "quote_absent",
+    "reason": "quote_absent",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "R23",
+   "moment": "read",
+   "note": "decision se trata como fact",
+   "record_type": "decision",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 9090.\n"
+    },
+    {
+     "name": "c2",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "default",
+    "freshness": "broken",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": null,
+    "matched_text": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "path_missing",
+    "reject": null,
+    "source": "not_found",
+    "source_reason": "path_missing"
+   },
+   "id": "R24",
+   "moment": "read",
+   "note": "al leer, una ruta que es o atraviesa un enlace simb\u00f3lico no existe",
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "op": "delete",
+     "path": "docs/a.md"
+    },
+    {
+     "op": "symlink",
+     "path": "docs/a.md",
+     "target": "../README.md"
+    },
+    {
+     "name": "c2",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "feat",
+   "expect": {
+    "at": "default",
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "literal",
+    "matched_text": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "R25",
+   "moment": "read",
+   "note": "borrada y restituida: la cita est\u00e1, es fresh",
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "README.md",
+     "text": "inicio\n"
+    },
+    {
+     "name": "c0",
+     "op": "commit"
+    },
+    {
+     "name": "feat",
+     "op": "branch"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "name": "main",
+     "op": "checkout"
+    },
+    {
+     "name": "feat",
+     "op": "checkout"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 9090.\n"
+    },
+    {
+     "name": "c2",
+     "op": "commit"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c3",
+     "op": "commit"
+    },
+    {
+     "name": "main",
+     "op": "checkout"
+    },
+    {
+     "from": "feat",
+     "name": "m1",
+     "op": "merge"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "default",
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "literal",
+    "matched_text": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "R02",
+   "moment": "read",
+   "note": "la cita cambi\u00f3 de l\u00ednea",
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "Aviso previo.\n\n# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c2",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "default",
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "ws-nfc/v1",
+    "matched_text": "El servidor\nusa port = 8080",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "R03",
+   "moment": "read",
+   "note": "la cita qued\u00f3 partida por un salto de l\u00ednea",
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nEl servidor\nusa port = 8080.\n"
+    },
+    {
+     "name": "c2",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "default",
+    "freshness": "stale",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": null,
+    "matched_text": null,
+    "quote": "not_found",
+    "quote_reason": "quote_absent",
+    "reason": "quote_absent",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "R04",
+   "moment": "read",
+   "note": null,
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 9090.\n"
+    },
+    {
+     "name": "c2",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "default",
+    "freshness": "broken",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": null,
+    "matched_text": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "path_missing",
+    "reject": null,
+    "source": "not_found",
+    "source_reason": "path_missing"
+   },
+   "id": "R05",
+   "moment": "read",
+   "note": null,
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "op": "delete",
+     "path": "docs/a.md"
+    },
+    {
+     "name": "c2",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "default",
+    "freshness": "broken",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": null,
+    "matched_text": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "path_missing",
+    "reject": null,
+    "source": "not_found",
+    "source_reason": "path_missing"
+   },
+   "id": "R06",
+   "moment": "read",
+   "note": "en v1 no se siguen renombres",
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "op": "rename",
+     "path": "docs/a.md",
+     "to": "docs/b.md"
+    },
+    {
+     "name": "c2",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "feat",
+   "expect": {
+    "at": "branch",
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "literal",
+    "matched_text": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "R07",
+   "moment": "read",
+   "note": "rama sin integrar que existe en el clon: se mira su punta",
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "README.md",
+     "text": "inicio\n"
+    },
+    {
+     "name": "c0",
+     "op": "commit"
+    },
+    {
+     "name": "feat",
+     "op": "branch"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "name": "main",
+     "op": "checkout"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "feat",
+   "expect": {
+    "at": "default",
+    "freshness": "unverified",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": null,
+    "matched_text": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "commit_not_on_default_branch",
+    "reject": null,
+    "source": "unverifiable",
+    "source_reason": "commit_not_on_default_branch"
+   },
+   "id": "R08",
+   "moment": "read",
+   "note": "sin integrar y sin rama: no se sabe, no est\u00e1 roto",
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "README.md",
+     "text": "inicio\n"
+    },
+    {
+     "name": "c0",
+     "op": "commit"
+    },
+    {
+     "name": "feat",
+     "op": "branch"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "name": "main",
+     "op": "checkout"
+    },
+    {
+     "name": "feat",
+     "op": "delete_branch"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "feat",
+   "expect": {
+    "at": "default",
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "literal",
+    "matched_text": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "R09",
+   "moment": "read",
+   "note": null,
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "README.md",
+     "text": "inicio\n"
+    },
+    {
+     "name": "c0",
+     "op": "commit"
+    },
+    {
+     "name": "feat",
+     "op": "branch"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "name": "main",
+     "op": "checkout"
+    },
+    {
+     "from": "feat",
+     "name": "m1",
+     "op": "merge"
+    },
+    {
+     "name": "feat",
+     "op": "delete_branch"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "feat",
+   "expect": {
+    "at": "default",
+    "freshness": "stale",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": null,
+    "matched_text": null,
+    "quote": "not_found",
+    "quote_reason": "quote_absent",
+    "reason": "quote_absent",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "R10",
+   "moment": "read",
+   "note": "integrado y luego cambiado",
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "README.md",
+     "text": "inicio\n"
+    },
+    {
+     "name": "c0",
+     "op": "commit"
+    },
+    {
+     "name": "feat",
+     "op": "branch"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "name": "main",
+     "op": "checkout"
+    },
+    {
+     "from": "feat",
+     "name": "m1",
+     "op": "merge"
+    },
+    {
+     "name": "feat",
+     "op": "delete_branch"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 9090.\n"
+    },
+    {
+     "name": "c3",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "feat",
+   "expect": {
+    "at": "default",
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "literal",
+    "matched_text": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "R11",
+   "moment": "read",
+   "note": "squash: el commit declarado nunca ser\u00e1 antecesor; la cita presente basta",
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "README.md",
+     "text": "inicio\n"
+    },
+    {
+     "name": "c0",
+     "op": "commit"
+    },
+    {
+     "name": "feat",
+     "op": "branch"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "name": "main",
+     "op": "checkout"
+    },
+    {
+     "from": "feat",
+     "name": "s1",
+     "op": "squash_merge"
+    },
+    {
+     "name": "feat",
+     "op": "delete_branch"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "feat",
+   "expect": {
+    "at": "default",
+    "freshness": "unverified",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": null,
+    "matched_text": null,
+    "quote": "unverifiable",
+    "quote_reason": "commit_not_on_default_branch",
+    "reason": "commit_not_on_default_branch",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "R12",
+   "moment": "read",
+   "note": "degradaci\u00f3n declarada: tras un squash, una ausencia no prueba nada",
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "README.md",
+     "text": "inicio\n"
+    },
+    {
+     "name": "c0",
+     "op": "commit"
+    },
+    {
+     "name": "feat",
+     "op": "branch"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "name": "main",
+     "op": "checkout"
+    },
+    {
+     "from": "feat",
+     "name": "s1",
+     "op": "squash_merge"
+    },
+    {
+     "name": "feat",
+     "op": "delete_branch"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 9090.\n"
+    },
+    {
+     "name": "c3",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "default",
+    "freshness": "fresh",
+    "integrity": "unverifiable",
+    "integrity_reason": "commit_not_in_clone",
+    "match": "literal",
+    "matched_text": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "R13",
+   "moment": "read",
+   "note": "clon superficial: la cita presente basta para fresh",
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 9090"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "default",
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "commit_not_in_clone",
+    "match": null,
+    "matched_text": null,
+    "quote": "unverifiable",
+    "quote_reason": "commit_not_in_clone",
+    "reason": "commit_not_in_clone",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "R14",
+   "moment": "read",
+   "note": null,
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "feat",
+   "expect": {
+    "at": "branch",
+    "freshness": "stale",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": null,
+    "matched_text": null,
+    "quote": "not_found",
+    "quote_reason": "quote_absent",
+    "reason": "quote_absent",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "R15",
+   "moment": "read",
+   "note": "en la rama del sobre, con el commit como antecesor, la ausencia cuenta",
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "README.md",
+     "text": "inicio\n"
+    },
+    {
+     "name": "c0",
+     "op": "commit"
+    },
+    {
+     "name": "feat",
+     "op": "branch"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "name": "main",
+     "op": "checkout"
+    },
+    {
+     "name": "feat",
+     "op": "checkout"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 9090.\n"
+    },
+    {
+     "name": "c2",
+     "op": "commit"
+    },
+    {
+     "name": "main",
+     "op": "checkout"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "feat",
+   "expect": {
+    "at": "default",
+    "freshness": "unverified",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": null,
+    "matched_text": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "commit_not_on_default_branch",
+    "reject": null,
+    "source": "unverifiable",
+    "source_reason": "commit_not_on_default_branch"
+   },
+   "id": "R16",
+   "moment": "read",
+   "note": "rama rehecha: el commit declarado ya no es antecesor de su punta",
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "README.md",
+     "text": "inicio\n"
+    },
+    {
+     "name": "c0",
+     "op": "commit"
+    },
+    {
+     "name": "feat",
+     "op": "branch"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "name": "main",
+     "op": "checkout"
+    },
+    {
+     "name": "feat",
+     "op": "delete_branch"
+    },
+    {
+     "name": "feat",
+     "op": "branch"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 9090.\n"
+    },
+    {
+     "name": "c2",
+     "op": "commit"
+    },
+    {
+     "name": "main",
+     "op": "checkout"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": null,
+   "envelope_branch": "main",
+   "expect": {
+    "at": null,
+    "freshness": "unverified",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": null,
+    "matched_text": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "no_default_branch",
+    "reject": null,
+    "source": "unverifiable",
+    "source_reason": "no_default_branch"
+   },
+   "id": "R17",
+   "moment": "read",
+   "note": null,
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "default",
+    "freshness": "unverified",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": null,
+    "matched_text": null,
+    "quote": "unverifiable",
+    "quote_reason": "binary",
+    "reason": "binary",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "R18",
+   "moment": "read",
+   "note": null,
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "nul_at": 3,
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c2",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": null,
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "worktree",
+    "freshness": "fresh",
+    "integrity": "unverifiable",
+    "integrity_reason": "working_tree",
+    "match": "literal",
+    "matched_text": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "R19",
+   "moment": "read",
+   "note": null,
+   "record_type": "state",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": null,
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "worktree",
+    "freshness": "stale",
+    "integrity": "unverifiable",
+    "integrity_reason": "working_tree",
+    "match": null,
+    "matched_text": null,
+    "quote": "not_found",
+    "quote_reason": "quote_absent",
+    "reason": "quote_absent",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "R20",
+   "moment": "read",
+   "note": null,
+   "record_type": "state",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 9090.\n"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": null,
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "worktree",
+    "freshness": "broken",
+    "integrity": "unverifiable",
+    "integrity_reason": "working_tree",
+    "match": null,
+    "matched_text": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "path_missing",
+    "reject": null,
+    "source": "not_found",
+    "source_reason": "path_missing"
+   },
+   "id": "R21",
+   "moment": "read",
+   "note": null,
+   "record_type": "state",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "op": "delete",
+     "path": "docs/a.md"
+    }
+   ]
+  },
+  {
+   "anchor": {
+    "commit": "@c1",
+    "kind": "repo-file",
+    "path": "docs/a.md",
+    "quote": "El servidor usa port = 8080"
+   },
+   "default_branch": "main",
+   "envelope_branch": "main",
+   "expect": {
+    "at": "default",
+    "freshness": "broken",
+    "integrity": "not_found",
+    "integrity_reason": "commit_blob_lacks_quote",
+    "match": "literal",
+    "matched_text": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": "commit_blob_lacks_quote",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "R22",
+   "moment": "read",
+   "note": "s\u00f3lo falla integrity: el commit declarado no conten\u00eda la cita",
+   "record_type": "fact",
+   "setup": [
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n"
+    },
+    {
+     "name": "c1",
+     "op": "commit"
+    },
+    {
+     "op": "write",
+     "path": "docs/a.md",
+     "text": "# Bandeja\n\nNada se borra de la bandeja hasta\n    confirmarse el commit. El servidor usa port = 8080.\n"
+    },
+    {
+     "name": "c2",
+     "op": "commit"
+    }
+   ]
+  }
+ ],
+ "schema": "memoria/ancla/v1-vectores",
+ "white_space": [
+  "U+0009",
+  "U+000A",
+  "U+000B",
+  "U+000C",
+  "U+000D",
+  "U+0020",
+  "U+0085",
+  "U+00A0",
+  "U+1680",
+  "U+2000",
+  "U+2001",
+  "U+2002",
+  "U+2003",
+  "U+2004",
+  "U+2005",
+  "U+2006",
+  "U+2007",
+  "U+2008",
+  "U+2009",
+  "U+200A",
+  "U+2028",
+  "U+2029",
+  "U+202F",
+  "U+205F",
+  "U+3000"
+ ]
+}

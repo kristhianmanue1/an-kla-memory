@@ -20,11 +20,13 @@ from dataclasses import dataclass, field
 from typing import Any, Mapping
 
 from . import identity_c0
+from .anchors import AnchorRejected, validate_anchors
 from .canonical import canonical_json, digest_json
 from .inbox import (
     DEFAULT_SLOT,
     ENTRY_SCHEMA,
     ENTRY_SCHEMA_V2,
+    ENTRY_SCHEMA_V3,
     KINDS,
     MAX_TEXT_BYTES,
     REASON_SUFFIX,
@@ -33,6 +35,7 @@ from .inbox import (
     inbox_paths,
     payload_digest,
 )
+from .inbox_anchors import OPERATIONS, VERDICTS, payload_extra, stored_anchors
 from .storage_primitives import fsync_directory
 
 UNSAFE = "inbox_entry_unsafe"
@@ -134,19 +137,49 @@ def _read_regular(path: Any) -> bytes:
     return raw
 
 
+_V3_KEYS = {"anchors", "verdict", "operation", "anchor_resolution"}
+
+
+def _validate_v3(data: dict[str, Any]) -> None:
+    """The v3 fields (ADR-0066 §1): operation, verdict, resolution and the anchors' rejections in C3's order."""
+
+    operation = data.get("operation", "remember")
+    if operation not in OPERATIONS or ("operation" in data and operation == "remember"):
+        raise Reject(INVALID, ["operation"])
+    verdict = data.get("verdict")
+    if (operation == "dispute") != (verdict is not None) or (verdict is not None and verdict not in VERDICTS):
+        raise Reject(INVALID, ["verdict"])
+    if operation == "dispute" and (data["kind"] != "fact" or "target_id" not in data):
+        raise Reject(INVALID, ["dispute"])
+    if (operation == "anchor_resolution") != isinstance(data.get("anchor_resolution"), dict):
+        raise Reject(INVALID, ["anchor_resolution"])
+    anchors = data.get("anchors")
+    if "anchors" in data and (not isinstance(anchors, list) or not anchors):
+        raise Reject(INVALID, ["anchors"])
+    if anchors:
+        try:
+            validate_anchors(stored_anchors(anchors), data["kind"])
+        except AnchorRejected as refused:
+            raise Reject(refused.code, [] if refused.anchor_index is None else [f"anchor_{refused.anchor_index}"]) from None
+
+
 def _validate(data: Any) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise Reject(INVALID, ["not_object"])
     keys = set(data)
-    v2 = data.get("schema") == ENTRY_SCHEMA_V2
-    if not _REQUIRED <= keys or not keys <= _REQUIRED | {"target_id"} | ({"slot"} if v2 else set()):
+    v3 = data.get("schema") == ENTRY_SCHEMA_V3
+    v2 = data.get("schema") == ENTRY_SCHEMA_V2 or (v3 and "slot" in data)
+    optional = {"target_id"} | ({"slot"} if v2 else set()) | (_V3_KEYS if v3 else set())
+    if not _REQUIRED <= keys or not keys <= _REQUIRED | optional:
         raise Reject(INVALID, ["keys"])
-    if data["schema"] not in (ENTRY_SCHEMA, ENTRY_SCHEMA_V2):
+    if data["schema"] not in (ENTRY_SCHEMA, ENTRY_SCHEMA_V2, ENTRY_SCHEMA_V3):
         raise Reject(INVALID, ["schema"])
     text, kind, target = data["text"], data["kind"], data.get("target_id")
     slot = data.get("slot")
     if v2 and (kind != "state" or not isinstance(slot, str) or not SLOT_PATTERN.fullmatch(slot)):
         raise Reject(INVALID, ["slot"])
+    if v3:
+        _validate_v3(data)
     if not isinstance(text, str) or not text:
         raise Reject(INVALID, ["text"])
     try:
@@ -167,7 +200,7 @@ def _validate(data: Any) -> dict[str, Any]:
     envelope = data["envelope"]
     if envelope["idempotency_key"] != data["idempotency_key"] or envelope["kind"] != kind:
         raise Reject(INVALID, ["envelope_mismatch"])
-    if data["payload_sha256"] != payload_digest(text, kind, target, slot):
+    if data["payload_sha256"] != payload_digest(text, kind, target, slot, payload_extra(data) or None):
         raise Reject(INVALID, ["payload_sha256_mismatch"])
     return data
 

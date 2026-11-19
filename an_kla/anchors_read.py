@@ -1,0 +1,209 @@
+"""Reading anchors: freshness with a limit, and the audit ``anchors verify`` (ADR-0066 §4, §5).
+
+Every anchor served is checked again with the state of *now* (``moment: read``); nothing the writer
+observed is trusted.  Only the anchors of what is served are checked, in serving order and, inside a
+record, in stored order, up to ``--anchor-limit`` (32 by default); the rest answer ``unverified`` /
+``anchor_limit`` and the output says how many were and were not checked.  There is never a time limit.
+Reading never starts a custodian or a resolver.  Anchor text is untrusted data.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+from typing import Any, Mapping
+
+from .disputes import _valid_disputes
+from .anchors_conversation import ConversationVerifier, apply_resolution, check_conversation
+from .anchors_document import check_document
+from .anchors_freshness import aggregate_freshness, unchecked_result
+from .anchors_git import GitRepo
+from .anchors_repo_file import ABSENT, ReadContext, verify_repo_file
+from .identity_c0 import validate_envelope
+from .store import STREAMS
+from .vigency import is_active
+
+DEFAULT_ANCHOR_LIMIT = 32
+RESULT_SCHEMA = "an-kla/anchors-verify-v1"
+CONFIG_FILE = "config.json"
+ENV_DEFAULT_BRANCH = "AN_KLA_DEFAULT_BRANCH"
+_STREAM_RECORD_TYPE = {"facts": "fact", "events": "fact", "episodes": "state"}
+
+
+class AnchorsReadError(ValueError):
+    """Stable error of ``anchors verify``: ``str(error)`` is the code (rc 1)."""
+
+    def __init__(self, code: str, detail: str | None = None) -> None:
+        super().__init__(code)
+        self.code = code
+        self.detail = detail
+
+
+def default_branch_setting(store: Any, env: Mapping[str, str] | None = None) -> Any:
+    """A branch name, ``None`` (there is none) or :data:`ABSENT` (use ``origin/HEAD``); never guessed (A4, E5).
+
+    The variable ``AN_KLA_DEFAULT_BRANCH`` replaces the ``default_branch`` key of the store's optional
+    ``config.json`` (next to ``project-identity.json``; this release only reads it).  A defined but empty
+    variable, or a null key, means "no default branch".
+    """
+
+    env = os.environ if env is None else env
+    if ENV_DEFAULT_BRANCH in env:
+        return env[ENV_DEFAULT_BRANCH] or None
+    try:
+        config = json.loads(Path(store.store_root, CONFIG_FILE).read_bytes())
+    except (OSError, ValueError, AttributeError):
+        return ABSENT
+    if isinstance(config, dict) and "default_branch" in config:
+        value = config["default_branch"]
+        return value if isinstance(value, str) and value else None
+    return ABSENT
+
+
+def record_type_of(stream: str, row: Mapping[str, Any]) -> str:
+    envelope = row.get("an_kla_envelope")
+    if isinstance(envelope, dict) and not validate_envelope(envelope) and envelope["kind"] in ("fact", "decision", "state"):
+        return envelope["kind"]
+    return _STREAM_RECORD_TYPE.get(stream, "fact")
+
+
+def resolution_annotations(snapshot: Any) -> list[dict[str, Any]]:
+    """The vigent ``anchor_resolution`` records of ``events``, with the ``enqueued_at`` that orders them."""
+
+    notes: list[dict[str, Any]] = []
+    for row in snapshot.records.get("events", []):
+        if row.get("kind") != "anchor_resolution" or not is_active(row):
+            continue
+        envelope = row.get("an_kla_envelope")
+        if isinstance(row.get("anchor_resolution"), dict) and isinstance(envelope, dict):
+            notes.append({"id": str(row.get("id", "")), "enqueued_at": envelope.get("enqueued_at"),
+                          "anchor_resolution": row["anchor_resolution"]})
+    return notes
+
+
+def _descriptor(index: int, anchor: Mapping[str, Any]) -> dict[str, Any]:
+    source = anchor.get("source") or {}
+    kind = source.get("kind")
+    locator = {"repo-file": ("path", "commit"), "conversation": ("session",), "document": ("document_sha256",)}.get(kind, ())
+    return {"index": index, "kind": kind, "quote": anchor.get("quote"), "quote_sha256": anchor.get("quote_sha256"),
+            **{key: source.get(key) for key in locator}}
+
+
+def disputed_by(snapshot: Any) -> dict[tuple[str, str], list[dict[str, Any]]]:
+    """Vigent disputes that carry a ``verdict``, by target ``(stream, id)``: the latest of each writer (ADR-0066 §6)."""
+
+    latest: dict[tuple[str, str], dict[tuple[str, str], dict[str, Any]]] = {}
+    for stream in STREAMS:
+        for row in snapshot.records[stream]:
+            disputes, verdict = row.get("disputes"), row.get("verdict")
+            if not (_valid_disputes(disputes) and isinstance(verdict, str) and is_active(row)):
+                continue
+            envelope = row.get("an_kla_envelope")
+            if not (isinstance(envelope, dict) and not validate_envelope(envelope)):
+                continue
+            writer = envelope["writer"]
+            who = (writer["repo"]["id"], writer["agent"]["name"])
+            item = {"id": str(row.get("id", "")), "verdict": verdict, "writer": dict(writer),
+                    "enqueued_at": envelope["enqueued_at"]}
+            target = (disputes["stream"], disputes["target_id"])
+            seen = latest.setdefault(target, {})
+            if who not in seen or (item["enqueued_at"], item["id"]) > (seen[who]["enqueued_at"], seen[who]["id"]):
+                seen[who] = item
+    return {t: sorted(v.values(), key=lambda i: (i["enqueued_at"], i["id"])) for t, v in latest.items()}
+
+
+class AnchorServer:
+    """Checks the anchors of the records a read command serves, sharing one limit and one Git reader."""
+
+    def __init__(
+        self, store: Any, snapshot: Any, limit: int = DEFAULT_ANCHOR_LIMIT, *,
+        env: Mapping[str, str] | None = None, verifier: ConversationVerifier | None = None,
+    ) -> None:
+        if isinstance(limit, bool) or not isinstance(limit, int) or limit <= 0:
+            raise AnchorsReadError("anchor_limit_invalid", "entero positivo")
+        self.store, self.limit, self.verifier = store, limit, verifier
+        self.checked = self.unchecked = 0
+        self.notes = resolution_annotations(snapshot)
+        self.disputes = disputed_by(snapshot)
+        self.setting = default_branch_setting(store, env)
+        self._repo: GitRepo | None = None
+
+    def __enter__(self) -> "AnchorServer":
+        return self
+
+    def __exit__(self, *exc: Any) -> None:
+        if self._repo is not None:
+            self._repo.close()
+
+    def repo(self) -> GitRepo:
+        if self._repo is None:
+            self._repo = GitRepo(self.store.project_root)
+        return self._repo
+
+    def declare(self) -> dict[str, int]:
+        """The limit and what it did; empty when nothing anchored was served (plain output stays as it was)."""
+        if not self.checked + self.unchecked:
+            return {}
+        return {"anchor_limit": self.limit, "anchors_checked": self.checked, "anchors_unchecked": self.unchecked}
+
+    def _check(self, row: Mapping[str, Any], stream: str, index: int, anchor: Mapping[str, Any]) -> dict[str, Any]:
+        kind = anchor["source"]["kind"]
+        if kind == "repo-file":
+            writer_repo = (row.get("an_kla_envelope") or {}).get("writer", {}).get("repo", {})
+            ctx = ReadContext(self.setting, writer_repo.get("branch"))
+            return verify_repo_file(self.repo(), anchor, record_type_of(stream, row), "read", ctx)
+        if kind == "conversation":
+            view = apply_resolution(anchor, str(row.get("id", "")), index, self.notes)
+            return check_conversation(view, self.verifier)
+        return check_document(anchor)
+
+    def serve(self, stream: str, row: Mapping[str, Any]) -> dict[str, Any]:
+        """``disputed``, ``anchors`` (each with its descriptor and checks), ``anchors_freshness``, the stored coverage."""
+
+        out: dict[str, Any] = {}
+        disputed = self.disputes.get((stream, str(row.get("id", ""))))
+        if disputed:
+            out["disputed"] = disputed  # the latest verdict of each writer; the target stays vigent
+        anchors = row.get("anchors")
+        if not isinstance(anchors, list) or not anchors:
+            return out
+        served: list[dict[str, Any]] = []
+        for index, anchor in enumerate(anchors):
+            if self.checked >= self.limit:
+                self.unchecked += 1
+                result = unchecked_result(anchor["source"]["kind"])
+            else:
+                self.checked += 1
+                result = self._check(row, stream, index, anchor)
+            served.append({"anchor": _descriptor(index, anchor), **result})
+        out.update(anchors=served, anchors_freshness=aggregate_freshness(served))
+        for key in ("coverage", "missing", "missing_total"):
+            if key in row:
+                out[key] = row[key]
+        return out
+
+
+def verify_command(store: Any, args: Any) -> dict[str, Any]:
+    """``anchors verify <id>`` or ``--all``: read-only; the only limit is ``--anchor-limit``."""
+
+    if args.all == (args.id is not None):
+        raise AnchorsReadError("anchors_target_required", "un id, o --all (no los dos)")
+    snapshot = store.snapshot()
+    if args.all:
+        rows = [(s, r) for s in STREAMS for r in snapshot.records[s] if is_active(r) and r.get("anchors")]
+        rows.sort(key=lambda sr: (STREAMS.index(sr[0]), sr[1].get("an_kla_envelope", {}).get("enqueued_at") is None,
+                                  str((sr[1].get("an_kla_envelope") or {}).get("enqueued_at") or ""), str(sr[1].get("id", ""))))
+    else:
+        rows = [(s, r) for s in STREAMS for r in snapshot.records[s] if str(r.get("id", "")) == args.id]
+        if not rows:
+            raise AnchorsReadError("anchors_id_not_found")
+        if len(rows) > 1:
+            raise AnchorsReadError("anchors_id_ambiguous", "el id está en más de un stream")
+    records: list[dict[str, Any]] = []
+    with AnchorServer(store, snapshot, args.anchor_limit) as server:
+        for stream, row in rows:
+            records.append({"id": str(row.get("id", "")), "stream": stream, **server.serve(stream, row)})
+        declared = server.declare()
+    return {"schema": RESULT_SCHEMA, "untrusted_memory_data": True, "revision": snapshot.revision_id,
+            **declared, "records": records}

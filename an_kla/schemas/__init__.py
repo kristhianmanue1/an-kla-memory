@@ -10,6 +10,8 @@ from ..canonical import digest_bytes
 
 
 SCHEMA_FILES = {
+    "anchor-resolution-v1": "anchor-resolution-v1.schema.json",
+    "anchors-verify-v1": "anchors-verify-v1.schema.json",
     "attest-receipt-v1": "attest-receipt-v1.schema.json",
     "checkpoint-authority-v1": "checkpoint-authority-v1.schema.json",
     "checkpoint-decision-v1": "checkpoint-decision-v1.schema.json",
@@ -45,6 +47,7 @@ SCHEMA_FILES = {
     "inbox-drain-result-v1": "inbox-drain-result-v1.schema.json",
     "inbox-entry-v1": "inbox-entry-v1.schema.json",
     "inbox-entry-v2": "inbox-entry-v2.schema.json",
+    "inbox-entry-v3": "inbox-entry-v3.schema.json",
     "inbox-status-v1": "inbox-status-v1.schema.json",
     "integration-status-v1": "integration-status-v1.schema.json",
     "integration-status-v2": "integration-status-v2.schema.json",
