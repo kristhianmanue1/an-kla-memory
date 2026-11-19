@@ -50,10 +50,9 @@ No instales `main` como sustituto de una versión.
 Las últimas betas, de la más reciente a la más antigua (detalle en
 [CHANGELOG](CHANGELOG.md) y [`docs/releases/`](docs/releases/)):
 
-- **beta.38**: anclas de C3 y frescura al recuperar (E1.d2, ADR-0066:
-  `remember --anchor-*`, `anchors verify`, `dispute`), `list` (ADR-0067) e
-  `inbox requeue|purge-rejected` (ADR-0068). **No incluye** `recall`, el custodio
-  de `document` ni el resolutor de conversación.
+- **beta.38**: anclas de C3 (ADR-0066: `remember --anchor-*`, `anchors verify`,
+  `dispute`), `list` (ADR-0067) e `inbox requeue|purge-rejected` (ADR-0068).
+  **No incluye** `recall`, el custodio de `document` ni el resolutor.
 - **beta.37**: estado de una casilla (E1.d1, ADR-0065): `remember --kind state
   [--slot]` (sin `--slot` jubila el anterior de `main`), `state show`, `history`
   e `identity_lock` compartido (#226). **No incluye** `recall` ni las anclas.
@@ -78,9 +77,6 @@ Las últimas betas, de la más reciente a la más antigua (detalle en
 - **beta.32**: errores accionables (`minimum_budget_bytes`, formato de
   transaction id), detección de intérprete más antiguo que la plantilla y
   «Referencia rápida para agentes» ejecutable en el contrato (#171).
-- **beta.31**: escalado medido del store (watermark, lote gobernado, lectura
-  2×) (#149).
-- **beta.30**: custodia externa del store (G3, ADR-0048) y `stores scan`.
 
 La plantilla de `authority` la genera `--emit-authority-template` en
 `plan-write` y `checkpoint plan` (#71, cerrado).
