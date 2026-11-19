@@ -1,4 +1,4 @@
-"""Despacho del CLI de ``state show`` e ``history`` (ADR-0065): la salida son bytes ya serializados."""
+"""Despacho del CLI de ``state show``, ``history`` y ``list`` (ADR-0065, ADR-0067): la salida son bytes ya serializados."""
 
 from __future__ import annotations
 
@@ -6,13 +6,23 @@ from typing import Any
 
 from .anchors_read import AnchorServer
 from .history import history
+from .listing import list_records
 from .state_show import render, state_show
 from .store import StoreError
 
 
 def run(store: Any, args: Any) -> bytes:
-    """``state show`` o ``history`` según ``args.command``; JSON canónico con salto de línea final (el presupuesto lo mide)."""
+    """``state show``, ``history`` o ``list`` según ``args.command``; JSON canónico con salto de línea final (el presupuesto lo mide)."""
 
+    if args.command == "list":
+        try:
+            snapshot = store.snapshot()
+        except OSError:
+            raise StoreError("storage_io_failed") from None
+        return render(list_records(
+            snapshot, streams=args.streams, status=args.status, kind=args.kind, slot=args.slot, limit=args.limit,
+            budget=args.budget, after=args.after, text=args.text,
+        ))
     if args.command == "state":
         return render(state_show(
             store, slot=args.slot, all_slots=args.all_slots, scope=args.scope, budget=args.budget,

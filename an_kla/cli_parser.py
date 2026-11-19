@@ -552,6 +552,22 @@ def build_parser() -> argparse.ArgumentParser:
         "--anchor-limit", type=int, default=32, metavar="N",
         help="Anclas comprobadas como máximo al servir (ADR-0066; por defecto 32): el resto sale unverified/anchor_limit.",
     )
+    list_cmd = sub.add_parser(
+        "list", help="Todos los registros de los streams pedidos, con su vigencia (ADR-0067), sólo lectura."
+    )
+    list_cmd.add_argument("--streams", default="facts", metavar="S", help="facts (por defecto), events, episodes; separados por coma, en ese orden.")
+    list_cmd.add_argument(
+        "--status", default="active", metavar="E", help="active (por defecto), superseded, refuted o all."
+    )
+    list_cmd.add_argument("--kind", default=None, metavar="K", help="fact, decision, state o event.")
+    list_cmd.add_argument("--slot", default=None, metavar="S", help="Sólo los state de esa casilla.")
+    list_cmd.add_argument("--limit", type=int, default=1000, metavar="N", help="Registros máximos (por defecto 1000, máximo 10000).")
+    list_cmd.add_argument(
+        "--budget", type=int, default=65536, metavar="N",
+        help="Bytes máximos de la salida JSON, con su salto de línea final (por defecto 65536).",
+    )
+    list_cmd.add_argument("--after", default=None, metavar="CURSOR", help="El `next` de la página anterior.")
+    list_cmd.add_argument("--text", action="store_true", help="Incluye el texto de cada registro (sin él, sólo text_bytes).")
     anchors_cli.add_parsers(sub, remember_cmd)  # ADR-0066: remember --anchor-*, dispute, anchors verify
     identity_cmd = sub.add_parser("identity", help="Inspeccionar o adoptar identidad local.")
     identity_sub = identity_cmd.add_subparsers(dest="identity_command", required=True)

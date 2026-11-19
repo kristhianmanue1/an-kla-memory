@@ -335,6 +335,35 @@ repo usan `--slot` distintos; con `main` para todos gana el último que escribe.
   no las lee: ejecuta `inbox drain` y comprueba `pending` 0 antes de bajar de
   versión.
 
+### Listar registros (`list`)
+
+`retrieve` busca; `list` enumera. Para ver **todos** los hechos vigentes (por ejemplo
+antes de retirar los estados viejos guardados como `fact`):
+
+```bash
+.venv/bin/python -m an_kla --project-root . list                       # hechos vigentes, sin texto
+.venv/bin/python -m an_kla --project-root . list --text                # con el texto, para clasificar
+.venv/bin/python -m an_kla --project-root . list --streams facts,episodes --status all
+.venv/bin/python -m an_kla --project-root . list --streams episodes --kind state --slot main
+.venv/bin/python -m an_kla --project-root . list --limit 100 --after "$NEXT"
+```
+
+- De sólo lectura: una sola revisión, sin Git y sin tocar la bandeja. Por defecto
+  `--streams facts --status active --limit 1000 --budget 65536`.
+- Orden: un bloque por stream, en el orden de `--streams`; dentro, los registros con sobre
+  por `enqueued_at` y `id`, y los legados al final (`legacy: true`).
+- Cada registro lleva `status`, `superseded_by`, `disputes_count`, `anchors_count` y
+  `coverage_level` (sólo si tiene anclas; no se comprueba ninguna: eso es `anchors verify`)
+  y `text_bytes`. El texto sólo sale con `--text`.
+- `total = returned + excluded.limit + excluded.budget`. Si `truncated` es `true`, `next`
+  es el cursor para `--after`; con otra revisión da `list_cursor_stale` (empieza de nuevo) y
+  con otros filtros, `list_cursor_invalid`. El tamaño de página (`--limit`, `--budget`) sí
+  puede cambiar entre páginas.
+- Errores (rc 1): `list_streams_invalid`, `list_status_invalid`, `list_kind_invalid`,
+  `list_slot_invalid`, `list_limit_invalid` (máximo 10000), `list_budget_invalid`,
+  `list_cursor_invalid`, `list_cursor_stale` y `list_budget_too_small` (también cuando
+  cabe la respuesta vacía pero no el primer registro; el detalle da los bytes que necesita).
+
 ### Anclas, frescura y disputa
 
 Un recuerdo sin fuente no se puede comprobar. Con **anclas** (C3,

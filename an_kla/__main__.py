@@ -491,7 +491,7 @@ def _run() -> None:
                 raise
             sys.stdout.buffer.write(canonical_json(error_result(exc)))
             raise SystemExit(3)
-    elif args.command in ("state", "history"):
+    elif args.command in ("state", "history", "list"):
         sys.stdout.buffer.write(state_cli_run(store, args))
         return
     elif args.command == "subject":

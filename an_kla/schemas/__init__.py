@@ -53,6 +53,7 @@ SCHEMA_FILES = {
     "integration-status-v2": "integration-status-v2.schema.json",
     "integration-status-v3": "integration-status-v3.schema.json",
     "inventory-v1": "inventory-v1.schema.json",
+    "list-result-v1": "list-result-v1.schema.json",
     "mcp-retrieve-v2": "mcp-retrieve-v2.schema.json",
     "mcp-retrieve-v3": "mcp-retrieve-v3.schema.json",
     "provenance-manifest-v1": "provenance-manifest-v1.schema.json",
