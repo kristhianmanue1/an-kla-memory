@@ -83,6 +83,7 @@ class InstalledSchemaTests(unittest.TestCase):
         "integration-status-v2",
         "integration-status-v3",
         "inventory-v1",
+        "list-result-v1",
         "mcp-retrieve-v2",
         "mcp-retrieve-v3",
         "project-identity-v1",

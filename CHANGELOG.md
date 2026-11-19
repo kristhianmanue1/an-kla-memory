@@ -12,6 +12,20 @@ en fase de pre-release `0.1.0`.
 
 ## [Sin publicar]
 
+**`list`, listado determinista de registros por stream y vigencia (ADR-0067, #233)**:
+nueva orden de sólo lectura `list [--streams] [--status active|superseded|refuted|all]
+[--kind] [--slot] [--limit] [--budget] [--after] [--text]` que devuelve todos los
+registros de los streams pedidos, con `status`, `superseded_by`, `disputes_count`,
+`anchors_count`, `coverage_level`, `text_bytes` y, sólo con `--text`, el texto. Lee
+una revisión bajo el gate de lectores, sin Git ni escritura, en orden total
+(partición por stream, con sobre antes que legados, `enqueued_at`, `id`) y con
+presupuesto exacto que poda del final (`excluded: {limit, budget}`). La paginación usa
+un cursor `next`/`--after` ligado a la revisión (`list_cursor_stale`,
+`list_cursor_invalid`); errores `list_*_invalid` y `list_budget_too_small` (rc 1).
+Esquema nuevo `list-result-v1`. `history`, `state show`, `retrieve`, el MCP y el
+formato del store no cambian. Detalle en
+[`docs/architecture/0067-list-registros-vigentes-v1.md`](docs/architecture/0067-list-registros-vigentes-v1.md).
+
 **Anclas de C3, frescura al recuperar y disputa nativa (ADR-0066, E1.d2)**:
 `remember` acepta anclas `memoria/ancla/v1` (`--anchor-file` o
 `--anchor-path/--anchor-quote/--anchor-commit`), las comprueba una vez al

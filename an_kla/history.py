@@ -18,7 +18,8 @@ from typing import Any, Mapping
 from .anchors_read import AnchorServer
 from .disputes import _valid_disputes
 from .identity_c0 import validate_envelope
-from .state_show import StateReadError, serialized_size
+from .read_budget import fit_prefix
+from .state_show import StateReadError
 from .state_slot import slot_of
 from .store import STREAMS
 
@@ -162,23 +163,7 @@ def history(
             truncated or count < len(ordered), used, declared,
         )
 
-    if serialized_size(build(0, budget)) > budget:
-        raise StateReadError("history_budget_too_small", f"la respuesta vacía necesita {serialized_size(build(0, budget))} bytes")
-    low, high = 0, len(ordered)  # mayor prefijo que cabe; el tamaño crece con el prefijo
-    while low < high:
-        middle = (low + high + 1) // 2
-        if serialized_size(build(middle, budget)) <= budget:
-            low = middle
-        else:
-            high = middle - 1
-    used = budget
-    for _ in range(8):  # punto fijo: used_bytes es la longitud de la salida que lo contiene
-        result = build(low, used)
-        size = serialized_size(result)
-        if size == used:
-            return result
-        used = size
-    return build(low, budget)
+    return dict(fit_prefix(build, len(ordered), budget, "history_budget_too_small"))
 
 
 __all__ = ["DEFAULT_BUDGET", "DEFAULT_LIMIT", "RESULT_SCHEMA", "history"]
