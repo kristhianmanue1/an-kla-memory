@@ -10,9 +10,9 @@
 
 | Ítem | Estado |
 |---|---|
-| Base | `main@de1b724` (PR #229) antes del PR de release de beta.37 |
-| Release vigente | `v0.1.0-beta.37` (en publicación; anterior `v0.1.0-beta.36`). Notas y actas en `docs/releases/` |
-| Plantilla gestionada | `0.1.0-beta.33` (sin cambios en beta.37) |
+| Base | `main@603e315` (PR #237) antes del PR de release de beta.38 |
+| Release vigente | `v0.1.0-beta.38` (en publicación; anterior `v0.1.0-beta.37`). Notas y actas en `docs/releases/` |
+| Plantilla gestionada | `0.1.0-beta.33` (sin cambios en beta.38) |
 | CI | Sin CI remota; autoridad = `scripts/ci_local.py --simulate-ci` con `.venv/bin/python` (Python 3.12) |
 
 ## Issues abiertos (verificados 17-10)
