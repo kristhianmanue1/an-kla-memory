@@ -361,7 +361,8 @@ antes de retirar los estados viejos guardados como `fact`):
   puede cambiar entre páginas.
 - Errores (rc 1): `list_streams_invalid`, `list_status_invalid`, `list_kind_invalid`,
   `list_slot_invalid`, `list_limit_invalid` (máximo 10000), `list_budget_invalid`,
-  `list_cursor_invalid`, `list_cursor_stale` y `list_budget_too_small`.
+  `list_cursor_invalid`, `list_cursor_stale` y `list_budget_too_small` (también cuando
+  cabe la respuesta vacía pero no el primer registro; el detalle da los bytes que necesita).
 
 ### Anclas, frescura y disputa
 

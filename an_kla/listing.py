@@ -18,7 +18,7 @@ from .disputes import _valid_disputes
 from .history import _describe, _order
 from .read_budget import fit_prefix
 from .record_text import record_text
-from .state_show import StateReadError
+from .state_show import StateReadError, serialized_size
 from .state_slot import SLOT_PATTERN
 from .store import STREAMS
 from .vigency import is_active
@@ -209,14 +209,24 @@ def list_records(
     total = len(items)
     limited = items[:filters["limit"]]
 
-    def build(count: int, used: int) -> dict[str, Any]:
+    def build(count: int, used: int, budget_shown: int = filters["budget"]) -> dict[str, Any]:
         kept = limited[:count]
         more = count < total
-        last = kept[-1][0] if kept else start  # sin ningún registro devuelto el cursor no avanza
+        last = kept[-1][0] if kept else start
         cursor = encode_cursor(revision, filters, last) if more else None
-        return _response(revision, filters, [item for _, item in kept], total, len(limited), used, cursor)
+        shown = {**filters, "budget": budget_shown}  # `filters.budget` se repite en la salida y cuenta en su tamaño
+        return _response(revision, shown, [item for _, item in kept], total, len(limited), used, cursor)
 
-    return dict(fit_prefix(build, len(limited), filters["budget"], "list_budget_too_small"))
+    result = dict(fit_prefix(build, len(limited), filters["budget"], "list_budget_too_small"))
+    if not result["items"] and total:  # cabe la respuesta vacía pero ningún registro: un `next` no avanzaría
+        need = 1
+        for _ in range(8):  # menor presupuesto que contiene su propia salida (budget y used_bytes dependen de él)
+            size = serialized_size(build(1, need, need))
+            if size <= need:
+                break
+            need = size
+        raise StateReadError("list_budget_too_small", f"el primer registro necesita {need} bytes")
+    return result
 
 
 __all__ = ["DEFAULT_BUDGET", "DEFAULT_LIMIT", "MAX_LIMIT", "RESULT_SCHEMA", "list_records"]

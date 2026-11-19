@@ -58,7 +58,7 @@ El resultado no depende ni del orden del sistema de archivos ni del de los segme
 ### 4. Presupuesto, límite y paginación
 
 - **Presupuesto exacto en bytes** de la salida canónica, como `state show` y `history`. Si no cabe, se podan registros **del final del orden**. No se esconde ninguno sin decirlo.
-- **Respuesta vacía que no cabe:** si ni la respuesta vacía cabe en el presupuesto, `list_budget_too_small`.
+- **Presupuesto demasiado pequeño:** si ni la respuesta vacía cabe en el presupuesto, `list_budget_too_small`. También si la vacía cabe pero ni el primer registro por devolver (quedan registros): un `next` sin avance haría entrar en bucle a quien pagina. El detalle da el tamaño mínimo que necesita ese primer registro.
 - **Límite:** `--limit` corta por número antes del presupuesto.
 - **Totales:** la salida declara `total` (los que pasan los filtros), `returned`, `truncated` y `excluded: {limit, budget}`, que cuenta cuántos quedaron fuera por cada causa (L67-07).
 - **Paginación** (L67-05): si `truncated` es `true`, la salida trae `next`, un cursor opaco.

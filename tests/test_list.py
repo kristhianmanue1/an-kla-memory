@@ -161,13 +161,14 @@ class BudgetTests(unittest.TestCase):
                 continue
             self.assertLessEqual(serialized_size(result), budget)
             self.assertEqual(result["used_bytes"], serialized_size(result))
+            self.assertGreater(result["returned"], 0)  # con 0 devueltos y registros por devolver es list_budget_too_small
             self.assertEqual(ids(result), ids(self.full)[:result["returned"]])  # se poda del final
             self.assertEqual(result["truncated"], result["returned"] < 5)
             self.assertEqual(result["excluded"], {"limit": 0, "budget": 5 - result["returned"]})
             self.assertEqual(result["next"] is not None, result["truncated"])
             counts.add(result["returned"])
             seen_next |= result["next"] is not None
-        self.assertEqual(counts, {0, 1, 2, 3, 4, 5})
+        self.assertEqual(counts, {1, 2, 3, 4, 5})
         self.assertTrue(seen_next)
         exact = list_records(self.snap, budget=serialized_size(self.full) - 3, text=True)  # filters.budget se hace eco: 7 cifras menos 4
         self.assertEqual((exact["items"], exact["truncated"]), (self.full["items"], False))
@@ -176,6 +177,32 @@ class BudgetTests(unittest.TestCase):
         with self.assertRaises(StateReadError) as raised:
             list_records(self.snap, budget=10)
         self.assertEqual(str(raised.exception), "list_budget_too_small")
+
+    def test_empty_fits_but_no_record_is_too_small_with_the_minimum_in_the_detail(self) -> None:
+        for after in (None, list_records(self.snap, limit=2, text=True)["next"]):  # desde el inicio y desde un cursor
+            fits_empty = [b for b in range(1, 3000) if self.empty_fits(b, after)]
+            self.assertTrue(fits_empty)
+            with self.assertRaises(StateReadError) as raised:
+                list_records(self.snap, budget=fits_empty[0], text=True, after=after)
+            self.assertEqual(str(raised.exception), "list_budget_too_small")
+            need = int(raised.exception.detail.split()[-2])
+            self.assertGreater(need, fits_empty[0])
+            self.assertEqual(list_records(self.snap, budget=need, text=True, after=after)["returned"], 1)
+            with self.assertRaises(StateReadError):
+                list_records(self.snap, budget=need - 1, text=True, after=after)
+
+    def empty_fits(self, budget: int, after: str | None) -> bool:
+        """¿Cabe la respuesta vacía? (error sin `el primer registro`: la vacía misma no cabe)."""
+
+        try:
+            list_records(self.snap, budget=budget, text=True, after=after)
+        except StateReadError as exc:
+            return bool(exc.detail and exc.detail.startswith("el primer registro"))
+        return False
+
+    def test_nothing_left_to_return_is_not_an_error(self) -> None:
+        empty = store_of()
+        self.assertEqual(list_records(empty, budget=serialized_size(list_records(empty)))["returned"], 0)
 
     def test_limit_cuts_by_number_before_the_budget(self) -> None:
         result = list_records(self.snap, limit=2)
