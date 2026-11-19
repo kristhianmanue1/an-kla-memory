@@ -16,6 +16,7 @@ el [README](../README.md); este documento la complementa.
   - [Actualización gobernada del proyecto](#actualización-gobernada-del-proyecto)
   - [Recuperación y escritura](#recuperación-y-escritura)
   - [Estado de una casilla e historia](#estado-de-una-casilla-e-historia)
+  - [Rechazos de la bandeja](#rechazos-de-la-bandeja)
   - [Respaldo sellado (opcional)](#respaldo-sellado-opcional)
 
 ## Actualizar desde otra beta
@@ -333,7 +334,8 @@ repo usan `--slot` distintos; con `main` para todos gana el último que escribe.
   `--idempotency-key`. Un `state` en cola no anuncia `record_id`.
 - Las entradas con casilla se encolan como `inbox-entry-v2`; un binario anterior
   no las lee: ejecuta `inbox drain` y comprueba `pending` 0 antes de bajar de
-  versión.
+  versión. Si un `inbox drain` anterior ya las rechazó:
+  `inbox requeue --all-format && inbox drain` (ver «Rechazos de la bandeja»).
 
 ### Listar registros (`list`)
 
@@ -425,7 +427,50 @@ sin fiarse de quien lo escribió y sin ningún modelo, si la cita sigue ahí.
   Una `--idempotency-key` explícita reutilizada con otras anclas da
   `remember_id_collision` (`idempotency_key_other_anchors`).
 - Las entradas con anclas se encolan como `inbox-entry-v3`; un binario anterior no
-  las lee: `inbox drain` y `pending` 0 antes de bajar de versión.
+  las lee: `inbox drain` y `pending` 0 antes de bajar de versión. Si un `inbox
+  drain` anterior ya las rechazó, ver «Rechazos de la bandeja».
+
+### Rechazos de la bandeja
+
+`inbox status` cuenta en `rejected` lo que el vaciado no pudo escribir, con su
+`.reason` (ADR-0068). Dos órdenes sacan algo de `rejected/`; ninguna edita ficheros
+a mano y las dos toman el candado de escritura como un lote más.
+
+- **Vuelta atrás de versión.** Un `inbox drain` de una versión anterior rechaza con
+  `inbox_entry_invalid` las entradas de un formato que no conoce (v2, v3). Ya en la
+  versión nueva:
+
+  ```bash
+  an-kla inbox requeue --all-format && an-kla inbox drain
+  ```
+
+  `requeue` sólo mueve a `pending/` los rechazos de inodo seguro cuyo `.reason` es
+  `inbox_entry_invalid` **y** que esta versión valida ahora, con su nombre canónico (sin
+  sufijo `.<n>`; si ese nombre ya existe en `pending/` recibe uno nuevo y no pisa nada).
+  No vacía: ese es el `inbox drain` de después. Lo demás se informa en `skipped` y no se
+  toca: `not_requeueable_policy` (un rechazo de política, p. ej.
+  `remember_state_over_fact`: se rehace con un `remember` nuevo), `still_invalid`,
+  `not_requeueable_unsafe` (sólo queda el `.reason`) y `orphan_reason` (un `.reason` sin
+  su entrada, resto de un corte entre los dos pasos; la entrada ya está en `pending/`).
+- **Purga.** Para dejar `rejected.count` en 0 (por ejemplo antes de adoptar un
+  procedimiento que lo exige), lee los `.reason` y purga con respaldo obligatorio:
+
+  ```bash
+  an-kla inbox purge-rejected --all --backup /ruta/absoluta/fuera/del/store
+  ```
+
+  Cada rechazo se copia al respaldo (también su `.reason`, o sólo éste si el inodo era
+  inseguro), se comprueba su sha256 y sólo entonces se borra el original. `--backup` es
+  un directorio absoluto fuera de `.an-kla/`; se crea con modo 0700 si falta (su padre
+  debe existir) y puede reutilizarse: las copias de purgas anteriores se aceptan si su
+  sha256 coincide. No hay `--no-backup`. Un archivo ajeno o una copia con el mismo
+  nombre y otro sha256 dan `inbox_purge_backup_invalid` y no se purga nada; una copia que
+  falla se informa en `failed` (`backup_failed`, rc 3) y de ese rechazo no se borra nada.
+- **Lotes.** Cada invocación cambia 50 rechazos como mucho; `remaining` dice cuántos
+  faltan: repite la orden. Los rechazos que no se tocan no consumen lote.
+- **Ocupado.** Con el candado de escritura o el de identidad tomados por otro proceso
+  (una reubicación, un `drain` largo) responden `write_lock_busy` o `identity_lock_busy`:
+  `remember-error-v1`, `retryable: true`, rc 3 y ningún cambio. Se reintenta igual.
 
 ### Respaldo sellado (opcional)
 

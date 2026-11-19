@@ -55,6 +55,28 @@ formato del store no cambian; los registros sin anclas son idénticos byte a
 byte. Detalle en
 [`docs/architecture/0066-anclas-c3-v1.md`](docs/architecture/0066-anclas-c3-v1.md).
 
+**Salida explícita de `rejected/`: `inbox requeue` e `inbox purge-rejected`
+(ADR-0068, #234)**: `inbox requeue [<rechazo>…] [--all-format]` devuelve a
+`pending/` los rechazos de inodo seguro con `inbox_entry_invalid` que esta
+versión ya valida (típico tras bajar de versión con entradas v2 o v3), con su
+nombre canónico o uno nuevo si ya existía; no vacía. Los de política
+(`not_requeueable_policy`), los aún inválidos (`still_invalid`) y los de inodo
+inseguro (`not_requeueable_unsafe`) no se tocan, y un `.reason` sin entrada,
+resto de un corte entre los dos pasos, se informa como `orphan_reason`.
+`inbox purge-rejected (<rechazo>… | --all) --backup <dir>` copia cada rechazo
+(y su `.reason`, o sólo éste) a un directorio absoluto fuera del store,
+comprueba su sha256 y sólo entonces lo borra; el respaldo se crea con 0700, se
+reutiliza entre invocaciones y no hay `--no-backup`
+(`inbox_purge_backup_invalid`). Las dos toman bandeja exclusiva → identidad
+compartida → `write_lock` con plazo de 0,5 s (`write_lock_busy` o
+`identity_lock_busy`, reintentables, rc 3, sin cambios), recorren todo
+`rejected/` en orden de bytes y cambian 50 por invocación (`remaining`). El
+remedio de la vuelta atrás pasa a `inbox requeue --all-format && inbox drain`.
+Esquemas nuevos `inbox-requeue-result-v1` e `inbox-purge-result-v1`;
+`remember-error-v1` admite también `write_lock_busy`. `retrieve`, el MCP y el
+formato del store no cambian. Detalle en
+[`docs/architecture/0068-inbox-requeue-purge-v1.md`](docs/architecture/0068-inbox-requeue-purge-v1.md).
+
 ## [v0.1.0-beta.37]
 
 **Estado de una casilla, `state show` e `history` (ADR-0065, E1.d1)**:

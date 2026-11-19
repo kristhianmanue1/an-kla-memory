@@ -77,6 +77,8 @@ publica:
   - { tipo: contrato, id: an-kla/history-result-v1 }
   - { tipo: contrato, id: an-kla/list-result-v1 }
   - { tipo: contrato, id: an-kla/inbox-drain-result-v1 }
+  - { tipo: contrato, id: an-kla/inbox-requeue-result-v1 }
+  - { tipo: contrato, id: an-kla/inbox-purge-result-v1 }
   - { tipo: contrato, id: an-kla/remember-result-v1 }
   - { tipo: contrato, id: an-kla/remember-error-v1 }
   # Continuidad

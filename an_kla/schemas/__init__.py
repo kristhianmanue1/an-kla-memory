@@ -48,6 +48,8 @@ SCHEMA_FILES = {
     "inbox-entry-v1": "inbox-entry-v1.schema.json",
     "inbox-entry-v2": "inbox-entry-v2.schema.json",
     "inbox-entry-v3": "inbox-entry-v3.schema.json",
+    "inbox-purge-result-v1": "inbox-purge-result-v1.schema.json",
+    "inbox-requeue-result-v1": "inbox-requeue-result-v1.schema.json",
     "inbox-status-v1": "inbox-status-v1.schema.json",
     "integration-status-v1": "integration-status-v1.schema.json",
     "integration-status-v2": "integration-status-v2.schema.json",

@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:inbox-purge-result:v1",
+  "title": "AN-KLA Inbox Purge Result v1",
+  "description": "Resultado de `inbox purge-rejected` (ADR-0068, #234): los rechazos respaldados y borrados de `rejected/` (`purged`), los que no se borraron porque una copia falló o su sha256 no coincide (`failed`, `backup_failed`: de ese rechazo no se borra nada) y cuántos quedan para otra invocación (`remaining`; el lote es de 50 purgados). Por rechazo: `rejected_name` (el nombre que lista `inbox status`), `code` (del `.reason`, `null` si no se lee), `result` y `files`, una lista de `{name, sha256}` con los archivos respaldados (la entrada y su `.reason`, o sólo el `.reason` de un inodo inseguro) y el digest de su copia (`null` si no existe o no se puede leer). Sin rutas: la del respaldo no se repite. Sin respaldo no se purga.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "untrusted_memory_data", "purged", "failed", "remaining"],
+  "properties": {
+    "schema": {"const": "an-kla/inbox-purge-result-v1"},
+    "untrusted_memory_data": {"const": true},
+    "purged": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/item"}
+    },
+    "failed": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/item"}
+    },
+    "remaining": {"type": "integer", "minimum": 0}
+  },
+  "$defs": {
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rejected_name", "code", "result", "files"],
+      "properties": {
+        "rejected_name": {"type": "string", "minLength": 1},
+        "code": {"type": ["string", "null"], "pattern": "^[a-z0-9_:.-]{1,80}$"},
+        "result": {"enum": ["purged", "backup_failed"]},
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "sha256"],
+            "properties": {
+              "name": {"type": "string", "minLength": 1},
+              "sha256": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"}
+            }
+          }
+        }
+      }
+    }
+  }
+}
