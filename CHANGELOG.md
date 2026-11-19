@@ -10,7 +10,7 @@ El formato de cada entrada sigue [Keep a Changelog](https://keepachangelog.com/e
 por intención, y el proyecto usa [versionado semántico](https://semver.org/lang/es/)
 en fase de pre-release `0.1.0`.
 
-## [Sin publicar]
+## [v0.1.0-beta.38]
 
 **`list`, listado determinista de registros por stream y vigencia (ADR-0067, #233)**:
 nueva orden de sólo lectura `list [--streams] [--status active|superseded|refuted|all]
@@ -76,6 +76,10 @@ Esquemas nuevos `inbox-requeue-result-v1` e `inbox-purge-result-v1`;
 `remember-error-v1` admite también `write_lock_busy`. `retrieve`, el MCP y el
 formato del store no cambian. Detalle en
 [`docs/architecture/0068-inbox-requeue-purge-v1.md`](docs/architecture/0068-inbox-requeue-purge-v1.md).
+
+No entran `recall` (ADR-0064), el custodio de `document` ni el resolutor de
+conversación. No cambia la plantilla gestionada (`0.1.0-beta.33`). Detalle en
+[`docs/releases/v0.1.0-beta.38.md`](docs/releases/v0.1.0-beta.38.md).
 
 ## [v0.1.0-beta.37]
 
