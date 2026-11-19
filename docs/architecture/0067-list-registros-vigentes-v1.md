@@ -1,7 +1,7 @@
 # ADR-0067: `list`, listado determinista de registros por stream y vigencia (#233)
 
 - **Estado:** Aceptada por delegación del orquestador (2026-11-19), tras r1 `fix-and-retry` y r2 `proceed` (Gemini).
-- **Implementación:** No iniciada
+- **Implementación:** En la rama `feat/233-list` (sin integrar): `list`, esquema `list-result-v1`, `capabilities` y documentación de uso, con sus pruebas de aceptación
 - **Fecha:** 2026-11-19
 - **Decide sobre:** una orden de sólo lectura que devuelve **todos** los registros de los streams pedidos, con su vigencia, en orden total y con presupuesto exacto.
 - **Depende de:** ADR-0063 (sobre C0, disputa) y ADR-0065 (casilla, vocabulario y orden de `history`). No depende de ADR-0064.
