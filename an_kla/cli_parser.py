@@ -483,6 +483,32 @@ def build_parser() -> argparse.ArgumentParser:
         "--budget-seconds", type=float, default=None,
         help="Presupuesto de tiempo entre lotes (por defecto 30 s); el lote en curso no se interrumpe.",
     )
+    inbox_requeue_cmd = inbox_sub.add_parser(
+        "requeue",
+        help="Devuelve a pending/ los rechazos de formato que esta versión ya entiende (ADR-0068); no vacía.",
+        description=(
+            "Reencola rechazos de rejected/ cuyo .reason es inbox_entry_invalid y que esta versión valida ahora "
+            "(típico tras bajar de versión). Los de política, los aún inválidos y los de inodo inseguro no se "
+            "tocan. 50 reencolados por invocación (`remaining` dice cuántos faltan). Después ejecuta `inbox drain`. "
+            "rc 3 con write_lock_busy o identity_lock_busy (reintentable)."
+        ),
+    )
+    inbox_requeue_cmd.add_argument("rejected", nargs="*", help="Nombres de rejected/ tal como los lista `inbox status`.")
+    inbox_requeue_cmd.add_argument(
+        "--all-format", action="store_true", help="Recorre todo rejected/ y reencola cuanto sea reencolable.",
+    )
+    inbox_purge_cmd = inbox_sub.add_parser(
+        "purge-rejected",
+        help="Respalda fuera del store y purga rechazos (ADR-0068); sin --backup no se purga.",
+        description=(
+            "Copia cada rechazo a --backup (directorio absoluto, fuera del store y de .an-kla/; se crea con 0700 "
+            "si falta y puede reutilizarse entre invocaciones), comprueba su sha256 y sólo entonces lo borra. "
+            "50 purgados por invocación (`remaining`). rc 3 con write_lock_busy, identity_lock_busy o backup_failed."
+        ),
+    )
+    inbox_purge_cmd.add_argument("rejected", nargs="*", help="Nombres de rejected/ tal como los lista `inbox status`.")
+    inbox_purge_cmd.add_argument("--all", action="store_true", help="Todos los rechazos.")
+    inbox_purge_cmd.add_argument("--backup", required=True, help="Directorio absoluto del respaldo, fuera del store.")
     remember_cmd = sub.add_parser(
         "remember",
         help="Guardar un recuerdo en una invocación (ADR-0063 D1): encola y vacía un lote; escribe en el store.",

@@ -205,6 +205,17 @@ def _validate(data: Any) -> dict[str, Any]:
     return data
 
 
+def parse_entry_file(path: Any) -> dict[str, Any]:
+    """Contenido validado de un archivo de entrada (en ``pending/`` o ``rejected/``), o ``Reject``."""
+
+    raw = _read_regular(path)
+    try:
+        parsed = json.loads(raw)
+    except (ValueError, UnicodeError, RecursionError):
+        raise Reject(INVALID, ["json"]) from None
+    return _validate(parsed)
+
+
 def load_entry(store: Any, name: str) -> Entry | None:
     """Entrada válida, ``None`` si es un directorio o ya no está, o ``Reject`` con el motivo."""
 
@@ -214,12 +225,7 @@ def load_entry(store: Any, name: str) -> Entry | None:
         return None
     if state == "unsafe":
         raise Reject(UNSAFE)
-    raw = _read_regular(path)
-    try:
-        parsed = json.loads(raw)
-    except (ValueError, UnicodeError, RecursionError):
-        raise Reject(INVALID, ["json"]) from None
-    data = _validate(parsed)
+    data = parse_entry_file(path)
     return Entry(name=name, data=data, digest=digest_json(data))
 
 
@@ -281,5 +287,5 @@ def reject_entry(store: Any, name: str, code: str, reason_codes: list[str] | Non
 
 __all__ = [
     "Entry", "INVALID", "MAX_ENTRY_BYTES", "Reject", "UNSAFE", "age_key", "kind_of_path",
-    "load_entry", "reject_entry", "safe_codes",
+    "load_entry", "parse_entry_file", "reject_entry", "safe_codes",
 ]

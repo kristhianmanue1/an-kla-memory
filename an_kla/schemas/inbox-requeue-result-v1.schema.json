@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:inbox-requeue-result:v1",
+  "title": "AN-KLA Inbox Requeue Result v1",
+  "description": "Resultado de `inbox requeue` (ADR-0068, #234): los rechazos de `rejected/` devueltos a `pending/` (`requeued`), los que no se tocan (`skipped`) y cuántos reencolables quedan para otra invocación (`remaining`; el lote es de 50 reencolados y sólo cuenta lo que cambia). Por rechazo: `rejected_name` (el nombre que lista `inbox status`), `code` (del `.reason` original, `null` si no se lee), `result`, `pending_name` (sólo si se reencoló: el canónico, o uno nuevo si ya existía en `pending/`) y `sha256` (digest de los bytes del archivo tal como está en disco, `null` si no existe o no se puede leer). `result`: `requeued`, `not_requeueable_policy` (el `.reason` no es `inbox_entry_invalid`), `still_invalid` (esta versión tampoco la valida), `not_requeueable_unsafe` (inodo inseguro: sólo existe el `.reason`) u `orphan_reason` (un `.reason` sin su entrada, resto de un corte entre los dos pasos; no se borra). Sólo nombres, códigos y digests: nunca texto de recuerdos ni rutas.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "untrusted_memory_data", "requeued", "skipped", "remaining"],
+  "properties": {
+    "schema": {"const": "an-kla/inbox-requeue-result-v1"},
+    "untrusted_memory_data": {"const": true},
+    "requeued": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/item"}
+    },
+    "skipped": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/item"}
+    },
+    "remaining": {"type": "integer", "minimum": 0}
+  },
+  "$defs": {
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rejected_name", "code", "result", "sha256"],
+      "properties": {
+        "rejected_name": {"type": "string", "minLength": 1},
+        "code": {"type": ["string", "null"], "pattern": "^[a-z0-9_:.-]{1,80}$"},
+        "result": {
+          "enum": ["requeued", "not_requeueable_policy", "still_invalid", "not_requeueable_unsafe", "orphan_reason"]
+        },
+        "pending_name": {"type": "string", "minLength": 1},
+        "sha256": {"type": ["string", "null"], "pattern": "^sha256:[0-9a-f]{64}$"}
+      }
+    }
+  }
+}

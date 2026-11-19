@@ -55,6 +55,8 @@ from .disputes import list_disputes
 from .inbox import read_status as inbox_status
 from .inbox_drain import DEFAULT_BUDGET_SECONDS as INBOX_DRAIN_BUDGET_SECONDS
 from .inbox_drain import drain as inbox_drain
+from .inbox_purge import purge_rejected as inbox_purge
+from .inbox_rejected import requeue as inbox_requeue
 from .remember import RememberError, error_result, read_text_file, remember
 from .anchors_cli import anchors_from_args
 from .anchors_cli import run as anchors_run
@@ -469,6 +471,15 @@ def _run() -> None:
             if not 0 < budget <= 3600:
                 raise CliUsageError("invalid_budget_seconds")
             result = inbox_drain(store, budget_seconds=budget)
+        elif args.inbox_command in ("requeue", "purge-rejected"):
+            try:
+                if args.inbox_command == "requeue":
+                    result = inbox_requeue(store, args.rejected, all_format=args.all_format)
+                else:
+                    result = inbox_purge(store, args.rejected, everything=args.all, backup=args.backup)
+            except RememberError as exc:  # ADR-0068: candado ocupado, reintentable, rc=3, sin cambios
+                sys.stdout.buffer.write(canonical_json(error_result(exc)))
+                raise SystemExit(3)
         else:
             raise CliUsageError("inbox_command_unknown")
     elif args.command == "remember":

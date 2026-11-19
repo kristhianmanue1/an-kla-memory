@@ -50,6 +50,9 @@ def pending_outcome_reason(args: Any, result: Any) -> str | None:
         # `drained`, `queued` y el corte por presupuesto (`partial`) salen con 0.
         if result.get("state") == "aborted" or result.get("outcome") != "known":
             return "inbox_drain_outcome_not_firm"
+    if args.command == "inbox" and getattr(args, "inbox_command", None) == "purge-rejected":
+        if result.get("failed"):  # ADR-0068: un respaldo que no se pudo verificar no es un estado terminal firme
+            return "inbox_purge_backup_failed"
     if args.command in ("remember", "dispute"):
         # `committed` y `queued` sin `drain_error` salen con 0 (la entrada está confirmada); `rejected`,
         # `queued` + `drain_error` (el vaciado abortó) y `outcome` desconocido, con 3 y el JSON íntegro (R1-02).
