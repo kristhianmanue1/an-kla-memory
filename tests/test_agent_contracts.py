@@ -76,6 +76,8 @@ class InstalledSchemaTests(unittest.TestCase):
         "inbox-entry-v1",
         "inbox-entry-v2",
         "inbox-entry-v3",
+        "inbox-purge-result-v1",
+        "inbox-requeue-result-v1",
         "inbox-status-v1",
         "integration-status-v1",
         "integration-status-v2",
