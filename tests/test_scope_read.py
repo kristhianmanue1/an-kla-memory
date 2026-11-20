@@ -291,3 +291,50 @@ class InjectionTests(ScopeCase):
         self.assertEqual(resumed["schema"], "an-kla/resume-v2")
         self.assertEqual(resumed["retrieved_evidence"], [])
         self.assertEqual((resumed["excluded_summary"]["other_audience"], resumed["excluded_summary"]["directive_not_injected"]), (1, 1))
+
+
+class RestoredRecordTests(ScopeCase):
+    """Criterio 9 (segunda parte): lo que llega por `export restore` sin pasar por `remember` sale `malformed`."""
+
+    def commit_directive(self, rid: str, session: str | None, anchors: list | None) -> None:
+        from an_kla import identity_c0
+        from an_kla.anchors import quote_sha256
+
+        env = {k: v for k, v in cli_env(self.env("orq-a", session=session)).items() if k.startswith("AN_KLA_")}
+        identity = identity_c0.build_identity(self.project, env)
+        envelope = identity_c0.build_envelope(identity, "directive", "sha256:" + "1" * 64)
+        extra: dict = {}
+        if anchors is not None:
+            extra["anchors"] = [{
+                "schema": "memoria/ancla/v1", "quote": QUOTE, "quote_sha256": quote_sha256(QUOTE),
+                "source": {"kind": "conversation", "session": identity["session"]["id"], "resolution": "pending",
+                           "turn_id": None, "seal": None},
+            }]
+        self.commit_record(
+            rid, text="orden de quetzal sobre el puerto", indexable_text="orden de quetzal sobre el puerto",
+            an_kla_envelope=envelope, subject=OTHER, audience="agent:orq-b", until_revoked=True, **extra,
+        )
+
+    def test_a_directive_without_anchor_or_with_no_session_restored_from_a_bundle_is_malformed(self) -> None:
+        from an_kla.export_restore import create_export, restore_export
+        from an_kla.retrieval import retrieve
+        from an_kla.store import MemoryStore
+        from tests.inbox_support import make_project
+
+        self.commit_directive("f-sin-ancla", "sesion-1", None)
+        self.commit_directive("f-sin-sesion", None, [])
+        bundle = self.scratch / "bundle"
+        create_export(self.store, bundle)
+        (self.scratch / "restaurado").mkdir()
+        restored = make_project(self.scratch / "restaurado")
+        self.assertTrue(restore_export(bundle, restored)["published"])
+        store = MemoryStore(restored)
+        env = {k: v for k, v in cli_env(self.env("orq-b")).items() if k.startswith("AN_KLA_")}
+        reader = make_reader(store, subject=OTHER, env=env)
+        got = retrieve(store, "orden puerto quetzal", 100000, reader=reader)
+        self.assertEqual(got["selected"], [])  # no se sirve
+        self.assertEqual(got["excluded_summary"]["directive_inactive"], 2)
+        listing = list_records(store.snapshot(), store=store, reader=reader, status="all")
+        views = {i["id"]: i["directive"] for i in listing["items"]}
+        self.assertEqual({k: (v["status"], v["actionable"]) for k, v in views.items()},
+                         {"f-sin-ancla": ("malformed", False), "f-sin-sesion": ("malformed", False)})
