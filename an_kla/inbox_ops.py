@@ -10,6 +10,7 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any, Mapping
 
+from .anchor_checks import validate_annotation
 from .anchors import AnchorRejected
 from .anchors_conversation import validate_resolution
 from . import directive
@@ -73,6 +74,27 @@ def build_resolution_op(snapshot: Any, envelope: Mapping[str, Any], data: Mappin
         "id": record_id("events", envelope["idempotency_key"]),
         "kind": "anchor_resolution",
         "anchor_resolution": deepcopy(dict(resolution)),
+        "an_kla_envelope": deepcopy(dict(envelope)),
+    }
+    return RememberOp("events", "add", record)
+
+
+def build_check_op(snapshot: Any, envelope: Mapping[str, Any], data: Mapping[str, Any]) -> RememberOp:
+    """The annotation record of an ``anchor_check`` entry (ADR-0071 §5), after its invariants: the target exists in the
+    snapshot and is vigent, each ``index`` is a ``document`` anchor of it with that ``quote_sha256``, each result has its form."""
+
+    annotation = data["anchor_check"]
+    ref = annotation.get("target") if isinstance(annotation, Mapping) else None
+    stream = ref.get("stream") if isinstance(ref, Mapping) else None
+    rows = [r for r in snapshot.records.get(stream, []) if str(r.get("id", "")) == ref.get("record_id")] if stream in STREAMS else []
+    try:
+        validate_annotation(annotation, rows[0] if len(rows) == 1 and is_active(rows[0]) else None)
+    except AnchorRejected as refused:
+        raise WritePolicyError(refused.code, "target_invalid") from None
+    record = {
+        "id": record_id("events", envelope["idempotency_key"]),
+        "kind": "anchor_check",
+        "anchor_check": deepcopy(dict(annotation)),
         "an_kla_envelope": deepcopy(dict(envelope)),
     }
     return RememberOp("events", "add", record)

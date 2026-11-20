@@ -5,18 +5,26 @@ observed is trusted.  Only the anchors of what is served are checked, in serving
 record, in stored order, up to ``--anchor-limit`` (32 by default); the rest answer ``unverified`` /
 ``anchor_limit`` and the output says how many were and were not checked.  There is never a time limit.
 Reading never starts a custodian or a resolver.  Anchor text is untrusted data.
+
+The exception is a ``document`` anchor (ADR-0071): it is not checked again when read, it is served as stored
+(``anchor_checks`` of its record or the latest ``anchor_check`` annotation; ``not_checked`` / ``kind_not_supported`` if
+none) and nobody is called.  ``anchors verify`` is the audit that does call the adapter and stores what it finds.
 """
 
 from __future__ import annotations
 
 import json
 import os
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any, Callable, Mapping
 
 from .disputes import _valid_disputes
+from .anchor_checks import check_annotations, has_checks, latest_check
+from .anchors import ANCHOR_SCHEMA_V2
+from .anchors_audit import AuditSession
 from .anchors_conversation import ConversationVerifier, apply_resolution, check_conversation
-from .anchors_document import check_document
+from .anchors_document_v2 import kind_not_supported, not_checked, served
 from .anchors_freshness import aggregate_freshness, unchecked_result
 from .anchors_git import GitRepo
 from .anchors_repo_file import ABSENT, ReadContext, verify_repo_file
@@ -122,12 +130,14 @@ class AnchorServer:
     def __init__(
         self, store: Any, snapshot: Any, limit: int = DEFAULT_ANCHOR_LIMIT, *,
         env: Mapping[str, str] | None = None, verifier: ConversationVerifier | None = None,
+        audit: AuditSession | None = None,
     ) -> None:
         if isinstance(limit, bool) or not isinstance(limit, int) or limit <= 0:
             raise AnchorsReadError("anchor_limit_invalid", "entero positivo")
-        self.store, self.limit, self.verifier = store, limit, verifier
+        self.store, self.limit, self.verifier, self.audit = store, limit, verifier, audit
         self.checked = self.unchecked = 0
         self.notes = resolution_annotations(snapshot)
+        self.checks = check_annotations(snapshot)  # ADR-0071 §5: what audits stored for ``document`` anchors
         self.disputes = disputed_by(snapshot)
         self.setting = default_branch_setting(store, env)
         self._repo: GitRepo | None = None
@@ -159,7 +169,12 @@ class AnchorServer:
         if kind == "conversation":
             view = apply_resolution(anchor, str(row.get("id", "")), index, self.notes)
             return check_conversation(view, self.verifier)
-        return check_document(anchor)
+        if self.audit is not None:  # the audit calls the adapter and stores the result; reading never does
+            return self.audit.audit(self.repo(), stream, str(row.get("id", "")), index, anchor)
+        stored = latest_check(row, stream, index, anchor, self.checks)
+        if stored is not None:
+            return served(stored)
+        return not_checked(anchor) if anchor.get("schema") == ANCHOR_SCHEMA_V2 else kind_not_supported(anchor)
 
     def serve(self, stream: str, row: Mapping[str, Any]) -> dict[str, Any]:
         """``disputed``, ``anchors`` (each with its descriptor and checks), ``anchors_freshness``, the stored coverage."""
@@ -187,8 +202,9 @@ class AnchorServer:
         return out
 
 
-def verify_command(store: Any, args: Any) -> dict[str, Any]:
-    """``anchors verify <id>`` or ``--all``: read-only; the only limit is ``--anchor-limit``."""
+def verify_command(store: Any, args: Any, clock: Callable[[], datetime] | None = None) -> dict[str, Any]:
+    """``anchors verify <id>`` or ``--all``; the only limit is ``--anchor-limit``.  It writes only for ``document`` anchors
+    (ADR-0071 §5): for ``repo-file``, ``conversation`` and a store without ``document`` anchors it stores nothing."""
 
     if args.all == (args.id is not None):
         raise AnchorsReadError("anchors_target_required", "un id, o --all (no los dos)")
@@ -205,12 +221,18 @@ def verify_command(store: Any, args: Any) -> dict[str, Any]:
             raise AnchorsReadError("anchors_id_ambiguous", "el id está en más de un stream")
     records: list[dict[str, Any]] = []
     reader = make_reader(store)
-    with AnchorServer(store, snapshot, args.anchor_limit) as server:
+    audit = AuditSession(store, default_branch_setting(store), clock=clock)
+    with AnchorServer(store, snapshot, args.anchor_limit, audit=audit) as server:
         for stream, row in rows:
             # ADR-0069 §4: auditar no filtra; lo que trae ámbito explícito y es para otro se marca
             marked = {"for_reader": False} if has_scope(row) and is_for_other(row, reader) else {}
-            records.append({"id": str(row.get("id", "")), "stream": stream, **marked, **server.serve(stream, row)})
+            shown = server.serve(stream, row)
+            # ADR-0071 §5: a record with ``document`` anchors audited gets its annotation (and says whether it was recorded)
+            stored = audit.finish(stream, str(row.get("id", "")))
+            records.append({"id": str(row.get("id", "")), "stream": stream, **marked, **shown, **stored})
         declared = server.declare()
-    schema = RESULT_SCHEMA_V2 if any("for_reader" in record or has_rules(record) for record in records) else RESULT_SCHEMA
-    return {"schema": schema, "untrusted_memory_data": True, "revision": snapshot.revision_id,
-            **declared, "records": records}
+    if audit.used_adapters and audit.adapters.config_error:
+        declared["custodians_config_error"] = audit.adapters.config_error
+    versioned = any("for_reader" in r or "recorded" in r or has_rules(r) or has_checks(r) for r in records)
+    return {"schema": RESULT_SCHEMA_V2 if versioned else RESULT_SCHEMA, "untrusted_memory_data": True,
+            "revision": snapshot.revision_id, **declared, "records": records}

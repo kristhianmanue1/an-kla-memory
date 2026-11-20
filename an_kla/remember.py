@@ -147,7 +147,7 @@ def _result(queued: dict[str, Any], report: dict[str, Any], pending_resolution: 
     }
     if "slot" in queued:
         result["slot"] = queued["slot"]
-    for field in ("anchors", "coverage", "missing", "missing_total", "verdict"):
+    for field in ("anchors", "coverage", "missing", "missing_total", "verdict", "custodians_config_error"):
         if field in queued:
             result[field] = queued[field]  # ADR-0066: what the three checks said at enqueue
     if "rules" in result.get("coverage", {}):

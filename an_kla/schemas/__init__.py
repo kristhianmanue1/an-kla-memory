@@ -10,6 +10,7 @@ from ..canonical import digest_bytes
 
 
 SCHEMA_FILES = {
+    "anchor-check-v1": "anchor-check-v1.schema.json",
     "anchor-resolution-v1": "anchor-resolution-v1.schema.json",
     "anchors-verify-v1": "anchors-verify-v1.schema.json",
     "attest-receipt-v1": "attest-receipt-v1.schema.json",

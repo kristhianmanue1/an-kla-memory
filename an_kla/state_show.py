@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
+from .anchor_checks import has_checks
 from .anchors_coverage_v2 import has_rules
 from .anchors_read import DEFAULT_ANCHOR_LIMIT, AnchorServer
 from .audience import Reader, explicit_scope, has_scope, is_for_other, make_reader
@@ -124,7 +125,7 @@ def fit_budget(
     """Respuesta que cabe en ``budget`` bytes: entrada completa, si no su stub, si no ``excluded.budget``."""
 
     total = len(items)
-    scoped = any(key in item for item in items for key in ("for_reader", "subject", "audience")) or any(has_rules(i) for i in items)
+    scoped = any(key in item for item in items for key in ("for_reader", "subject", "audience")) or any(has_rules(i) or has_checks(i) for i in items)
     # Cotas superiores mientras los contadores no se conocen (used_bytes = presupuesto; excluded = todas).
     floor = _response(revision, scope, [], total, inbox_pending, budget, empty, declared, other, scoped)
     if serialized_size(floor) > budget:

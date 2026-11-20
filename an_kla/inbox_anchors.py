@@ -10,21 +10,27 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Any, Callable, Mapping, Sequence
 
+from .anchor_checks import stored_check
 from .anchors import (
-    MAX_ANCHORS, ANCHOR_SCHEMA, AnchorRejected, normalize_quote, source_identity, validate_anchor,
+    MAX_ANCHORS, ANCHOR_SCHEMA, ANCHOR_SCHEMA_V2, AnchorRejected, normalize_quote, source_identity, validate_anchor,
 )
 from .anchors_conversation import check_conversation
 from .audience import ENTRY_SCOPE_KEYS
 from .anchors_coverage_v2 import coverage as compute_coverage
-from .anchors_document import check_document
+from .anchors_document_copy import copy_state
+from .anchors_document_v2 import REJECT_LOCATOR_REQUIRED, evaluate
 from .anchors_git import GitRepo
-from .anchors_repo_file import ReadContext, verify_repo_file, write_rejection
+from .anchors_read import default_branch_setting
+from .anchors_repo_file import ABSENT, ReadContext, verify_repo_file, write_rejection
 from .canonical import digest_json
+from .custodian_adapter import Adapters
+from .temporal import format_utc
 
 ENTRY_SCHEMA_V3 = "an-kla/inbox-entry-v3"  # v2 plus ``anchors``, ``verdict`` and ``operation``
-OPERATIONS = ("remember", "dispute", "anchor_resolution")
+OPERATIONS = ("remember", "dispute", "anchor_resolution", "anchor_check")
 VERDICTS = ("contradicted", "insufficient")  # `supported` and `not_reviewed` stay in agora's ledger (A6)
 ANCHOR_INPUT_INVALID = "anchor_input_invalid"
 
@@ -35,6 +41,7 @@ class Prepared:
 
     anchors: list[dict[str, Any]]
     fields: dict[str, Any]
+    config_error: str | None = None  # the table of custodians could not be read and a ``document`` anchor was checked (ADR-0071 §3)
 
 
 def strip_check(anchor: Mapping[str, Any]) -> dict[str, Any]:
@@ -78,6 +85,13 @@ def record_fields(data: Mapping[str, Any]) -> dict[str, Any]:
     if anchors:
         fields["anchors"] = anchors
         fields.update(coverage_fields(data["text"], anchors, data["kind"]))  # R70-01: the mode comes from the entry's kind
+        checks = [  # ADR-0071 §5: what writing found out about each ``document`` anchor; the anchor itself does not change
+            stored_check(index, anchor["quote_sha256"], anchor["write_check"])
+            for index, anchor in enumerate(data["anchors"])
+            if anchor["source"]["kind"] == "document" and "checked_at" in anchor.get("write_check", {})
+        ]
+        if checks:
+            fields["anchor_checks"] = checks
     if data.get("verdict") is not None:
         fields["verdict"] = data["verdict"]
     return fields
@@ -97,8 +111,11 @@ def fill_anchor(
     if not isinstance(raw, Mapping) or not isinstance(raw.get("source"), Mapping):
         raise AnchorRejected("anchor_schema_invalid")
     anchor = copy.deepcopy(dict(raw))
-    anchor.setdefault("schema", ANCHOR_SCHEMA)
     source = anchor["source"]
+    # ADR-0071 §1: only a ``document`` is written as v2; a repo-file or a conversation stays v1 (beta.38 keeps reading them)
+    anchor.setdefault("schema", ANCHOR_SCHEMA_V2 if source.get("kind") == "document" else ANCHOR_SCHEMA)
+    if source.get("kind") == "document" and isinstance(source.get("copy"), dict):
+        source["copy"]["repo"] = repo_id  # the tool puts it from C0, as for a repo-file
     if source.get("kind") == "repo-file":
         source["repo"] = repo_id
         if source.get("commit") == "HEAD":
@@ -112,13 +129,38 @@ def fill_anchor(
     return anchor
 
 
-def _check(repo: GitRepo, anchor: Mapping[str, Any], record_type: str) -> dict[str, Any]:
+@dataclass(frozen=True)
+class WriteContext:
+    """What a ``document`` anchor needs to be checked when written: the project's ``repo.id``, the default-branch setting, the
+    custodians' adapters and the clock (ADR-0071 §2, §3)."""
+
+    repo_id: str
+    setting: Any
+    adapters: Adapters
+    clock: Callable[[], datetime]
+
+
+def _check_document(repo: GitRepo, anchor: Mapping[str, Any], ctx: WriteContext) -> dict[str, Any]:
+    """The seven rejections in their order: form and size (already done), the page, the path, the copy, its sha256, then
+    the adapter.  The result is what is stored; a rejection raises."""
+    locator = anchor["source"].get("locator")
+    if not (isinstance(locator, dict) and "page" in locator):
+        raise AnchorRejected(REJECT_LOCATOR_REQUIRED)
+    state = copy_state(repo, anchor, ctx.repo_id, ctx.setting, strict=True)  # anchor_path_invalid
+    out = evaluate(anchor, "write", state, ctx.adapters, format_utc(ctx.clock()))
+    if out["reject"]:
+        raise AnchorRejected(out["reject"])
+    del out["reject"]
+    return out
+
+
+def _check(repo: GitRepo, anchor: Mapping[str, Any], record_type: str, ctx: WriteContext) -> dict[str, Any]:
     kind = anchor["source"]["kind"]
     if kind == "repo-file":
         return verify_repo_file(repo, anchor, record_type, "write", ReadContext())
     if kind == "conversation":
         return check_conversation(anchor, None)
-    return check_document(anchor)
+    return _check_document(repo, anchor, ctx)
 
 
 def prepare(
@@ -128,27 +170,40 @@ def prepare(
     text: str,
     repo_id: str,
     session_id: str,
+    *,
+    store: Any = None,
+    clock: Callable[[], datetime] | None = None,
+    adapters: Adapters | None = None,
 ) -> Prepared:
     """Validate and check every anchor, in C3's order; raises :class:`AnchorRejected` for the first refusal.
 
     The count first (``anchor_too_many``), then anchor by anchor: shape, not normalised, size, path,
     ``source`` / ``quote`` / ``integrity`` ``not_found``.  A record refused for any of them is never queued.
+    A ``document`` anchor follows ADR-0071 §2 (the adapter is called last); ``store`` gives it the table of custodians and
+    the default branch.
     """
     if len(raw_anchors) > MAX_ANCHORS:
         raise AnchorRejected("anchor_too_many")
+    if adapters is None:
+        adapters = Adapters.for_store(store) if store is not None else Adapters()
+    ctx = WriteContext(
+        repo_id, default_branch_setting(store) if store is not None else ABSENT, adapters,
+        clock or (lambda: datetime.now(timezone.utc)),
+    )
     stored: list[dict[str, Any]] = []
     with GitRepo(project_root) as repo:
         for index, raw in enumerate(raw_anchors):
             try:
                 anchor = validate_anchor(fill_anchor(raw, repo_id, session_id, record_type, repo.head), record_type, index)
-                result = _check(repo, anchor, record_type)
+                result = _check(repo, anchor, record_type, ctx)
                 code = write_rejection(result)
             except AnchorRejected as rejected:
                 raise AnchorRejected(rejected.code, index) from None
             if code:
                 raise AnchorRejected(code, index)
             stored.append({**anchor, "write_check": result})
-    return Prepared(stored, coverage_fields(text, stored, record_type))
+    documents = any(a["source"]["kind"] == "document" for a in stored)
+    return Prepared(stored, coverage_fields(text, stored, record_type), adapters.config_error if documents else None)
 
 
 @dataclass(frozen=True)
@@ -159,6 +214,7 @@ class Extras:
     key: dict[str, Any] | None  # joins the derived idempotency key
     digest: dict[str, Any]  # joins ``payload_sha256``
     result: dict[str, Any]  # what ``remember`` answers beyond a plain write
+    v4: bool = False  # ADR-0071 §6: a v2 anchor or an ``anchor_check`` annotation travels in an ``inbox-entry-v4``
 
 
 def payload_extra(data: Mapping[str, Any]) -> dict[str, Any]:
@@ -173,6 +229,8 @@ def payload_extra(data: Mapping[str, Any]) -> dict[str, Any]:
         extra["operation"] = operation
     if data.get("anchor_resolution") is not None:
         extra["anchor_resolution"] = digest_json(data["anchor_resolution"])
+    if data.get("anchor_check") is not None:
+        extra["anchor_check"] = digest_json(data["anchor_check"])
     extra.update(scope_extra(data))  # ADR-0069 §1: the same text for two projects or two addressees is two intentions
     return extra
 
@@ -191,13 +249,17 @@ def entry_extras(
     verdict: str | None,
     operation: str,
     anchor_resolution: Mapping[str, Any] | None,
+    anchor_check: Mapping[str, Any] | None = None,
+    *,
+    store: Any = None,
+    clock: Callable[[], datetime] | None = None,
 ) -> Extras | None:
     """Check the anchors (outside every lock) and gather the entry's extra fields; ``None`` for a plain one."""
     prepared = (
-        prepare(project_root, anchors, kind, text, identity["repo"]["id"], identity["session"]["id"])
+        prepare(project_root, anchors, kind, text, identity["repo"]["id"], identity["session"]["id"], store=store, clock=clock)
         if anchors else None
     )
-    if prepared is None and verdict is None and operation == "remember" and anchor_resolution is None:
+    if prepared is None and verdict is None and operation == "remember" and anchor_resolution is None and anchor_check is None:
         return None
     fields: dict[str, Any] = {}
     if prepared is not None:
@@ -208,6 +270,8 @@ def entry_extras(
         fields["operation"] = operation
     if anchor_resolution is not None:
         fields["anchor_resolution"] = dict(anchor_resolution)
+    if anchor_check is not None:
+        fields["anchor_check"] = copy.deepcopy(dict(anchor_check))
     result: dict[str, Any] = {}
     if prepared is not None:
         result["anchors"] = [
@@ -215,6 +279,14 @@ def entry_extras(
             for i, a in enumerate(prepared.anchors)
         ]
         result.update(prepared.fields)
+        if prepared.config_error:
+            result["custodians_config_error"] = prepared.config_error
     if verdict is not None:
         result["verdict"] = verdict
-    return Extras(fields, key_extra(prepared.anchors if prepared else None, verdict), payload_extra(fields), result)
+    key = key_extra(prepared.anchors if prepared else None, verdict)
+    if anchor_check is not None:  # ADR-0071 §5: the target, the digest of the results and their date (a retry is the same audit)
+        target = anchor_check["target"]
+        key = {**(key or {}), "anchor_check": [
+            [target["stream"], target["record_id"]], digest_json(anchor_check["checks"]), anchor_check["checks"][0]["checked_at"]]}
+    v4 = anchor_check is not None or any(a.get("schema") == ANCHOR_SCHEMA_V2 for a in (prepared.anchors if prepared else []))
+    return Extras(fields, key, payload_extra(fields), result, v4)

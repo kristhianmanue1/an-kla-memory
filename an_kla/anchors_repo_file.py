@@ -160,6 +160,12 @@ def _tips(repo: GitRepo, ctx: ReadContext) -> list[tuple[str, str]]:
     return tips
 
 
+def default_tip(repo: GitRepo, setting: Any = ABSENT) -> str | None:
+    """The tip of the default branch (ADR-0066 §4), or ``None`` when there is none: where a document's copy is read."""
+    tips = _tips(repo, ReadContext(setting))
+    return tips[0][1] if tips else None
+
+
 def _read_fact_check(
     repo: GitRepo, commit: str, path: str, quote: str, ctx: ReadContext
 ) -> dict[str, Any]:

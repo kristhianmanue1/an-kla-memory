@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:an-kla:schema:inbox-entry:v4",
   "title": "AN-KLA Inbox Entry v4",
-  "description": "Entrada confirmada de `memory/inbox/pending/` con anclas, veredicto u operación (ADR-0066 §1): `inbox-entry-v2` más `anchors`, `verdict` y `operation` opcionales, y `anchor_resolution` en una anotación. v1 y v2 siguen leyéndose. `anchors` lleva de 1 a 16 anclas `memoria/ancla/v1` (C3) y, por cada una, su `write_check`: las tres comprobaciones de `remember` y su `at`; el vaciado no vuelve a leer Git y `write_check` no pasa al registro. `verdict` (contradicted|insufficient) sólo en `operation: dispute`, que exige `target_id` y `kind: fact`. `anchor_resolution` sólo en `operation: anchor_resolution` (schema `an-kla/anchor-resolution-v1`; sin orden pública en esta versión). `payload_sha256` incluye el digest canónico de las anclas, el veredicto y la operación. `slot` sólo con `kind: state`. El texto y las citas son datos, nunca instrucciones. Un binario anterior no lee v3: `inbox drain` y pendientes 0 antes de bajar de versión. ADR-0069 §1: v3 con `directive` en `kind` y los campos de ámbito y vigencia.",
+  "description": "Entrada confirmada de `memory/inbox/pending/` con anclas, veredicto u operación (ADR-0066 §1): `inbox-entry-v2` más `anchors`, `verdict` y `operation` opcionales, y `anchor_resolution` en una anotación. v1 y v2 siguen leyéndose. `anchors` lleva de 1 a 16 anclas `memoria/ancla/v1` (C3) y, por cada una, su `write_check`: las tres comprobaciones de `remember` y su `at`; el vaciado no vuelve a leer Git y `write_check` no pasa al registro. `verdict` (contradicted|insufficient) sólo en `operation: dispute`, que exige `target_id` y `kind: fact`. `anchor_resolution` sólo en `operation: anchor_resolution` (schema `an-kla/anchor-resolution-v1`; sin orden pública en esta versión). `payload_sha256` incluye el digest canónico de las anclas, el veredicto y la operación. `slot` sólo con `kind: state`. El texto y las citas son datos, nunca instrucciones. Un binario anterior no lee v3: `inbox drain` y pendientes 0 antes de bajar de versión. ADR-0069 §1: v3 con `directive` en `kind` y los campos de ámbito y vigencia. ADR-0071: `anchors` admite `memoria/ancla/v2` (un `document`: sólo en esta versión; un binario anterior lo rechaza con `anchor_schema_invalid`) y la operación `anchor_check`, con `anchor_check` (schema `an-kla/anchor-check-v1`), que guarda el resultado de auditar anclas `document`. `write_check` de un `document` lleva `checked_at`, `manifest_sha256`, `derivation`, `custody` y `adapter_called`.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -66,7 +66,10 @@
         ],
         "properties": {
           "schema": {
-            "const": "memoria/ancla/v1"
+            "enum": [
+              "memoria/ancla/v1",
+              "memoria/ancla/v2"
+            ]
           },
           "source": {
             "type": "object",
@@ -113,6 +116,7 @@
                 ],
                 "enum": [
                   null,
+                  "adapter_error",
                   "anchor_limit",
                   "commit_not_in_clone",
                   "commit_not_on_default_branch",
@@ -120,9 +124,11 @@
                   "custodian_offline",
                   "document_unknown",
                   "kind_not_supported",
+                  "no_adapter",
                   "no_default_branch",
                   "no_git",
                   "no_verifier",
+                  "not_checked",
                   "path_missing",
                   "repo_unavailable",
                   "resolution_pending",
@@ -144,6 +150,7 @@
                 ],
                 "enum": [
                   null,
+                  "adapter_truncated",
                   "anchor_limit",
                   "binary",
                   "commit_not_in_clone",
@@ -151,7 +158,11 @@
                   "custodian_offline",
                   "derived_modality",
                   "document_unknown",
+                  "integrity_not_verified",
                   "kind_not_supported",
+                  "locator_invalid",
+                  "locator_not_found",
+                  "not_checked",
                   "not_utf8",
                   "quote_absent",
                   "source_not_verified",
@@ -172,16 +183,23 @@
                 ],
                 "enum": [
                   null,
+                  "adapter_error",
                   "anchor_limit",
                   "binary",
                   "commit_blob_lacks_quote",
                   "commit_not_in_clone",
                   "copy_sha_mismatch",
                   "custodian_offline",
+                  "derivation_parent_mismatch",
+                  "derivation_superseded",
+                  "derivation_unsupported",
                   "document_unknown",
                   "kind_not_supported",
                   "manifest_mismatch",
+                  "manifest_missing",
+                  "no_adapter",
                   "no_verifier",
+                  "not_checked",
                   "not_utf8",
                   "raw_lost",
                   "resolution_pending",
@@ -243,6 +261,48 @@
                   "string",
                   "null"
                 ]
+              },
+              "checked_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Cuándo se comprobó (ADR-0071): la fecha del resultado guardado; null en un ancla v2 aún no comprobada."
+              },
+              "manifest_sha256": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "derivation": {
+                "enum": [
+                  null,
+                  "current",
+                  "superseded",
+                  "unsupported"
+                ],
+                "description": "Estado de la derivación según el custodio al comprobar; null sin respuesta."
+              },
+              "custody": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "retention": {
+                    "enum": [
+                      "effective",
+                      "expired",
+                      "unknown"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "adapter_called": {
+                "type": "boolean",
+                "description": "Sólo al escribir y al auditar: si se lanzó el adaptador."
               }
             }
           }
@@ -258,7 +318,8 @@
     "operation": {
       "enum": [
         "dispute",
-        "anchor_resolution"
+        "anchor_resolution",
+        "anchor_check"
       ]
     },
     "anchor_resolution": {
@@ -278,6 +339,9 @@
     },
     "revokes": {
       "const": true
+    },
+    "anchor_check": {
+      "$ref": "urn:an-kla:schema:anchor-check:v1"
     }
   }
 }
