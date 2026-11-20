@@ -10,6 +10,38 @@ El formato de cada entrada sigue [Keep a Changelog](https://keepachangelog.com/e
 por intención, y el proyecto usa [versionado semántico](https://semver.org/lang/es/)
 en fase de pre-release `0.1.0`.
 
+## [Sin publicar]
+
+**Ámbito y destinatario de un recuerdo, y órdenes del Operador (`directive`)
+(ADR-0069)**: `remember --subject <repo.id> --audience all|role:<papel>|agent:<nombre>`
+en `fact`, `decision` y `state` (campos de primer nivel, como `slot`; C0 y
+`record-envelope-v1` no cambian), y el tipo `directive` (`remember --kind directive
+[--valid-until <fecha> | --until-revoked] [--supersedes <id> [--revoke]]`): papel
+`orquestador` o `capitan`, sesión real, `subject`, `audience`, una vigencia y un ancla
+`conversation`, con sus rechazos en orden (`directive_role_not_allowed`,
+`directive_session_missing`, `directive_missing_subject`, `directive_missing_audience`,
+`directive_validity_missing`/`_conflict`, `directive_anchor_missing`,
+`directive_valid_until_past`, `directive_subject_mismatch`, `directive_audience_mismatch`,
+`directive_revoke_without_target`, `remember_subject_invalid`, `remember_audience_invalid`,
+`remember_directive_field_not_allowed`) al encolar y otra vez al vaciar. Entre directivas
+rige una excepción a D3: cualquier orquestador o capitán del mismo `subject` sustituye o
+revoca sin disputa. `plan-write` rechaza el ámbito y `kind: directive`
+(`plan_write_scope_fields_not_allowed`). `retrieve`, `list` y `state show` filtran por el
+lector (identidad C0 del entorno y `--subject`; `--include-other-audience` sirve lo que es
+para otro con `for_reader: false`), MCP filtra siempre, y `history`, `disputes list` y
+`anchors verify` marcan sin filtrar. Una `directive` servida lleva su objeto `directive`
+con `status` y `actionable`; `assemble-context` y `resume` no inyectan ninguna
+(`directive_not_injected`). Esquemas nuevos y dispersos (sólo salen con una clave nueva; sin
+registros nuevos las salidas son byte a byte las de beta.38): `inbox-entry-v4`,
+`remember-error-v2`, `retrieval-result-v4`, `mcp-retrieve-v4`, `list-result-v2`,
+`state-result-v2`, `history-result-v2`, `disputes-list-v2`, `anchors-verify-v2`,
+`context-assembly-v3` y `resume-v2`. **Riesgo al bajar de versión**: un binario anterior
+(beta.38 o menos) lee los registros nuevos sin entenderlos y **sirve las directivas sin
+filtro y sin marca**; no bajes con directivas escritas (o no las escribas hasta haber
+adoptado la versión en todo el puesto). Tampoco lee `inbox-entry-v4`: `inbox drain` y
+pendientes 0 antes de bajar. Detalle en
+[`docs/architecture/0069-ambito-audiencia-directivas-v1.md`](docs/architecture/0069-ambito-audiencia-directivas-v1.md).
+
 ## [v0.1.0-beta.38]
 
 **`list`, listado determinista de registros por stream y vigencia (ADR-0067, #233)**:

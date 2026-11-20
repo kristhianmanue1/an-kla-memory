@@ -107,6 +107,18 @@ SCHEMA_FILES = {
     "write-proposal-v1": "write-proposal-v1.schema.json",
     "write-proposal-v2": "write-proposal-v2.schema.json",
     "working-state-v2": "working-state-v2.schema.json",
+    # ADR-0069 (ámbito, destinatario y directivas): versiones dispersas, superconjunto de la anterior
+    "anchors-verify-v2": "anchors-verify-v2.schema.json",
+    "context-assembly-v3": "context-assembly-v3.schema.json",
+    "disputes-list-v2": "disputes-list-v2.schema.json",
+    "history-result-v2": "history-result-v2.schema.json",
+    "inbox-entry-v4": "inbox-entry-v4.schema.json",
+    "list-result-v2": "list-result-v2.schema.json",
+    "mcp-retrieve-v4": "mcp-retrieve-v4.schema.json",
+    "remember-error-v2": "remember-error-v2.schema.json",
+    "resume-v2": "resume-v2.schema.json",
+    "retrieval-result-v4": "retrieval-result-v4.schema.json",
+    "state-result-v2": "state-result-v2.schema.json",
 }
 
 

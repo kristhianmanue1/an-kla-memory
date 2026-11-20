@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:remember-error:v2",
+  "title": "AN-KLA Remember Error v2",
+  "description": "Rechazo de `remember` que no dejó entrada y no es reintentable (ADR-0069 §1–§3): `remember_subject_invalid`, `remember_audience_invalid`, `remember_directive_field_not_allowed` y los códigos `directive_*` de escritura. Sale en stdout con rc=3. Sólo códigos y pistas: nunca el texto del recuerdo ni rutas. `remember-error-v1` sigue siendo el error reintentable de #226.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "untrusted_memory_data",
+    "ok",
+    "code",
+    "retryable",
+    "hint"
+  ],
+  "properties": {
+    "schema": {
+      "const": "an-kla/remember-error-v2"
+    },
+    "untrusted_memory_data": {
+      "const": true
+    },
+    "ok": {
+      "const": false
+    },
+    "code": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]{0,79}$"
+    },
+    "retryable": {
+      "const": false
+    },
+    "hint": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  }
+}

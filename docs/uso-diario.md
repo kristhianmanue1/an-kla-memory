@@ -16,6 +16,7 @@ el [README](../README.md); este documento la complementa.
   - [Actualización gobernada del proyecto](#actualización-gobernada-del-proyecto)
   - [Recuperación y escritura](#recuperación-y-escritura)
   - [Estado de una casilla e historia](#estado-de-una-casilla-e-historia)
+  - [Ámbito, destinatario y órdenes del Operador](#ámbito-destinatario-y-órdenes-del-operador-directive)
   - [Rechazos de la bandeja](#rechazos-de-la-bandeja)
   - [Respaldo sellado (opcional)](#respaldo-sellado-opcional)
 
@@ -429,6 +430,60 @@ sin fiarse de quien lo escribió y sin ningún modelo, si la cita sigue ahí.
 - Las entradas con anclas se encolan como `inbox-entry-v3`; un binario anterior no
   las lee: `inbox drain` y `pending` 0 antes de bajar de versión. Si un `inbox
   drain` anterior ya las rechazó, ver «Rechazos de la bandeja».
+
+### Ámbito, destinatario y órdenes del Operador (`directive`)
+
+(ADR-0069.) Un recuerdo puede decir de qué proyecto trata y para quién es. Sin los
+campos nuevos nada cambia: un registro sin `subject` ni `audience` nunca se filtra.
+
+- **Escribir el ámbito**, en `fact`, `decision` y `state`: `remember --subject <repo.id>
+  --audience all|role:<papel>|agent:<nombre>`. `subject` es un `repo.id` de C0
+  (`host[:puerto]/ruta`, `local:` o `remoto:` + 16 hex), nunca un nombre corto
+  (`remember_subject_invalid`, `remember_audience_invalid`).
+- **Escribir una orden** del Operador, la que recibió un orquestador o un capitán
+  y que éste registra citando la conversación:
+
+  ```bash
+  AN_KLA_AGENT_NAME=orq-memoria AN_KLA_AGENT_ROLE=orquestador AN_KLA_SESSION_ID=<sesión> \
+    an-kla --project-root . remember --kind directive --text-file - \
+      --subject example.org/equipo/proyecto-p --audience agent:orq-memoria \
+      --until-revoked --anchor-file conversacion.json   # o --valid-until 2026-12-01
+  ```
+
+  `conversacion.json` es `[{"source": {"kind": "conversation"}, "quote": "<cita literal>"}]`.
+  Son obligatorios, sin valor por defecto, y se comprueban en este orden: papel
+  `orquestador` o `capitan` (`directive_role_not_allowed`), sesión real
+  (`directive_session_missing`), `--subject`, `--audience`, una sola vigencia
+  (`directive_validity_missing` o `_conflict`) y un ancla `conversation`
+  (`directive_anchor_missing`). El rechazo sale en JSON (`remember-error-v2`, rc 3) y
+  no deja entrada. Sólo se escribe con `remember`: `plan-write` la rechaza
+  (`plan_write_scope_fields_not_allowed`).
+- **Cambiarla o retirarla:** `remember --kind directive --supersedes <id>` con su propio
+  ámbito y vigencia (mismo `subject`, o `directive_subject_mismatch`), o `--supersedes <id>
+  --revoke`, que hereda `subject` y `audience` del destino y no lleva vigencia. Cualquier
+  orquestador o capitán del mismo `subject` puede hacerlo, sea suya o no, sin abrir
+  disputa; también lleva su ancla `conversation`. Un `dispute <id>` de cualquier papel la
+  deja vigente pero no accionable.
+- **Cómo la recibe su destinatario.** El lector es la identidad C0 del entorno
+  (`AN_KLA_AGENT_NAME`, `AN_KLA_AGENT_ROLE`) y su proyecto es el del checkout, o el que
+  declare con `--subject <repo.id>`. `retrieve`, `list` y `state show` no sirven lo que
+  es para otro y lo cuentan en `other_audience`; con `--include-other-audience` lo sirven
+  con `for_reader: false`. MCP filtra siempre y no tiene el flag. `history`, `disputes
+  list` y `anchors verify` marcan sin filtrar.
+- **Qué lleva una `directive` servida:** el objeto `directive` con su `status`
+  (`unverified` hoy; `verified` cuando exista un resolutor de conversaciones;
+  `invalidated`, `expired`, `revocation` y `malformed` no se sirven como orden) y su
+  `actionable`. Sólo es `true` si la orden es del proyecto del lector, **nombra** al
+  lector (`agent:<su nombre>` o `role:<su papel>`; `all` no basta) y no tiene disputas
+  vigentes. Si es `false`, vale como contexto: para cambiar una acción por ella hay que
+  confirmarla con el Operador. `unverified` + `actionable: true` significa que se puede
+  actuar sin esperar al resolutor, y que lo que se sirve es la palabra de quien la escribió.
+- **`assemble-context` y `resume` no inyectan ninguna `directive`**: filtran como
+  `retrieve` y cuentan `directive_not_injected`. Léelas con `retrieve`, `list` o `state show`.
+- **Bajar de versión:** un binario anterior (beta.38 o menos) lee los registros nuevos sin
+  entenderlos y sirve las directivas sin filtro y sin marca. No bajes con directivas
+  escritas, o no las escribas hasta haber adoptado la versión en todo el puesto. Las
+  entradas `inbox-entry-v4` tampoco las lee: `inbox drain` y `pending` 0 antes de bajar.
 
 ### Rechazos de la bandeja
 

@@ -30,6 +30,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from . import lock_order
+from .audience import scope_row_fields
 from .custody import CustodyError
 from .disputes import (
     build_remember_op,
@@ -62,7 +63,7 @@ from .inbox_close import (
 )
 from .inbox_anchors import record_fields
 from .inbox_entries import Entry, Reject, age_key, kind_of_path, load_entry, reject_entry, safe_codes
-from .inbox_ops import build_dispute_op, build_resolution_op, intent_mismatch
+from .inbox_ops import build_dispute_op, build_resolution_op, check_directive_target, intent_mismatch
 from .reader_gate import ReaderGateError
 from .state_slot import StateAlready, resolve_state
 from .store import STREAMS
@@ -271,8 +272,11 @@ class Scanner:
                 self.snapshot, entry.target_id, kind=entry.data["kind"],
                 kind_explicit=entry.data["kind_explicit"], envelope=entry.envelope,
             )
+        if entry.data["kind"] == "directive" and target is not None:
+            check_directive_target(entry.data, self.by_stream[target.stream].get(target.target_id))
         entry.op = build_remember_op(entry.envelope, entry.text, entry.data["kind"], target)
         entry.op.record.update(record_fields(entry.data))  # ADR-0066: anchors and coverage; nothing for a plain entry
+        entry.op.record.update(scope_row_fields(entry.data))  # ADR-0069: subject, audience, validity; nothing for a plain entry
 
     def _target_exists(self, target_id: str) -> bool:
         return any(str(row.get("id", "")) == target_id for stream in STREAMS for row in self.snapshot.raw_records[stream])
@@ -288,7 +292,7 @@ class Scanner:
         try:
             outcome = resolve_state(
                 self.snapshot, envelope=entry.envelope, text=entry.text, key=entry.key, slot=entry.slot,
-                target_id=entry.target_id, fields=record_fields(entry.data),
+                target_id=entry.target_id, fields={**record_fields(entry.data), **scope_row_fields(entry.data)},
             )
         except WritePolicyError as exc:
             self.reject(entry.name, exc.code, [exc.detail] if exc.detail else [])

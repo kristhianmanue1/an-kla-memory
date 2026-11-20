@@ -12,12 +12,17 @@ from typing import Any, Mapping
 
 from .anchors import AnchorRejected
 from .anchors_conversation import validate_resolution
+from . import directive
+from .audience import ScopeError, scope_row_fields
 from .canonical import digest_json
 from .disputes import RememberOp, TargetResolution, record_id
 from .inbox_anchors import record_fields, stored_anchors
 from .store import STREAMS
 from .vigency import is_active
 from .write_policy import WritePolicyError
+
+
+SCOPE_ROW_KEYS = ("subject", "audience", "valid_until", "valid_until_input", "until_revoked", "revokes")
 
 
 def _find(snapshot: Any, target_id: str) -> list[tuple[str, Mapping[str, Any]]]:
@@ -84,7 +89,21 @@ def intent_mismatch(row: Mapping[str, Any], data: Mapping[str, Any]) -> str | No
         return "idempotency_key_other_anchors"
     if row.get("verdict") != data.get("verdict"):
         return "idempotency_key_other_verdict"
+    scope = scope_row_fields(data)  # ADR-0069 §1: the scope and the validity are part of the intention too
+    if any(row.get(key) != scope.get(key) for key in SCOPE_ROW_KEYS):
+        return "idempotency_key_other_scope"
     return None
+
+
+def check_directive_target(data: Mapping[str, Any], row: Mapping[str, Any] | None) -> None:
+    """ADR-0069 §3: a directive replaces or revokes a directive of the same ``subject`` (a revocation, of its audience too)."""
+
+    try:
+        if row is None or not directive.is_directive(row):
+            raise WritePolicyError("remember_kind_mismatch", "kind_explicit")
+        directive.check_target(data, row)
+    except ScopeError as refused:
+        raise WritePolicyError(refused.code, refused.hint) from None
 
 
 def target_exists(store: Any, target_id: str) -> bool:

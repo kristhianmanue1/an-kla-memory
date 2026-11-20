@@ -227,11 +227,7 @@ def _validate_reference(value: Any, code: str, detail: str) -> None:
         raise WritePolicyError(code, detail)
 
 
-_DEFAULT_ISSUER_CONFIG = {
-    "kind": "model",
-    "id": "agent-local",
-    "profile": "manual-cli/v1",
-}
+_DEFAULT_ISSUER_CONFIG = {"kind": "model", "id": "agent-local", "profile": "manual-cli/v1"}
 
 
 def emit_write_authority_template(proposal: Mapping[str, Any]) -> dict[str, Any]:

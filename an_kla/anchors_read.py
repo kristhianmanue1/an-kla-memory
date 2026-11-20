@@ -20,12 +20,14 @@ from .anchors_document import check_document
 from .anchors_freshness import aggregate_freshness, unchecked_result
 from .anchors_git import GitRepo
 from .anchors_repo_file import ABSENT, ReadContext, verify_repo_file
+from .audience import has_scope, is_for_other, make_reader
 from .identity_c0 import validate_envelope
 from .store import STREAMS
 from .vigency import is_active
 
 DEFAULT_ANCHOR_LIMIT = 32
 RESULT_SCHEMA = "an-kla/anchors-verify-v1"
+RESULT_SCHEMA_V2 = "an-kla/anchors-verify-v2"  # ADR-0069 §4: sólo con `for_reader`
 CONFIG_FILE = "config.json"
 ENV_DEFAULT_BRANCH = "AN_KLA_DEFAULT_BRANCH"
 _STREAM_RECORD_TYPE = {"facts": "fact", "events": "fact", "episodes": "state"}
@@ -201,9 +203,13 @@ def verify_command(store: Any, args: Any) -> dict[str, Any]:
         if len(rows) > 1:
             raise AnchorsReadError("anchors_id_ambiguous", "el id está en más de un stream")
     records: list[dict[str, Any]] = []
+    reader = make_reader(store)
     with AnchorServer(store, snapshot, args.anchor_limit) as server:
         for stream, row in rows:
-            records.append({"id": str(row.get("id", "")), "stream": stream, **server.serve(stream, row)})
+            # ADR-0069 §4: auditar no filtra; lo que trae ámbito explícito y es para otro se marca
+            marked = {"for_reader": False} if has_scope(row) and is_for_other(row, reader) else {}
+            records.append({"id": str(row.get("id", "")), "stream": stream, **marked, **server.serve(stream, row)})
         declared = server.declare()
-    return {"schema": RESULT_SCHEMA, "untrusted_memory_data": True, "revision": snapshot.revision_id,
+    schema = RESULT_SCHEMA_V2 if any("for_reader" in record for record in records) else RESULT_SCHEMA
+    return {"schema": schema, "untrusted_memory_data": True, "revision": snapshot.revision_id,
             **declared, "records": records}

@@ -127,11 +127,17 @@ def capabilities() -> dict[str, Any]:
                 },
             },
             "remember": {
-                "command": "remember (--text <t> | --text-file <ruta|->) [--kind fact|decision|state] [--slot <s>] [--supersedes <id>] [--idempotency-key <k>] [--anchor-file <ruta|-> | --anchor-path <p> --anchor-quote <q> [--anchor-commit <c>]]",
+                "command": "remember (--text <t> | --text-file <ruta|->) [--kind fact|decision|state|directive] [--slot <s>] [--subject <repo.id>] [--audience all|role:<papel>|agent:<nombre>] [--valid-until <fecha> | --until-revoked] [--supersedes <id> [--revoke]] [--idempotency-key <k>] [--anchor-file <ruta|-> | --anchor-path <p> --anchor-quote <q> [--anchor-commit <c>]]",
                 "schema": "an-kla/remember-result-v1",
                 "read_only": False,
                 "mcp": False,
                 "decision": "ADR-0063 D1",
+                "scope": {
+                    "decision": "ADR-0069",
+                    "entry_schema": "an-kla/inbox-entry-v4",
+                    "error_schema": "an-kla/remember-error-v2",
+                    "directive": "orden del Operador: papel orquestador o capitan, sesion real, --subject, --audience, vigencia y un ancla conversation; sólo por remember (plan-write la rechaza)",
+                },
                 "recommended_input": "--text-file - (--text expone el contenido en argv)",
                 "idempotency_key": "texto libre de 1 a 256 caracteres; sha256:<64 hex> se usa tal cual, otro valor se hashea",
                 "identity_env": {
@@ -157,8 +163,9 @@ def capabilities() -> dict[str, Any]:
                 "decision": "ADR-0066",
             },
             "state": {
-                "command": "state show [--slot <s> | --all-slots] [--scope repo|all] [--budget <n>] [--anchor-limit <n>]",
+                "command": "state show [--slot <s> | --all-slots] [--scope repo|all] [--budget <n>] [--anchor-limit <n>] [--subject <repo.id>] [--include-other-audience]",
                 "schema": "an-kla/state-result-v1",
+                "schema_v2": "an-kla/state-result-v2 (sólo con claves de ADR-0069)",
                 "read_only": True,
                 "creates_nothing": True,
                 "default_budget": 4000,
@@ -176,8 +183,9 @@ def capabilities() -> dict[str, Any]:
                 "decision": "ADR-0065",
             },
             "list": {
-                "command": "list [--streams facts[,events,episodes]] [--status active|superseded|refuted|all] [--kind fact|decision|state|event] [--slot <s>] [--limit <n>] [--budget <n>] [--after <cursor>] [--text]",
+                "command": "list [--streams facts[,events,episodes]] [--status active|superseded|refuted|all] [--kind fact|decision|state|event|directive] [--slot <s>] [--limit <n>] [--budget <n>] [--after <cursor>] [--text] [--subject <repo.id>] [--include-other-audience]",
                 "schema": "an-kla/list-result-v1",
+                "schema_v2": "an-kla/list-result-v2 (sólo con claves de ADR-0069)",
                 "read_only": True,
                 "creates_nothing": True,
                 "default_streams": "facts",

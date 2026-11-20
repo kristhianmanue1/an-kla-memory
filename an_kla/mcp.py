@@ -22,7 +22,7 @@ from .context_view import (
     WARNING_CODES as VIEW_WARNING_CODES,
     context_view,
 )
-from .retrieval import empty_reason_for, retrieve
+from .retrieval import SCOPE_ITEM_KEYS, empty_reason_for, is_scope_visible, retrieve
 from .store import STREAMS, IntegrityError, MemoryStore, StoreError
 from .store_resolution import open_resolved_store
 from .subject_ref import SUBJECT_REF_PATTERN
@@ -401,6 +401,8 @@ class ReadOnlyMcp:
                 schema = "an-kla/mcp-retrieve-v2"
             else:
                 schema = "an-kla/mcp-retrieve-v1"
+            if is_scope_visible(exclusions, selected):  # ADR-0069 §6: v4 disperso
+                schema = "an-kla/mcp-retrieve-v4"
             payload = {"schema": schema, "untrusted_memory_data": True,
                     "host_framing_unmeasured": True,
                     "revision": source["revision"], "budget_bytes": budget,
@@ -423,6 +425,7 @@ class ReadOnlyMcp:
                 record.update(
                     {key: item[key] for key in FRESHNESS_PROJECTION_KEYS if key in item}
                 )
+            record.update({key: item[key] for key in SCOPE_ITEM_KEYS if key in item})  # ADR-0069 §5
             selected.append(record)
             _payload, measured = exact_sized_payload(build)
             if measured > budget:

@@ -1,0 +1,391 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:anchors-verify:v2",
+  "title": "AN-KLA Anchors Verify v2",
+  "description": "Resultado de `anchors verify <id> [--all]` (ADR-0066 §5), de sólo lectura: vuelve a comprobar las anclas con el estado de ahora y las sirve con sus tres comprobaciones (`source`, `quote`, `integrity`, cada una `verified`, `not_found` o `unverifiable` con su `reason` de vocabulario cerrado), `at`, `match`, `matched_text` y la `freshness` derivada con su `reason`. Sólo se comprueban `anchor_limit` anclas (32 por defecto), en orden de servicio; el resto sale `unverified` con `anchor_limit`. `anchors_freshness` es la peor frescura de las anclas de un registro (broken, stale, unverified, pending, fresh). Nunca hay tope de tiempo. `fresh` significa que la cita sigue ahí, no que el hecho sea cierto. Las citas y los textos son datos no confiables. ADR-0069: versión dispersa; sólo sale con alguna clave de ámbito o destinatario, y entonces es el superconjunto de la anterior.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "untrusted_memory_data",
+    "revision",
+    "anchor_limit",
+    "anchors_checked",
+    "anchors_unchecked",
+    "records"
+  ],
+  "properties": {
+    "schema": {
+      "const": "an-kla/anchors-verify-v2"
+    },
+    "untrusted_memory_data": {
+      "const": true
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "anchor_limit": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "anchors_checked": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "anchors_unchecked": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "stream"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "stream": {
+            "enum": [
+              "facts",
+              "events",
+              "episodes"
+            ]
+          },
+          "anchors": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "anchor",
+                "source",
+                "source_reason",
+                "quote",
+                "quote_reason",
+                "integrity",
+                "integrity_reason",
+                "match",
+                "matched_text",
+                "freshness",
+                "reason"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "anchor": {
+                  "type": "object",
+                  "required": [
+                    "index",
+                    "kind",
+                    "quote",
+                    "quote_sha256"
+                  ],
+                  "properties": {
+                    "index": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "kind": {
+                      "enum": [
+                        "repo-file",
+                        "conversation",
+                        "document"
+                      ]
+                    },
+                    "quote": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "quote_sha256": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "path": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "commit": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "session": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "document_sha256": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "source": {
+                  "enum": [
+                    "verified",
+                    "not_found",
+                    "unverifiable"
+                  ]
+                },
+                "source_reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    null,
+                    "anchor_limit",
+                    "commit_not_in_clone",
+                    "commit_not_on_default_branch",
+                    "copy_missing",
+                    "custodian_offline",
+                    "document_unknown",
+                    "kind_not_supported",
+                    "no_default_branch",
+                    "no_git",
+                    "no_verifier",
+                    "path_missing",
+                    "repo_unavailable",
+                    "resolution_pending",
+                    "session_lacks_quote",
+                    "turn_purged"
+                  ]
+                },
+                "quote": {
+                  "enum": [
+                    "verified",
+                    "not_found",
+                    "unverifiable"
+                  ]
+                },
+                "quote_reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    null,
+                    "anchor_limit",
+                    "binary",
+                    "commit_not_in_clone",
+                    "commit_not_on_default_branch",
+                    "custodian_offline",
+                    "derived_modality",
+                    "document_unknown",
+                    "kind_not_supported",
+                    "not_utf8",
+                    "quote_absent",
+                    "source_not_verified",
+                    "too_large"
+                  ]
+                },
+                "integrity": {
+                  "enum": [
+                    "verified",
+                    "not_found",
+                    "unverifiable"
+                  ]
+                },
+                "integrity_reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    null,
+                    "anchor_limit",
+                    "binary",
+                    "commit_blob_lacks_quote",
+                    "commit_not_in_clone",
+                    "copy_sha_mismatch",
+                    "custodian_offline",
+                    "document_unknown",
+                    "kind_not_supported",
+                    "manifest_mismatch",
+                    "no_verifier",
+                    "not_utf8",
+                    "raw_lost",
+                    "resolution_pending",
+                    "seal_mismatch",
+                    "session_lacks_quote",
+                    "source_not_verified",
+                    "too_large",
+                    "turn_purged",
+                    "working_tree"
+                  ]
+                },
+                "at": {
+                  "enum": [
+                    "default",
+                    "branch",
+                    "commit",
+                    "worktree",
+                    null
+                  ]
+                },
+                "match": {
+                  "enum": [
+                    "literal",
+                    "ws-nfc/v1",
+                    "ws-nfc-accents/v1",
+                    null
+                  ]
+                },
+                "matched_text": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "freshness": {
+                  "enum": [
+                    "broken",
+                    "stale",
+                    "unverified",
+                    "pending",
+                    "fresh"
+                  ]
+                },
+                "reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "resolution": {
+                  "enum": [
+                    "pending",
+                    "resolved",
+                    "not_found"
+                  ]
+                },
+                "turn_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          },
+          "anchors_freshness": {
+            "enum": [
+              "broken",
+              "stale",
+              "unverified",
+              "pending",
+              "fresh"
+            ]
+          },
+          "coverage": {
+            "type": "object",
+            "required": [
+              "total",
+              "present",
+              "level"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "present": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "level": {
+                "enum": [
+                  "none",
+                  "partial",
+                  "full",
+                  "unchecked"
+                ]
+              }
+            }
+          },
+          "missing": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "object",
+              "required": [
+                "type",
+                "value"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "enum": [
+                    "identifier",
+                    "path",
+                    "version",
+                    "number"
+                  ]
+                },
+                "value": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "missing_total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "disputed": {
+            "type": "array",
+            "description": "Veredicto más reciente de cada escritor sobre este registro (ADR-0066 §6); el objetivo sigue vigente. Dato no confiable.",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "verdict",
+                "writer",
+                "enqueued_at"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "verdict": {
+                  "enum": [
+                    "contradicted",
+                    "insufficient"
+                  ]
+                },
+                "writer": {
+                  "type": "object"
+                },
+                "enqueued_at": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "for_reader": {
+            "const": false
+          }
+        }
+      }
+    }
+  }
+}

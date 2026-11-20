@@ -22,6 +22,7 @@ from typing import Any, Mapping
 
 from . import attest as attest_module
 from .identity import _Preflight, assert_unchanged, _mutation_preflight_with_context
+from .plan_write_guard import reject_scope_fields
 from .record_text import record_text
 from .store_locks import LockResult
 from .subject_binding import check_subject_ref_binding
@@ -73,8 +74,13 @@ def commit_write_plan(
     decision: Mapping[str, Any],
     transaction_id: str | None = None,
 ) -> dict[str, Any]:
-    """Revalidate and commit one exact write plan under the store lock."""
+    """Revalidate and commit one exact write plan under the store lock.
 
+    Public entry (``commit-write-plan``): a hand-made plan cannot carry scope or directives (ADR-0069 §2); the
+    drain commits through ``_commit_write_plan_locked`` and its records do carry them.
+    """
+
+    reject_scope_fields(proposal)
     preflight = _mutation_preflight_with_context(store)
     store._make_layout()
     with store.write_lock() as lock_result:

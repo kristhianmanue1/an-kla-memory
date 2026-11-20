@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import argparse
 
-from . import anchors_cli
+from . import anchors_cli, scope_cli
 from .context_view import DEFAULT_BUDGET_BYTES, DEFAULT_LIMIT, PROJECTIONS
 from .index import INDEX_PROFILE
 from .inventory import DEFAULT_LIMIT as INVENTORY_DEFAULT_LIMIT
@@ -529,8 +529,8 @@ def build_parser() -> argparse.ArgumentParser:
         "--text-file", help="Archivo con el texto del recuerdo, o '-' para stdin (forma recomendada)."
     )
     remember_cmd.add_argument(
-        "--kind", choices=("fact", "decision", "state"), default=None,
-        help="fact (por defecto) y decision van a facts; state a episodes. Con --supersedes lo decide el target.",
+        "--kind", choices=("fact", "decision", "state", "directive"), default=None,
+        help="fact (por defecto), decision y directive (orden del Operador, ADR-0069) van a facts; state a episodes. Con --supersedes lo decide el target.",
     )
     remember_cmd.add_argument(
         "--supersedes", metavar="ID", default=None,
@@ -595,6 +595,7 @@ def build_parser() -> argparse.ArgumentParser:
     list_cmd.add_argument("--after", default=None, metavar="CURSOR", help="El `next` de la página anterior.")
     list_cmd.add_argument("--text", action="store_true", help="Incluye el texto de cada registro (sin él, sólo text_bytes).")
     anchors_cli.add_parsers(sub, remember_cmd)  # ADR-0066: remember --anchor-*, dispute, anchors verify
+    scope_cli.add_arguments(remember_cmd, retrieve_cmd, list_cmd, state_show_cmd)  # ADR-0069: ámbito y destinatario
     identity_cmd = sub.add_parser("identity", help="Inspeccionar o adoptar identidad local.")
     identity_sub = identity_cmd.add_subparsers(dest="identity_command", required=True)
     identity_status_cmd = identity_sub.add_parser("status")

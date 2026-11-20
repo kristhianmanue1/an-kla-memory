@@ -32,6 +32,7 @@ from .custody import CustodyError, read_pointer
 from .identity import IdentityError, _mutation_preflight_with_context, identity_lock
 from .identity_c0 import DEFAULT_SLOT, SLOT_PATTERN
 from .inbox_anchors import entry_extras
+from .inbox_scope import entry_scope
 from .reader_gate import ReaderGateError
 from .state_slot import target_slot
 from .storage_primitives import fsync_directory
@@ -51,6 +52,7 @@ except ImportError:  # pragma: no cover - plataforma con fcntl
 ENTRY_SCHEMA = "an-kla/inbox-entry-v1"
 ENTRY_SCHEMA_V2 = "an-kla/inbox-entry-v2"  # ADR-0065 §3: v1 más `slot` opcional; la usan las entradas `state`
 ENTRY_SCHEMA_V3 = "an-kla/inbox-entry-v3"  # ADR-0066 §1: v2 más `anchors`, `verdict` y `operation` opcionales
+ENTRY_SCHEMA_V4 = "an-kla/inbox-entry-v4"  # ADR-0069 §1: v3 más `directive` en `kind` y `subject`, `audience`, `valid_until`, `until_revoked`, `revokes`
 STATUS_SCHEMA = "an-kla/inbox-status-v1"
 INBOX_DIRNAME = "inbox"
 LOCK_NAME = ".lock"
@@ -63,6 +65,7 @@ _REASON_CODE = re.compile(r"[a-z0-9_:.-]{1,80}")
 _DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
 
 KINDS = ("fact", "decision", "state")
+ALL_KINDS = KINDS + ("directive",)  # ADR-0069 §2: `directive` exige ámbito y se encola sólo como inbox-entry-v4
 MAX_TEXT_BYTES = 64 * 1024
 MAX_TARGET_CHARS = 256
 ENQUEUE_LOCK_WAIT_SECONDS = 2.0
@@ -74,7 +77,7 @@ MAX_LISTED = 1000
 _MAX_REASON_BYTES = 4096
 
 # stream por kind (D1 «Orden»); el prefijo de id por stream es `store.PREFIXES`
-_KIND_STREAM = {"fact": "facts", "decision": "facts", "state": "episodes"}
+_KIND_STREAM = {"fact": "facts", "decision": "facts", "state": "episodes", "directive": "facts"}
 _STREAM_DEFAULT_KIND = {"facts": "fact", "episodes": "state"}
 
 # Sin `fcntl` no hay candado compartido: se pide siempre exclusivo (más lento, igual de correcto).
@@ -472,7 +475,7 @@ def resolve_kind(store: Any, kind: str | None, target_id: str | None) -> tuple[s
     """
 
     if kind is not None:
-        if kind not in KINDS:
+        if kind not in ALL_KINDS:
             raise InboxError("inbox_kind_invalid")
         return kind, True
     if target_id is None:
@@ -492,7 +495,7 @@ def resolve_kind(store: Any, kind: str | None, target_id: str | None) -> tuple[s
     stream, record = found[0]
     envelope = record.get("an_kla_envelope")
     declared = envelope.get("kind") if isinstance(envelope, Mapping) else None
-    if declared in KINDS:
+    if declared in KINDS:  # ADR-0069 §3: sin --kind nunca se deriva `directive` (ni se sustituye una por accidente)
         return declared, False
     return _STREAM_DEFAULT_KIND.get(stream, "fact"), False
 
@@ -533,6 +536,11 @@ def enqueue(
     verdict: str | None = None,
     operation: str = "remember",
     anchor_resolution: Mapping[str, Any] | None = None,
+    subject: str | None = None,
+    audience: str | None = None,
+    valid_until: str | None = None,
+    until_revoked: bool = False,
+    revoke: bool = False,
     env: Mapping[str, str] | None = None,
     clock: Callable[[], datetime] | None = None,
     wait_seconds: float = ENQUEUE_LOCK_WAIT_SECONDS,
@@ -567,11 +575,17 @@ def enqueue(
     # La casilla (ADR-0065 §1-2): la pedida; si no, la del target `state` (sin --kind); si no, `main`.
     entry_slot = (slot or (target_slot(store, target_id) if not explicit else None) or DEFAULT_SLOT) if resolved_kind == "state" else None
     identity = identity_c0.build_identity(store.project_root, env)
-    extras = entry_extras(store.project_root, identity, resolved_kind, data_text, anchors, verdict, operation, anchor_resolution)
+    # ADR-0069 §1–§3: los rechazos de ámbito y de directiva van antes que las anclas y antes de cualquier candado.
+    scope = entry_scope(
+        store, identity, resolved_kind, target_id, anchors, subject=subject, audience=audience,
+        valid_until=valid_until, until_revoked=until_revoked, revoke=revoke, clock=clock,
+    )
+    anchor_kind = "decision" if resolved_kind == "directive" else resolved_kind  # una directive se ancla como una decision
+    extras = entry_extras(store.project_root, identity, anchor_kind, data_text, anchors, verdict, operation, anchor_resolution)
+    key_extra = {**(extras.key if extras and extras.key else {}), **scope} or None
+    digest_extra = {**(extras.digest if extras else {}), **scope} or None
     if idempotency_key is None:
-        key = identity_c0.derive_idempotency_key(
-            identity, resolved_kind, data_text, target_id, entry_slot, extras.key if extras else None
-        )
+        key = identity_c0.derive_idempotency_key(identity, resolved_kind, data_text, target_id, entry_slot, key_extra)
     elif isinstance(idempotency_key, str) and _DIGEST.fullmatch(idempotency_key):
         key = idempotency_key
     else:
@@ -585,18 +599,17 @@ def enqueue(
             _custody_preflight(store, preflight, seen_custody)  # la custodia pudo cambiar mientras se esperaba
             envelope = identity_c0.build_envelope(identity, resolved_kind, key, clock)
             entry: dict[str, Any] = {
-                "schema": ENTRY_SCHEMA_V3 if extras else ENTRY_SCHEMA if entry_slot is None else ENTRY_SCHEMA_V2,
+                "schema": ENTRY_SCHEMA_V4 if scope else ENTRY_SCHEMA_V3 if extras else ENTRY_SCHEMA if entry_slot is None else ENTRY_SCHEMA_V2,
                 "text": data_text,
                 "kind": resolved_kind,
                 "kind_explicit": explicit,
                 "envelope": envelope,
                 "idempotency_key": key,
-                "payload_sha256": payload_digest(
-                    data_text, resolved_kind, target_id, entry_slot, extras.digest if extras else None
-                ),
+                "payload_sha256": payload_digest(data_text, resolved_kind, target_id, entry_slot, digest_extra),
             }
             if extras:
                 entry.update(extras.fields)
+            entry.update(scope)
             if target_id is not None:
                 entry["target_id"] = target_id
             if entry_slot is not None:
@@ -717,7 +730,7 @@ def _publish(
 from .inbox_status import read_status  # noqa: E402  (vive aparte por el tope de tamaño)
 
 __all__ = [
-    "DEFAULT_SLOT", "ENTRY_SCHEMA", "ENTRY_SCHEMA_V2", "ENTRY_SCHEMA_V3", "SLOT_PATTERN", "InboxError", "InboxPaths", "KINDS", "MAX_TEXT_BYTES", "STATUS_SCHEMA",
+    "DEFAULT_SLOT", "ENTRY_SCHEMA", "ENTRY_SCHEMA_V2", "ENTRY_SCHEMA_V3", "ENTRY_SCHEMA_V4", "SLOT_PATTERN", "InboxError", "InboxPaths", "ALL_KINDS", "KINDS", "MAX_TEXT_BYTES", "STATUS_SCHEMA",
     "collect_tmp", "ensure_layout", "enqueue", "entry_names", "inbox_lock", "inbox_paths", "inflight_is_empty",
     "is_entry_name", "is_marker_name", "marker_names", "payload_digest", "pending_is_empty",
     "read_status", "record_id", "resolve_kind", "root_state", "stream_for_kind", "subdir_names",

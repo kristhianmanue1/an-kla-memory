@@ -20,6 +20,7 @@ import re
 from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
+from .audience import has_scope, is_for_other
 from .canonical import digest_json
 from .identity_c0 import NAME_SENTINEL, validate_envelope
 from .record_text import record_text
@@ -33,12 +34,13 @@ from .write_policy import (
 )
 
 DISPUTES_LIST_SCHEMA = "an-kla/disputes-list-v1"
+DISPUTES_LIST_SCHEMA_V2 = "an-kla/disputes-list-v2"  # ADR-0069 §4: sólo con `for_reader`
 # ``--kind`` to the stream that holds it (ADR-0063 D1 "Orden": ``fact|decision|state``;
 # not the ``fact|event|episode`` of ``refutations``).  ``kind`` arrives validated from
 # the enqueue; a value outside D1 is never a "kind invalid" here, it matches no stream.
 # ``events`` has no kind (``remember`` never writes it), so a target there never
 # matches one (``remember_kind_mismatch``).
-KIND_STREAMS = {"fact": "facts", "decision": "facts", "state": "episodes"}
+KIND_STREAMS = {"fact": "facts", "decision": "facts", "state": "episodes", "directive": "facts"}
 _BATCH_SCHEMA = "an-kla/write-proposal-v2"
 _PROPOSAL_SCHEMA = "an-kla/write-proposal-v1"
 _DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
@@ -171,10 +173,15 @@ def resolve_supersede_target(
         raise WritePolicyError(
             "remember_kind_mismatch", "kind_explicit" if kind_explicit else "kind_derived"
         )
+    envelope_kind = (raw.get("an_kla_envelope") or {}).get("kind") if isinstance(raw.get("an_kla_envelope"), Mapping) else None
+    if (kind == "directive") != (envelope_kind == "directive"):
+        # ADR-0069 §3: ni `state` ni `fact` sustituyen a una `directive`, ni al revés
+        raise WritePolicyError("remember_kind_mismatch", "kind_explicit" if kind_explicit else "kind_derived")
     return TargetResolution(
         stream=stream,
         target_id=target_id,
-        own=is_own(raw, envelope),
+        # ADR-0069 §3, excepción a D3: una directive sustituye o revoca a otra de su `subject`, sea de quien sea
+        own=True if kind == "directive" else is_own(raw, envelope),
         target_record_sha256=digest_json(raw),
     )
 
@@ -346,7 +353,7 @@ def _target_active(snapshot: Any, stream: str, target_id: str) -> bool | None:
     return None
 
 
-def list_disputes(snapshot: Any, *, target: str | None = None) -> dict[str, Any]:
+def list_disputes(snapshot: Any, *, target: str | None = None, reader: Any = None) -> dict[str, Any]:
     """Vigent dispute records of ``snapshot`` (``disputes-list-v1``), read-only.
 
     A dispute is a vigent record with a well-formed ``disputes`` object; ``target`` keeps
@@ -384,10 +391,13 @@ def list_disputes(snapshot: Any, *, target: str | None = None) -> dict[str, Any]
                     "writer": deepcopy(envelope["writer"]) if valid else None,
                     "enqueued_at": envelope["enqueued_at"] if valid else None,
                     **({"verdict": row["verdict"]} if row.get("verdict") in ("contradicted", "insufficient") else {}),
+                    # ADR-0069 §4: `disputes list` audita, no filtra; marca lo que es para otro (sólo si trae ámbito explícito)
+                    **({"for_reader": False} if reader is not None and has_scope(row) and is_for_other(row, reader) else {}),
                 }
             )
+    marked = any("for_reader" in item for item in items)
     return {
-        "schema": DISPUTES_LIST_SCHEMA,
+        "schema": DISPUTES_LIST_SCHEMA_V2 if marked else DISPUTES_LIST_SCHEMA,
         "untrusted_memory_data": True,
         "revision": snapshot.revision_id,
         "target": target,

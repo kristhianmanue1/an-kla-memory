@@ -27,6 +27,7 @@ import sys
 from typing import Any, BinaryIO, Mapping
 
 from .anchors import AnchorRejected
+from .audience import ScopeError
 from .identity import IdentityError
 from .identity_c0 import IdentityC0Error
 from .inbox import MAX_TEXT_BYTES, InboxError, enqueue
@@ -46,6 +47,7 @@ _IDENTITY_HINTS = {
 }
 _IDENTITY_LOCK_HINT = "cambio de custodia o de identidad en curso; no quedó entrada, reintenta en unos segundos"
 ERROR_SCHEMA = "an-kla/remember-error-v1"
+ERROR_SCHEMA_V2 = "an-kla/remember-error-v2"  # ADR-0069: v1 sin el tope de códigos reintentables; los de ámbito y directiva
 # Fallos de la fase de vaciado de `remember` que no deshacen el encolado: `queued` + `drain_error`.
 _DRAIN_ERRORS = (StoreError, IdentityError, TransactionError, ReaderGateError, InboxError, OSError)
 
@@ -53,11 +55,12 @@ _DRAIN_ERRORS = (StoreError, IdentityError, TransactionError, ReaderGateError, I
 class RememberError(ValueError):
     """Error estable de ``remember``; ``str(error)`` es el código y ``detail`` la pista (el CLI la imprime)."""
 
-    def __init__(self, code: str, detail: str | None = None, *, retryable: bool = False) -> None:
+    def __init__(self, code: str, detail: str | None = None, *, retryable: bool = False, structured: bool = False) -> None:
         super().__init__(code)
         self.code = code
         self.detail = detail
         self.retryable = retryable  # #226: sin entrada y reintentar es seguro (idempotente)
+        self.structured = structured  # ADR-0069: rechazo de ámbito o de directiva; sale como JSON, rc 3, sin entrada
 
 
 def normalize_idempotency_key(value: str) -> str:
@@ -99,6 +102,8 @@ def _enqueue(
 ) -> dict[str, Any]:
     try:
         return enqueue(store, text, kind=kind, target_id=target_id, idempotency_key=key, slot=slot, env=env, **anchored)
+    except ScopeError as exc:  # ADR-0069 §1-§3: nothing was queued
+        raise RememberError(exc.code, exc.hint, structured=True) from None
     except AnchorRejected as exc:  # ADR-0066 §2: nothing was queued; the record is not saved halfway
         raise RememberError(exc.code, None if exc.anchor_index is None else f"anchor {exc.anchor_index}") from None
     except IdentityC0Error as exc:
@@ -186,10 +191,10 @@ def _result(queued: dict[str, Any], report: dict[str, Any], pending_resolution: 
 
 
 def error_result(error: RememberError) -> dict[str, Any]:
-    """``remember-error-v1``: el error reintentable que no dejó entrada (#226)."""
+    """``remember-error-v1``: el error reintentable que no dejó entrada (#226); ``remember-error-v2``: el rechazo de ADR-0069."""
 
     return {
-        "schema": ERROR_SCHEMA,
+        "schema": ERROR_SCHEMA_V2 if error.structured and not error.retryable else ERROR_SCHEMA,
         "untrusted_memory_data": True,
         "ok": False,
         "code": error.code,
@@ -209,13 +214,21 @@ def remember(
     anchors: Any = None,
     verdict: str | None = None,
     operation: str = "remember",
+    subject: str | None = None,
+    audience: str | None = None,
+    valid_until: str | None = None,
+    until_revoked: bool = False,
+    revoke: bool = False,
     env: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Guarda ``text`` y devuelve ``remember-result-v1``. Los errores previos al encolado salen como ``RememberError``
     (o con el código de la bandeja, la custodia o la identidad): en ellos no queda ninguna entrada."""
 
     key = None if idempotency_key is None else normalize_idempotency_key(idempotency_key)
-    queued = _enqueue(store, text, kind, supersedes, key, env, slot, anchors=anchors, verdict=verdict, operation=operation)
+    queued = _enqueue(
+        store, text, kind, supersedes, key, env, slot, anchors=anchors, verdict=verdict, operation=operation,
+        subject=subject, audience=audience, valid_until=valid_until, until_revoked=until_revoked, revoke=revoke,
+    )
     report = _drain(store, queued["entry"])
     result = _result(queued, report, (supersedes is not None and operation == "remember") or queued["kind"] == "state")
     return result

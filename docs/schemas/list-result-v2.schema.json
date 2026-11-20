@@ -1,0 +1,322 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:list-result:v2",
+  "title": "AN-KLA List Result v2",
+  "description": "Resultado de `list` (ADR-0067), sólo lectura y datos no confiables. Los registros de los streams pedidos de UNA revisión (`revision`), en orden total: partición por stream, en el orden de `filters.streams`, y dentro de cada una los registros con sobre antes que los legados, por `enqueued_at` ascendente y por `id`. `total` cuenta los registros que pasan los filtros y quedan después del cursor; `total = returned + excluded.limit + excluded.budget`. `--limit` corta por número antes del presupuesto; el presupuesto poda del final del orden. `truncated` es true si algo quedó fuera, y entonces `next` es el cursor opaco para `--after` (nulo si no hay más). `used_bytes` es la longitud exacta de la salida, con su salto de línea final. Un item lleva `superseded_by` si lo sustituyó otro registro, `disputes_count` (disputas vigentes que lo apuntan), `anchors_count` y `coverage_level` sólo si tiene anclas (no se comprueba ninguna), `text_bytes`, `text` sólo con `--text` y `legacy: true` si no tiene sobre válido (`writer` y `enqueued_at` nulos). ADR-0069: versión dispersa; sólo sale con alguna clave de ámbito o destinatario, y entonces es el superconjunto de la anterior.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "untrusted_memory_data",
+    "revision",
+    "filters",
+    "items",
+    "total",
+    "returned",
+    "truncated",
+    "excluded",
+    "next",
+    "used_bytes"
+  ],
+  "properties": {
+    "schema": {
+      "const": "an-kla/list-result-v2"
+    },
+    "untrusted_memory_data": {
+      "const": true
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "filters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "streams",
+        "status",
+        "kind",
+        "slot",
+        "limit",
+        "budget",
+        "text"
+      ],
+      "properties": {
+        "streams": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 3,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "facts",
+              "events",
+              "episodes"
+            ]
+          }
+        },
+        "status": {
+          "enum": [
+            "active",
+            "superseded",
+            "refuted",
+            "all"
+          ]
+        },
+        "kind": {
+          "enum": [
+            "fact",
+            "decision",
+            "state",
+            "event",
+            "directive",
+            null
+          ]
+        },
+        "slot": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "budget": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "text": {
+          "type": "boolean"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "include_other_audience": {
+          "const": true
+        }
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "stream",
+          "id",
+          "kind",
+          "slot",
+          "writer",
+          "enqueued_at",
+          "status",
+          "disputes_count",
+          "text_bytes"
+        ],
+        "properties": {
+          "stream": {
+            "enum": [
+              "facts",
+              "events",
+              "episodes"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string"
+          },
+          "slot": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "writer": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "urn:an-kla:schema:record-envelope:v1#/$defs/identity"
+              }
+            ]
+          },
+          "enqueued_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "enum": [
+              "active",
+              "superseded",
+              "refuted"
+            ]
+          },
+          "superseded_by": {
+            "type": "string",
+            "minLength": 1
+          },
+          "disputes_count": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "anchors_count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "coverage_level": {
+            "type": "string"
+          },
+          "text_bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "text": {
+            "type": "string"
+          },
+          "legacy": {
+            "const": true
+          },
+          "for_reader": {
+            "const": false
+          },
+          "subject": {
+            "type": "string"
+          },
+          "audience": {
+            "type": "string"
+          },
+          "directive": {
+            "$ref": "#/$defs/directive"
+          },
+          "subject_implicit": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "total": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "returned": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "truncated": {
+      "type": "boolean"
+    },
+    "excluded": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "limit",
+        "budget"
+      ],
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "budget": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "other_audience": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "next": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "used_bytes": {
+      "type": "integer",
+      "minimum": 1
+    }
+  },
+  "$defs": {
+    "directive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "actionable"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "malformed",
+            "revocation",
+            "invalidated",
+            "expired",
+            "verified",
+            "unverified"
+          ]
+        },
+        "actionable": {
+          "type": "boolean"
+        },
+        "subject": {
+          "type": "string"
+        },
+        "audience": {
+          "type": "string"
+        },
+        "valid_until": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        },
+        "until_revoked": {
+          "const": true
+        },
+        "revokes": {
+          "const": true
+        },
+        "writer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "name",
+            "role"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "role": {
+              "type": "string"
+            }
+          }
+        },
+        "session": {
+          "type": "string"
+        },
+        "anchor_freshness": {
+          "enum": [
+            "broken",
+            "stale",
+            "unverified",
+            "pending",
+            "fresh"
+          ]
+        },
+        "disputed": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

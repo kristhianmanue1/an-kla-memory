@@ -58,6 +58,9 @@ from .inbox_drain import drain as inbox_drain
 from .inbox_purge import purge_rejected as inbox_purge
 from .inbox_rejected import requeue as inbox_requeue
 from .remember import RememberError, error_result, read_text_file, remember
+from .audience import make_reader
+from .plan_write_guard import reject_scope_fields
+from .scope_cli import reader_from_args
 from .anchors_cli import anchors_from_args
 from .anchors_cli import run as anchors_run
 from .cli_outcome import pending_outcome_reason
@@ -391,7 +394,7 @@ def _run() -> None:
             snapshot = store.snapshot()
         except OSError:  # #218: nunca el mensaje crudo del SO (lleva la ruta); código estable, rc 1
             raise StoreError("storage_io_failed") from None
-        result = list_disputes(snapshot, target=args.target)
+        result = list_disputes(snapshot, target=args.target, reader=make_reader(store))
     elif args.command == "export":
         # Dispatcher dual ADR-0042 §2/§3/§8 (T5): sin --seal, EXACTAMENTE export/v1;
         # con --seal, sealed-export/v1 con adaptador y la capa sellada de T4.
@@ -488,11 +491,13 @@ def _run() -> None:
             result = remember(
                 store, text, kind=args.kind, supersedes=args.supersedes,
                 idempotency_key=args.idempotency_key, slot=args.slot, anchors=anchors_from_args(args),
+                subject=args.subject, audience=args.audience, valid_until=args.valid_until,
+                until_revoked=args.until_revoked, revoke=args.revoke,
             )
         except RememberError as exc:
-            if not exc.retryable:
+            if not (exc.retryable or exc.structured):
                 raise
-            sys.stdout.buffer.write(canonical_json(error_result(exc)))  # #226: sin entrada, reintentable, rc=3
+            sys.stdout.buffer.write(canonical_json(error_result(exc)))  # #226 y ADR-0069: sin entrada, rc=3
             raise SystemExit(3)
     elif args.command in ("dispute", "anchors"):  # ADR-0066
         try:
@@ -576,6 +581,7 @@ def _run() -> None:
             freshness_profile=args.freshness_profile,
             now=parse_freshness_now(args.now) if args.now is not None else None,
             stale_after_days=args.stale_after_days,
+            reader=reader_from_args(store, args, lambda: ValueError("retrieve_subject_invalid")),
         )
         _mint_hook_run(
             store, args.on_behalf_of_hook, "retrieve",
@@ -612,15 +618,15 @@ def _run() -> None:
     elif args.command == "benchmark-reference":
         result = run_reference_benchmark(measure_latency=args.measure_latency)
     elif args.command == "plan-write":
+        proposal = _json(args.proposal, role="proposal")
         if args.emit_authority_template:
-            result = emit_write_authority_template(
-                _json(args.proposal, role="proposal")
-            )
+            reject_scope_fields(proposal)  # ADR-0069 §2; `store.plan_write` y `commit_write_plan` llevan la suya
+            result = emit_write_authority_template(proposal)
         else:
             if not args.authority:
                 raise CliUsageError("missing_write_authority")
             result = store.plan_write(
-                _json(args.proposal, role="proposal"),
+                proposal,
                 _cli_authority(_json(args.authority, role="authority"), store),
             )
     elif args.command == "attest":
