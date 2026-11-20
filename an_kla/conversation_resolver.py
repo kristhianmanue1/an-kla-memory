@@ -70,7 +70,9 @@ def validate_resolve(response: Any) -> str | None:
         return None if (tail == "closed" and not any(candidates.values()) and reason is None) else "incoherent"
     if reason is None or reason == "session_unavailable" or candidates["user"] != 0 or tail is None:
         return "incoherent"
-    return None if (reason != "origin_unreadable" or tail == "open") else "incoherent"
+    if (reason in ("tail_open", "origin_unreadable") and tail != "open") or (reason == "only_in_other_voice" and candidates["pasted"] + candidates["other"] < 1):
+        return "incoherent"  # an open tail, or a quote that is there in another voice
+    return None
 
 
 def validate_verify(response: Any) -> str | None:
@@ -88,7 +90,8 @@ def validate_verify(response: Any) -> str | None:
         return None if (seal == "unknown" and quote == "unknown" and speaker is None) else "incoherent"
     if seal == "turn_missing":
         return None if (quote == "unknown" and speaker is None) else "incoherent"
-    return None if quote != "unknown" else "incoherent"
+    # a known session and a message that exists (``match``, ``mismatch``, ``unknown``): the quote was looked for in it and the voice is its own
+    return None if (quote != "unknown" and speaker is not None) else "incoherent"
 
 
 def _result(

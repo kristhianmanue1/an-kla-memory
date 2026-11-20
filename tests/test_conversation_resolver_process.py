@@ -107,6 +107,37 @@ class FormTests(unittest.TestCase):
             with self.subTest(str(response)[:60]):
                 self.assertIsNotNone(validate_verify(response))
 
+    def test_q01_a_known_session_and_an_existing_message_need_a_speaker(self) -> None:
+        """Q-01: ``speaker`` is null only with ``session: unknown`` or ``seal: turn_missing``; with ``match``, ``mismatch`` or ``unknown`` it is a voice."""
+        for seal in ("match", "mismatch", "unknown"):
+            for quote in ("found", "absent"):
+                with self.subTest(seal=seal, quote=quote):
+                    self.assertIsNotNone(validate_verify(verify(seal=seal, quote=quote, speaker=None)["response"]))
+                    self.assertIsNone(validate_verify(verify(seal=seal, quote=quote, speaker="user")["response"]))
+        self.assertIsNone(validate_verify(verify(seal="turn_missing", quote="unknown", speaker=None)["response"]))  # the two exceptions stay
+        self.assertIsNone(validate_verify(verify(session="unknown", seal="unknown", quote="unknown", speaker=None, reason="session_unavailable")["response"]))
+
+    def test_q01_with_a_real_process_a_verify_without_speaker_is_resolver_error(self) -> None:
+        custodian = FakeCustodian(self)
+        answer = custodian.resolver_adapters(verify(speaker=None)).call_resolver(REQUEST, validate_verify)
+        self.assertEqual((answer.failure, answer.response, answer.called), ("invalid_response", None, True))
+        good = custodian.resolver_adapters(verify()).call_resolver(REQUEST, validate_verify)
+        self.assertIsNone(good.failure)
+
+    def test_q02_a_pending_answer_is_coherent_with_its_reason(self) -> None:
+        """Q-02: ``tail_open`` requires ``tail: open``; ``only_in_other_voice`` requires ``candidates.pasted + candidates.other >= 1``."""
+        base = pending()["response"]
+        self.assertIsNone(validate_resolve(base))  # tail_open, tail open
+        self.assertIsNotNone(validate_resolve({**base, "tail": "closed"}))
+        other = pending("only_in_other_voice")["response"]
+        self.assertIsNone(validate_resolve(other))
+        self.assertIsNone(validate_resolve({**other, "tail": "closed"}))  # valid with the session closed: never ``not_found``
+        self.assertIsNone(validate_resolve({**other, "candidates": {"user": 0, "pasted": 1, "other": 0}}))
+        self.assertIsNotNone(validate_resolve({**other, "candidates": {"user": 0, "pasted": 0, "other": 0}}))
+        for scenario in ({**pending(), "response": {**base, "tail": "closed"}}, {**pending("only_in_other_voice"), "response": {**other, "candidates": {"user": 0, "pasted": 0, "other": 0}}}):
+            answer = FakeCustodian(self).resolver_adapters(scenario).call_resolver(REQUEST, validate_resolve)
+            self.assertEqual((answer.failure, answer.response), ("invalid_response", None))
+
 
 class ConfigurationTests(unittest.TestCase):
     def test_a_single_resolver_with_its_custodian_and_argv(self) -> None:

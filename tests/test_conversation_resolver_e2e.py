@@ -37,7 +37,7 @@ def resolved(**changes: Any) -> dict[str, Any]:
 
 def pending(reason: str = "tail_open") -> dict[str, Any]:
     return {"mode": "response", "response": {"schema": RESOLVER_SCHEMA, "session": "known", "resolution": "pending", "reason": reason, "turn_id": None, "seal": None,
-                                              "speaker": None, "match": None, "candidates": {"user": 0, "pasted": 0, "other": 0}, "tail": "open"}}
+                                              "speaker": None, "match": None, "candidates": {"user": 0, "pasted": 0, "other": 1 if reason == "only_in_other_voice" else 0}, "tail": "open"}}  # Q-02: only_in_other_voice has the quote in another voice
 
 
 def verify(seal: str = "match", quote: str = "found", speaker: str | None = "user", session: str = "known", reason: str | None = None) -> dict[str, Any]:
@@ -210,6 +210,19 @@ class ThreeMomentsTests(ConversationCase):
         self.assertNotIn("recorded", audit["records"][0])
         self.assertEqual(audit["records"][0]["anchors"][0]["served"]["freshness"], "pending")
         self.assertEqual(audit["schema"], "an-kla/anchors-verify-v4")  # served is always there, and a conversation was audited
+
+    def test_q03_a_resolved_anchor_audited_without_a_resolver_is_no_verifier_and_served_stays_fresh(self) -> None:
+        body = self.written()
+        written_at = self.stored(body["record_id"])["anchor_checks"][0]["checked_at"]
+        (Path(self.store.store_root) / "config.json").unlink()  # no table, no resolver
+        before = len(self.events("anchor_check"))
+        item = self.audit(body["record_id"])["records"][0]["anchors"][0]
+        self.assertEqual((item["resolution"], item["source"], item["source_reason"], item["integrity"], item["integrity_reason"], item["quote"], item["freshness"], item["reason"]),
+                         ("resolved", "unverifiable", "no_verifier", "unverifiable", "no_verifier", "unverifiable", "unverified", "no_verifier"))  # the table of the contract
+        self.assertEqual((item["turn_id"], item["seal"]), (TURN, SEAL))  # the anchor stays resolved: its own turn and seal
+        self.assertEqual((item["served"]["freshness"], item["served"]["checked_at"]), ("fresh", written_at))
+        self.assertEqual(len(self.events("anchor_check")), before)  # still nothing is stored without a resolver
+        self.assertEqual((self.history(body["record_id"])["freshness"], self.history(body["record_id"])["checked_at"]), ("fresh", written_at))
 
     def test_an_unreadable_table_is_resolver_error_with_no_process_and_says_why(self) -> None:
         (Path(self.store.store_root) / "config.json").write_text("{no es json", encoding="utf-8")
