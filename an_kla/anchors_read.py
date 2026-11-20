@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any, Callable, Mapping
 
 from .disputes import _valid_disputes
-from .anchor_checks import check_annotations, has_checks, latest_check
+from .anchor_checks import check_annotations, has_checks, is_conclusive, latest_check
 from .anchors import ANCHOR_SCHEMA_V2
 from .anchors_audit import AuditSession
 from .anchors_conversation import ConversationVerifier, apply_resolution, check_conversation
@@ -37,6 +37,7 @@ from .vigency import is_active
 DEFAULT_ANCHOR_LIMIT = 32
 RESULT_SCHEMA = "an-kla/anchors-verify-v1"
 RESULT_SCHEMA_V2 = "an-kla/anchors-verify-v2"  # ADR-0069 §4: sólo con `for_reader`
+RESULT_SCHEMA_V3 = "an-kla/anchors-verify-v3"  # ADR-0072 §2: sólo con `served` o `warnings` (v2 está publicado)
 CONFIG_FILE = "config.json"
 ENV_DEFAULT_BRANCH = "AN_KLA_DEFAULT_BRANCH"
 _STREAM_RECORD_TYPE = {"facts": "fact", "events": "fact", "episodes": "state"}
@@ -170,7 +171,12 @@ class AnchorServer:
             view = apply_resolution(anchor, str(row.get("id", "")), index, self.notes)
             return check_conversation(view, self.verifier)
         if self.audit is not None:  # the audit calls the adapter and stores the result; reading never does
-            return self.audit.audit(self.repo(), stream, str(row.get("id", "")), index, anchor)
+            attempt = self.audit.audit(self.repo(), stream, str(row.get("id", "")), index, anchor)
+            if not is_conclusive(attempt):  # ADR-0072 §2: say what reading will keep serving, the last conclusive result
+                prior = latest_check(row, stream, index, anchor, self.checks)
+                if prior is not None and is_conclusive(prior):
+                    attempt["served"] = {"freshness": prior["freshness"], "reason": prior["reason"], "checked_at": prior["checked_at"]}
+            return attempt
         stored = latest_check(row, stream, index, anchor, self.checks)
         if stored is not None:
             return served(stored)
@@ -233,6 +239,10 @@ def verify_command(store: Any, args: Any, clock: Callable[[], datetime] | None =
         declared = server.declare()
     if audit.used_adapters and audit.adapters.config_error:
         declared["custodians_config_error"] = audit.adapters.config_error
+    warnings = audit.warnings()
+    if warnings:
+        declared["warnings"] = warnings  # ADR-0072 §2: a warning, not a failure: the rc does not change
     versioned = any("for_reader" in r or "recorded" in r or has_rules(r) or has_checks(r) for r in records)
-    return {"schema": RESULT_SCHEMA_V2 if versioned else RESULT_SCHEMA, "untrusted_memory_data": True,
+    third = bool(warnings) or any("served" in a for r in records for a in r.get("anchors", []))  # ADR-0072 §2: v2 is published
+    return {"schema": RESULT_SCHEMA_V3 if third else RESULT_SCHEMA_V2 if versioned else RESULT_SCHEMA, "untrusted_memory_data": True,
             "revision": snapshot.revision_id, **declared, "records": records}

@@ -130,6 +130,8 @@ def capabilities() -> dict[str, Any]:
                 "command": "remember (--text <t> | --text-file <ruta|->) [--kind fact|decision|state|directive] [--slot <s>] [--subject <repo.id>] [--audience all|role:<papel>|agent:<nombre>] [--valid-until <fecha> | --until-revoked] [--supersedes <id> [--revoke]] [--idempotency-key <k>] [--anchor-file <ruta|-> | --anchor-path <p> --anchor-quote <q> [--anchor-commit <c>] | --anchor-document <sha256> --anchor-custodian <id> --anchor-derivation <id> --anchor-manifest <sha256> --anchor-modality native_text|ocr_text|visual --anchor-page <n> [--anchor-item <id>]... [--anchor-copy <ruta>] --anchor-quote <q>]",
                 "schema": "an-kla/remember-result-v1",
                 "schema_v2": "an-kla/remember-result-v2 (sólo con cobertura fact-checks-rules/v2, ADR-0070)",
+                "schema_v3": "an-kla/remember-result-v3 (sólo con el ámbito o la vigencia guardados: subject, audience, valid_until, valid_until_input, until_revoked, revokes, subject_normalized_from; ADR-0072)",
+                "subject": "las mayúsculas de un --subject se normalizan a minúsculas (subject_normalized_from lo dice); un rechazo trae en su pista el repo.id del proyecto (ADR-0072)",
                 "coverage_rules": "fact-checks-rules/v2",
                 "document_anchor": {
                     "decision": "ADR-0071",
@@ -169,6 +171,8 @@ def capabilities() -> dict[str, Any]:
                 "command": "anchors verify (<id> | --all) [--anchor-limit <n>]",
                 "schema": "an-kla/anchors-verify-v1",
                 "schema_v2": "an-kla/anchors-verify-v2 (con ámbito, cobertura v2 o resultados guardados de un document)",
+                "schema_v3": "an-kla/anchors-verify-v3 (sólo con `served` o `warnings`, ADR-0072)",
+                "inconclusive": "un intento con integrity_reason no_adapter o adapter_error no concluye: se guarda, pero leer sigue sirviendo el último resultado concluyente; la respuesta lo dice en `served` y avisa con `warnings` (custodian_not_configured) si el custodio no está en la tabla",
                 "read_only": False,
                 "creates_nothing": False,
                 "writes_only": "anclas document: una anotación an-kla/anchor-check-v1 en `events` por registro auditado (`recorded`, `record_error`); para repo-file, conversation y un store sin anclas document no escribe nada",

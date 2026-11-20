@@ -47,7 +47,8 @@ class WriteRejectionTests(ScopeCase):
         self.assertRejected(self.directive("orq-otro", "orden", anchors=False), "directive_missing_subject")  # el orden manda
 
     def test_syntax_and_fields_of_the_scope(self) -> None:
-        for bad in ("proyecto-corto", "UPPER/case", ""):
+        # ADR-0072 §3: `UPPER/case` ya no se rechaza (sólo difiere por mayúsculas: se guarda en minúsculas); `https://` o `.git` sí
+        for bad in ("proyecto-corto", "https://example.org/a", "example.org/a.git", ""):
             self.assertRejected(self.directive("orq-otro", "x", *self.good(**{"--subject": bad})), "remember_subject_invalid")
         for bad in ("todos", "role:desconocido", "role:rey", "agent:sin-nombre", "agent:desconocido", "agent:sin-sesion", "agent:Mal", "all:x"):
             self.assertRejected(self.directive("orq-otro", "x", *self.good(**{"--audience": bad})), "remember_audience_invalid")

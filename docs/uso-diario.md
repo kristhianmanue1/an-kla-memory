@@ -496,6 +496,9 @@ python3 -m an_kla remember --text-file - --kind fact \
   (`anchor_source_not_found`, `anchor_integrity_not_found`, `anchor_derivation_*`,
   `anchor_locator_*`, `anchor_quote_not_found`); sin adaptador o con el adaptador fallando se
   acepta como `unverified`. Un sha256 de copia distinto se rechaza siempre.
+- **Una cita `ocr_text`** se comprueba entera (`source`, `integrity` y `quote` en `verified`) y **aun así
+  sale `unverified` / `derived_modality`**: el OCR no es literal del original. Sólo `native_text`
+  sale `fresh`. Es lo que fija el contrato, no un fallo de la comprobación.
 
 **Comprobar y leer.** Se comprueba **al escribir y al auditar**; al leer (`history`, `state show`)
 se sirve el último resultado guardado, con su fecha (`checked_at`), y **no se llama a nadie**.
@@ -505,6 +508,20 @@ sin identidad C0 audita igual y dice `recorded: false`). Es lo único que `ancho
 para `repo-file` y `conversation` sigue siendo de sólo lectura. Un v2 nunca comprobado sale
 `unverified`/`not_checked`. Cada auditoría añade una anotación y **la compactación de hoy no las
 poda**: se audita cuando hace falta, no en bucle.
+
+**Una auditoría sin tabla no rebaja lo comprobado** (ADR-0072, errata 6 del contrato). Un intento que
+no concluye (`no_adapter`, `adapter_error`: el custodio no está en la tabla, la tabla no se lee o el
+proceso falla) **se guarda**, con su fecha y su motivo, pero **no sustituye a un resultado concluyente**:
+leer sigue sirviendo el último concluyente, con su `checked_at`. Concluyen la respuesta válida del
+adaptador y una copia local que contradice (`copy_sha_mismatch`), así que una contradicción
+(`broken`) no se tapa con un intento posterior sin adaptador. La respuesta de `anchors verify`
+describe el intento (sus tres comprobaciones y `anchors_freshness`) y, por ancla, `served`
+(`freshness`, `reason`, `checked_at`) dice lo que leer seguirá sirviendo; con un custodio que no
+está en la tabla (o sin tabla) avisa en la raíz con `warnings` (`custodian_not_configured`, el
+custodio y cuántas anclas), sin cambiar el rc. Una tabla ilegible dice `custodians_config_error`, y
+un proceso que falla con el custodio configurado no avisa de configuración. Sin ningún resultado
+concluyente previo, el intento se sirve como siempre. Lo que beta.39 ya dejó rebajado vuelve a servirse
+`fresh` sin migrar nada. La respuesta sube a `anchors-verify-v3` sólo con `served` o `warnings`.
 
 Vuelta atrás: `inbox drain` y `pending` a 0 antes de bajar a beta.38, que rechaza entera la
 entrada `inbox-entry-v4` pendiente; un registro ya comprometido lo lee beta.38 sin romper, sirve el
@@ -518,7 +535,14 @@ campos nuevos nada cambia: un registro sin `subject` ni `audience` nunca se filt
 - **Escribir el ámbito**, en `fact`, `decision` y `state`: `remember --subject <repo.id>
   --audience all|role:<papel>|agent:<nombre>`. `subject` es un `repo.id` de C0
   (`host[:puerto]/ruta`, `local:` o `remoto:` + 16 hex), nunca un nombre corto
-  (`remember_subject_invalid`, `remember_audience_invalid`).
+  (`remember_subject_invalid`, `remember_audience_invalid`). **La pista de un `--subject` inválido
+  trae el `repo.id` del proyecto**, «por ejemplo» (una orden puede tratar de otro proyecto). Una
+  entrada que sólo difiere de un `repo.id` canónico por **mayúsculas** se acepta y se guarda en
+  minúsculas (`subject_normalized_from` lo dice), y `retrieve`, `list` y `state show` leen igual con
+  `--subject` en mayúsculas; `https://`, `.git` final o espacios se rechazan, no se adivinan.
+  `remember` devuelve el ámbito y la vigencia guardados (`subject`, `audience`, `valid_until`,
+  `valid_until_input`, `until_revoked`, `revokes`) con `remember-result-v3`, y `state show` muestra el
+  `subject` y el `audience` explícitos de la cabeza de una casilla.
 - **Escribir una orden** del Operador, la que recibió un orquestador o un capitán
   y que éste registra citando la conversación:
 

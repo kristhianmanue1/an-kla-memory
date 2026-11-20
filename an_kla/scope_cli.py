@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from .audience import Reader, is_subject, make_reader
+from .audience import Reader, is_subject, make_reader, normalize_subject, subject_hint
 
 SUBJECT_HELP = "repo.id de C0 canónico del proyecto del que trata el recuerdo (host[:puerto]/ruta, local:|remoto:<16 hex>)."
 
@@ -43,8 +43,12 @@ def reader_from_args(store: Any, args: Any, error: Callable[[], Exception]) -> R
     """El lector de una lectura: identidad C0 del entorno y ``--subject`` (``error()`` si está mal formado)."""
 
     subject = getattr(args, "subject", None)
+    if subject is not None:
+        subject = normalize_subject(subject)[0]  # ADR-0072 §3: las mayúsculas leen igual que las minúsculas
     if subject is not None and not is_subject(subject):
-        raise error()
+        failure = error()
+        failure.detail = subject_hint(getattr(store, "project_root", None), getattr(failure, "detail", None))  # type: ignore[attr-defined]
+        raise failure
     return make_reader(store, subject=subject, include_other=bool(getattr(args, "include_other_audience", False)))
 
 

@@ -29,13 +29,13 @@ _MCP = (
 )
 
 
-def baseline_tree(target: Path) -> Path | None:
-    """``git archive`` de beta.38 en ``target`` (sin instalar nada); ``None`` si la etiqueta no está en este clon."""
+def baseline_tree(target: Path, tag_name: str = BASELINE_TAG) -> Path | None:
+    """``git archive`` de beta.38 (o de la etiqueta pedida) en ``target`` (sin instalar nada); ``None`` si la etiqueta no está en este clon."""
 
-    tag = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--verify", "-q", BASELINE_TAG + "^{commit}"], capture_output=True)
+    tag = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--verify", "-q", tag_name + "^{commit}"], capture_output=True)
     if tag.returncode != 0:
         return None
-    archive = subprocess.run(["git", "-C", str(ROOT), "archive", BASELINE_TAG], capture_output=True, check=True)
+    archive = subprocess.run(["git", "-C", str(ROOT), "archive", tag_name], capture_output=True, check=True)
     subprocess.run(["tar", "-x", "-C", str(target)], input=archive.stdout, check=True)
     return target
 

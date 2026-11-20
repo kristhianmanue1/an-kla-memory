@@ -204,8 +204,9 @@ def state_show(
             if other and not scope_reader.include_other:
                 other_count += 1
                 continue
+            marks = explicit_scope(head.row)  # ADR-0072 §4: el ámbito explícito de la cabeza se ve, sea o no para el lector
             if other:
-                marks = {"for_reader": False, **explicit_scope(head.row)}
+                marks = {"for_reader": False, **marks}
         items.append(_entry(head, actives, retired, pending, scope == "all", {**server.serve(STATE_STREAM, head.row), **marks}))
     with server:
         declared = server.declare()

@@ -121,5 +121,48 @@ class FormTests(unittest.TestCase):
         self.assertFalse(has_checks({}))
 
 
+def attempt(at: str, integrity_reason: str, **changes: Any) -> dict[str, Any]:
+    """Un intento que no concluye: lo que guarda una auditoría sin tabla o con el adaptador fallando."""
+    return {**check(at, freshness="unverified", reason=integrity_reason), "source": "unverifiable", "integrity": "unverifiable",
+            "integrity_reason": integrity_reason, "quote": "unverifiable", "quote_reason": "source_not_verified", **changes}
+
+
+class ConclusiveTests(unittest.TestCase):
+    """ADR-0072 §1 (errata 6): el último concluyente manda; sin ninguno, el último a secas."""
+
+    def test_what_is_conclusive_comes_from_the_integrity_reason(self) -> None:
+        from an_kla.anchor_checks import is_conclusive
+
+        self.assertTrue(is_conclusive(check("2026-11-19T21:00:00Z")))
+        self.assertTrue(is_conclusive({**attempt("2026-11-19T21:00:00Z", "copy_sha_mismatch")}))  # A3: a contradicting copy concludes
+        for reason in ("no_adapter", "adapter_error"):
+            self.assertFalse(is_conclusive(attempt("2026-11-19T21:00:00Z", reason)))
+        for reason in ("manifest_mismatch", "derivation_superseded", "document_unknown", "manifest_missing", "derivation_unsupported"):
+            self.assertTrue(is_conclusive(attempt("2026-11-19T21:00:00Z", reason)), reason)  # the adapter answered validly
+
+    def test_an_attempt_that_does_not_conclude_does_not_cover_a_conclusive_result(self) -> None:
+        own = [check("2026-11-19T21:00:00.000000Z", reason="concluyente")]
+        later = note("e-1", "2026-11-19T22:00:00.000000Z", attempt("2026-11-19T22:00:00.000000Z", "no_adapter"))
+        self.assertEqual(pick(own, later), "concluyente")
+        self.assertEqual(pick(own, note("e-2", "t", attempt("2026-11-19T23:00:00.000000Z", "adapter_error"))), "concluyente")
+
+    def test_fresh_then_broken_then_no_adapter_is_broken(self) -> None:
+        own = [check("2026-11-19T21:00:00.000000Z", reason="fresco")]
+        broken = note("e-1", "2026-11-19T22:00:00.000000Z", check("2026-11-19T22:00:00.000000Z", reason="quote_absent", freshness="broken"))
+        none = note("e-2", "2026-11-19T23:00:00.000000Z", attempt("2026-11-19T23:00:00.000000Z", "no_adapter"))
+        self.assertEqual(pick(own, broken, none), "quote_absent")
+
+    def test_a_later_conclusive_result_still_wins_over_an_earlier_one(self) -> None:
+        own = [check("2026-11-19T21:00:00.000000Z", reason="antiguo")]
+        newer = note("e-1", "2026-11-19T22:00:00.000000Z", check("2026-11-19T22:00:00.000000Z", reason="nuevo"))
+        self.assertEqual(pick(own, newer), "nuevo")
+
+    def test_with_no_conclusive_result_the_latest_attempt_is_served(self) -> None:
+        first = [attempt("2026-11-19T21:00:00.000000Z", "no_adapter")]
+        second = note("e-1", "2026-11-19T22:00:00.000000Z", attempt("2026-11-19T22:00:00.000000Z", "adapter_error"))
+        self.assertEqual(pick(first, second), "adapter_error")
+        self.assertEqual(pick(first), "no_adapter")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -44,6 +44,28 @@ def is_subject(value: Any) -> bool:
     return isinstance(value, str) and (_HASHED_ID.fullmatch(value) is not None or is_canonical_repo_id(value))
 
 
+def normalize_subject(value: Any) -> tuple[Any, str | None]:
+    """``(subject, normalized_from)`` (ADR-0072 §3).  C0 pasa el ``repo.id`` de un remoto entero a minúsculas, así que un valor que sólo
+    difiere de uno canónico por mayúsculas no tiene otra lectura: se acepta en minúsculas y ``normalized_from`` es lo dado.  Cualquier
+    otra diferencia (esquema, ``.git``, espacios) no se adivina: el valor vuelve tal cual, y quien llama lo rechaza."""
+
+    if isinstance(value, str) and not is_subject(value) and value.lower() != value and is_subject(value.lower()):
+        return value.lower(), value
+    return value, None
+
+
+def subject_hint(project_root: Any, base: str | None = None) -> str:
+    """La pista de un ``--subject`` inválido: lo esperado y, si se puede calcular, el ``repo.id`` de este proyecto «por ejemplo»
+    (una ``directive`` puede tratar de otro proyecto).  Sin ``git``, la pista de siempre."""
+
+    base = base or "un repo.id de C0 canónico (host[:puerto]/ruta, local:|remoto:<16 hex>)"
+    try:
+        repo_id = repo_id_for(project_root)
+    except (ValueError, OSError):
+        return base
+    return f"se esperaba un `repo.id` de C0 canónico, en minúsculas; por ejemplo, el de este proyecto es `{repo_id}`"
+
+
 def is_audience(value: Any) -> bool:
     """``all``, ``role:<papel de C0 distinto de desconocido>`` o ``agent:<nombre de C0 no reservado>``."""
 

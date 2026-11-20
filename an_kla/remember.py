@@ -38,6 +38,8 @@ from .transaction_attempts import TransactionError
 
 RESULT_SCHEMA = "an-kla/remember-result-v1"
 RESULT_SCHEMA_V2 = "an-kla/remember-result-v2"  # ADR-0070 §3: sólo cuando la respuesta lleva una cobertura con `rules`
+RESULT_SCHEMA_V3 = "an-kla/remember-result-v3"  # ADR-0072 §4: sólo cuando la respuesta lleva el ámbito o la vigencia guardados
+SCOPE_RESULT_FIELDS = ("subject", "audience", "valid_until", "valid_until_input", "until_revoked", "revokes", "subject_normalized_from")
 KEY_MAX_CHARS = 256
 _DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
 _STORAGE_HINT = "la escritura falló en disco; no se perdió nada confirmado: reintenta (es idempotente)"
@@ -152,6 +154,11 @@ def _result(queued: dict[str, Any], report: dict[str, Any], pending_resolution: 
             result[field] = queued[field]  # ADR-0066: what the three checks said at enqueue
     if "rules" in result.get("coverage", {}):
         result["schema"] = RESULT_SCHEMA_V2  # ADR-0070 §3: v2 disperso; el resto de las respuestas sigue siendo v1
+    scoped = [field for field in SCOPE_RESULT_FIELDS if field in queued]
+    for field in scoped:
+        result[field] = queued[field]  # ADR-0072 §4: el ámbito y la vigencia guardados
+    if scoped:
+        result["schema"] = RESULT_SCHEMA_V3  # disperso: sólo con alguna de esas claves; v1 y v2 están publicados
     rejections = report["rejected"]["entries"]
     result["rejected"] = {"count": len(rejections), "entries": rejections}
     committed = _find(report["committed"]["entries"], name)
