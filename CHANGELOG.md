@@ -27,7 +27,13 @@ prueba que hablara el Operador. **Las `directive` no se tocan:** sus anclas no s
 `anchors-verify-v4`, `remember-result-v4`, `history-result-v3` y `state-result-v3`. Vuelta atrás: beta.40
 rechaza entera una entrada v5 (`inbox drain` y pendientes a 0 antes de bajar; el remedio es
 `inbox requeue --all-format && inbox drain`) y lee un store de esta versión sin romper, sirviendo esas
-anclas `pending`. Un store sin anclas `conversation` se lee igual. Detalle en
+anclas `pending`. Un store sin anclas `conversation` se lee igual. **Evidencia de cobertura de una cita de
+documento (errata 7 de `ancla/v1`)**: la cobertura se mide contra una evidencia por ancla; la de un `document`
+de forma válida es su cita más su página y la ruta de su copia (`item_id` e `item_ids` no entran), y
+`coverage.evidence` (`ancla-document/v1`) lo dice: una cita correcta de un manual deja de salir `none` por
+la página y la clave. Una evidencia de más de 16 384 bytes anula la cobertura del registro
+(`coverage_error`). Las reglas no cambian y lo guardado no se recalcula. Los agentes de Claude Code llevan
+`AN_KLA_AGENT_CLI=claude-code`. Detalle en
 [`docs/architecture/0073-citas-conversacion-resolutor.md`](docs/architecture/0073-citas-conversacion-resolutor.md).
 
 ## [v0.1.0-beta.40]

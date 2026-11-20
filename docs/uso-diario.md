@@ -500,6 +500,12 @@ python3 -m an_kla remember --text-file - --kind fact \
 - **Una cita `ocr_text`** se comprueba entera (`source`, `integrity` y `quote` en `verified`) y **aun así
   sale `unverified` / `derived_modality`**: el OCR no es literal del original. Sólo `native_text`
   sale `fresh`. Es lo que fija el contrato, no un fallo de la comprobación.
+- **La cobertura de un hecho con una cita de documento** (errata 7 de `ancla/v1`) se mide contra la cita
+  **más su página y la ruta de su copia** (no los `item_id`): el «188» y la clave del manual que sólo están
+  en el localizador y en la copia salen presentes. La respuesta lo dice con `coverage.evidence`
+  (`ancla-document/v1`) y sube a `remember-result-v4`, `history-result-v3` o `state-result-v3`. La página es la
+  física; si el texto cita la impresa y no coinciden, ese número sigue ausente. Una evidencia de más de
+  16 384 bytes (una ruta enorme) anula la cobertura del registro (`coverage_error`), no se trunca.
 
 **Comprobar y leer.** Se comprueba **al escribir y al auditar**; al leer (`history`, `state show`)
 se sirve el último resultado guardado, con su fecha (`checked_at`), y **no se llama a nadie**.
@@ -547,7 +553,10 @@ el mismo «tabla ilegible»; para reubicar el store, usa la variable):
 `argv` va con rutas absolutas y nunca pasa por un intérprete de órdenes; el proceso corre con
 `PATH=/usr/bin:/bin`, `LC_ALL=C`, directorio `/`, 10 s de plazo y 8 MiB de salida como máximo.
 `custodian` sólo informa. Sin resolutor configurado todo sigue como antes: el ancla queda `pending`
-y no se guarda nada.
+y no se guarda nada. **Para que las citas de conversación resuelvan, el agente debe llevar
+`AN_KLA_AGENT_CLI=claude-code` (o `codex`) y su `AN_KLA_SESSION_ID`** (C0 fija `agent.cli`; el id de
+sesión es `claude-code:<uuid>`). Con otro nombre (p. ej. `claude`), el resolutor contesta
+`session_unavailable` y la cita queda `pending`.
 
 **Los tres momentos.** Al **escribir**, `remember` llama a `resolve` y guarda el resultado en
 `anchor_checks`; **el ancla se guarda siempre como nace** (`pending`, `turn_id` y `seal` nulos) y un
