@@ -20,7 +20,8 @@ from pathlib import Path
 from typing import Any, Callable, Mapping
 
 from .disputes import _valid_disputes
-from .anchor_checks import check_annotations, has_checks, is_conclusive, latest_check
+from .anchor_checks import check_annotations, check_kind, has_checks, has_conversation_result, is_conclusive, is_directive_row, latest_check, normalized
+from .conversation_resolver import served as conversation_served
 from .anchors import ANCHOR_SCHEMA_V2
 from .anchors_audit import AuditSession
 from .anchors_conversation import ConversationVerifier, apply_resolution, check_conversation
@@ -38,6 +39,7 @@ DEFAULT_ANCHOR_LIMIT = 32
 RESULT_SCHEMA = "an-kla/anchors-verify-v1"
 RESULT_SCHEMA_V2 = "an-kla/anchors-verify-v2"  # ADR-0069 §4: sólo con `for_reader`
 RESULT_SCHEMA_V3 = "an-kla/anchors-verify-v3"  # ADR-0072 §2: sólo con `served` o `warnings` (v2 está publicado)
+RESULT_SCHEMA_V4 = "an-kla/anchors-verify-v4"  # ADR-0073 §6: con alguna ancla `conversation` auditada
 CONFIG_FILE = "config.json"
 ENV_DEFAULT_BRANCH = "AN_KLA_DEFAULT_BRANCH"
 _STREAM_RECORD_TYPE = {"facts": "fact", "events": "fact", "episodes": "state"}
@@ -168,19 +170,46 @@ class AnchorServer:
             ctx = ReadContext(self.setting, writer_repo.get("branch"))
             return verify_repo_file(self.repo(), anchor, record_type_of(stream, row), "read", ctx)
         if kind == "conversation":
-            view = apply_resolution(anchor, str(row.get("id", "")), index, self.notes)
-            return check_conversation(view, self.verifier)
+            return self._conversation(row, stream, index, anchor)
         if self.audit is not None:  # the audit calls the adapter and stores the result; reading never does
             attempt = self.audit.audit(self.repo(), stream, str(row.get("id", "")), index, anchor)
-            if not is_conclusive(attempt):  # ADR-0072 §2: say what reading will keep serving, the last conclusive result
-                prior = latest_check(row, stream, index, anchor, self.checks)
-                if prior is not None and is_conclusive(prior):
-                    attempt["served"] = {"freshness": prior["freshness"], "reason": prior["reason"], "checked_at": prior["checked_at"]}
+            prior = latest_check(row, stream, index, anchor, self.checks)
+            prior = prior if prior is not None and is_conclusive(prior) else None
+            # ADR-0072 §2, ADR-0073 §6: ``served`` always says what reading keeps serving: the attempt if it concludes (or nothing
+            # concluded before), else the last conclusive result
+            chosen = prior if prior is not None and not is_conclusive(attempt) else attempt
+            attempt["served"] = {"freshness": chosen["freshness"], "reason": chosen["reason"], "checked_at": chosen["checked_at"]}
             return attempt
         stored = latest_check(row, stream, index, anchor, self.checks)
         if stored is not None:
             return served(stored)
         return not_checked(anchor) if anchor.get("schema") == ANCHOR_SCHEMA_V2 else kind_not_supported(anchor)
+
+    def _conversation(self, row: Mapping[str, Any], stream: str, index: int, anchor: Mapping[str, Any]) -> dict[str, Any]:
+        """A ``conversation`` anchor (ADR-0073).  Those of a ``directive`` are never resolved (§5): as in beta.40.  Otherwise, reading serves
+        the last conclusive stored result of the resolver (else the last), unless a newer ``anchor-resolution-v1`` annotation says otherwise;
+        auditing calls the resolver, stores the attempt and says in ``served`` what reading keeps serving."""
+        record_id = str(row.get("id", ""))
+        view = apply_resolution(anchor, record_id, index, self.notes)
+        old = check_conversation(view, self.verifier)
+        if is_directive_row(row):
+            return old
+        stored = latest_check(row, stream, index, anchor, self.checks)
+        stored = stored if stored is not None and check_kind(stored) == "conversation" else None
+        newer_note = stored is not None and any(
+            normalized(n["enqueued_at"]) > normalized(stored["checked_at"]) for n in self.notes
+            if (n["anchor_resolution"].get("target") or {}).get("record_id") == record_id and (n["anchor_resolution"].get("target") or {}).get("anchor_index") == index
+            and n["enqueued_at"]
+        )
+        if self.audit is None:
+            return old if stored is None or newer_note else conversation_served(stored)
+        prior = stored if stored is not None and is_conclusive(stored) else None
+        attempt = self.audit.audit_conversation(stream, record_id, index, anchor, prior)
+        if attempt is None:  # no resolver: nothing is called and nothing stored, as in beta.40
+            attempt = dict(old)
+        chosen = prior if prior is not None and not is_conclusive(attempt, "conversation") else attempt
+        attempt["served"] = {"freshness": chosen["freshness"], "reason": chosen["reason"], "checked_at": chosen.get("checked_at")}
+        return attempt
 
     def serve(self, stream: str, row: Mapping[str, Any]) -> dict[str, Any]:
         """``disputed``, ``anchors`` (each with its descriptor and checks), ``anchors_freshness``, the stored coverage."""
@@ -244,5 +273,8 @@ def verify_command(store: Any, args: Any, clock: Callable[[], datetime] | None =
         declared["warnings"] = warnings  # ADR-0072 §2: a warning, not a failure: the rc does not change
     versioned = any("for_reader" in r or "recorded" in r or has_rules(r) or has_checks(r) for r in records)
     third = bool(warnings) or any("served" in a for r in records for a in r.get("anchors", []))  # ADR-0072 §2: v2 is published
-    return {"schema": RESULT_SCHEMA_V3 if third else RESULT_SCHEMA_V2 if versioned else RESULT_SCHEMA, "untrusted_memory_data": True,
+    # ADR-0073 §6: v3 is published and closed for ``served``: with a ``conversation`` anchor audited (``served``, never of a directive) it is v4
+    fourth = any("served" in a and a.get("anchor", {}).get("kind") == "conversation" for r in records for a in r.get("anchors", []))
+    return {"schema": RESULT_SCHEMA_V4 if fourth else RESULT_SCHEMA_V3 if third else RESULT_SCHEMA_V2 if versioned else RESULT_SCHEMA,
+            "untrusted_memory_data": True,
             "revision": snapshot.revision_id, **declared, "records": records}

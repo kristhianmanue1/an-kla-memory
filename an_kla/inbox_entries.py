@@ -29,6 +29,7 @@ from .inbox import (
     ENTRY_SCHEMA_V2,
     ENTRY_SCHEMA_V3,
     ENTRY_SCHEMA_V4,
+    ENTRY_SCHEMA_V5,
     ALL_KINDS,
     MAX_TEXT_BYTES,
     REASON_SUFFIX,
@@ -164,7 +165,7 @@ def _validate_v3(data: dict[str, Any]) -> None:
     operation = data.get("operation", "remember")
     if operation not in OPERATIONS or ("operation" in data and operation == "remember"):
         raise Reject(INVALID, ["operation"])
-    v4 = data.get("schema") == ENTRY_SCHEMA_V4
+    v4 = data.get("schema") in (ENTRY_SCHEMA_V4, ENTRY_SCHEMA_V5)  # v5 is v4 plus a resolver result (ADR-0073 §2)
     if (operation == "anchor_check") != isinstance(data.get("anchor_check"), dict) or (operation == "anchor_check" and not v4):
         raise Reject(INVALID, ["anchor_check"])
     verdict = data.get("verdict")
@@ -190,13 +191,13 @@ def _validate(data: Any) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise Reject(INVALID, ["not_object"])
     keys = set(data)
-    v4 = data.get("schema") == ENTRY_SCHEMA_V4
-    v3 = data.get("schema") in (ENTRY_SCHEMA_V3, ENTRY_SCHEMA_V4)
+    v4 = data.get("schema") in (ENTRY_SCHEMA_V4, ENTRY_SCHEMA_V5)  # v5 is v4 plus a resolver result (ADR-0073 §2)
+    v3 = data.get("schema") in (ENTRY_SCHEMA_V3, ENTRY_SCHEMA_V4, ENTRY_SCHEMA_V5)
     v2 = data.get("schema") == ENTRY_SCHEMA_V2 or (v3 and "slot" in data)
     optional = {"target_id"} | ({"slot"} if v2 else set()) | (_V3_KEYS if v3 else set()) | (_V4_KEYS if v4 else set())
     if not _REQUIRED <= keys or not keys <= _REQUIRED | optional:
         raise Reject(INVALID, ["keys"])
-    if data["schema"] not in (ENTRY_SCHEMA, ENTRY_SCHEMA_V2, ENTRY_SCHEMA_V3, ENTRY_SCHEMA_V4):
+    if data["schema"] not in (ENTRY_SCHEMA, ENTRY_SCHEMA_V2, ENTRY_SCHEMA_V3, ENTRY_SCHEMA_V4, ENTRY_SCHEMA_V5):
         raise Reject(INVALID, ["schema"])
     if data.get("kind") == "directive" and not v4:  # ADR-0069 §1: `directive` es de v4
         raise Reject(INVALID, ["kind"])

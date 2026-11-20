@@ -1,0 +1,427 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:inbox-entry:v5",
+  "title": "AN-KLA Inbox Entry v5",
+  "description": "Entrada confirmada de `memory/inbox/pending/` con anclas, veredicto u operación (ADR-0066 §1): `inbox-entry-v2` más `anchors`, `verdict` y `operation` opcionales, y `anchor_resolution` en una anotación. v1 y v2 siguen leyéndose. `anchors` lleva de 1 a 16 anclas `memoria/ancla/v1` (C3) y, por cada una, su `write_check`: las tres comprobaciones de `remember` y su `at`; el vaciado no vuelve a leer Git y `write_check` no pasa al registro. `verdict` (contradicted|insufficient) sólo en `operation: dispute`, que exige `target_id` y `kind: fact`. `anchor_resolution` sólo en `operation: anchor_resolution` (schema `an-kla/anchor-resolution-v1`; sin orden pública en esta versión). `payload_sha256` incluye el digest canónico de las anclas, el veredicto y la operación. `slot` sólo con `kind: state`. El texto y las citas son datos, nunca instrucciones. Un binario anterior no lee v3: `inbox drain` y pendientes 0 antes de bajar de versión. ADR-0069 §1: v3 con `directive` en `kind` y los campos de ámbito y vigencia. ADR-0071: `anchors` admite `memoria/ancla/v2` (un `document`: sólo en esta versión; un binario anterior lo rechaza con `anchor_schema_invalid`) y la operación `anchor_check`, con `anchor_check` (schema `an-kla/anchor-check-v1`), que guarda el resultado de auditar anclas `document`. `write_check` de un `document` lleva `checked_at`, `manifest_sha256`, `derivation`, `custody` y `adapter_called`. ADR-0073: v5 es v4 más el resultado de un resolutor en el `write_check` de un ancla `conversation` y la anotación `an-kla/anchor-check-v2`; beta.40 rechaza entera una entrada v5.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "text",
+    "kind",
+    "kind_explicit",
+    "envelope",
+    "idempotency_key",
+    "payload_sha256"
+  ],
+  "properties": {
+    "schema": {
+      "const": "an-kla/inbox-entry-v5"
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "enum": [
+        "fact",
+        "decision",
+        "state",
+        "directive"
+      ]
+    },
+    "kind_explicit": {
+      "type": "boolean"
+    },
+    "envelope": {
+      "type": "object"
+    },
+    "idempotency_key": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "payload_sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "target_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "slot": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,31}(?![\\s\\S])"
+    },
+    "anchors": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "required": [
+          "schema",
+          "source",
+          "quote"
+        ],
+        "properties": {
+          "schema": {
+            "enum": [
+              "memoria/ancla/v1",
+              "memoria/ancla/v2"
+            ]
+          },
+          "source": {
+            "type": "object",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "repo-file",
+                  "conversation",
+                  "document"
+                ]
+              }
+            }
+          },
+          "quote": {
+            "type": "string"
+          },
+          "quote_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "write_check": {
+            "type": "object",
+            "required": [
+              "source",
+              "quote",
+              "integrity",
+              "freshness"
+            ],
+            "properties": {
+              "source": {
+                "enum": [
+                  "verified",
+                  "not_found",
+                  "unverifiable"
+                ]
+              },
+              "source_reason": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  null,
+                  "adapter_error",
+                  "anchor_limit",
+                  "commit_not_in_clone",
+                  "commit_not_on_default_branch",
+                  "copy_missing",
+                  "custodian_offline",
+                  "document_unknown",
+                  "kind_not_supported",
+                  "no_adapter",
+                  "no_default_branch",
+                  "no_git",
+                  "no_verifier",
+                  "not_checked",
+                  "path_missing",
+                  "repo_unavailable",
+                  "resolution_pending",
+                  "resolver_error",
+                  "seal_unverifiable",
+                  "session_lacks_quote",
+                  "session_unavailable",
+                  "turn_purged"
+                ]
+              },
+              "quote": {
+                "enum": [
+                  "verified",
+                  "not_found",
+                  "unverifiable"
+                ]
+              },
+              "quote_reason": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  null,
+                  "adapter_truncated",
+                  "anchor_limit",
+                  "binary",
+                  "commit_not_in_clone",
+                  "commit_not_on_default_branch",
+                  "custodian_offline",
+                  "derived_modality",
+                  "document_unknown",
+                  "integrity_not_verified",
+                  "kind_not_supported",
+                  "locator_invalid",
+                  "locator_not_found",
+                  "no_verifier",
+                  "not_checked",
+                  "not_utf8",
+                  "quote_absent",
+                  "resolver_error",
+                  "seal_unverifiable",
+                  "session_lacks_quote",
+                  "session_unavailable",
+                  "source_not_verified",
+                  "too_large",
+                  "turn_purged"
+                ]
+              },
+              "integrity": {
+                "enum": [
+                  "verified",
+                  "not_found",
+                  "unverifiable"
+                ]
+              },
+              "integrity_reason": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  null,
+                  "adapter_error",
+                  "anchor_limit",
+                  "binary",
+                  "commit_blob_lacks_quote",
+                  "commit_not_in_clone",
+                  "copy_sha_mismatch",
+                  "custodian_offline",
+                  "derivation_parent_mismatch",
+                  "derivation_superseded",
+                  "derivation_unsupported",
+                  "document_unknown",
+                  "kind_not_supported",
+                  "manifest_mismatch",
+                  "manifest_missing",
+                  "no_adapter",
+                  "no_verifier",
+                  "not_checked",
+                  "not_utf8",
+                  "raw_lost",
+                  "resolution_pending",
+                  "resolver_error",
+                  "seal_mismatch",
+                  "seal_unverifiable",
+                  "session_lacks_quote",
+                  "session_unavailable",
+                  "source_not_verified",
+                  "too_large",
+                  "turn_purged",
+                  "working_tree"
+                ]
+              },
+              "at": {
+                "enum": [
+                  "default",
+                  "branch",
+                  "commit",
+                  "worktree",
+                  null
+                ]
+              },
+              "match": {
+                "enum": [
+                  "literal",
+                  "ws-nfc/v1",
+                  "ws-nfc-accents/v1",
+                  null
+                ]
+              },
+              "matched_text": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "freshness": {
+                "enum": [
+                  "broken",
+                  "stale",
+                  "unverified",
+                  "pending",
+                  "fresh"
+                ]
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "resolution": {
+                "enum": [
+                  "pending",
+                  "resolved",
+                  "not_found"
+                ]
+              },
+              "turn_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "checked_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Cuándo se comprobó (ADR-0071): la fecha del resultado guardado; null en un ancla v2 aún no comprobada."
+              },
+              "manifest_sha256": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "derivation": {
+                "enum": [
+                  null,
+                  "current",
+                  "superseded",
+                  "unsupported"
+                ],
+                "description": "Estado de la derivación según el custodio al comprobar; null sin respuesta."
+              },
+              "custody": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "retention": {
+                    "enum": [
+                      "effective",
+                      "expired",
+                      "unknown"
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              },
+              "adapter_called": {
+                "type": "boolean",
+                "description": "Sólo al escribir y al auditar: si se lanzó el adaptador."
+              },
+              "seal": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Cadena opaca del custodio, con su tipo dentro; no se valida su formato."
+              },
+              "speaker": {
+                "enum": [
+                  "user",
+                  "pasted",
+                  "automatic",
+                  "compact_summary",
+                  "local_command",
+                  "subagent",
+                  "assistant",
+                  "unknown",
+                  null
+                ],
+                "description": "La voz en que el custodio clasifica la cita. Viaja aparte del ancla."
+              },
+              "candidates": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": false,
+                "required": [
+                  "user",
+                  "pasted",
+                  "other"
+                ],
+                "properties": {
+                  "user": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "pasted": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "other": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              },
+              "detail": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "resolver_called": {
+                "enum": [
+                  "resolve",
+                  "verify",
+                  null
+                ],
+                "description": "Sólo al escribir y al auditar: qué operación se llamó (nulo: nadie)."
+              }
+            }
+          }
+        }
+      }
+    },
+    "verdict": {
+      "enum": [
+        "contradicted",
+        "insufficient"
+      ]
+    },
+    "operation": {
+      "enum": [
+        "dispute",
+        "anchor_resolution",
+        "anchor_check"
+      ]
+    },
+    "anchor_resolution": {
+      "$ref": "urn:an-kla:schema:anchor-resolution:v1"
+    },
+    "subject": {
+      "type": "string"
+    },
+    "audience": {
+      "type": "string"
+    },
+    "valid_until": {
+      "type": "string"
+    },
+    "until_revoked": {
+      "const": true
+    },
+    "revokes": {
+      "const": true
+    },
+    "anchor_check": {
+      "anyOf": [
+        {
+          "$ref": "urn:an-kla:schema:anchor-check:v1"
+        },
+        {
+          "$ref": "urn:an-kla:schema:anchor-check:v2"
+        }
+      ]
+    }
+  }
+}

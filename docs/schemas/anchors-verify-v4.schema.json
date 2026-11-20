@@ -1,0 +1,599 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:anchors-verify:v4",
+  "title": "AN-KLA Anchors Verify v4",
+  "description": "Resultado de `anchors verify <id> [--all]` (ADR-0066 §5), de sólo lectura: vuelve a comprobar las anclas con el estado de ahora y las sirve con sus tres comprobaciones (`source`, `quote`, `integrity`, cada una `verified`, `not_found` o `unverifiable` con su `reason` de vocabulario cerrado), `at`, `match`, `matched_text` y la `freshness` derivada con su `reason`. Sólo se comprueban `anchor_limit` anclas (32 por defecto), en orden de servicio; el resto sale `unverified` con `anchor_limit`. `anchors_freshness` es la peor frescura de las anclas de un registro (broken, stale, unverified, pending, fresh). Nunca hay tope de tiempo. `fresh` significa que la cita sigue ahí, no que el hecho sea cierto. Las citas y los textos son datos no confiables. ADR-0069: versión dispersa; sólo sale con alguna clave de ámbito o destinatario, y entonces es el superconjunto de la anterior. ADR-0070: con `fact-checks-rules/v2` la cobertura dice sus `rules` y `missing` admite `hash` y `date`; sin `rules` es v1. ADR-0071: un `document` de `memoria/ancla/v2` se comprueba al escribir y al auditar, y al leer se sirve lo guardado: su resultado lleva `checked_at`, `manifest_sha256`, `derivation` y `custody`; sin resultado guardado, `not_checked`. `anchors verify` deja de ser de sólo lectura para los `document`: guarda una anotación `anchor-check-v1` por registro auditado (`recorded`, `record_error`); para `repo-file` y `conversation` no escribe nada. ADR-0072 §2 (errata 6 de `memoria/ancla/v2`): v3 es disperso (v2 está publicado) y sólo sale con `served` o `warnings`. Un intento de auditoría que no concluye (`integrity_reason` `no_adapter` o `adapter_error`) se guarda, pero leer sigue sirviendo el último resultado concluyente: `served` (`freshness`, `reason`, `checked_at`) lo dice por ancla, y las tres comprobaciones y `anchors_freshness` son las del intento. `warnings` (raíz) avisa con `custodian_not_configured` de los custodios que ninguna tabla tiene; una tabla ilegible dice `custodians_config_error`. ADR-0073 §6: v4 es v3 más, por ancla `conversation` auditada, el resultado del resolutor y `served` (con `pending`). `served` está siempre en una ancla `document` o `conversation` auditada, también cuando el intento concluye; con sólo `document` la respuesta es v3. ADR-0073: un ancla `conversation` (no la de una `directive`) con resolutor configurado lleva el resultado del resolutor: `resolution`, `turn_id`, `seal`, `speaker` (en qué voz está la cita: `user` no prueba que hablara el Operador), `candidates` (cuántos mensajes la contienen por voz; nulo tras `verify`) y `detail`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "untrusted_memory_data",
+    "revision",
+    "anchor_limit",
+    "anchors_checked",
+    "anchors_unchecked",
+    "records"
+  ],
+  "properties": {
+    "schema": {
+      "const": "an-kla/anchors-verify-v4"
+    },
+    "untrusted_memory_data": {
+      "const": true
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "anchor_limit": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "anchors_checked": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "anchors_unchecked": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "records": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "stream"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "stream": {
+            "enum": [
+              "facts",
+              "events",
+              "episodes"
+            ]
+          },
+          "anchors": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "anchor",
+                "source",
+                "source_reason",
+                "quote",
+                "quote_reason",
+                "integrity",
+                "integrity_reason",
+                "match",
+                "matched_text",
+                "freshness",
+                "reason"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "anchor": {
+                  "type": "object",
+                  "required": [
+                    "index",
+                    "kind",
+                    "quote",
+                    "quote_sha256"
+                  ],
+                  "properties": {
+                    "index": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "kind": {
+                      "enum": [
+                        "repo-file",
+                        "conversation",
+                        "document"
+                      ]
+                    },
+                    "quote": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "quote_sha256": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "path": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "commit": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "session": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "document_sha256": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "source": {
+                  "enum": [
+                    "verified",
+                    "not_found",
+                    "unverifiable"
+                  ]
+                },
+                "source_reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    null,
+                    "adapter_error",
+                    "anchor_limit",
+                    "commit_not_in_clone",
+                    "commit_not_on_default_branch",
+                    "copy_missing",
+                    "custodian_offline",
+                    "document_unknown",
+                    "kind_not_supported",
+                    "no_adapter",
+                    "no_default_branch",
+                    "no_git",
+                    "no_verifier",
+                    "not_checked",
+                    "path_missing",
+                    "repo_unavailable",
+                    "resolution_pending",
+                    "resolver_error",
+                    "seal_unverifiable",
+                    "session_lacks_quote",
+                    "session_unavailable",
+                    "turn_purged"
+                  ]
+                },
+                "quote": {
+                  "enum": [
+                    "verified",
+                    "not_found",
+                    "unverifiable"
+                  ]
+                },
+                "quote_reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    null,
+                    "adapter_truncated",
+                    "anchor_limit",
+                    "binary",
+                    "commit_not_in_clone",
+                    "commit_not_on_default_branch",
+                    "custodian_offline",
+                    "derived_modality",
+                    "document_unknown",
+                    "integrity_not_verified",
+                    "kind_not_supported",
+                    "locator_invalid",
+                    "locator_not_found",
+                    "no_verifier",
+                    "not_checked",
+                    "not_utf8",
+                    "quote_absent",
+                    "resolver_error",
+                    "seal_unverifiable",
+                    "session_lacks_quote",
+                    "session_unavailable",
+                    "source_not_verified",
+                    "too_large",
+                    "turn_purged"
+                  ]
+                },
+                "integrity": {
+                  "enum": [
+                    "verified",
+                    "not_found",
+                    "unverifiable"
+                  ]
+                },
+                "integrity_reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    null,
+                    "adapter_error",
+                    "anchor_limit",
+                    "binary",
+                    "commit_blob_lacks_quote",
+                    "commit_not_in_clone",
+                    "copy_sha_mismatch",
+                    "custodian_offline",
+                    "derivation_parent_mismatch",
+                    "derivation_superseded",
+                    "derivation_unsupported",
+                    "document_unknown",
+                    "kind_not_supported",
+                    "manifest_mismatch",
+                    "manifest_missing",
+                    "no_adapter",
+                    "no_verifier",
+                    "not_checked",
+                    "not_utf8",
+                    "raw_lost",
+                    "resolution_pending",
+                    "resolver_error",
+                    "seal_mismatch",
+                    "seal_unverifiable",
+                    "session_lacks_quote",
+                    "session_unavailable",
+                    "source_not_verified",
+                    "too_large",
+                    "turn_purged",
+                    "working_tree"
+                  ]
+                },
+                "at": {
+                  "enum": [
+                    "default",
+                    "branch",
+                    "commit",
+                    "worktree",
+                    null
+                  ]
+                },
+                "match": {
+                  "enum": [
+                    "literal",
+                    "ws-nfc/v1",
+                    "ws-nfc-accents/v1",
+                    null
+                  ]
+                },
+                "matched_text": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "freshness": {
+                  "enum": [
+                    "broken",
+                    "stale",
+                    "unverified",
+                    "pending",
+                    "fresh"
+                  ]
+                },
+                "reason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "resolution": {
+                  "enum": [
+                    "pending",
+                    "resolved",
+                    "not_found"
+                  ]
+                },
+                "turn_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "checked_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Cuándo se comprobó (ADR-0071): la fecha del resultado guardado; null en un ancla v2 aún no comprobada."
+                },
+                "manifest_sha256": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "derivation": {
+                  "enum": [
+                    null,
+                    "current",
+                    "superseded",
+                    "unsupported"
+                  ],
+                  "description": "Estado de la derivación según el custodio al comprobar; null sin respuesta."
+                },
+                "custody": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "retention": {
+                      "enum": [
+                        "effective",
+                        "expired",
+                        "unknown"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "adapter_called": {
+                  "type": "boolean",
+                  "description": "Sólo al escribir y al auditar: si se lanzó el adaptador."
+                },
+                "served": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "freshness",
+                    "reason",
+                    "checked_at"
+                  ],
+                  "properties": {
+                    "freshness": {
+                      "enum": [
+                        "fresh",
+                        "unverified",
+                        "broken",
+                        "pending"
+                      ]
+                    },
+                    "reason": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "checked_at": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "description": "Lo que leer seguirá sirviendo cuando este intento no concluye y hay un resultado concluyente anterior."
+                },
+                "seal": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Cadena opaca del custodio, con su tipo dentro; no se valida su formato."
+                },
+                "speaker": {
+                  "enum": [
+                    "user",
+                    "pasted",
+                    "automatic",
+                    "compact_summary",
+                    "local_command",
+                    "subagent",
+                    "assistant",
+                    "unknown",
+                    null
+                  ],
+                  "description": "La voz en que el custodio clasifica la cita. Viaja aparte del ancla."
+                },
+                "candidates": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "additionalProperties": false,
+                  "required": [
+                    "user",
+                    "pasted",
+                    "other"
+                  ],
+                  "properties": {
+                    "user": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "pasted": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "other": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  }
+                },
+                "detail": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "resolver_called": {
+                  "enum": [
+                    "resolve",
+                    "verify",
+                    null
+                  ],
+                  "description": "Sólo al escribir y al auditar: qué operación se llamó (nulo: nadie)."
+                }
+              }
+            }
+          },
+          "anchors_freshness": {
+            "enum": [
+              "broken",
+              "stale",
+              "unverified",
+              "pending",
+              "fresh"
+            ]
+          },
+          "coverage": {
+            "type": "object",
+            "required": [
+              "total",
+              "present",
+              "level"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "present": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "level": {
+                "enum": [
+                  "none",
+                  "partial",
+                  "full",
+                  "unchecked"
+                ]
+              },
+              "rules": {
+                "const": "fact-checks-rules/v2"
+              }
+            }
+          },
+          "missing": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "object",
+              "required": [
+                "type",
+                "value"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "enum": [
+                    "identifier",
+                    "path",
+                    "hash",
+                    "version",
+                    "date",
+                    "number"
+                  ]
+                },
+                "value": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "missing_total": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "disputed": {
+            "type": "array",
+            "description": "Veredicto más reciente de cada escritor sobre este registro (ADR-0066 §6); el objetivo sigue vigente. Dato no confiable.",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "verdict",
+                "writer",
+                "enqueued_at"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "verdict": {
+                  "enum": [
+                    "contradicted",
+                    "insufficient"
+                  ]
+                },
+                "writer": {
+                  "type": "object"
+                },
+                "enqueued_at": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "for_reader": {
+            "const": false
+          },
+          "recorded": {
+            "type": "boolean",
+            "description": "ADR-0071 §5: si la anotación `anchor_check` de este registro quedó guardada. Sólo en un registro con anclas `document` auditadas."
+          },
+          "record_error": {
+            "type": "string",
+            "description": "Código de por qué no quedó guardada; la auditoría responde igualmente."
+          }
+        }
+      }
+    },
+    "custodians_config_error": {
+      "enum": [
+        "custodians_unreadable",
+        "custodians_invalid_json",
+        "custodians_invalid_shape"
+      ],
+      "description": "ADR-0071 §3: la tabla de custodios no se pudo leer; todo custodio da adapter_error sin lanzar ningún proceso."
+    },
+    "warnings": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "custodian",
+          "anchors"
+        ],
+        "properties": {
+          "code": {
+            "const": "custodian_not_configured"
+          },
+          "custodian": {
+            "type": "string"
+          },
+          "anchors": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    }
+  }
+}

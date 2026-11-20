@@ -19,7 +19,7 @@ from datetime import datetime
 from typing import Callable
 
 from . import directive as directive_mod
-from .anchor_checks import has_checks
+from .anchor_checks import has_checks, has_conversation_result
 from .anchors_conversation import ConversationVerifier
 from .anchors_coverage_v2 import has_rules
 from .anchors_read import AnchorServer
@@ -34,6 +34,7 @@ from .store import STREAMS
 
 RESULT_SCHEMA = "an-kla/history-result-v1"
 RESULT_SCHEMA_V2 = "an-kla/history-result-v2"  # ADR-0069 §4: sólo con `for_reader`, `subject`, `audience` o `directive`
+RESULT_SCHEMA_V3 = "an-kla/history-result-v3"  # ADR-0073 §6: sólo con el resultado de un resolutor en alguna ancla `conversation`
 SCOPE_NODE_KEYS = ("for_reader", "subject", "audience", "directive")
 DEFAULT_LIMIT = 200
 DEFAULT_BUDGET = 16000
@@ -124,7 +125,7 @@ def _response(
     scoped = any(key in node for node in nodes for key in SCOPE_NODE_KEYS) or any(has_rules(node) or has_checks(node) for node in nodes)  # ADR-0070 §3, ADR-0071 §6
     return {
         **(declared or {}),
-        "schema": RESULT_SCHEMA_V2 if scoped else RESULT_SCHEMA,  # ADR-0069 §4: v2 disperso
+        "schema": RESULT_SCHEMA_V3 if any(has_conversation_result(n) for n in nodes) else RESULT_SCHEMA_V2 if scoped else RESULT_SCHEMA,  # ADR-0069 §4, ADR-0073 §6: disperso
         "untrusted_memory_data": True,
         "revision": revision,
         "root": root,

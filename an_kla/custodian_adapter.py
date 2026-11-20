@@ -33,6 +33,7 @@ from .anchors_document_v2 import Answer, build_request, validate_response
 
 CONFIG_FILE = "config.json"
 TABLE_KEY = "custodians"
+RESOLVER_KEY = "conversation_resolver"
 ENV_TABLE = "AN_KLA_CUSTODIANS"
 MAX_STDOUT_BYTES = 8 * 1024 * 1024  # more is a failure
 TIMEOUT_SECONDS = 10.0  # the contract's deadline; a test may pass a shorter one (erratum 1, A7)
@@ -74,23 +75,37 @@ def _read_json(path: Path) -> Any:
         raise TableError("custodians_invalid_json") from None
 
 
-def load_table(store_root: Any, env: Mapping[str, str] | None = None) -> dict[str, tuple[str, ...]]:
-    """The table of the Operator.  ``AN_KLA_CUSTODIANS``, if defined, replaces the store's whole; raises :class:`TableError`."""
+def parse_resolver(entry: Any) -> tuple[str, tuple[str, ...]]:
+    """``(custodian, argv)`` from the value of ``conversation_resolver`` (ADR-0073 §1): a custodian id, only to inform, and an ``argv`` as in the table."""
+    if not isinstance(entry, dict) or set(entry) != {"custodian", "argv"} or not isinstance(entry["custodian"], str) or not CUSTODIAN_ID.fullmatch(entry["custodian"]):
+        raise TableError("custodians_invalid_shape")
+    return entry["custodian"], parse_table({entry["custodian"]: {"argv": entry["argv"]}})[entry["custodian"]]
+
+
+def load_config(store_root: Any, env: Mapping[str, str] | None = None) -> tuple[dict[str, tuple[str, ...]], tuple[str, tuple[str, ...]] | None]:
+    """The table of custodians and the conversation resolver (``None``: no resolver) of the Operator.  ``AN_KLA_CUSTODIANS``, if
+    defined, replaces the store's file whole; raises :class:`TableError`.  One file, one error: a file that cannot be read says so for both."""
     env = os.environ if env is None else env
     if ENV_TABLE in env:
         if not env[ENV_TABLE]:
             raise TableError("custodians_unreadable")
         document = _read_json(Path(env[ENV_TABLE]))
-        if not isinstance(document, dict) or TABLE_KEY not in document:
+        if not isinstance(document, dict) or not (TABLE_KEY in document or RESOLVER_KEY in document):
             raise TableError("custodians_invalid_shape")
-        return parse_table(document[TABLE_KEY])
-    path = Path(store_root, CONFIG_FILE)
-    if not path.exists():
-        return {}  # no config: nothing configured, no adapter
-    document = _read_json(path)
-    if not isinstance(document, dict):
-        raise TableError("custodians_invalid_shape")
-    return parse_table(document[TABLE_KEY]) if TABLE_KEY in document else {}
+    else:
+        path = Path(store_root, CONFIG_FILE)
+        if not path.exists():
+            return {}, None  # no config: nothing configured, no adapter and no resolver
+        document = _read_json(path)
+        if not isinstance(document, dict):
+            raise TableError("custodians_invalid_shape")
+    table = parse_table(document[TABLE_KEY]) if TABLE_KEY in document else {}
+    return table, parse_resolver(document[RESOLVER_KEY]) if RESOLVER_KEY in document else None
+
+
+def load_table(store_root: Any, env: Mapping[str, str] | None = None) -> dict[str, tuple[str, ...]]:
+    """The table of the Operator (see :func:`load_config`)."""
+    return load_config(store_root, env)[0]
 
 
 def _kill(proc: subprocess.Popen[bytes]) -> None:
@@ -193,13 +208,42 @@ class Adapters:
     table: dict[str, tuple[str, ...]] = field(default_factory=dict)
     config_error: str | None = None
     timeout: float = TIMEOUT_SECONDS
+    resolver: tuple[str, tuple[str, ...]] | None = None  # ADR-0073 §1: (custodian, argv) of the single conversation resolver
 
     @classmethod
     def for_store(cls, store: Any, env: Mapping[str, str] | None = None, timeout: float = TIMEOUT_SECONDS) -> "Adapters":
         try:
-            return cls(load_table(store.store_root, env), None, timeout)
+            table, resolver = load_config(store.store_root, env)
+            return cls(table, None, timeout, resolver)
         except TableError as error:
             return cls({}, str(error), timeout)
+
+    def resolver_state(self) -> str | None:
+        """``None`` if a resolver is configured; ``"unreadable"`` if the file could not be read; ``"absent"`` otherwise (no resolver)."""
+        if self.config_error is not None:
+            return "unreadable"
+        return None if self.resolver is not None else "absent"
+
+    def call_resolver(self, request: dict[str, Any], validate: Any) -> Answer | None:
+        """Ask the resolver: ``None`` for "no resolver", else an :class:`Answer` (``called`` false when the file cannot be read); never raises.
+        ``validate`` checks the answer's form and coherence (:mod:`an_kla.conversation_resolver`): any violation is a failure."""
+        if self.config_error is not None:
+            return Answer(failure=self.config_error, called=False)
+        if self.resolver is None:
+            return None
+        payload = json.dumps(request, ensure_ascii=False).encode("utf-8")
+        failure, out = run_process(list(self.resolver[1]), payload, self.timeout)
+        if failure:
+            return Answer(failure=failure)
+        try:
+            response = json.loads(out.decode("utf-8"), object_pairs_hook=_no_duplicates, parse_constant=_no_constant)
+        except (UnicodeDecodeError, ValueError, RecursionError, MemoryError):
+            return Answer(failure="bad_json")
+        if not isinstance(response, dict):
+            return Answer(failure="bad_json")
+        if validate(response) is not None:
+            return Answer(failure="invalid_response")
+        return Answer(response=response)
 
     def call(self, source: Mapping[str, Any]) -> Answer | None:
         """Ask the adapter of ``source``'s custodian: ``None`` for "no adapter", else an :class:`Answer`; never raises."""
