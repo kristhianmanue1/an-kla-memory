@@ -12,6 +12,29 @@ en fase de pre-release `0.1.0`.
 
 ## [Sin publicar]
 
+**Anclas `document` de `memoria/ancla/v2`, adaptador de custodio y resultado guardado (ADR-0071)**:
+se puede citar una página de un documento custodiado (p. ej. un PDF de skopos) con comprobación real,
+sin que an-kla lea archivos del custodio. Un ejecutable externo por custodio, el **adaptador**
+(`memoria/custodio-adaptador/v1`), responde por el documento, el manifiesto, la derivación y los
+elementos de la página; sale de la tabla `custodians` de `<store>/config.json` (o de
+`AN_KLA_CUSTODIANS`), con `argv` sin intérprete de órdenes, entorno mínimo, directorio `/`, plazo de
+10 s y tope de 8 MiB. Sólo `document` se escribe como v2 (`--anchor-document`, `-custodian`,
+`-derivation`, `-manifest`, `-modality`, `-page`, `-item`, `-copy`, o `--anchor-file`); `repo-file` y
+`conversation` siguen como v1 y se aceptan con `schema` v2. Escribir sigue el orden de rechazos del
+ADR y la copia local se lee por Git de la rama por defecto, con sha256 por bloques. **Se comprueba al
+escribir y al auditar; al leer se sirve lo guardado y no se llama a nadie**: el registro lleva
+`anchor_checks` y `anchors verify` **guarda** una anotación `an-kla/anchor-check-v1` por registro
+auditado (`recorded`, `record_error`), sólo para `document`: para `repo-file`, `conversation` y un store
+sin anclas `document` sigue sin escribir nada. Un `document` v1 ya guardado se lee byte a byte como en
+beta.38 hasta su primera auditoría (`kind_not_supported`); un v2 nunca comprobado sale `not_checked`.
+Implementación propia derivada del contrato y sus 61 casos exigibles (`an_kla/anchors_document_v2.py`,
+`custodian_adapter.py`); `anchors_document.py` (v1) se sustituye. Esquemas: `anchor-check-v1`, nuevo, y
+`inbox-entry-v4`, `remember-result-v2`, `history-result-v2`, `state-result-v2` y `anchors-verify-v2`
+ampliados antes de su primera publicación. Vuelta atrás: `inbox drain` y `pending` a 0 antes de bajar;
+beta.38 lee un store con anclas v2 sin romper. Las anotaciones de auditoría crecen con cada auditoría
+y la compactación de hoy no las poda. Detalle en
+[`docs/architecture/0071-anclas-documento-v2.md`](docs/architecture/0071-anclas-documento-v2.md).
+
 **Cobertura con `fact-checks-rules/v2` y modo `state` (ADR-0070, errata 4 de C3; cierra #239)**:
 todo lo que se escribe (`remember`, el vaciado de la bandeja y `dispute`) calcula la cobertura
 con las reglas v2 (`an_kla/anchors_coverage_v2.py`, derivada de los 74 vectores de la errata): una

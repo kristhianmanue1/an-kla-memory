@@ -428,10 +428,13 @@ sin fiarse de quien lo escribió y sin ningún modelo, si la cita sigue ahí.
   resto sale `unverified`/`anchor_limit` y la salida declara cuántas se
   comprobaron. No hay tope de tiempo. Leer nunca arranca un custodio.
   `anchors_freshness` de un registro es la peor de sus anclas. `retrieve` no cambia.
+  Un `document` es la excepción: no se vuelve a comprobar al leer, se sirve lo guardado
+  (ver «Citar un documento custodiado»).
 - **`conversation` y `document`**: un ancla de conversación nace `pending` y se
   guarda siempre así; hasta que exista el resolutor de C2 no hay orden que la
   resuelva (el esquema `anchor-resolution-v1` y su vista ya están). Un `document`
-  bien formado se guarda intacto y responde `unverified`/`kind_not_supported`.
+  de `memoria/ancla/v1` ya guardado sigue respondiendo `unverified`/`kind_not_supported`
+  hasta su primera auditoría.
 - **`dispute`**: guarda un dictamen externo (`contradicted` o `insufficient`; un
   `supported` o `not_reviewed` da `dispute_verdict_invalid`) como una disputa con
   la forma de ADR-0063 D3. El objetivo sigue vigente, también un `state`: nunca se
@@ -442,7 +445,66 @@ sin fiarse de quien lo escribió y sin ningún modelo, si la cita sigue ahí.
   `remember_id_collision` (`idempotency_key_other_anchors`).
 - Las entradas con anclas se encolan como `inbox-entry-v3`; un binario anterior no
   las lee: `inbox drain` y `pending` 0 antes de bajar de versión. Si un `inbox
-  drain` anterior ya las rechazó, ver «Rechazos de la bandeja».
+  drain` anterior ya las rechazó, ver «Rechazos de la bandeja». Las que llevan un
+  `document` de `memoria/ancla/v2` (o la anotación de una auditoría) van como `inbox-entry-v4`.
+
+### Citar un documento custodiado (`document`)
+
+(ADR-0071, contrato `memoria/ancla/v2`.) Una página de un PDF que guarda un custodio
+(p. ej. skopos) se cita con comprobación real, sin que an-kla lea los archivos del custodio:
+un programa que configura el Operador, el **adaptador**, responde por el documento, su
+derivación y los elementos de la página.
+
+**Configurar el custodio.** Una tabla `custodians` en `<store>/config.json` (la misma que
+lleva `default_branch`), o en el archivo al que apunte `AN_KLA_CUSTODIANS`, que la sustituye entera:
+
+```json
+{"custodians": {"skopos": {"argv": ["/ruta/python", "-B", "/ruta/adaptador.py", "--runs-root", "/ruta/runs"]}}}
+```
+
+`argv` es una lista con rutas absolutas; nunca pasa por un intérprete de órdenes, y el nombre del
+custodio (`[a-z0-9][a-z0-9_-]{0,31}`) es sólo la clave de la tabla. El adaptador corre con
+`PATH=/usr/bin:/bin`, `LC_ALL=C`, directorio `/`, 10 s de plazo y 8 MiB de salida como máximo.
+Un custodio que no está en la tabla es «sin adaptador»; una tabla que no se puede leer da
+`adapter_error` en todos y la respuesta lo dice (`custodians_config_error`).
+
+**Citar.** Con el atajo (repetible, en grupo), o con `--anchor-file` y el ancla completa:
+
+```bash
+python3 -m an_kla remember --text-file - --kind fact \
+  --anchor-document <sha256> --anchor-custodian skopos --anchor-derivation <derivation_id> \
+  --anchor-manifest <sha256> --anchor-modality native_text --anchor-page 188 \
+  --anchor-item i-12 --anchor-item i-13 --anchor-copy docs/fuentes/manual.pdf \
+  --anchor-quote "El personal de base tendrá derecho a veinte días de vacaciones" < texto.txt
+```
+
+- La **página** es la física del archivo (1…N) y es obligatoria (`anchor_locator_required`). Sin
+  `--anchor-item` la cita se busca en toda la página (`{page}`); con uno, en ese elemento; con
+  varios, en ellos, **en el orden del custodio**. En OCR casi ninguna cita cabe en un solo
+  elemento: lo normal es citar por varios elementos o por `{page}`. La cita no cruza páginas.
+- La cita mide de 40 a 300 bytes sin contar espacio en blanco. Una cita `visual` no se comprueba
+  (`derived_modality`).
+- `--anchor-copy` es opcional: la copia local, **leída por Git de la rama por defecto** al escribir
+  y al auditar, nunca del árbol de trabajo. Una copia añadida en una rama aún no integrada cuenta
+  como ausente (`anchor_copy_not_found`); se omite la copia o se integra antes. El `repo` de la
+  copia es el del proyecto y lo pone la herramienta.
+- Al escribir se rechaza todo lo que no sea una cita comprobada, con el código de la causa
+  (`anchor_source_not_found`, `anchor_integrity_not_found`, `anchor_derivation_*`,
+  `anchor_locator_*`, `anchor_quote_not_found`); sin adaptador o con el adaptador fallando se
+  acepta como `unverified`. Un sha256 de copia distinto se rechaza siempre.
+
+**Comprobar y leer.** Se comprueba **al escribir y al auditar**; al leer (`history`, `state show`)
+se sirve el último resultado guardado, con su fecha (`checked_at`), y **no se llama a nadie**.
+`anchors verify <id>|--all` llama al adaptador por cada `document` (v1 o v2) y **guarda** una
+anotación `an-kla/anchor-check-v1` en `events` por registro auditado (`recorded`, `record_error`;
+sin identidad C0 audita igual y dice `recorded: false`). Es lo único que `anchors verify` escribe:
+para `repo-file` y `conversation` sigue siendo de sólo lectura. Un v2 nunca comprobado sale
+`unverified`/`not_checked`. Cada auditoría añade una anotación y **la compactación de hoy no las
+poda**: se audita cuando hace falta, no en bucle.
+
+Vuelta atrás: `inbox drain` y `pending` a 0 antes de bajar a beta.38, que rechaza entera la
+entrada `inbox-entry-v4` pendiente; un registro ya comprometido lo lee beta.38 sin romper, sirve el
+ancla como `kind_not_supported` e ignora `anchor_checks` y las anotaciones.
 
 ### Ámbito, destinatario y órdenes del Operador (`directive`)
 
