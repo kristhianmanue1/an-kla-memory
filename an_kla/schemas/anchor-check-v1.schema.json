@@ -1,0 +1,173 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:anchor-check:v1",
+  "title": "AN-KLA Anchor Check v1",
+  "description": "Anotación que guarda el resultado de auditar las anclas `document` de un registro (ADR-0071 §5): un registro nuevo del stream `events` con `kind: anchor_check`, por cada registro auditado y auditoría. Entra por la bandeja con el sobre C0 de quien audita. Invariantes al vaciar (`anchor_check_invalid`): el destino existe y está vigente; cada `index` es un ancla `document` (v1 o v2) del destino y su `quote_sha256` coincide; cada resultado tiene esta forma. Lo que sirve la lectura es el último por `(checked_at, origen, enqueued_at, id)`, con `anchor_checks` del propio registro como origen 0 y estas anotaciones como origen 1. Nunca se llama al adaptador al leer.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "target",
+    "checks"
+  ],
+  "properties": {
+    "schema": {
+      "const": "an-kla/anchor-check-v1"
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stream",
+        "record_id"
+      ],
+      "properties": {
+        "stream": {
+          "enum": [
+            "facts",
+            "events",
+            "episodes"
+          ]
+        },
+        "record_id": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "checks": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/check"
+      }
+    }
+  },
+  "$defs": {
+    "check": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "index",
+        "quote_sha256",
+        "checked_at",
+        "manifest_sha256",
+        "derivation",
+        "source",
+        "source_reason",
+        "integrity",
+        "integrity_reason",
+        "quote",
+        "quote_reason",
+        "match",
+        "freshness",
+        "reason",
+        "custody"
+      ],
+      "properties": {
+        "index": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "quote_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "checked_at": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,6})?Z$"
+        },
+        "manifest_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "derivation": {
+          "enum": [
+            null,
+            "current",
+            "superseded",
+            "unsupported"
+          ]
+        },
+        "source": {
+          "enum": [
+            "verified",
+            "not_found",
+            "unverifiable"
+          ]
+        },
+        "source_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "integrity": {
+          "enum": [
+            "verified",
+            "not_found",
+            "unverifiable"
+          ]
+        },
+        "integrity_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "quote": {
+          "enum": [
+            "verified",
+            "not_found",
+            "unverifiable"
+          ]
+        },
+        "quote_reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "match": {
+          "enum": [
+            "literal",
+            "ws-nfc/v1",
+            "ws-nfc-accents/v1",
+            null
+          ]
+        },
+        "freshness": {
+          "enum": [
+            "fresh",
+            "unverified",
+            "broken"
+          ]
+        },
+        "reason": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "custody": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "retention": {
+              "enum": [
+                "effective",
+                "expired",
+                "unknown"
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      }
+    }
+  }
+}

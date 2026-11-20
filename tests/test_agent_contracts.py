@@ -36,6 +36,7 @@ SOURCE_SCHEMAS = ROOT / "docs" / "schemas"
 
 class InstalledSchemaTests(unittest.TestCase):
     expected_names = (
+        "anchor-check-v1",
         "anchor-resolution-v1",
         "anchors-verify-v1",
         "anchors-verify-v2",

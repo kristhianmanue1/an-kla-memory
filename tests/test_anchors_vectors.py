@@ -192,7 +192,7 @@ class DocumentVectors(unittest.TestCase):
                 anchor = validate_anchor(document_anchor(case["anchor"]), "fact")
                 got = kind_not_supported(anchor)
                 _note("document", "total")
-                _note("document", "replaced")
+                _note("document", "n/a")  # replaced by the v2 cases: not run here
                 self.assertEqual((got["freshness"], got["reason"]), ("unverified", "kind_not_supported"))
 
 
@@ -213,9 +213,15 @@ class Errata2Vectors(unittest.TestCase):
                     got = rejected.code
                 _check(self, "errata2", case["id"], got, case["expect"]["reject"])
         for case in data["forma"]:
+            anchor = case["anchor"]
+            if case["id"] == "F16":
+                # F16 (a `schema` this binary does not know) named `memoria/ancla/v2`, which is now known (ADR-0071 §1, B3 of
+                # errata 2 of ancla/v2: a v2 anchor may be of any kind).  Declared: that anchor is valid; an unknown one is not.
+                validate_anchor(anchor, case["record_type"])
+                anchor = {**anchor, "schema": "memoria/ancla/v3"}
             with self.subTest(case["id"]):
                 try:
-                    validate_anchor(case["anchor"], case["record_type"])
+                    validate_anchor(anchor, case["record_type"])
                     got = None
                 except AnchorRejected as rejected:
                     got = rejected.code

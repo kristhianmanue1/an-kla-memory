@@ -63,7 +63,7 @@ from .inbox_close import (
 )
 from .inbox_anchors import record_fields
 from .inbox_entries import Entry, Reject, age_key, kind_of_path, load_entry, reject_entry, safe_codes
-from .inbox_ops import build_dispute_op, build_resolution_op, check_directive_target, intent_mismatch
+from .inbox_ops import build_check_op, build_dispute_op, build_resolution_op, check_directive_target, intent_mismatch
 from .reader_gate import ReaderGateError
 from .state_slot import StateAlready, resolve_state
 from .store import STREAMS
@@ -263,7 +263,7 @@ class Scanner:
     def _resolve(self, entry: Entry) -> None:
         operation = entry.data.get("operation", "remember")
         if operation != "remember":
-            build = build_dispute_op if operation == "dispute" else build_resolution_op
+            build = {"dispute": build_dispute_op, "anchor_check": build_check_op}.get(operation, build_resolution_op)
             entry.op = build(self.snapshot, entry.envelope, entry.data)
             return
         target = None
@@ -371,7 +371,9 @@ class Scanner:
         existing = self.index.get(record_id)
         if existing is not None:
             envelope = existing.get("an_kla_envelope")
-            same = isinstance(envelope, dict) and envelope.get("idempotency_key") == entry.key and existing.get("text") == entry.text
+            # an `anchor_check` annotation has no text: what it says is its content (ADR-0071 §5, the retry of an audit)
+            said = existing.get("anchor_check") == entry.data["anchor_check"] if entry.data.get("operation") == "anchor_check" else existing.get("text") == entry.text
+            same = isinstance(envelope, dict) and envelope.get("idempotency_key") == entry.key and said
             if same and intent_mismatch(existing, entry.data):
                 reason = [intent_mismatch(existing, entry.data)]
                 entry.extra["fate"] = ("rejected", "remember_id_collision", reason)

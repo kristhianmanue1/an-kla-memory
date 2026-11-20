@@ -19,6 +19,7 @@ from datetime import datetime
 from typing import Callable
 
 from . import directive as directive_mod
+from .anchor_checks import has_checks
 from .anchors_conversation import ConversationVerifier
 from .anchors_coverage_v2 import has_rules
 from .anchors_read import AnchorServer
@@ -120,7 +121,7 @@ def _response(
     revision: str, root: str, nodes: list[dict[str, Any]], edges: list[dict[str, str]], truncated: bool, used: int,
     declared: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    scoped = any(key in node for node in nodes for key in SCOPE_NODE_KEYS) or any(has_rules(node) for node in nodes)  # ADR-0070 §3
+    scoped = any(key in node for node in nodes for key in SCOPE_NODE_KEYS) or any(has_rules(node) or has_checks(node) for node in nodes)  # ADR-0070 §3, ADR-0071 §6
     return {
         **(declared or {}),
         "schema": RESULT_SCHEMA_V2 if scoped else RESULT_SCHEMA,  # ADR-0069 §4: v2 disperso

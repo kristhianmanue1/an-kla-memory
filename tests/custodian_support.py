@@ -55,6 +55,17 @@ class FakeCustodian:
     def adapters(self, scenario: dict[str, Any] | None, timeout: float = 10.0) -> Adapters:
         return Adapters(self.table(scenario) if scenario else {}, None, timeout)
 
+    def install(self, store_root: Any, scenario: dict[str, Any]) -> None:
+        """The custodian in the store's ``config.json`` (``custodians``), with a scenario file that ``set`` can rewrite."""
+        self.scenario_path = self.dir / "escenario.json"
+        self.scenario_path.write_text(json.dumps(scenario), encoding="utf-8")
+        argv = [sys.executable, "-B", str(FAKE), "--scenario", str(self.scenario_path), "--log", str(self.dir / "llamada.json")]
+        Path(store_root, "config.json").write_text(json.dumps({"custodians": {self.name: {"argv": argv}}}), encoding="utf-8")
+
+    def set(self, scenario: dict[str, Any]) -> None:
+        self.scenario_path.write_text(json.dumps(scenario), encoding="utf-8")
+        (self.dir / "llamada.json").unlink(missing_ok=True)
+
     def log(self) -> dict[str, Any] | None:
         path = self.dir / "llamada.json"
         return json.loads(path.read_text(encoding="utf-8")) if path.exists() else None

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:an-kla:schema:history-result:v2",
   "title": "AN-KLA History Result v2",
-  "description": "Resultado de `history <id>` (ADR-0065 §6), sólo lectura y datos no confiables. Grafo de la revisión vigente: nodos = registros, aristas dirigidas `supersedes` (nuevo → antiguo, incluida la jubilación por casilla) y `disputes` (disputa → target). Se recorre en anchura desde `root` por las aristas en los dos sentidos, con visitados (un ciclo se recorre una vez), hasta `--limit` nodos. `nodes` va ordenado por `enqueued_at` ascendente, los legados (sin sobre válido: `enqueued_at`, `writer` y `slot` nulos) después, y por `id`; `edges` por `(from, to, type)`, y sólo con los dos extremos en `nodes`. `truncated` es true si el límite o `--budget` podaron nodos (del final del orden, con sus aristas). `used_bytes` es la longitud exacta de la salida, con su salto de línea final. ADR-0066: un nodo con anclas lleva `anchors`, `anchors_freshness` y `coverage`; con disputas con veredicto, `disputed`. La salida declara `anchor_limit`, `anchors_checked` y `anchors_unchecked` (sólo si sirvió anclas). ADR-0069: versión dispersa; sólo sale con alguna clave de ámbito o destinatario, y entonces es el superconjunto de la anterior. ADR-0070: con `fact-checks-rules/v2` la cobertura dice sus `rules` y `missing` admite `hash` y `date`; sin `rules` es v1.",
+  "description": "Resultado de `history <id>` (ADR-0065 §6), sólo lectura y datos no confiables. Grafo de la revisión vigente: nodos = registros, aristas dirigidas `supersedes` (nuevo → antiguo, incluida la jubilación por casilla) y `disputes` (disputa → target). Se recorre en anchura desde `root` por las aristas en los dos sentidos, con visitados (un ciclo se recorre una vez), hasta `--limit` nodos. `nodes` va ordenado por `enqueued_at` ascendente, los legados (sin sobre válido: `enqueued_at`, `writer` y `slot` nulos) después, y por `id`; `edges` por `(from, to, type)`, y sólo con los dos extremos en `nodes`. `truncated` es true si el límite o `--budget` podaron nodos (del final del orden, con sus aristas). `used_bytes` es la longitud exacta de la salida, con su salto de línea final. ADR-0066: un nodo con anclas lleva `anchors`, `anchors_freshness` y `coverage`; con disputas con veredicto, `disputed`. La salida declara `anchor_limit`, `anchors_checked` y `anchors_unchecked` (sólo si sirvió anclas). ADR-0069: versión dispersa; sólo sale con alguna clave de ámbito o destinatario, y entonces es el superconjunto de la anterior. ADR-0070: con `fact-checks-rules/v2` la cobertura dice sus `rules` y `missing` admite `hash` y `date`; sin `rules` es v1. ADR-0071: un `document` de `memoria/ancla/v2` se comprueba al escribir y al auditar, y al leer se sirve lo guardado: su resultado lleva `checked_at`, `manifest_sha256`, `derivation` y `custody`; sin resultado guardado, `not_checked`.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -181,6 +181,7 @@
                   ],
                   "enum": [
                     null,
+                    "adapter_error",
                     "anchor_limit",
                     "commit_not_in_clone",
                     "commit_not_on_default_branch",
@@ -188,9 +189,11 @@
                     "custodian_offline",
                     "document_unknown",
                     "kind_not_supported",
+                    "no_adapter",
                     "no_default_branch",
                     "no_git",
                     "no_verifier",
+                    "not_checked",
                     "path_missing",
                     "repo_unavailable",
                     "resolution_pending",
@@ -212,6 +215,7 @@
                   ],
                   "enum": [
                     null,
+                    "adapter_truncated",
                     "anchor_limit",
                     "binary",
                     "commit_not_in_clone",
@@ -219,7 +223,11 @@
                     "custodian_offline",
                     "derived_modality",
                     "document_unknown",
+                    "integrity_not_verified",
                     "kind_not_supported",
+                    "locator_invalid",
+                    "locator_not_found",
+                    "not_checked",
                     "not_utf8",
                     "quote_absent",
                     "source_not_verified",
@@ -240,16 +248,23 @@
                   ],
                   "enum": [
                     null,
+                    "adapter_error",
                     "anchor_limit",
                     "binary",
                     "commit_blob_lacks_quote",
                     "commit_not_in_clone",
                     "copy_sha_mismatch",
                     "custodian_offline",
+                    "derivation_parent_mismatch",
+                    "derivation_superseded",
+                    "derivation_unsupported",
                     "document_unknown",
                     "kind_not_supported",
                     "manifest_mismatch",
+                    "manifest_missing",
+                    "no_adapter",
                     "no_verifier",
+                    "not_checked",
                     "not_utf8",
                     "raw_lost",
                     "resolution_pending",
@@ -311,6 +326,48 @@
                     "string",
                     "null"
                   ]
+                },
+                "checked_at": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Cuándo se comprobó (ADR-0071): la fecha del resultado guardado; null en un ancla v2 aún no comprobada."
+                },
+                "manifest_sha256": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "derivation": {
+                  "enum": [
+                    null,
+                    "current",
+                    "superseded",
+                    "unsupported"
+                  ],
+                  "description": "Estado de la derivación según el custodio al comprobar; null sin respuesta."
+                },
+                "custody": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "retention": {
+                      "enum": [
+                        "effective",
+                        "expired",
+                        "unknown"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "adapter_called": {
+                  "type": "boolean",
+                  "description": "Sólo al escribir y al auditar: si se lanzó el adaptador."
                 }
               }
             }

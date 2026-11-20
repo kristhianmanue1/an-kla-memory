@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 from typing import Any, Mapping
 
 from . import directive, identity_c0
-from .anchors import AnchorRejected, validate_anchors
+from .anchors import ANCHOR_SCHEMA_V2, AnchorRejected, validate_anchors
 from .audience import ENTRY_SCOPE_KEYS, ScopeError
 from .canonical import canonical_json, digest_json
 from .inbox import (
@@ -140,7 +140,7 @@ def _read_regular(path: Any) -> bytes:
 
 
 _V3_KEYS = {"anchors", "verdict", "operation", "anchor_resolution"}
-_V4_KEYS = set(ENTRY_SCOPE_KEYS)
+_V4_KEYS = set(ENTRY_SCOPE_KEYS) | {"anchor_check"}  # ADR-0071 §6: v4 also carries the audit's annotation
 
 
 def _validate_scope(data: dict[str, Any]) -> None:
@@ -164,6 +164,9 @@ def _validate_v3(data: dict[str, Any]) -> None:
     operation = data.get("operation", "remember")
     if operation not in OPERATIONS or ("operation" in data and operation == "remember"):
         raise Reject(INVALID, ["operation"])
+    v4 = data.get("schema") == ENTRY_SCHEMA_V4
+    if (operation == "anchor_check") != isinstance(data.get("anchor_check"), dict) or (operation == "anchor_check" and not v4):
+        raise Reject(INVALID, ["anchor_check"])
     verdict = data.get("verdict")
     if (operation == "dispute") != (verdict is not None) or (verdict is not None and verdict not in VERDICTS):
         raise Reject(INVALID, ["verdict"])
@@ -175,6 +178,8 @@ def _validate_v3(data: dict[str, Any]) -> None:
     if "anchors" in data and (not isinstance(anchors, list) or not anchors):
         raise Reject(INVALID, ["anchors"])
     if anchors:
+        if not v4 and any(isinstance(a, dict) and a.get("schema") == ANCHOR_SCHEMA_V2 for a in anchors):
+            raise Reject("anchor_schema_invalid", ["anchor_schema"])  # a v2 anchor travels in an inbox-entry-v4 (ADR-0071 §6)
         try:
             validate_anchors(stored_anchors(anchors), "decision" if data["kind"] == "directive" else data["kind"])
         except AnchorRejected as refused:

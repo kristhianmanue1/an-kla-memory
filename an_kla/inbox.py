@@ -536,6 +536,7 @@ def enqueue(
     verdict: str | None = None,
     operation: str = "remember",
     anchor_resolution: Mapping[str, Any] | None = None,
+    anchor_check: Mapping[str, Any] | None = None,
     subject: str | None = None,
     audience: str | None = None,
     valid_until: str | None = None,
@@ -581,11 +582,15 @@ def enqueue(
         valid_until=valid_until, until_revoked=until_revoked, revoke=revoke, clock=clock,
     )
     anchor_kind = "decision" if resolved_kind == "directive" else resolved_kind  # una directive se ancla como una decision
-    extras = entry_extras(store.project_root, identity, anchor_kind, data_text, anchors, verdict, operation, anchor_resolution)
+    extras = entry_extras(
+        store.project_root, identity, anchor_kind, data_text, anchors, verdict, operation, anchor_resolution, anchor_check,
+        store=store, clock=clock,
+    )
     key_extra = {**(extras.key if extras and extras.key else {}), **scope} or None
     digest_extra = {**(extras.digest if extras else {}), **scope} or None
-    if idempotency_key is None:
-        key = identity_c0.derive_idempotency_key(identity, resolved_kind, data_text, target_id, entry_slot, key_extra)
+    if idempotency_key is None:  # ADR-0071 §5: the key of an audit's annotation is derived with kind ``anchor_check``
+        key = identity_c0.derive_idempotency_key(
+            identity, "anchor_check" if anchor_check is not None else resolved_kind, data_text, target_id, entry_slot, key_extra)
     elif isinstance(idempotency_key, str) and _DIGEST.fullmatch(idempotency_key):
         key = idempotency_key
     else:
@@ -599,7 +604,7 @@ def enqueue(
             _custody_preflight(store, preflight, seen_custody)  # la custodia pudo cambiar mientras se esperaba
             envelope = identity_c0.build_envelope(identity, resolved_kind, key, clock)
             entry: dict[str, Any] = {
-                "schema": ENTRY_SCHEMA_V4 if scope else ENTRY_SCHEMA_V3 if extras else ENTRY_SCHEMA if entry_slot is None else ENTRY_SCHEMA_V2,
+                "schema": ENTRY_SCHEMA_V4 if scope or (extras and extras.v4) else ENTRY_SCHEMA_V3 if extras else ENTRY_SCHEMA if entry_slot is None else ENTRY_SCHEMA_V2,
                 "text": data_text,
                 "kind": resolved_kind,
                 "kind_explicit": explicit,
