@@ -8,7 +8,7 @@ from typing import Any
 
 from .canonical import canonical_json
 from .checkpoint_policy import CheckpointPolicyError, validate_working_state
-from .retrieval import SCAN_PROFILE, retrieve
+from .retrieval import SCAN_PROFILE, SCOPE_EXCLUSIONS, injecting, retrieve
 from .reader_gate import shared_reader_gate
 
 
@@ -125,14 +125,15 @@ def _resume_under_gate(
         warnings = list(snapshot_warnings)
         retrieval = None
         if query is not None:
-            retrieval = retrieve(
-                store,
-                query,
-                limit,
-                profile=profile,
-                streams=("facts", "events", "episodes"),
-                revision_id=revision,
-            )
+            with injecting():  # ADR-0069 §4: resume injects text, never a directive
+                retrieval = retrieve(
+                    store,
+                    query,
+                    limit,
+                    profile=profile,
+                    streams=("facts", "events", "episodes"),
+                    revision_id=revision,
+                )
             if retrieval["degradation"] != "none":
                 warnings.append("retrieval_degraded_to_scan")
         source = retrieval["profile"] if retrieval is not None else "disabled"
@@ -164,6 +165,11 @@ def _resume_under_gate(
         # early, as before #171, instead of trying every candidate.  The base
         # size is a lower bound, so _minimum_budget still converges on the full
         # projection.
+        if retrieval is not None:  # ADR-0069 §4: the new counters join only when they are not zero; then v2
+            for key in SCOPE_EXCLUSIONS:
+                if retrieval["excluded_summary"].get(key):
+                    result["excluded_summary"][key] = int(retrieval["excluded_summary"][key])
+                    result["schema"] = "an-kla/resume-v2"
         base = _size_at_fixed_point(result)
         if base > limit:
             return result, base

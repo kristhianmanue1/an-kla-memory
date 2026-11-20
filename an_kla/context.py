@@ -6,7 +6,7 @@ from datetime import datetime
 from typing import Any
 
 from .canonical import exact_sized_payload
-from .retrieval import retrieve
+from .retrieval import SCOPE_EXCLUSIONS, injecting, retrieve
 from .store import MemoryStore
 from .temporal import (
     FRESHNESS_PROFILE,
@@ -45,16 +45,18 @@ def assemble_context(
         raise ValueError("invalid_new_information")
 
     if freshness_profile is None and now is None and stale_after_days is None:
-        source = retrieve(store, query, 2**63 - 1)
+        with injecting():  # ADR-0069 §4: this surface injects text, never a directive
+            source = retrieve(store, query, 2**63 - 1)
     else:
-        source = retrieve(
-            store,
-            query,
-            2**63 - 1,
-            freshness_profile=freshness_profile,
-            now=now,
-            stale_after_days=stale_after_days,
-        )
+        with injecting():
+            source = retrieve(
+                store,
+                query,
+                2**63 - 1,
+                freshness_profile=freshness_profile,
+                now=now,
+                stale_after_days=stale_after_days,
+            )
     snapshot = store.snapshot(source["revision"])
     candidates = source["selected"]
     # ADR-0049: detección estructural — nunca igualdad de string de id
@@ -72,7 +74,9 @@ def assemble_context(
             exclusions["budget"] = exclusions.get("budget", 0) + budget_excluded
         payload = {
             "schema": (
-                "an-kla/context-assembly-v2"
+                "an-kla/context-assembly-v3"  # ADR-0069 §4: v3 disperso, sólo con un contador nuevo
+                if any(key in exclusions for key in SCOPE_EXCLUSIONS)
+                else "an-kla/context-assembly-v2"
                 if freshness_enabled
                 else "an-kla/context-assembly-v1"
             ),

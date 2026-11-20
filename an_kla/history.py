@@ -15,7 +15,14 @@ from __future__ import annotations
 from collections import deque
 from typing import Any, Mapping
 
+from datetime import datetime
+from typing import Callable
+
+from . import directive as directive_mod
+from .anchors_conversation import ConversationVerifier
 from .anchors_read import AnchorServer
+from .audience import Reader, explicit_scope, has_scope, is_for_other, make_reader
+from .directive import DirectiveReader
 from .disputes import _valid_disputes
 from .identity_c0 import validate_envelope
 from .read_budget import fit_prefix
@@ -24,6 +31,8 @@ from .state_slot import slot_of
 from .store import STREAMS
 
 RESULT_SCHEMA = "an-kla/history-result-v1"
+RESULT_SCHEMA_V2 = "an-kla/history-result-v2"  # ADR-0069 §4: sólo con `for_reader`, `subject`, `audience` o `directive`
+SCOPE_NODE_KEYS = ("for_reader", "subject", "audience", "directive")
 DEFAULT_LIMIT = 200
 DEFAULT_BUDGET = 16000
 _STREAM_KIND = {"facts": "fact", "events": "event", "episodes": "state"}
@@ -110,9 +119,10 @@ def _response(
     revision: str, root: str, nodes: list[dict[str, Any]], edges: list[dict[str, str]], truncated: bool, used: int,
     declared: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
+    scoped = any(key in node for node in nodes for key in SCOPE_NODE_KEYS)
     return {
         **(declared or {}),
-        "schema": RESULT_SCHEMA,
+        "schema": RESULT_SCHEMA_V2 if scoped else RESULT_SCHEMA,  # ADR-0069 §4: v2 disperso
         "untrusted_memory_data": True,
         "revision": revision,
         "root": root,
@@ -130,9 +140,13 @@ def _edges_among(kept: set[Node], edges: set[tuple[Node, Node, str]]) -> list[di
 
 def history(
     snapshot: Any, record_id: str, *, limit: int = DEFAULT_LIMIT, budget: int = DEFAULT_BUDGET,
-    anchors: AnchorServer | None = None,
+    anchors: AnchorServer | None = None, reader: Reader | None = None, store: Any = None,
+    clock: Callable[[], datetime] | None = None, verifier: ConversationVerifier | None = None,
 ) -> dict[str, Any]:
-    """``history-result-v1`` de ``record_id``: nodos y aristas de su componente, acotados por ``limit`` y ``budget``."""
+    """``history-result-v1`` de ``record_id``: nodos y aristas de su componente, acotados por ``limit`` y ``budget``.
+
+    ``history`` audita: no filtra, marca (ADR-0069 §4). Cada registro para otro lleva ``for_reader: false``; ``subject``
+    y ``audience`` salen siempre que sean explícitos, y una ``directive`` lleva su objeto con su ``status``."""
 
     if not isinstance(record_id, str) or not record_id:
         raise StateReadError("history_id_invalid", "id no vacío")
@@ -149,6 +163,20 @@ def history(
     visited, truncated = _walk(nodes, edges, starts[0], limit)
     ordered = sorted(visited, key=lambda n: _order(nodes[n]))
     revision = snapshot.revision_id
+    scope_reader = reader if reader is not None else make_reader(store)
+    directives = DirectiveReader(store, snapshot, scope_reader, clock=clock, verifier=verifier)
+    by_node = {(s, str(r.get("id", ""))): r for s in STREAMS for r in snapshot.records[s]}
+    for node in ordered:  # ADR-0069 §4: sólo lo que trae ámbito explícito o es una directive se marca
+        row = by_node.get(node)
+        if row is None or not (has_scope(row) or directive_mod.is_directive(row)):
+            continue
+        other = is_for_other(row, scope_reader)
+        nodes[node].update(explicit_scope(row))
+        if other:
+            nodes[node]["for_reader"] = False
+        if directive_mod.is_directive(row):
+            view = directives.render(node[0], row, freshness=False)
+            nodes[node]["directive"] = {**view, "actionable": False} if other else view
     declared: dict[str, int] = {}
     if anchors is not None:  # ADR-0066 §4: freshness of the anchors of what is served, in serving order
         rows = {(s, str(r.get("id", ""))): r for s in STREAMS for r in snapshot.records[s]}

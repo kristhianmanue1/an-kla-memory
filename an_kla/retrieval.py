@@ -3,11 +3,18 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
+import contextlib
 from contextlib import nullcontext
+import contextvars
 import re
 import sqlite3
-from typing import Any, Mapping
+from typing import Any, Callable, Iterator, Mapping
 
+from . import directive as directive_mod
+from .anchors_conversation import ConversationVerifier
+from .audience import Reader, explicit_scope, has_scope, is_for_other, make_reader
+from .canonical import canonical_json
+from .directive import DirectiveReader
 from .index import (
     INDEX_PROFILE,
     detect_fts5,
@@ -54,7 +61,34 @@ def _match_clause(query: str) -> str | None:
     return " OR ".join(f'"{token}"' for token in tokens) if tokens else None
 
 
+_INJECT: contextvars.ContextVar[bool] = contextvars.ContextVar("an_kla_inject_surface", default=False)
+
+
+@contextlib.contextmanager
+def injecting() -> Iterator[None]:
+    """Marca las lecturas de dentro como de una superficie que inyecta texto (``assemble-context``, ``resume``).
+
+    Una variable de contexto y no un argumento: esas superficies conservan la llamada de tres argumentos a ``retrieve``
+    que sus consumidores envuelven o sustituyen (la ruta exacta de beta.8)."""
+
+    token = _INJECT.set(True)
+    try:
+        yield
+    finally:
+        _INJECT.reset(token)
+
+
 EMPTY_REASON_NO_LEXICAL_OVERLAP = "no_lexical_overlap"
+SCOPE_EXCLUSIONS = ("other_audience", "directive_inactive", "directive_not_injected")
+SCOPE_ITEM_KEYS = ("directive", "for_reader", "subject", "audience")
+
+
+def is_scope_visible(excluded_summary: Mapping[str, Any], records: Any) -> bool:
+    """True si la respuesta lleva alguna clave de ADR-0069: sólo entonces sube a ``retrieval-result-v4`` (o ``mcp-retrieve-v4``)."""
+
+    return any(key in excluded_summary for key in SCOPE_EXCLUSIONS) or any(
+        key in item for item in records for key in SCOPE_ITEM_KEYS
+    )
 
 
 def empty_reason_for(
@@ -123,8 +157,17 @@ def _retrieve_under_gate(
     now: datetime | None = None,
     stale_after_days: int | None = None,
     revision_id: str | None = None,
+    reader: Reader | None = None,
+    clock: Callable[[], datetime] | None = None,
+    verifier: ConversationVerifier | None = None,
+    inject: bool = False,
 ) -> dict[str, Any]:
     """Retrieve deterministically, reserving any caller-owned envelope cost.
+
+    ``reader`` (ADR-0069 §4) is who reads: by default the C0 identity of the environment.  What is for another
+    audience or subject is not served (``excluded_summary.other_audience``) unless ``reader.include_other``; a
+    ``directive`` carries its object (§5).  ``inject`` is for the surfaces that inject text (``assemble-context``,
+    ``resume``): they never serve a ``directive`` (``directive_not_injected``).
 
     ``fixed_overhead_bytes`` and ``per_record_overhead_bytes`` let a transport
     reserve its JSON wrapper before selection.  They must be conservative: the
@@ -176,7 +219,14 @@ def _retrieve_under_gate(
         "budget": 0,
         "invalid_record": 0,
         "no_text": 0,
+        "other_audience": 0,
+        "directive_inactive": 0,
+        "directive_not_injected": 0,
     }
+    scope_reader = reader if reader is not None else make_reader(store)
+    inject = inject or _INJECT.get()
+    directives: DirectiveReader | None = None
+    served_extra: dict[str, dict[str, Any]] = {}
     # Track IDs for every exclusion reason so the operator can debug silent
     # drops uniformly; counters without an entry here simply aren't tracked.
     excluded_detail: dict[str, list[str]] = {
@@ -185,7 +235,16 @@ def _retrieve_under_gate(
         "budget": [],
         "invalid_record": [],
         "no_text": [],
+        "other_audience": [],
+        "directive_inactive": [],
+        "directive_not_injected": [],
     }
+
+    def exclude(reason: str, record: Mapping[str, Any]) -> None:
+        excluded[reason] += 1
+        if len(excluded_detail[reason]) < EXCLUDED_DETAIL_CAP:
+            excluded_detail[reason].append(str(record.get("id", "")))
+
     for stream in selected_streams:
         for record in snapshot.records[stream]:
             if not is_active(record):
@@ -196,6 +255,16 @@ def _retrieve_under_gate(
             if not record.get("id"):
                 excluded["invalid_record"] += 1
                 continue
+            is_directive = directive_mod.is_directive(record)
+            if is_directive or has_scope(record):  # ADR-0069 §4: un registro sin los campos nuevos nunca se filtra
+                other = is_for_other(record, scope_reader)
+                if other and not scope_reader.include_other:
+                    exclude("other_audience", record)
+                    continue
+                if is_directive and inject:
+                    exclude("directive_not_injected", record)
+                    continue
+                served_extra[str(record["id"])] = {"other": other, "directive": is_directive}
             rendered = _render(record)
             if not rendered:
                 excluded["no_text"] += 1
@@ -249,7 +318,25 @@ def _retrieve_under_gate(
     selected: list[dict[str, Any]] = []
     used = fixed_overhead_bytes
     for score, identifier, _record, rendered, stream in ranked:
-        cost = len(rendered.encode("utf-8")) + per_record_overhead_bytes
+        added: dict[str, Any] = {}
+        info = served_extra.get(identifier)
+        if info is not None:  # ADR-0069 §5: the directive object and the marks of what is for another reader
+            if info["directive"]:
+                if directives is None:
+                    directives = DirectiveReader(store, snapshot, scope_reader, clock=clock, verifier=verifier)
+                view = directives.render(stream, _record)
+                if view["status"] in directive_mod.INACTIVE:
+                    exclude("directive_inactive", _record)
+                    continue
+                if info["other"]:
+                    view["actionable"] = False
+                added["directive"] = view
+            if info["other"]:
+                added["for_reader"] = False
+                if not info["directive"]:
+                    added.update(explicit_scope(_record))
+        # ADR-0069 §6: what the record gains counts in its cost, so an exact budget stays exact
+        cost = len(rendered.encode("utf-8")) + (len(canonical_json(added)) if added else 0) + per_record_overhead_bytes
         if used + cost > budget:
             excluded["budget"] += 1
             if len(excluded_detail["budget"]) < EXCLUDED_DETAIL_CAP:
@@ -262,6 +349,7 @@ def _retrieve_under_gate(
             "render": rendered,
             "cost_bytes": cost,
         }
+        item.update(added)
         if freshness_now is not None:
             item.update(
                 project_record_freshness(
@@ -272,6 +360,8 @@ def _retrieve_under_gate(
             )
         selected.append(item)
         used += cost
+    if directives is not None:
+        directives.close()
     excluded_summary = {key: value for key, value in excluded.items() if value}
     truncated: dict[str, bool] = {}
     visible_detail: dict[str, list[str]] = {}
@@ -318,6 +408,8 @@ def _retrieve_under_gate(
         result["schema"] = "an-kla/retrieval-result-v3"
     elif freshness_now is not None:
         result["schema"] = "an-kla/retrieval-result-v2"
+    if is_scope_visible(excluded_summary, selected):  # ADR-0069 §6: v4 disperso, superconjunto de v1-v3
+        result["schema"] = "an-kla/retrieval-result-v4"
     return result
 
 
@@ -334,6 +426,10 @@ def retrieve(
     now: datetime | None = None,
     stale_after_days: int | None = None,
     revision_id: str | None = None,
+    reader: Reader | None = None,
+    clock: Callable[[], datetime] | None = None,
+    verifier: ConversationVerifier | None = None,
+    inject: bool = False,
 ) -> dict[str, Any]:
     """Hold the archival reader lease through scan and index consumption."""
 
@@ -351,4 +447,8 @@ def retrieve(
             now=now,
             stale_after_days=stale_after_days,
             revision_id=revision_id,
+            reader=reader,
+            clock=clock,
+            verifier=verifier,
+            inject=inject,
         )

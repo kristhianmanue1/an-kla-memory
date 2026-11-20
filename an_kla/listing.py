@@ -12,9 +12,15 @@ import base64
 import binascii
 import json
 from collections import Counter
-from typing import Any, Mapping
+from datetime import datetime
+from typing import Any, Callable, Mapping
 
+from . import directive as directive_mod
+from .anchors_conversation import ConversationVerifier
+from .audience import Reader, explicit_scope, has_scope, is_for_other, make_reader
+from .directive import DirectiveReader
 from .disputes import _valid_disputes
+from .identity_c0 import validate_envelope
 from .history import _describe, _order
 from .read_budget import fit_prefix
 from .record_text import record_text
@@ -24,12 +30,15 @@ from .store import STREAMS
 from .vigency import is_active
 
 RESULT_SCHEMA = "an-kla/list-result-v1"
+RESULT_SCHEMA_V2 = "an-kla/list-result-v2"  # ADR-0069 §4: sólo con alguna clave nueva
+SCOPE_FILTERS = ("subject", "include_other_audience")
+SCOPE_ITEM_KEYS = ("for_reader", "subject", "audience", "directive", "subject_implicit")
 DEFAULT_STREAMS = "facts"
 DEFAULT_LIMIT = 1000
 MAX_LIMIT = 10000
 DEFAULT_BUDGET = 65536
 STATUSES = ("active", "superseded", "refuted", "all")
-KINDS = ("fact", "decision", "state", "event")
+KINDS = ("fact", "decision", "state", "event", "directive")
 _REVISION = "sha256:"
 _CURSOR_KEYS = {"r", "f", "k"}
 
@@ -67,7 +76,7 @@ def _filters(streams: Any, status: Any, kind: Any, slot: Any, limit: Any, budget
 def _cursor_scope(filters: Mapping[str, Any]) -> dict[str, Any]:
     """Lo que el cursor fija: el tamaño de página (``limit``, ``budget``) puede cambiar entre páginas."""
 
-    return {key: filters[key] for key in ("streams", "status", "kind", "slot", "text")}
+    return {key: filters[key] for key in ("streams", "status", "kind", "slot", "text", *SCOPE_FILTERS) if key in filters}
 
 
 def _sort_key(item: Mapping[str, Any], streams: list[str]) -> tuple[int, int, str, str]:
@@ -127,6 +136,26 @@ def _disputes_count(snapshot: Any) -> Counter[tuple[str, str]]:
     return count
 
 
+def _scope_marks(
+    stream: str, row: Mapping[str, Any], reader: Reader, directives: DirectiveReader, other: bool
+) -> dict[str, Any]:
+    """ADR-0069 §4–§5: ``subject`` y ``audience`` explícitos, ``for_reader: false``, el objeto ``directive`` y, con
+    ``--include-other-audience``, ``subject_implicit`` (el proyecto de quien escribió: información para auditar)."""
+
+    marks: dict[str, Any] = explicit_scope(row)
+    if other:
+        marks["for_reader"] = False
+    if directive_mod.is_directive(row):
+        view = directives.render(stream, row, freshness=False)  # `list` no usa Git: sólo anclas de conversación
+        marks["directive"] = {**view, "actionable": False} if other else view
+    if reader.include_other and "subject" not in row:
+        envelope = row.get("an_kla_envelope")
+        implicit = envelope["writer"]["repo"]["id"] if isinstance(envelope, dict) and not validate_envelope(envelope) else reader.project()
+        if implicit is not None:
+            marks["subject_implicit"] = implicit
+    return marks
+
+
 def _item(
     stream: str, row: Mapping[str, Any], replaced: Mapping[tuple[str, str], str], disputes: Mapping[tuple[str, str], int],
     with_text: bool,
@@ -153,12 +182,15 @@ def _item(
 
 def _response(
     revision: str, filters: Mapping[str, Any], items: list[dict[str, Any]], total: int, limited: int, used: int,
-    next_cursor: str | None,
+    next_cursor: str | None, other: int = 0,
 ) -> dict[str, Any]:
     by_limit = total - limited
     by_budget = limited - len(items)
+    scoped = bool(other) or any(key in filters for key in SCOPE_FILTERS) or any(
+        key in item for item in items for key in SCOPE_ITEM_KEYS
+    )
     return {
-        "schema": RESULT_SCHEMA,
+        "schema": RESULT_SCHEMA_V2 if scoped else RESULT_SCHEMA,  # ADR-0069 §4: v2 disperso
         "untrusted_memory_data": True,
         "revision": revision,
         "filters": dict(filters),
@@ -166,7 +198,7 @@ def _response(
         "total": total,
         "returned": len(items),
         "truncated": by_limit + by_budget > 0,
-        "excluded": {"limit": by_limit, "budget": by_budget},
+        "excluded": {"limit": by_limit, "budget": by_budget, **({"other_audience": other} if other else {})},
         "next": next_cursor,
         "used_bytes": used,
     }
@@ -175,15 +207,27 @@ def _response(
 def list_records(
     snapshot: Any, *, streams: str = DEFAULT_STREAMS, status: str = "active", kind: str | None = None,
     slot: str | None = None, limit: int = DEFAULT_LIMIT, budget: int = DEFAULT_BUDGET, after: str | None = None,
-    text: bool = False,
+    text: bool = False, reader: Reader | None = None, store: Any = None, clock: Callable[[], datetime] | None = None,
+    verifier: ConversationVerifier | None = None,
 ) -> dict[str, Any]:
     """``list-result-v1`` de la revisión de ``snapshot``.
 
     ``total`` cuenta los registros que pasan los filtros y quedan después del cursor, de modo que
     ``total = returned + excluded.limit + excluded.budget`` en cada página.
+
+    ``reader`` (ADR-0069 §4): lo que es para otro no sale y cuenta en ``excluded.other_audience`` (no entra en
+    ``total``), salvo con ``reader.include_other``; entonces sale marcado ``for_reader: false``. El cursor fija
+    también ``subject`` e ``include_other_audience`` cuando se dan.
     """
 
     filters = _filters(streams, status, kind, slot, limit, budget, text)
+    scope_reader = reader if reader is not None else make_reader(store)
+    if reader is not None and reader.declared_subject is not None:
+        filters["subject"] = reader.declared_subject
+    if scope_reader.include_other:
+        filters["include_other_audience"] = True
+    directives = DirectiveReader(store, snapshot, scope_reader, clock=clock, verifier=verifier)
+    other_count = 0
     revision = snapshot.revision_id
     start = None
     if after is not None:
@@ -202,6 +246,14 @@ def list_records(
                 continue
             if slot is not None and item["slot"] != slot:
                 continue
+            if has_scope(row) or directive_mod.is_directive(row):  # un registro sin los campos nuevos nunca se filtra
+                other = is_for_other(row, scope_reader)
+                if other and not scope_reader.include_other:
+                    other_count += 1
+                    continue
+                item.update(_scope_marks(stream, row, scope_reader, directives, other))
+            elif scope_reader.include_other and "subject" not in row:
+                item.update(_scope_marks(stream, row, scope_reader, directives, False))
             items.append((_sort_key(item, names), item))
     items.sort(key=lambda pair: pair[0])
     if start is not None:
@@ -215,7 +267,7 @@ def list_records(
         last = kept[-1][0] if kept else start
         cursor = encode_cursor(revision, filters, last) if more else None
         shown = {**filters, "budget": budget_shown}  # `filters.budget` se repite en la salida y cuenta en su tamaño
-        return _response(revision, shown, [item for _, item in kept], total, len(limited), used, cursor)
+        return _response(revision, shown, [item for _, item in kept], total, len(limited), used, cursor, other_count)
 
     result = dict(fit_prefix(build, len(limited), filters["budget"], "list_budget_too_small"))
     if not result["items"] and total:  # cabe la respuesta vacía pero ningún registro: un `next` no avanzaría

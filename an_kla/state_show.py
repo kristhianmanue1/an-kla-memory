@@ -15,6 +15,7 @@ from __future__ import annotations
 from typing import Any, Mapping
 
 from .anchors_read import DEFAULT_ANCHOR_LIMIT, AnchorServer
+from .audience import Reader, explicit_scope, has_scope, is_for_other, make_reader
 from .canonical import canonical_json
 from .identity_c0 import DEFAULT_SLOT, SLOT_PATTERN, IdentityC0Error, repo_id_for
 from .inbox import entry_names
@@ -22,6 +23,7 @@ from .inbox_entries import Reject, load_entry
 from .state_slot import STATE_STREAM, StateRow, active_by_slot, state_rows
 
 RESULT_SCHEMA = "an-kla/state-result-v1"
+RESULT_SCHEMA_V2 = "an-kla/state-result-v2"  # ADR-0069 §4: sólo con `for_reader`, `subject`, `audience` o `excluded.other_audience`
 DEFAULT_BUDGET = 4000
 MAX_PENDING_READ = 1000
 
@@ -98,17 +100,17 @@ def _stub(item: Mapping[str, Any]) -> dict[str, Any]:
 
 def _response(
     revision: str, scope: str, slots: list[dict[str, Any]], excluded: int, inbox_pending: int,
-    used: int, empty: bool, declared: Mapping[str, Any] | None = None,
+    used: int, empty: bool, declared: Mapping[str, Any] | None = None, other: int = 0, scoped: bool = False,
 ) -> dict[str, Any]:
     return {
         **(declared or {}),
-        "schema": RESULT_SCHEMA,
+        "schema": RESULT_SCHEMA_V2 if scoped or other else RESULT_SCHEMA,  # ADR-0069 §4: v2 disperso
         "untrusted_memory_data": True,
         "revision": revision,
         "scope": scope,
         "inbox": {"pending": inbox_pending},
         "slots": slots,
-        "excluded": {"budget": excluded},
+        "excluded": {"budget": excluded, **({"other_audience": other} if other else {})},
         "used_bytes": used,
         "empty": empty,
     }
@@ -116,31 +118,32 @@ def _response(
 
 def fit_budget(
     revision: str, scope: str, items: list[dict[str, Any]], inbox_pending: int, budget: int, empty: bool,
-    declared: Mapping[str, Any] | None = None,
+    declared: Mapping[str, Any] | None = None, other: int = 0,
 ) -> dict[str, Any]:
     """Respuesta que cabe en ``budget`` bytes: entrada completa, si no su stub, si no ``excluded.budget``."""
 
     total = len(items)
+    scoped = any(key in item for item in items for key in ("for_reader", "subject", "audience"))
     # Cotas superiores mientras los contadores no se conocen (used_bytes = presupuesto; excluded = todas).
-    floor = _response(revision, scope, [], total, inbox_pending, budget, empty, declared)
+    floor = _response(revision, scope, [], total, inbox_pending, budget, empty, declared, other, scoped)
     if serialized_size(floor) > budget:
         raise StateReadError("state_budget_too_small", f"la respuesta vacía necesita {serialized_size(floor)} bytes")
     kept: list[dict[str, Any]] = []
     for item in items:
         for candidate in (item, _stub(item)):
-            trial = _response(revision, scope, kept + [candidate], total, inbox_pending, budget, empty, declared)
+            trial = _response(revision, scope, kept + [candidate], total, inbox_pending, budget, empty, declared, other, scoped)
             if serialized_size(trial) <= budget:
                 kept.append(candidate)
                 break
     excluded = total - len(kept)
     used = budget
     for _ in range(8):  # punto fijo: used_bytes es la longitud de la salida que lo contiene
-        result = _response(revision, scope, kept, excluded, inbox_pending, used, empty, declared)
+        result = _response(revision, scope, kept, excluded, inbox_pending, used, empty, declared, other, scoped)
         size = serialized_size(result)
         if size == used:
             return result
         used = size
-    return _response(revision, scope, kept, excluded, inbox_pending, budget, empty, declared)
+    return _response(revision, scope, kept, excluded, inbox_pending, budget, empty, declared, other, scoped)
 
 
 def state_show(
@@ -152,8 +155,13 @@ def state_show(
     budget: int = DEFAULT_BUDGET,
     repo_id: str | None = None,
     anchor_limit: int = DEFAULT_ANCHOR_LIMIT,
+    reader: Reader | None = None,
 ) -> dict[str, Any]:
-    """``state-result-v1`` de la revisión vigente. ``slot`` y ``all_slots`` son excluyentes (``main`` por defecto)."""
+    """``state-result-v1`` de la revisión vigente. ``slot`` y ``all_slots`` son excluyentes (``main`` por defecto).
+
+    ``reader`` (ADR-0069 §4): quien lee. Una casilla cuya cabeza es para otro no sale y cuenta en
+    ``excluded.other_audience`` (con ``reader.include_other`` sale marcada ``for_reader: false``); el ``state``
+    anterior no ocupa su lugar: la cabeza es la que es."""
 
     if slot is not None and all_slots:
         raise StateReadError("state_slot_conflict", "--slot y --all-slots son excluyentes")
@@ -172,6 +180,8 @@ def state_show(
     inbox_pending, per_slot = pending_states(store, repo)
     wanted = None if all_slots else (slot or DEFAULT_SLOT)
     items: list[dict[str, Any]] = []
+    scope_reader = reader if reader is not None else make_reader(store)
+    other_count = 0
     server = AnchorServer(store, snapshot, anchor_limit)
     # Con scope `all` una casilla es (repo, slot): se agrupa por ambos y se ordena por slot y repo.
     groups: dict[tuple[str, str], list[StateRow]] = {}
@@ -186,10 +196,18 @@ def state_show(
         retired = sum(1 for m in members if not m.active)
         pending = per_slot.get(group_slot, 0) if group_repo == repo else 0
         head = actives[-1]
-        items.append(_entry(head, actives, retired, pending, scope == "all", server.serve(STATE_STREAM, head.row)))
+        marks: dict[str, Any] = {}
+        if has_scope(head.row):  # ADR-0069 §4: un registro sin los campos nuevos nunca se filtra
+            other = is_for_other(head.row, scope_reader)
+            if other and not scope_reader.include_other:
+                other_count += 1
+                continue
+            if other:
+                marks = {"for_reader": False, **explicit_scope(head.row)}
+        items.append(_entry(head, actives, retired, pending, scope == "all", {**server.serve(STATE_STREAM, head.row), **marks}))
     with server:
         declared = server.declare()
-    return fit_budget(snapshot.revision_id, scope, items, inbox_pending, budget, not items, declared)
+    return fit_budget(snapshot.revision_id, scope, items, inbox_pending, budget, not items, declared, other_count)
 
 
 __all__ = ["DEFAULT_BUDGET", "RESULT_SCHEMA", "StateReadError", "render", "serialized_size", "state_show"]
