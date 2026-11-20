@@ -3,7 +3,7 @@
     python custodian_adapter_fake.py --scenario <json> --log <file>
 
 The scenario is ``{"mode": ..., ...}``: ``response`` (prints ``response``), ``exit_nonzero``, ``timeout`` (sleeps),
-``bad_json``, ``bad_schema``, ``noisy_stderr`` (MiB on standard error, then ``response``), ``huge_stdout`` (more than the
+``bad_json``, ``bad_schema``, ``raw`` (prints ``raw`` as is), ``noisy_stderr`` (MiB on standard error, then ``response``), ``huge_stdout`` (more than the
 8 MiB cap), ``grandchild`` (leaves a sleeping child in its process group and sleeps; its pid goes to ``pid_file``).
 Every call writes to ``--log`` what it saw: its argv, its working directory, its environment and the request.
 """
@@ -27,6 +27,9 @@ def main() -> int:
         return 3
     if mode == "timeout":
         time.sleep(60)
+        return 0
+    if mode == "raw":
+        sys.stdout.write(scenario["raw"])
         return 0
     if mode == "bad_json":
         sys.stdout.write("esto no es JSON {")
