@@ -1,0 +1,123 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:disputes-list:v2",
+  "title": "AN-KLA Disputes List v2",
+  "description": "Result of `disputes list` (ADR-0063 D3): the vigent records that dispute another record instead of superseding it. Read-only and untrusted memory data. `target.record_sha256` is the digest of the target's canonical record before overlays (ADR-0026 selector); `target.active` is true for a vigent target, false for a target no longer vigent (superseded or refuted; the dispute is still listed) and null when the target is not in the revision. `writer` and `enqueued_at` come from the record envelope and are null when it is absent or invalid; they are assertions by the emitter, not proof of authorship. ADR-0069: versión dispersa; sólo sale con alguna clave de ámbito o destinatario, y entonces es el superconjunto de la anterior.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "untrusted_memory_data",
+    "revision",
+    "target",
+    "disputes"
+  ],
+  "properties": {
+    "schema": {
+      "const": "an-kla/disputes-list-v2"
+    },
+    "untrusted_memory_data": {
+      "const": true
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "target": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "disputes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "stream",
+          "text",
+          "target",
+          "writer",
+          "enqueued_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "stream": {
+            "enum": [
+              "facts",
+              "events",
+              "episodes"
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "target": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "stream",
+              "id",
+              "record_sha256",
+              "active"
+            ],
+            "properties": {
+              "stream": {
+                "enum": [
+                  "facts",
+                  "events",
+                  "episodes"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "record_sha256": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              },
+              "active": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            }
+          },
+          "writer": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "urn:an-kla:schema:record-envelope:v1#/$defs/identity"
+              }
+            ]
+          },
+          "enqueued_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "verdict": {
+            "enum": [
+              "contradicted",
+              "insufficient"
+            ]
+          },
+          "for_reader": {
+            "const": false
+          }
+        }
+      }
+    }
+  }
+}

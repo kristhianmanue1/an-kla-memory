@@ -81,6 +81,18 @@ publica:
   - { tipo: contrato, id: an-kla/inbox-purge-result-v1 }
   - { tipo: contrato, id: an-kla/remember-result-v1 }
   - { tipo: contrato, id: an-kla/remember-error-v1 }
+  # Ámbito, destinatario y directivas (ADR-0069)
+  - { tipo: contrato, id: an-kla/inbox-entry-v4 }
+  - { tipo: contrato, id: an-kla/remember-error-v2 }
+  - { tipo: contrato, id: an-kla/retrieval-result-v4 }
+  - { tipo: contrato, id: an-kla/mcp-retrieve-v4 }
+  - { tipo: contrato, id: an-kla/list-result-v2 }
+  - { tipo: contrato, id: an-kla/state-result-v2 }
+  - { tipo: contrato, id: an-kla/history-result-v2 }
+  - { tipo: contrato, id: an-kla/disputes-list-v2 }
+  - { tipo: contrato, id: an-kla/anchors-verify-v2 }
+  - { tipo: contrato, id: an-kla/context-assembly-v3 }
+  - { tipo: contrato, id: an-kla/resume-v2 }
   # Continuidad
   - { tipo: contrato, id: an-kla/working-state-v2 }
   - { tipo: contrato, id: an-kla/checkpoint-v2 }
