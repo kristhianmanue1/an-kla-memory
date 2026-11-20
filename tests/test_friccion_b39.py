@@ -44,7 +44,7 @@ class InconclusiveAttemptTests(DocumentCase):
         written_at = body["anchors"][0]["checked_at"]
         (Path(self.store.store_root) / "config.json").unlink()  # the environment of the audit has no table of custodians
         audit = self.audit(body["record_id"])
-        self.assertEqual(audit["schema"], "an-kla/anchors-verify-v3")
+        self.assertEqual(audit["schema"], "an-kla/anchors-verify-v4")
         self.assertEqual(audit["warnings"], [{"code": "custodian_not_configured", "custodian": "skopos", "anchors": 1}])
         self.assertNotIn("custodians_config_error", audit)
         item = self.anchor_of(audit)
@@ -57,7 +57,7 @@ class InconclusiveAttemptTests(DocumentCase):
         self.assertEqual(state["state"], "committed", state)
         shown = self.served("state", "show")["slots"][0]["anchors"][0]
         self.assertEqual(shown["freshness"], "unverified")  # a state never audited and never concluded: nothing to keep
-        schema_validator(self, "anchors-verify-v3").validate(audit)
+        schema_validator(self, "anchors-verify-v4").validate(audit)
 
     def test_a_failing_process_with_the_custodian_configured_is_no_configuration_warning(self) -> None:
         body = self.written(*shortcut())
@@ -67,7 +67,7 @@ class InconclusiveAttemptTests(DocumentCase):
         self.assertNotIn("warnings", audit)
         item = self.anchor_of(audit)
         self.assertEqual((item["reason"], item["adapter_called"], item["served"]["freshness"]), ("adapter_error", True, "fresh"))
-        self.assertEqual(audit["schema"], "an-kla/anchors-verify-v3")  # `served` alone makes it v3
+        self.assertEqual(audit["schema"], "an-kla/anchors-verify-v4")  # the record carries `coverage.evidence` (erratum 7): v4
         self.assert_reads_fresh(body["record_id"], written_at)
 
     def test_an_unreadable_table_says_config_error_and_not_custodian_not_configured(self) -> None:
@@ -83,7 +83,7 @@ class InconclusiveAttemptTests(DocumentCase):
     def test_a_conclusive_attempt_has_its_own_served_and_no_warning(self) -> None:
         body = self.written(*shortcut())
         audit = self.audit(body["record_id"])
-        self.assertEqual((audit["schema"], "warnings" in audit, "served" in self.anchor_of(audit)), ("an-kla/anchors-verify-v3", False, True))  # ADR-0073 §6: `served` is always there, also when the attempt concludes
+        self.assertEqual((audit["schema"], "warnings" in audit, "served" in self.anchor_of(audit)), ("an-kla/anchors-verify-v4", False, True))  # ADR-0073 §6: `served` is always there, also when the attempt concludes
 
     def test_a_conclusive_attempt_does_rule(self) -> None:
         """Aceptación 2: `quote_absent` y `copy_sha_mismatch` mandan; `fresh` → `broken` → `no_adapter` se sirve `broken`."""

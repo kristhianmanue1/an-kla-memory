@@ -275,6 +275,7 @@ def verify_command(store: Any, args: Any, clock: Callable[[], datetime] | None =
     third = bool(warnings) or any("served" in a for r in records for a in r.get("anchors", []))  # ADR-0072 §2: v2 is published
     # ADR-0073 §6: v3 is published and closed for ``served``: with a ``conversation`` anchor audited (``served``, never of a directive) it is v4
     fourth = any("served" in a and a.get("anchor", {}).get("kind") == "conversation" for r in records for a in r.get("anchors", []))
+    fourth = fourth or any(isinstance(r.get("coverage"), dict) and "evidence" in r["coverage"] for r in records)  # erratum 7: coverage.evidence is not in the published v3
     return {"schema": RESULT_SCHEMA_V4 if fourth else RESULT_SCHEMA_V3 if third else RESULT_SCHEMA_V2 if versioned else RESULT_SCHEMA,
             "untrusted_memory_data": True,
             "revision": snapshot.revision_id, **declared, "records": records}
