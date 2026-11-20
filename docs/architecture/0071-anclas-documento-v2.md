@@ -110,7 +110,7 @@ Sin anclas `document` v2 ni anotaciones `anchor_check`, todo sale como hoy.
 
 ### 7. Vuelta atrás
 
-beta.38 rechaza un ancla v2 (`anchor_schema_invalid`) al vaciar una entrada v4 que la lleve: la regla de siempre («`inbox drain` y pendientes a 0 antes de bajar») lo cubre. Un registro ya comprometido con anclas v2 lo lee beta.38 sin entenderlo:
+beta.38 no conoce `inbox-entry-v4`: al vaciar rechaza la entrada **entera** con `inbox_entry_invalid`, y un ancla v2 suelta la rechaza con `anchor_schema_invalid` (X72). La regla de siempre («`inbox drain` y pendientes a 0 antes de bajar») cubre los dos casos. (Corregido en la implementación: el borrador decía sólo lo segundo.) Un registro ya comprometido con anclas v2 lo lee beta.38 sin entenderlo:
 - las sirve como `document` con `kind_not_supported`, o las rechaza al validarlas, según el camino;
 - ignora `anchor_checks` y las anotaciones `anchor_check`.
 
