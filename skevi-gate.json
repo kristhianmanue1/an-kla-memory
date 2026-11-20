@@ -6,7 +6,9 @@
     "tests/fixtures/anchors-c3/vectores.json": 4900,
     "tests/fixtures/anchors-c3/fact-checks-v1-vectors.json": 1200,
     "tests/fixtures/anchors-c3/fact-checks-v2-vectors.json": 3500,
-    "tests/fixtures/anchors-c3-v2/vectores.json": 2800
+    "tests/fixtures/anchors-c3-v2/vectores.json": 2800,
+    "tests/fixtures/conversacion-resolutor-v1/vectores.json": 1200,
+    "tests/fixtures/conversacion-resolutor-v1/coverage-evidence-vectors.json": 2500
   },
   "default_limit": 800,
   "root_markdown": [

@@ -1,0 +1,655 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:an-kla:schema:remember-result:v4",
+  "title": "AN-KLA Remember Result v4",
+  "description": "Resultado de `remember` (ADR-0063 D1). `state`: `committed` (con `revision`, salvo `already_committed: true` de un reintento sin lote propio), `rejected` (con `code` y `reason_codes`) o `queued` (la entrada está en la bandeja; con `drain_error` si el vaciado abortó con resultado conocido, con `outcome: unknown` si el commit quedó sin resultado firme —lo resuelve el paso 0 del vaciado siguiente—, y con `resolution: pending` cuando se pidió `--supersedes`: la resolución propia/ajena ocurre al vaciar). `record_id` sólo con `committed` y `queued` (un rechazado no crea record). `disputed` o `superseded` sólo con `committed` (D3). `rejected` lista todos los rechazos que produjo el vaciado de esta invocación, también los de otras entradas. Reintentar con el mismo texto, `kind` y target es idempotente. `--idempotency-key` acepta texto libre de 1 a 256 caracteres: `sha256:<64 hex>` se usa tal cual y cualquier otro valor se convierte en `sha256:` + sha256 de su UTF-8; `idempotency_key` es siempre la forma final. Sólo nombres y códigos: nunca el texto del recuerdo ni rutas. ADR-0065: un `state` lleva `slot` y jubila sólo la cabeza de su casilla: `retired` ({id, writer, enqueued_at}) dice a quién, `retired_by` (también con `already_committed`) qué `state` posterior lo jubiló a él y `conflict_remaining` los demás vigentes de la casilla (sólo por `plan-write`, restauración o `relocate`). Un `state` en cola no anuncia `record_id` (su id depende de la cabeza que jubila) y queda con `resolution: pending`. Rechazos propios: `remember_state_over_fact` y `remember_state_slot_mismatch`. ADR-0066: con anclas, `anchors` lleva por cada una las tres comprobaciones que hizo `remember` al encolar (nunca se vuelven a hacer al vaciar), y `coverage`, `missing` y `missing_total` la cobertura determinista del texto contra la cita guardada (sólo `none` se sirve como aviso; el registro siempre se guarda). `verdict` sólo en `dispute`. Rechazos de ancla (`anchor_*`, `dispute_*`) salen sin entrada y sin cambio en el store. ADR-0070: con `fact-checks-rules/v2` la cobertura dice sus `rules` y `missing` admite `hash` y `date`; sin `rules` es v1. ADR-0071: un `document` de `memoria/ancla/v2` se comprueba al escribir y al auditar, y al leer se sirve lo guardado: su resultado lleva `checked_at`, `manifest_sha256`, `derivation` y `custody`; sin resultado guardado, `not_checked`. ADR-0072 §4: v3 es disperso (v1 y v2 están publicados): sólo sale si la respuesta lleva el ámbito o la vigencia guardados (`subject`, `audience`, `valid_until` normalizada y `valid_until_input` tal como se dio, `until_revoked`, `revokes`) o `subject_normalized_from` (un `--subject` que sólo difería por mayúsculas, guardado en minúsculas). ADR-0073: v4 es v3 más el resultado del resolutor por ancla `conversation`. ADR-0073: un ancla `conversation` (no la de una `directive`) con resolutor configurado lleva el resultado del resolutor: `resolution`, `turn_id`, `seal`, `speaker` (en qué voz está la cita: `user` no prueba que hablara el Operador), `candidates` (cuántos mensajes la contienen por voz; nulo tras `verify`) y `detail`. Errata 7 de `ancla/v1` (ADR-0073 §8): `coverage.evidence` (`ancla-document/v1`) dice que la cobertura se midió contra la evidencia de un ancla `document` de forma válida (su cita, su página y la ruta de su copia); una evidencia de más de 16 384 bytes anula la cobertura de todo el registro: `coverage` lleva `coverage_error` (`invalid_fact_quotes`) en vez de `total`, `present` y `level`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "untrusted_memory_data",
+    "state",
+    "entry",
+    "kind",
+    "idempotency_key",
+    "enqueued_at",
+    "outcome",
+    "warnings",
+    "rejected"
+  ],
+  "properties": {
+    "schema": {
+      "const": "an-kla/remember-result-v4"
+    },
+    "untrusted_memory_data": {
+      "const": true
+    },
+    "state": {
+      "enum": [
+        "committed",
+        "rejected",
+        "queued"
+      ]
+    },
+    "entry": {
+      "type": "string"
+    },
+    "kind": {
+      "enum": [
+        "fact",
+        "decision",
+        "state",
+        "directive"
+      ]
+    },
+    "idempotency_key": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "enqueued_at": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\\.[0-9]{6}Z(?![\\s\\S])"
+    },
+    "outcome": {
+      "enum": [
+        "known",
+        "unknown"
+      ]
+    },
+    "record_id": {
+      "type": "string"
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}(?![\\s\\S])"
+    },
+    "stream": {
+      "enum": [
+        "facts",
+        "events",
+        "episodes"
+      ]
+    },
+    "operation": {
+      "enum": [
+        "add",
+        "supersede"
+      ]
+    },
+    "already_committed": {
+      "const": true
+    },
+    "disputed": {
+      "type": "object"
+    },
+    "superseded": {
+      "type": "string"
+    },
+    "code": {
+      "type": "string",
+      "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"
+    },
+    "reason_codes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"
+      }
+    },
+    "drain_error": {
+      "type": "string",
+      "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"
+    },
+    "resolution": {
+      "const": "pending"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "rejected": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "count",
+        "entries"
+      ],
+      "properties": {
+        "count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "entry",
+              "rejected_as",
+              "code",
+              "reason_codes"
+            ],
+            "properties": {
+              "entry": {
+                "type": "string"
+              },
+              "rejected_as": {
+                "type": "string"
+              },
+              "code": {
+                "type": "string",
+                "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"
+              },
+              "reason_codes": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z0-9_:.-]{1,80}(?![\\s\\S])"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "slot": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]{0,31}(?![\\s\\S])"
+    },
+    "retired": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "writer",
+        "enqueued_at"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "writer": {
+          "type": "object"
+        },
+        "enqueued_at": {
+          "type": "string"
+        }
+      }
+    },
+    "retired_by": {
+      "type": "string"
+    },
+    "conflict_remaining": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "anchors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "index",
+          "kind",
+          "quote_sha256",
+          "source",
+          "source_reason",
+          "quote",
+          "quote_reason",
+          "integrity",
+          "integrity_reason",
+          "match",
+          "matched_text",
+          "freshness",
+          "reason"
+        ],
+        "properties": {
+          "index": {
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "repo-file",
+              "conversation",
+              "document"
+            ]
+          },
+          "quote_sha256": {
+            "type": "string"
+          },
+          "source": {
+            "enum": [
+              "verified",
+              "not_found",
+              "unverifiable"
+            ]
+          },
+          "source_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              null,
+              "adapter_error",
+              "anchor_limit",
+              "commit_not_in_clone",
+              "commit_not_on_default_branch",
+              "copy_missing",
+              "custodian_offline",
+              "document_unknown",
+              "kind_not_supported",
+              "no_adapter",
+              "no_default_branch",
+              "no_git",
+              "no_verifier",
+              "not_checked",
+              "path_missing",
+              "repo_unavailable",
+              "resolution_pending",
+              "resolver_error",
+              "seal_unverifiable",
+              "session_lacks_quote",
+              "session_unavailable",
+              "turn_purged"
+            ]
+          },
+          "quote": {
+            "enum": [
+              "verified",
+              "not_found",
+              "unverifiable"
+            ]
+          },
+          "quote_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              null,
+              "adapter_truncated",
+              "anchor_limit",
+              "binary",
+              "commit_not_in_clone",
+              "commit_not_on_default_branch",
+              "custodian_offline",
+              "derived_modality",
+              "document_unknown",
+              "integrity_not_verified",
+              "kind_not_supported",
+              "locator_invalid",
+              "locator_not_found",
+              "no_verifier",
+              "not_checked",
+              "not_utf8",
+              "quote_absent",
+              "resolver_error",
+              "seal_unverifiable",
+              "session_lacks_quote",
+              "session_unavailable",
+              "source_not_verified",
+              "too_large",
+              "turn_purged"
+            ]
+          },
+          "integrity": {
+            "enum": [
+              "verified",
+              "not_found",
+              "unverifiable"
+            ]
+          },
+          "integrity_reason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              null,
+              "adapter_error",
+              "anchor_limit",
+              "binary",
+              "commit_blob_lacks_quote",
+              "commit_not_in_clone",
+              "copy_sha_mismatch",
+              "custodian_offline",
+              "derivation_parent_mismatch",
+              "derivation_superseded",
+              "derivation_unsupported",
+              "document_unknown",
+              "kind_not_supported",
+              "manifest_mismatch",
+              "manifest_missing",
+              "no_adapter",
+              "no_verifier",
+              "not_checked",
+              "not_utf8",
+              "raw_lost",
+              "resolution_pending",
+              "resolver_error",
+              "seal_mismatch",
+              "seal_unverifiable",
+              "session_lacks_quote",
+              "session_unavailable",
+              "source_not_verified",
+              "too_large",
+              "turn_purged",
+              "working_tree"
+            ]
+          },
+          "at": {
+            "enum": [
+              "default",
+              "branch",
+              "commit",
+              "worktree",
+              null
+            ]
+          },
+          "match": {
+            "enum": [
+              "literal",
+              "ws-nfc/v1",
+              "ws-nfc-accents/v1",
+              null
+            ]
+          },
+          "matched_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "freshness": {
+            "enum": [
+              "broken",
+              "stale",
+              "unverified",
+              "pending",
+              "fresh"
+            ]
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "resolution": {
+            "enum": [
+              "pending",
+              "resolved",
+              "not_found"
+            ]
+          },
+          "turn_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "checked_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cuándo se comprobó (ADR-0071): la fecha del resultado guardado; null en un ancla v2 aún no comprobada."
+          },
+          "manifest_sha256": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "derivation": {
+            "enum": [
+              null,
+              "current",
+              "superseded",
+              "unsupported"
+            ],
+            "description": "Estado de la derivación según el custodio al comprobar; null sin respuesta."
+          },
+          "custody": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "retention": {
+                "enum": [
+                  "effective",
+                  "expired",
+                  "unknown"
+                ]
+              }
+            },
+            "additionalProperties": false
+          },
+          "adapter_called": {
+            "type": "boolean",
+            "description": "Sólo al escribir y al auditar: si se lanzó el adaptador."
+          },
+          "seal": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Cadena opaca del custodio, con su tipo dentro; no se valida su formato."
+          },
+          "speaker": {
+            "enum": [
+              "user",
+              "pasted",
+              "automatic",
+              "compact_summary",
+              "local_command",
+              "subagent",
+              "assistant",
+              "unknown",
+              null
+            ],
+            "description": "La voz en que el custodio clasifica la cita. Viaja aparte del ancla."
+          },
+          "candidates": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "required": [
+              "user",
+              "pasted",
+              "other"
+            ],
+            "properties": {
+              "user": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pasted": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "other": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "resolver_called": {
+            "enum": [
+              "resolve",
+              "verify",
+              null
+            ],
+            "description": "Sólo al escribir y al auditar: qué operación se llamó (nulo: nadie)."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "required": [],
+      "additionalProperties": false,
+      "properties": {
+        "total": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "present": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "level": {
+          "enum": [
+            "none",
+            "partial",
+            "full",
+            "unchecked"
+          ]
+        },
+        "rules": {
+          "const": "fact-checks-rules/v2"
+        },
+        "evidence": {
+          "const": "ancla-document/v1"
+        },
+        "coverage_error": {
+          "enum": [
+            "invalid_fact_quotes"
+          ]
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "total",
+            "present",
+            "level"
+          ]
+        },
+        {
+          "required": [
+            "coverage_error"
+          ]
+        }
+      ]
+    },
+    "missing": {
+      "type": "array",
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "required": [
+          "type",
+          "value"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "enum": [
+              "identifier",
+              "path",
+              "hash",
+              "version",
+              "date",
+              "number"
+            ]
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "missing_total": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "verdict": {
+      "enum": [
+        "contradicted",
+        "insufficient"
+      ]
+    },
+    "custodians_config_error": {
+      "enum": [
+        "custodians_unreadable",
+        "custodians_invalid_json",
+        "custodians_invalid_shape"
+      ],
+      "description": "ADR-0071 §3: la tabla de custodios no se pudo leer; todo custodio da adapter_error sin lanzar ningún proceso."
+    },
+    "subject": {
+      "type": "string"
+    },
+    "audience": {
+      "type": "string"
+    },
+    "valid_until": {
+      "type": "string"
+    },
+    "valid_until_input": {
+      "type": "string"
+    },
+    "until_revoked": {
+      "const": true
+    },
+    "revokes": {
+      "const": true
+    },
+    "subject_normalized_from": {
+      "type": "string",
+      "description": "Lo dado, cuando sólo difería de un repo.id canónico por mayúsculas."
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "committed"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "record_id"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "state": {
+            "const": "rejected"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "code",
+          "reason_codes"
+        ],
+        "not": {
+          "required": [
+            "record_id"
+          ]
+        }
+      }
+    }
+  ]
+}

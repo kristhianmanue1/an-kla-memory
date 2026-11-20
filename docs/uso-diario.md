@@ -431,8 +431,9 @@ sin fiarse de quien lo escribió y sin ningún modelo, si la cita sigue ahí.
   Un `document` es la excepción: no se vuelve a comprobar al leer, se sirve lo guardado
   (ver «Citar un documento custodiado»).
 - **`conversation` y `document`**: un ancla de conversación nace `pending` y se
-  guarda siempre así; hasta que exista el resolutor de C2 no hay orden que la
-  resuelva (el esquema `anchor-resolution-v1` y su vista ya están). Un `document`
+  guarda siempre así; con un resolutor configurado se comprueba al escribir y al
+  auditar y el resultado se guarda aparte (ver «Citar una conversación con
+  resolutor»). Un `document`
   de `memoria/ancla/v1` ya guardado sigue respondiendo `unverified`/`kind_not_supported`
   hasta su primera auditoría.
 - **`dispute`**: guarda un dictamen externo (`contradicted` o `insufficient`; un
@@ -499,6 +500,12 @@ python3 -m an_kla remember --text-file - --kind fact \
 - **Una cita `ocr_text`** se comprueba entera (`source`, `integrity` y `quote` en `verified`) y **aun así
   sale `unverified` / `derived_modality`**: el OCR no es literal del original. Sólo `native_text`
   sale `fresh`. Es lo que fija el contrato, no un fallo de la comprobación.
+- **La cobertura de un hecho con una cita de documento** (errata 7 de `ancla/v1`) se mide contra la cita
+  **más su página y la ruta de su copia** (no los `item_id`): el «188» y la clave del manual que sólo están
+  en el localizador y en la copia salen presentes. La respuesta lo dice con `coverage.evidence`
+  (`ancla-document/v1`) y sube a `remember-result-v4`, `history-result-v3` o `state-result-v3`. La página es la
+  física; si el texto cita la impresa y no coinciden, ese número sigue ausente. Una evidencia de más de
+  16 384 bytes (una ruta enorme) anula la cobertura del registro (`coverage_error`), no se trunca.
 
 **Comprobar y leer.** Se comprueba **al escribir y al auditar**; al leer (`history`, `state show`)
 se sirve el último resultado guardado, con su fecha (`checked_at`), y **no se llama a nadie**.
@@ -526,6 +533,66 @@ concluyente previo, el intento se sirve como siempre. Lo que beta.39 ya dejó re
 Vuelta atrás: `inbox drain` y `pending` a 0 antes de bajar a beta.38, que rechaza entera la
 entrada `inbox-entry-v4` pendiente; un registro ya comprometido lo lee beta.38 sin romper, sirve el
 ancla como `kind_not_supported` e ignora `anchor_checks` y las anotaciones.
+
+### Citar una conversación con resolutor (`conversation`)
+
+(ADR-0073, contrato `memoria/conversacion-resolutor/v1`.) Una cita de lo que se dijo en una sesión
+(`--anchor-file` con `{"source": {"kind": "conversation"}, "quote": "<cita literal>"}`) se comprueba
+con un **resolutor**: un programa del custodio, un proceso por petición, que busca la cita en **un**
+mensaje de la sesión, lo sella y dice en qué voz está. El texto no sale de su proceso. Sirve para
+`fact`, `decision` y `state`.
+
+**Configurar el resolutor.** Un único resolutor, con la clave `conversation_resolver` en el mismo
+archivo que la tabla de custodios (`AN_KLA_CUSTODIANS`, o `<store>/config.json`, con las mismas reglas y
+el mismo «tabla ilegible»; para reubicar el store, usa la variable):
+
+```json
+{"conversation_resolver": {"custodian": "skopos", "argv": ["/ruta/python", "-B", "/ruta/skopos_conversation_resolver.py", "--claude-root", "/ruta/.claude/projects", "--codex-root", "/ruta/.codex/sessions"]}}
+```
+
+`argv` va con rutas absolutas y nunca pasa por un intérprete de órdenes; el proceso corre con
+`PATH=/usr/bin:/bin`, `LC_ALL=C`, directorio `/`, 10 s de plazo y 8 MiB de salida como máximo.
+`custodian` sólo informa. Sin resolutor configurado todo sigue como antes: el ancla queda `pending`
+y no se guarda nada. **Para que las citas de conversación resuelvan, el agente debe llevar
+`AN_KLA_AGENT_CLI=claude-code` (o `codex`) y su `AN_KLA_SESSION_ID`** (C0 fija `agent.cli`; el id de
+sesión es `claude-code:<uuid>`). Con otro nombre (p. ej. `claude`), el resolutor contesta
+`session_unavailable` y la cita queda `pending`.
+
+**Los tres momentos.** Al **escribir**, `remember` llama a `resolve` y guarda el resultado en
+`anchor_checks`; **el ancla se guarda siempre como nace** (`pending`, `turn_id` y `seal` nulos) y un
+ancla que queda `pending` es válida (no hay rechazo por resolución, ni por `not_found`). Al **auditar**,
+`anchors verify` llama a `resolve` si el último resultado concluyente no es `resolved` y a `verify` si lo es, y
+guarda una anotación `anchor-check-v2`. Al **leer** no se llama a nadie: se sirve el último concluyente
+(si no hay ninguno, el último), con el ancla construida con su `resolution`, `turn_id` y `seal`.
+Concluye el resultado en que el ancla pasa a `not_found`, o alguna comprobación es `not_found`, o las tres
+son `verified`; **no concluyen** `pending`, `no_verifier`, `resolver_error`, `session_unavailable` ni
+`seal_unverifiable`, y un intento así no rebaja un `fresh`. Una rotura comprobada (`seal_mismatch`,
+`quote_absent`, `turn_purged`) sí manda. Cualquier fallo del resolutor (plazo, rc ≠ 0, salida que no
+es JSON, `{"schema": "invalid"}`, respuesta incoherente) es `resolver_error`: nunca excepción ni `broken`.
+Los orígenes se borran a plazo (30 días en Claude Code): después se sirve el último concluyente con su fecha.
+
+**`speaker` y lo que no prueba `user`.** Con cada resultado se guardan y se sirven `speaker` (`user`,
+`pasted`, `automatic`, `compact_summary`, `local_command`, `subagent`, `assistant`, `unknown`) y
+`candidates` (en cuántos mensajes aparece la cita, por voz; nulo tras un `verify`), aparte del ancla.
+**`user` quiere decir «entró por el canal de usuario de una sesión raíz»; no prueba que hubiera una persona
+al teclado ni que hablara el Operador:** en la sesión de un agente orquestado, ese «usuario» es otro agente,
+y un pegado sin marca del arnés no se distingue de lo tecleado. Si el custodio reclasifica el mensaje,
+la cita sigue `fresh` y el `speaker` cambia. Usa citas largas (40 bytes útiles o más): una cita corta
+casa con el primer mensaje que la contenga.
+
+**Las `directive` no se comprueban todavía.** Por decisión del Operador, sus anclas `conversation` no se
+resuelven, ni al escribir ni al auditar: siguen `pending`, y la `directive`, `unverified`, igual que en
+beta.40. La política de órdenes (quién las escribe, qué sesiones cuentan y cuándo se verifican) está aplazada.
+
+**`anchors verify` y su respuesta.** Toda ancla `document` o `conversation` auditada lleva `served` (lo que leer
+seguirá sirviendo), también cuando el intento concluye. Con sólo `document` la respuesta es
+`anchors-verify-v3`; con alguna `conversation`, `anchors-verify-v4`. **El «segundo registro» de cada
+auditoría** no es un duplicado: además de la anotación `anchor-check`, cada auditoría que guarda deja en
+`events` el registro de la política de escritura (`e-write-policy-…`), que añade todo commit de la bandeja
+(también cada `remember`). Las respuestas con un resultado de resolutor suben, de forma dispersa, a
+`remember-result-v4`, `history-result-v3` y `state-result-v3`; la bandeja, a `inbox-entry-v5`, que beta.40
+rechaza entera: `inbox drain` y `pending` a 0 antes de bajar, o, de vuelta aquí,
+`inbox requeue --all-format && inbox drain`.
 
 ### Ámbito, destinatario y órdenes del Operador (`directive`)
 

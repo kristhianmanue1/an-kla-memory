@@ -1,10 +1,10 @@
-"""The audit of ``document`` anchors: ``anchors verify`` calls the adapter and **stores** what it found (ADR-0071 §5).
+"""The audit of ``document`` and ``conversation`` anchors: ``anchors verify`` calls the adapter or the resolver and **stores** what it found (ADR-0071 §5, ADR-0073).
 
 Reading serves what is stored and calls nobody; auditing is the moment that calls (README: "al escribir y al auditar").
 Each audited record gets one ``an-kla/anchor-check-v1`` annotation in ``events``, even when the result did not change
 (the date of the last check is data too).  It enters through the inbox with the C0 envelope of whoever audits and is drained
 in the same invocation.  Without a C0 identity in the environment, or with the inbox busy, the audit still answers, with
-``recorded: false`` and ``record_error: <code>``.  Nothing but ``document`` anchors is ever written.
+``recorded: false`` and ``record_error: <code>``.  Nothing but ``document`` and (with a resolver) ``conversation`` anchors is ever written.
 """
 
 from __future__ import annotations
@@ -12,7 +12,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Callable, Mapping
 
-from .anchor_checks import CHECK_SCHEMA, stored_check
+from .anchor_checks import CHECK_SCHEMA, CHECK_SCHEMA_V2, check_kind, stored_check
+from .anchors_conversation_check import evaluate as evaluate_conversation
 from .anchors_document_copy import copy_state
 from .anchors_document_v2 import evaluate
 from .anchors_git import GitRepo
@@ -61,6 +62,20 @@ class AuditSession:
         del out["reject"]
         return out
 
+    def audit_conversation(
+        self, stream: str, record_id: str, index: int, anchor: Mapping[str, Any], prior: Mapping[str, Any] | None
+    ) -> dict[str, Any] | None:
+        """Call the resolver for one ``conversation`` anchor (``verify`` if its last conclusive result is ``resolved``, else ``resolve``) and
+        remember the attempt for the record's annotation.  ``None`` without a resolver (nothing is called, nothing stored)."""
+        if self.adapters.resolver_state() == "absent":
+            return None
+        key = (stream, record_id)
+        at = self._at.setdefault(key, format_utc(self.clock()))
+        out = evaluate_conversation(anchor, prior, self.adapters, at)
+        self._pending.setdefault(key, []).append(stored_check(index, anchor["quote_sha256"], out))
+        self.used_adapters = True
+        return out
+
     def warnings(self) -> list[dict[str, Any]]:
         """``custodian_not_configured``, one per custodian an audited anchor named that the table does not have (or there is no
         table).  A table that cannot be read says ``custodians_config_error`` instead, and a process that fails with its
@@ -80,7 +95,8 @@ class AuditSession:
         from .inbox import enqueue  # late: the inbox imports the anchors' modules
         from .inbox_drain import drain, error_code
 
-        annotation = {"schema": CHECK_SCHEMA, "target": {"stream": stream, "record_id": record_id}, "checks": checks}
+        schema = CHECK_SCHEMA_V2 if any(check_kind(check) == "conversation" for check in checks) else CHECK_SCHEMA  # v1 only describes ``document``
+        annotation = {"schema": schema, "target": {"stream": stream, "record_id": record_id}, "checks": checks}
         try:
             queued = enqueue(
                 self.store, f"anchor_check {stream}/{record_id}", kind="fact", operation="anchor_check",

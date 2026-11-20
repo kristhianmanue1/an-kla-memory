@@ -70,6 +70,19 @@ class FakeCustodian:
     def adapters(self, scenario: dict[str, Any] | None, timeout: float = 10.0) -> Adapters:
         return Adapters(self.table(scenario) if scenario else {}, None, timeout)
 
+    def resolver_adapters(self, scenario: dict[str, Any] | None, timeout: float = 10.0) -> Adapters:
+        """The same process as the single conversation resolver (ADR-0073 §1); ``None``: no resolver configured."""
+        return Adapters({}, None, timeout, (self.name, self.table(scenario)[self.name]) if scenario else None)
+
+    def install_resolver(self, store_root: Any, scenario: dict[str, Any]) -> None:
+        """The resolver in the store's ``config.json`` (``conversation_resolver``), with a scenario file that ``set`` can rewrite."""
+        self.scenario_path = self.dir / "escenario.json"
+        self.scenario_path.write_text(json.dumps(scenario), encoding="utf-8")
+        argv = [sys.executable, "-B", str(FAKE), "--scenario", str(self.scenario_path), "--log", str(self.dir / "llamada.json")]
+        path = Path(store_root, "config.json")
+        config = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+        path.write_text(json.dumps({**config, "conversation_resolver": {"custodian": self.name, "argv": argv}}), encoding="utf-8")
+
     def install(self, store_root: Any, scenario: dict[str, Any]) -> None:
         """The custodian in the store's ``config.json`` (``custodians``), with a scenario file that ``set`` can rewrite."""
         self.scenario_path = self.dir / "escenario.json"

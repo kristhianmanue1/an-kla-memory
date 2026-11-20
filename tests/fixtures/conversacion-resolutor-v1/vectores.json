@@ -1,0 +1,1153 @@
+{
+ "cases": [
+  {
+   "anchor": {
+    "resolution": "pending",
+    "seal": null,
+    "turn_id": null
+   },
+   "expect": {
+    "detail": null,
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "resolution": "resolved",
+    "resolver_called": "resolve",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "served": "new",
+    "source": "verified",
+    "source_reason": null,
+    "speaker": "user",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "id": "C01",
+   "note": "la cita est\u00e1 en un mensaje del usuario; la sesi\u00f3n sigue abierta",
+   "resolver": {
+    "candidates": {
+     "other": 0,
+     "pasted": 0,
+     "user": 1
+    },
+    "match": "literal",
+    "reason": null,
+    "resolution": "resolved",
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "session": "known",
+    "speaker": "user",
+    "tail": "open",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "pending",
+    "seal": null,
+    "turn_id": null
+   },
+   "expect": {
+    "detail": null,
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "resolution": "resolved",
+    "resolver_called": "resolve",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "served": "new",
+    "source": "verified",
+    "source_reason": null,
+    "speaker": "user",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "id": "C02",
+   "note": "la cita est\u00e1 en dos mensajes del usuario y la repite un resumen: el primero",
+   "resolver": {
+    "candidates": {
+     "other": 1,
+     "pasted": 0,
+     "user": 2
+    },
+    "match": "ws-nfc/v1",
+    "reason": null,
+    "resolution": "resolved",
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "session": "known",
+    "speaker": "user",
+    "tail": "open",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "pending",
+    "seal": null,
+    "turn_id": null
+   },
+   "expect": {
+    "detail": "tail_open",
+    "freshness": "pending",
+    "integrity": "unverifiable",
+    "integrity_reason": "resolution_pending",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "resolution_pending",
+    "resolution": "pending",
+    "resolver_called": "resolve",
+    "seal": null,
+    "served": "new",
+    "source": "unverifiable",
+    "source_reason": "resolution_pending",
+    "speaker": null,
+    "turn_id": null
+   },
+   "id": "C03",
+   "note": "no est\u00e1 en lo escrito hasta ahora y la sesi\u00f3n sigue abierta",
+   "resolver": {
+    "candidates": {
+     "other": 0,
+     "pasted": 0,
+     "user": 0
+    },
+    "match": null,
+    "reason": "tail_open",
+    "resolution": "pending",
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": null,
+    "session": "known",
+    "speaker": null,
+    "tail": "open",
+    "turn_id": null
+   },
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "pending",
+    "seal": null,
+    "turn_id": null
+   },
+   "expect": {
+    "detail": "only_in_other_voice",
+    "freshness": "pending",
+    "integrity": "unverifiable",
+    "integrity_reason": "resolution_pending",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "resolution_pending",
+    "resolution": "pending",
+    "resolver_called": "resolve",
+    "seal": null,
+    "served": "new",
+    "source": "unverifiable",
+    "source_reason": "resolution_pending",
+    "speaker": null,
+    "turn_id": null
+   },
+   "id": "C04",
+   "note": "s\u00f3lo est\u00e1 en texto pegado",
+   "resolver": {
+    "candidates": {
+     "other": 0,
+     "pasted": 1,
+     "user": 0
+    },
+    "match": null,
+    "reason": "only_in_other_voice",
+    "resolution": "pending",
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": null,
+    "session": "known",
+    "speaker": null,
+    "tail": "open",
+    "turn_id": null
+   },
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "pending",
+    "seal": null,
+    "turn_id": null
+   },
+   "expect": {
+    "detail": "only_in_other_voice",
+    "freshness": "pending",
+    "integrity": "unverifiable",
+    "integrity_reason": "resolution_pending",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "resolution_pending",
+    "resolution": "pending",
+    "resolver_called": "resolve",
+    "seal": null,
+    "served": "new",
+    "source": "unverifiable",
+    "source_reason": "resolution_pending",
+    "speaker": null,
+    "turn_id": null
+   },
+   "id": "C05",
+   "note": "s\u00f3lo est\u00e1 en una notificaci\u00f3n o un resumen del sistema, sesi\u00f3n cerrada: pendiente, nunca rota",
+   "resolver": {
+    "candidates": {
+     "other": 2,
+     "pasted": 0,
+     "user": 0
+    },
+    "match": null,
+    "reason": "only_in_other_voice",
+    "resolution": "pending",
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": null,
+    "session": "known",
+    "speaker": null,
+    "tail": "closed",
+    "turn_id": null
+   },
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "pending",
+    "seal": null,
+    "turn_id": null
+   },
+   "expect": {
+    "detail": "session_unavailable",
+    "freshness": "pending",
+    "integrity": "unverifiable",
+    "integrity_reason": "resolution_pending",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "resolution_pending",
+    "resolution": "pending",
+    "resolver_called": "resolve",
+    "seal": null,
+    "served": "new",
+    "source": "unverifiable",
+    "source_reason": "resolution_pending",
+    "speaker": null,
+    "turn_id": null
+   },
+   "id": "C06",
+   "note": "sesi\u00f3n que el custodio no tiene, o cuyo origen ya no existe",
+   "resolver": {
+    "candidates": {
+     "other": 0,
+     "pasted": 0,
+     "user": 0
+    },
+    "match": null,
+    "reason": "session_unavailable",
+    "resolution": "pending",
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": null,
+    "session": "unknown",
+    "speaker": null,
+    "tail": null,
+    "turn_id": null
+   },
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "pending",
+    "seal": null,
+    "turn_id": null
+   },
+   "expect": {
+    "detail": "origin_unreadable",
+    "freshness": "pending",
+    "integrity": "unverifiable",
+    "integrity_reason": "resolution_pending",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "resolution_pending",
+    "resolution": "pending",
+    "resolver_called": "resolve",
+    "seal": null,
+    "served": "new",
+    "source": "unverifiable",
+    "source_reason": "resolution_pending",
+    "speaker": null,
+    "turn_id": null
+   },
+   "id": "C07",
+   "note": "origen ilegible o mayor que el tope del custodio",
+   "resolver": {
+    "candidates": {
+     "other": 0,
+     "pasted": 0,
+     "user": 0
+    },
+    "match": null,
+    "reason": "origin_unreadable",
+    "resolution": "pending",
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": null,
+    "session": "known",
+    "speaker": null,
+    "tail": "open",
+    "turn_id": null
+   },
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "pending",
+    "seal": null,
+    "turn_id": null
+   },
+   "expect": {
+    "detail": null,
+    "freshness": "broken",
+    "integrity": "unverifiable",
+    "integrity_reason": "session_lacks_quote",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "session_lacks_quote",
+    "resolution": "not_found",
+    "resolver_called": "resolve",
+    "seal": null,
+    "served": "new",
+    "source": "unverifiable",
+    "source_reason": "session_lacks_quote",
+    "speaker": null,
+    "turn_id": null
+   },
+   "id": "C08",
+   "note": "sesi\u00f3n cerrada entera y la cita no est\u00e1 en ninguna voz: no se dijo",
+   "resolver": {
+    "candidates": {
+     "other": 0,
+     "pasted": 0,
+     "user": 0
+    },
+    "match": null,
+    "reason": null,
+    "resolution": "not_found",
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": null,
+    "session": "known",
+    "speaker": null,
+    "tail": "closed",
+    "turn_id": null
+   },
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "pending",
+    "seal": null,
+    "turn_id": null
+   },
+   "expect": {
+    "detail": "no_verifier",
+    "freshness": "pending",
+    "integrity": "unverifiable",
+    "integrity_reason": "resolution_pending",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "resolution_pending",
+    "resolution": "pending",
+    "resolver_called": null,
+    "seal": null,
+    "served": "new",
+    "source": "unverifiable",
+    "source_reason": "resolution_pending",
+    "speaker": null,
+    "turn_id": null
+   },
+   "id": "C09",
+   "note": "sin resolutor configurado",
+   "resolver": "none",
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "pending",
+    "seal": null,
+    "turn_id": null
+   },
+   "expect": {
+    "detail": "resolver_error",
+    "freshness": "pending",
+    "integrity": "unverifiable",
+    "integrity_reason": "resolution_pending",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "resolution_pending",
+    "resolution": "pending",
+    "resolver_called": "resolve",
+    "seal": null,
+    "served": "new",
+    "source": "unverifiable",
+    "source_reason": "resolution_pending",
+    "speaker": null,
+    "turn_id": null
+   },
+   "id": "C10",
+   "note": "el resolutor no responde a tiempo",
+   "resolver": "timeout",
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "pending",
+    "seal": null,
+    "turn_id": null
+   },
+   "expect": {
+    "detail": "resolver_error",
+    "freshness": "pending",
+    "integrity": "unverifiable",
+    "integrity_reason": "resolution_pending",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "resolution_pending",
+    "resolution": "pending",
+    "resolver_called": "resolve",
+    "seal": null,
+    "served": "new",
+    "source": "unverifiable",
+    "source_reason": "resolution_pending",
+    "speaker": null,
+    "turn_id": null
+   },
+   "id": "C11",
+   "note": "salida que no es JSON",
+   "resolver": "bad_json",
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "pending",
+    "seal": null,
+    "turn_id": null
+   },
+   "expect": {
+    "detail": "resolver_error",
+    "freshness": "pending",
+    "integrity": "unverifiable",
+    "integrity_reason": "resolution_pending",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "resolution_pending",
+    "resolution": "pending",
+    "resolver_called": "resolve",
+    "seal": null,
+    "served": "new",
+    "source": "unverifiable",
+    "source_reason": "resolution_pending",
+    "speaker": null,
+    "turn_id": null
+   },
+   "id": "C12",
+   "note": "el resolutor rechaza la petici\u00f3n (objeto de fallo)",
+   "resolver": "failure_object",
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "pending",
+    "seal": null,
+    "turn_id": null
+   },
+   "expect": {
+    "detail": "resolver_error",
+    "freshness": "pending",
+    "integrity": "unverifiable",
+    "integrity_reason": "resolution_pending",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "resolution_pending",
+    "resolution": "pending",
+    "resolver_called": "resolve",
+    "seal": null,
+    "served": "new",
+    "source": "unverifiable",
+    "source_reason": "resolution_pending",
+    "speaker": null,
+    "turn_id": null
+   },
+   "id": "C13",
+   "note": "dice resolved con una voz que no es la del usuario",
+   "resolver": {
+    "candidates": {
+     "other": 0,
+     "pasted": 0,
+     "user": 1
+    },
+    "match": "literal",
+    "reason": null,
+    "resolution": "resolved",
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "session": "known",
+    "speaker": "pasted",
+    "tail": "open",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "pending",
+    "seal": null,
+    "turn_id": null
+   },
+   "expect": {
+    "detail": "resolver_error",
+    "freshness": "pending",
+    "integrity": "unverifiable",
+    "integrity_reason": "resolution_pending",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "resolution_pending",
+    "resolution": "pending",
+    "resolver_called": "resolve",
+    "seal": null,
+    "served": "new",
+    "source": "unverifiable",
+    "source_reason": "resolution_pending",
+    "speaker": null,
+    "turn_id": null
+   },
+   "id": "C14",
+   "note": "dice resolved sin sello",
+   "resolver": {
+    "candidates": {
+     "other": 0,
+     "pasted": 0,
+     "user": 1
+    },
+    "match": "literal",
+    "reason": null,
+    "resolution": "resolved",
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": null,
+    "session": "known",
+    "speaker": "user",
+    "tail": "open",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "pending",
+    "seal": null,
+    "turn_id": null
+   },
+   "expect": {
+    "detail": "resolver_error",
+    "freshness": "pending",
+    "integrity": "unverifiable",
+    "integrity_reason": "resolution_pending",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "resolution_pending",
+    "resolution": "pending",
+    "resolver_called": "resolve",
+    "seal": null,
+    "served": "new",
+    "source": "unverifiable",
+    "source_reason": "resolution_pending",
+    "speaker": null,
+    "turn_id": null
+   },
+   "id": "C15",
+   "note": "dice not_found con la sesi\u00f3n abierta",
+   "resolver": {
+    "candidates": {
+     "other": 0,
+     "pasted": 0,
+     "user": 0
+    },
+    "match": null,
+    "reason": null,
+    "resolution": "not_found",
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": null,
+    "session": "known",
+    "speaker": null,
+    "tail": "open",
+    "turn_id": null
+   },
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "pending",
+    "seal": null,
+    "turn_id": null
+   },
+   "expect": {
+    "detail": "resolver_error",
+    "freshness": "pending",
+    "integrity": "unverifiable",
+    "integrity_reason": "resolution_pending",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "resolution_pending",
+    "resolution": "pending",
+    "resolver_called": "resolve",
+    "seal": null,
+    "served": "new",
+    "source": "unverifiable",
+    "source_reason": "resolution_pending",
+    "speaker": null,
+    "turn_id": null
+   },
+   "id": "C16",
+   "note": "dice not_found pero cuenta la cita en otra voz",
+   "resolver": {
+    "candidates": {
+     "other": 0,
+     "pasted": 1,
+     "user": 0
+    },
+    "match": null,
+    "reason": null,
+    "resolution": "not_found",
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": null,
+    "session": "known",
+    "speaker": null,
+    "tail": "closed",
+    "turn_id": null
+   },
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "pending",
+    "seal": null,
+    "turn_id": null
+   },
+   "expect": {
+    "detail": "resolver_error",
+    "freshness": "pending",
+    "integrity": "unverifiable",
+    "integrity_reason": "resolution_pending",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "resolution_pending",
+    "resolution": "pending",
+    "resolver_called": "resolve",
+    "seal": null,
+    "served": "new",
+    "source": "unverifiable",
+    "source_reason": "resolution_pending",
+    "speaker": null,
+    "turn_id": null
+   },
+   "id": "C17",
+   "note": "dice pending pero cuenta un mensaje del usuario con la cita",
+   "resolver": {
+    "candidates": {
+     "other": 0,
+     "pasted": 0,
+     "user": 1
+    },
+    "match": null,
+    "reason": "tail_open",
+    "resolution": "pending",
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": null,
+    "session": "known",
+    "speaker": null,
+    "tail": "open",
+    "turn_id": null
+   },
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "resolved",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "expect": {
+    "detail": null,
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "resolution": "resolved",
+    "resolver_called": "verify",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "served": "new",
+    "source": "verified",
+    "source_reason": null,
+    "speaker": "user",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "id": "C20",
+   "note": "el mensaje sigue igual y contiene la cita",
+   "resolver": {
+    "quote": "found",
+    "reason": null,
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": "match",
+    "session": "known",
+    "speaker": "user"
+   },
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "resolved",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "expect": {
+    "detail": null,
+    "freshness": "broken",
+    "integrity": "not_found",
+    "integrity_reason": "seal_mismatch",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": "seal_mismatch",
+    "resolution": "resolved",
+    "resolver_called": "verify",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "served": "new",
+    "source": "verified",
+    "source_reason": null,
+    "speaker": "user",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "id": "C21",
+   "note": "el mensaje cambi\u00f3 en el origen",
+   "resolver": {
+    "quote": "found",
+    "reason": null,
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": "mismatch",
+    "session": "known",
+    "speaker": "user"
+   },
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "resolved",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "expect": {
+    "detail": null,
+    "freshness": "broken",
+    "integrity": "not_found",
+    "integrity_reason": "seal_mismatch",
+    "quote": "not_found",
+    "quote_reason": "quote_absent",
+    "reason": "seal_mismatch",
+    "resolution": "resolved",
+    "resolver_called": "verify",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "served": "new",
+    "source": "verified",
+    "source_reason": null,
+    "speaker": "user",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "id": "C22",
+   "note": "el mensaje cambi\u00f3 y ya no contiene la cita",
+   "resolver": {
+    "quote": "absent",
+    "reason": null,
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": "mismatch",
+    "session": "known",
+    "speaker": "user"
+   },
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "resolved",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "expect": {
+    "detail": null,
+    "freshness": "broken",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "quote": "not_found",
+    "quote_reason": "quote_absent",
+    "reason": "quote_absent",
+    "resolution": "resolved",
+    "resolver_called": "verify",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "served": "new",
+    "source": "verified",
+    "source_reason": null,
+    "speaker": "user",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "id": "C23",
+   "note": "el sello casa pero la cita no est\u00e1 (cambi\u00f3 el modo de buscar): lo dicho no cambia",
+   "resolver": {
+    "quote": "absent",
+    "reason": null,
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": "match",
+    "session": "known",
+    "speaker": "user"
+   },
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "resolved",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "expect": {
+    "detail": null,
+    "freshness": "broken",
+    "integrity": "unverifiable",
+    "integrity_reason": "turn_purged",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "turn_purged",
+    "resolution": "resolved",
+    "resolver_called": "verify",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "served": "new",
+    "source": "not_found",
+    "source_reason": "turn_purged",
+    "speaker": null,
+    "turn_id": "claude-code:msg-0042"
+   },
+   "id": "C24",
+   "note": "la sesi\u00f3n existe, se ley\u00f3 entera y el mensaje no est\u00e1",
+   "resolver": {
+    "quote": "unknown",
+    "reason": null,
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": "turn_missing",
+    "session": "known",
+    "speaker": null
+   },
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "resolved",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "expect": {
+    "detail": null,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "session_unavailable",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "session_unavailable",
+    "resolution": "resolved",
+    "resolver_called": "verify",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "served": "stored",
+    "source": "unverifiable",
+    "source_reason": "session_unavailable",
+    "speaker": null,
+    "turn_id": "claude-code:msg-0042"
+   },
+   "id": "C25",
+   "note": "el origen ya no existe (borrado a plazo) y hab\u00eda un resultado concluyente: se sigue sirviendo el guardado",
+   "resolver": {
+    "quote": "unknown",
+    "reason": "session_unavailable",
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": "unknown",
+    "session": "unknown",
+    "speaker": null
+   },
+   "stored_conclusive": true
+  },
+  {
+   "anchor": {
+    "resolution": "resolved",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "expect": {
+    "detail": null,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "session_unavailable",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "session_unavailable",
+    "resolution": "resolved",
+    "resolver_called": "verify",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "served": "new",
+    "source": "unverifiable",
+    "source_reason": "session_unavailable",
+    "speaker": null,
+    "turn_id": "claude-code:msg-0042"
+   },
+   "id": "C26",
+   "note": "lo mismo sin resultado previo",
+   "resolver": {
+    "quote": "unknown",
+    "reason": "session_unavailable",
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": "unknown",
+    "session": "unknown",
+    "speaker": null
+   },
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "resolved",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "expect": {
+    "detail": null,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "seal_unverifiable",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": "seal_unverifiable",
+    "resolution": "resolved",
+    "resolver_called": "verify",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "served": "stored",
+    "source": "verified",
+    "source_reason": null,
+    "speaker": "user",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "id": "C27",
+   "note": "sello de un formato que el custodio ya no calcula: no comprobable, nunca roto",
+   "resolver": {
+    "quote": "found",
+    "reason": null,
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": "unknown",
+    "session": "known",
+    "speaker": "user"
+   },
+   "stored_conclusive": true
+  },
+  {
+   "anchor": {
+    "resolution": "resolved",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "expect": {
+    "detail": null,
+    "freshness": "broken",
+    "integrity": "unverifiable",
+    "integrity_reason": "seal_unverifiable",
+    "quote": "not_found",
+    "quote_reason": "quote_absent",
+    "reason": "quote_absent",
+    "resolution": "resolved",
+    "resolver_called": "verify",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "served": "new",
+    "source": "verified",
+    "source_reason": null,
+    "speaker": "user",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "id": "C33",
+   "note": "sello no comprobable y la cita ya no est\u00e1 en el mensaje: rota por la cita",
+   "resolver": {
+    "quote": "absent",
+    "reason": null,
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": "unknown",
+    "session": "known",
+    "speaker": "user"
+   },
+   "stored_conclusive": true
+  },
+  {
+   "anchor": {
+    "resolution": "resolved",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "expect": {
+    "detail": null,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "no_verifier",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "no_verifier",
+    "resolution": "resolved",
+    "resolver_called": null,
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "served": "stored",
+    "source": "unverifiable",
+    "source_reason": "no_verifier",
+    "speaker": null,
+    "turn_id": "claude-code:msg-0042"
+   },
+   "id": "C28",
+   "note": "sin resolutor al auditar, con resultado previo",
+   "resolver": "none",
+   "stored_conclusive": true
+  },
+  {
+   "anchor": {
+    "resolution": "resolved",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "expect": {
+    "detail": null,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "resolver_error",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "resolver_error",
+    "resolution": "resolved",
+    "resolver_called": "verify",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "served": "stored",
+    "source": "unverifiable",
+    "source_reason": "resolver_error",
+    "speaker": null,
+    "turn_id": "claude-code:msg-0042"
+   },
+   "id": "C29",
+   "note": "el resolutor falla al auditar, con resultado previo",
+   "resolver": "exit_nonzero",
+   "stored_conclusive": true
+  },
+  {
+   "anchor": {
+    "resolution": "resolved",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "expect": {
+    "detail": null,
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "resolution": "resolved",
+    "resolver_called": "verify",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "served": "new",
+    "source": "verified",
+    "source_reason": null,
+    "speaker": "automatic",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "id": "C30",
+   "note": "el custodio reclasifica el mensaje (ahora lo reconoce como autom\u00e1tico): la cita sigue ah\u00ed; la voz viaja aparte y la decide quien exige voz de usuario",
+   "resolver": {
+    "quote": "found",
+    "reason": null,
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": "match",
+    "session": "known",
+    "speaker": "automatic"
+   },
+   "stored_conclusive": false
+  },
+  {
+   "anchor": {
+    "resolution": "resolved",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "expect": {
+    "detail": null,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "resolver_error",
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "resolver_error",
+    "resolution": "resolved",
+    "resolver_called": "verify",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "served": "stored",
+    "source": "unverifiable",
+    "source_reason": "resolver_error",
+    "speaker": null,
+    "turn_id": "claude-code:msg-0042"
+   },
+   "id": "C31",
+   "note": "respuesta de verify incoherente (mensaje ausente pero cita hallada)",
+   "resolver": {
+    "quote": "found",
+    "reason": null,
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": "turn_missing",
+    "session": "known",
+    "speaker": "user"
+   },
+   "stored_conclusive": true
+  },
+  {
+   "anchor": {
+    "resolution": "resolved",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "expect": {
+    "detail": null,
+    "freshness": "broken",
+    "integrity": "not_found",
+    "integrity_reason": "seal_mismatch",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": "seal_mismatch",
+    "resolution": "resolved",
+    "resolver_called": "verify",
+    "seal": "m1:abababababababababababababababababababababababababababababababab",
+    "served": "new",
+    "source": "verified",
+    "source_reason": null,
+    "speaker": "user",
+    "turn_id": "claude-code:msg-0042"
+   },
+   "id": "C32",
+   "note": "una rotura comprobada s\u00ed sustituye al resultado guardado",
+   "resolver": {
+    "quote": "found",
+    "reason": null,
+    "schema": "memoria/conversacion-resolutor/v1",
+    "seal": "mismatch",
+    "session": "known",
+    "speaker": "user"
+   },
+   "stored_conclusive": true
+  }
+ ],
+ "estado": "congelado",
+ "schema": "memoria/conversacion-resolutor/v1-vectores"
+}

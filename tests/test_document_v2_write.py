@@ -99,7 +99,7 @@ class DocumentCase(ScopeCase):
 class WriteTests(DocumentCase):
     def test_writing_stores_the_result_and_the_anchor_is_v2(self) -> None:
         body = self.written(*shortcut(copy=COPY))
-        self.assertEqual(body["schema"], "an-kla/remember-result-v2")
+        self.assertEqual(body["schema"], "an-kla/remember-result-v4")
         item = body["anchors"][0]
         self.assertEqual((item["kind"], item["freshness"], item["reason"], item["adapter_called"]), ("document", "fresh", None, True))
         self.assertEqual((item["derivation"], item["manifest_sha256"], item["custody"]), ("current", MANIFEST, {"retention": "effective"}))
@@ -260,7 +260,7 @@ class ThreeMomentsTests(DocumentCase):
         written_at = body["anchors"][0]["checked_at"]
         self.fake.set({"mode": "response", "response": response(manifest="mismatch", derivation=None, derivation_parent_sha256=None)})
         audit = self.served("anchors", "verify", body["record_id"])
-        self.assertEqual(audit["schema"], "an-kla/anchors-verify-v2")
+        self.assertEqual(audit["schema"], "an-kla/anchors-verify-v4")
         record = audit["records"][0]
         self.assertTrue(record["recorded"], record)
         item = record["anchors"][0]
@@ -350,20 +350,20 @@ class SchemaTests(DocumentCase):
 
     def test_every_answer_validates_against_its_schema(self) -> None:
         body = self.written(*shortcut(copy=COPY))
-        self.validator("remember-result-v2").validate(body)
+        self.validator("remember-result-v4").validate(body)
         state = self.write(*shortcut(), "--kind", "state", "--idempotency-key", "estado", text="en curso: la cláusula 47")[1]
         self.assertEqual(state["state"], "committed", state)
-        self.validator("remember-result-v2").validate(state)
+        self.validator("remember-result-v4").validate(state)
         self.fake.set({"mode": "response", "response": response(manifest="mismatch", derivation=None, derivation_parent_sha256=None)})
         audit = self.served("anchors", "verify", "--all")
-        self.validator("anchors-verify-v2").validate(audit)
+        self.validator("anchors-verify-v4").validate(audit)
         self.assertTrue(all(record["recorded"] for record in audit["records"]), audit)
         self.fake.set({"mode": "exit_nonzero"})
         history = self.served("history", body["record_id"])
-        self.validator("history-result-v2").validate(history)
-        self.assertEqual(history["schema"], "an-kla/history-result-v2")
+        self.validator("history-result-v3").validate(history)
+        self.assertEqual(history["schema"], "an-kla/history-result-v3")
         shown = self.served("state", "show", "--all-slots")
-        self.validator("state-result-v2").validate(shown)
+        self.validator("state-result-v3").validate(shown)
         for note in self.events("anchor_check"):
             self.validator("anchor-check-v1").validate(note["anchor_check"])
         self.assertFalse(self.fake.called())
@@ -378,10 +378,10 @@ class SchemaTests(DocumentCase):
         (Path(self.store.store_root) / "config.json").write_text("[]", encoding="utf-8")
         body = self.written(*shortcut())
         self.assertEqual(body["custodians_config_error"], "custodians_invalid_shape")
-        self.validator("remember-result-v2").validate(body)
+        self.validator("remember-result-v4").validate(body)
         audit = self.served("anchors", "verify", "f-v2")
         self.assertEqual(audit["custodians_config_error"], "custodians_invalid_shape")
-        self.validator("anchors-verify-v2").validate(audit)
+        self.validator("anchors-verify-v3").validate(audit)
 
 
 class InvariantTests(DocumentCase):

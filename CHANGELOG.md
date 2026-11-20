@@ -10,6 +10,32 @@ El formato de cada entrada sigue [Keep a Changelog](https://keepachangelog.com/e
 por intención, y el proyecto usa [versionado semántico](https://semver.org/lang/es/)
 en fase de pre-release `0.1.0`.
 
+## [Sin publicar]
+
+**Citas de conversación con resolutor (ADR-0073; contrato `memoria/conversacion-resolutor/v1`, 31 casos)**:
+un ancla `conversation` de un `fact`, una `decision` o un `state` se comprueba con un **resolutor** (un
+proceso por petición, el de skopos cubre Claude Code y Codex) configurado con la clave
+`conversation_resolver` de `AN_KLA_CUSTODIANS` o de `config.json`. Al escribir se llama a `resolve` y el
+resultado va a `anchor_checks` (**el ancla se guarda como nace**, `pending`); al auditar, `anchors verify`
+llama a `resolve` o a `verify` según el último resultado concluyente y guarda una anotación
+`anchor-check-v2`; al leer no se llama a nadie y se sirve el último concluyente. Un intento que no concluye
+(`no_verifier`, `resolver_error`, `session_unavailable`, `seal_unverifiable`, `pending`) no rebaja un `fresh`;
+una rotura comprobada sí manda. La voz (`speaker`) y los candidatos viajan con el resultado: `user` no
+prueba que hablara el Operador. **Las `directive` no se tocan:** sus anclas no se resuelven y siguen
+`pending` y `unverified`, como en beta.40. `anchors verify` lleva `served` en toda ancla `document` o
+`conversation` auditada. Esquemas nuevos y dispersos: `anchor-check-v2`, `inbox-entry-v5`,
+`anchors-verify-v4`, `remember-result-v4`, `history-result-v3` y `state-result-v3`. Vuelta atrás: beta.40
+rechaza entera una entrada v5 (`inbox drain` y pendientes a 0 antes de bajar; el remedio es
+`inbox requeue --all-format && inbox drain`) y lee un store de esta versión sin romper, sirviendo esas
+anclas `pending`. Un store sin anclas `conversation` se lee igual. **Evidencia de cobertura de una cita de
+documento (errata 7 de `ancla/v1`)**: la cobertura se mide contra una evidencia por ancla; la de un `document`
+de forma válida es su cita más su página y la ruta de su copia (`item_id` e `item_ids` no entran), y
+`coverage.evidence` (`ancla-document/v1`) lo dice: una cita correcta de un manual deja de salir `none` por
+la página y la clave. Una evidencia de más de 16 384 bytes anula la cobertura del registro
+(`coverage_error`). Las reglas no cambian y lo guardado no se recalcula. Los agentes de Claude Code llevan
+`AN_KLA_AGENT_CLI=claude-code`. Detalle en
+[`docs/architecture/0073-citas-conversacion-resolutor.md`](docs/architecture/0073-citas-conversacion-resolutor.md).
+
 ## [v0.1.0-beta.40]
 
 **Fricción del primer día de beta.39 (ADR-0072; errata 6 de `memoria/ancla/v2`)**: **un intento de

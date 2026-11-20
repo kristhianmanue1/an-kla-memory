@@ -1,0 +1,2412 @@
+{
+  "schema": "agora/coverage-evidence-vectors/v1",
+  "evidence": "ancla-document/v1",
+  "coverage_rules_default": "fact-checks-rules/v2",
+  "cases": [
+    {
+      "id": "measured-case",
+      "note": "el caso medido: página y clave sólo en el localizador y en la ruta",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "measured-case",
+        "type": "fact",
+        "text": "Según la página 188 del manual 2000-002-001, el dengue grave se refiere de inmediato al segundo nivel.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 4,
+          "present": 4,
+          "level": "full",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [],
+        "missing_total": 0
+      }
+    },
+    {
+      "id": "physical-page-differs",
+      "note": "la página física (196) no es la impresa que cita el texto (188): 188 queda ausente",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "physical-page-differs",
+        "type": "fact",
+        "text": "Según la página 188 del manual 2000-002-001, el dengue grave se refiere de inmediato al segundo nivel.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 196
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n196\ndocs/fuentes/imss/2000-002-001.pdf"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 4,
+          "present": 3,
+          "level": "partial",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [
+          {
+            "type": "number",
+            "value": "188"
+          }
+        ],
+        "missing_total": 1
+      }
+    },
+    {
+      "id": "no-copy",
+      "note": "sin copy sólo entra la página",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "no-copy",
+        "type": "fact",
+        "text": "Según la página 188 del manual 2000-002-001, el dengue grave se refiere de inmediato al segundo nivel.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 4,
+          "present": 1,
+          "level": "partial",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [
+          {
+            "type": "number",
+            "value": "2000"
+          },
+          {
+            "type": "number",
+            "value": "002"
+          },
+          {
+            "type": "number",
+            "value": "001"
+          }
+        ],
+        "missing_total": 3
+      }
+    },
+    {
+      "id": "no-copy-no-page",
+      "note": "sin copy y con localizador heredado: la evidencia es la cita, pero el registro lleva la marca",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "no-copy-no-page",
+        "type": "fact",
+        "text": "Según la página 188 del manual 2000-002-001, el dengue grave se refiere de inmediato al segundo nivel.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "locator": "unknown"
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención."
+      ],
+      "expect": {
+        "coverage": {
+          "total": 4,
+          "present": 0,
+          "level": "none",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [
+          {
+            "type": "number",
+            "value": "188"
+          },
+          {
+            "type": "number",
+            "value": "2000"
+          },
+          {
+            "type": "number",
+            "value": "002"
+          },
+          {
+            "type": "number",
+            "value": "001"
+          }
+        ],
+        "missing_total": 4
+      }
+    },
+    {
+      "id": "legacy-locator-unknown",
+      "note": "localizador heredado \"unknown\": no entra página; la ruta sí",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "legacy-locator-unknown",
+        "type": "fact",
+        "text": "Según la página 188 del manual 2000-002-001, el dengue grave se refiere de inmediato al segundo nivel.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": "unknown"
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\ndocs/fuentes/imss/2000-002-001.pdf"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 4,
+          "present": 3,
+          "level": "partial",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [
+          {
+            "type": "number",
+            "value": "188"
+          }
+        ],
+        "missing_total": 1
+      }
+    },
+    {
+      "id": "legacy-locator-absent",
+      "note": "sin localizador: no entra página; la ruta sí",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "legacy-locator-absent",
+        "type": "fact",
+        "text": "Según la página 188 del manual 2000-002-001, el dengue grave se refiere de inmediato al segundo nivel.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\ndocs/fuentes/imss/2000-002-001.pdf"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 4,
+          "present": 3,
+          "level": "partial",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [
+          {
+            "type": "number",
+            "value": "188"
+          }
+        ],
+        "missing_total": 1
+      }
+    },
+    {
+      "id": "schema-v1-document",
+      "note": "ancla document con esquema v1: misma evidencia que v2",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "schema-v1-document",
+        "type": "fact",
+        "text": "Según la página 188 del manual 2000-002-001, el dengue grave se refiere de inmediato al segundo nivel.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v1",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 4,
+          "present": 4,
+          "level": "full",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [],
+        "missing_total": 0
+      }
+    },
+    {
+      "id": "schema-v1-document-no-locator",
+      "note": "esquema v1 sin localizador: sólo la ruta",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "schema-v1-document-no-locator",
+        "type": "fact",
+        "text": "Según la página 188 del manual 2000-002-001, el dengue grave se refiere de inmediato al segundo nivel.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v1",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\ndocs/fuentes/imss/2000-002-001.pdf"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 4,
+          "present": 3,
+          "level": "partial",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [
+          {
+            "type": "number",
+            "value": "188"
+          }
+        ],
+        "missing_total": 1
+      }
+    },
+    {
+      "id": "numbers-20-200-vs-path",
+      "note": "20 y 200 no salen presentes por estar dentro de 2000 en la ruta: se aplica la regla de números de v2",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "numbers-20-200-vs-path",
+        "type": "fact",
+        "text": "Se revisa a los 20 días y luego a los 200.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 2,
+          "present": 0,
+          "level": "none",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [
+          {
+            "type": "number",
+            "value": "20"
+          },
+          {
+            "type": "number",
+            "value": "200"
+          }
+        ],
+        "missing_total": 2
+      }
+    },
+    {
+      "id": "hash-prefix-path-segment",
+      "note": "un segmento de la ruta con forma de hash: el hash del texto es prefijo de él y sale presente (límite declarado)",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "hash-prefix-path-segment",
+        "type": "fact",
+        "text": "El manual cita la revisión abc1234 del anexo.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/abc1234def/anexo.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/abc1234def/anexo.pdf"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 1,
+          "present": 1,
+          "level": "full",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [],
+        "missing_total": 0
+      }
+    },
+    {
+      "id": "item-ids-do-not-enter",
+      "note": "item_ids no entran en la evidencia: el identificador igual a un item_id queda ausente",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "item-ids-do-not-enter",
+        "type": "fact",
+        "text": "El elemento `i-13` de la página 188 lo dice.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "locator": {
+                "page": 188,
+                "item_ids": [
+                  "i-13",
+                  "i-14"
+                ]
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 2,
+          "present": 1,
+          "level": "partial",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [
+          {
+            "type": "identifier",
+            "value": "i-13"
+          }
+        ],
+        "missing_total": 1
+      }
+    },
+    {
+      "id": "path-element-from-copy",
+      "note": "una ruta del texto igual a copy.path sale presente por la línea de la ruta",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "path-element-from-copy",
+        "type": "fact",
+        "text": "La fuente está en docs/fuentes/imss/2000-002-001.pdf y dice lo mismo.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 1,
+          "present": 1,
+          "level": "full",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [],
+        "missing_total": 0
+      }
+    },
+    {
+      "id": "date-from-path",
+      "note": "una fecha que sólo está en la ruta sale presente",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "date-from-path",
+        "type": "fact",
+        "text": "El acta del 2026-11-20 fija la referencia inmediata.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/actas/2026-11-20/acta.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/actas/2026-11-20/acta.pdf"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 1,
+          "present": 1,
+          "level": "full",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [],
+        "missing_total": 0
+      }
+    },
+    {
+      "id": "no-crossing-the-line-break",
+      "note": "la versión 1.2.3 no se forma uniendo el final de la cita (1.2) con la página (3)",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "no-crossing-the-line-break",
+        "type": "fact",
+        "text": "Aplica la versión 1.2.3 de la norma.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "locator": {
+                "page": 3
+              }
+            },
+            "quote": "Este procedimiento se describe en la versión de la norma 1.2",
+            "quote_sha256": "265a53945771765d39f24ac1b9e7373c80cfa6a8731fe7e2a3b2c8d18ad03a84"
+          }
+        ]
+      },
+      "evidence": [
+        "Este procedimiento se describe en la versión de la norma 1.2\n3"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 1,
+          "present": 0,
+          "level": "none",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [
+          {
+            "type": "version",
+            "value": "1.2.3"
+          }
+        ],
+        "missing_total": 1
+      }
+    },
+    {
+      "id": "quote-number-and-page-separate",
+      "note": "un número al final de la cita y la página siguen siendo dos números",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "quote-number-and-page-separate",
+        "type": "fact",
+        "text": "Desde 2024 la página 188 lo indica.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El criterio de referencia inmediata está vigente desde el año 2024",
+            "quote_sha256": "62ab8d64cd994e2084637b01087b0185559821a63505b313f26c1741ff974205"
+          }
+        ]
+      },
+      "evidence": [
+        "El criterio de referencia inmediata está vigente desde el año 2024\n188"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 2,
+          "present": 2,
+          "level": "full",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [],
+        "missing_total": 0
+      }
+    },
+    {
+      "id": "mixed-anchors",
+      "note": "repo-file, conversation y document: sólo la de documento añade página y ruta; la marca aparece",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "mixed-anchors",
+        "type": "fact",
+        "text": "Según la página 188 del manual 2000-002-001, el dengue grave se refiere de inmediato al segundo nivel. Ver docs/notas.md.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v1",
+            "source": {
+              "kind": "repo-file",
+              "repo": "github.com/ejemplo/consumidor",
+              "path": "docs/notas.md",
+              "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "quote": "Ver docs/notas.md para el criterio de referencia.",
+            "quote_sha256": "81665177b9092e8464a6425884fe8b0feb5864c11e401e942d210506bd9500cc"
+          },
+          {
+            "schema": "memoria/ancla/v1",
+            "source": {
+              "kind": "conversation",
+              "session": "s-1"
+            },
+            "quote": "el dengue grave se refiere de inmediato",
+            "quote_sha256": "51db2f96e9ea46460106d90c02a89b481ec4473b1dd533b5d8e7599b5c6aa1c6"
+          },
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "Ver docs/notas.md para el criterio de referencia.",
+        "el dengue grave se refiere de inmediato",
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 5,
+          "present": 5,
+          "level": "full",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [],
+        "missing_total": 0
+      }
+    },
+    {
+      "id": "other-anchor-page",
+      "note": "la página de otra ancla del mismo registro cuenta (límite declarado)",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "other-anchor-page",
+        "type": "fact",
+        "text": "Lo dicen las páginas 188 y 40.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "locator": {
+                "page": 40
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          },
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n40",
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 2,
+          "present": 2,
+          "level": "full",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [],
+        "missing_total": 0
+      }
+    },
+    {
+      "id": "no-document-repo-file",
+      "note": "sin anclas document la salida es la de hoy (sin evidence)",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "no-document-repo-file",
+        "type": "fact",
+        "text": "Ver docs/notas.md, sección 3.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v1",
+            "source": {
+              "kind": "repo-file",
+              "repo": "github.com/ejemplo/consumidor",
+              "path": "docs/notas.md",
+              "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "quote": "Ver docs/notas.md para el criterio de referencia.",
+            "quote_sha256": "81665177b9092e8464a6425884fe8b0feb5864c11e401e942d210506bd9500cc"
+          }
+        ]
+      },
+      "evidence": [
+        "Ver docs/notas.md para el criterio de referencia."
+      ],
+      "expect": {
+        "coverage": {
+          "total": 2,
+          "present": 1,
+          "level": "partial",
+          "rules": "fact-checks-rules/v2"
+        },
+        "missing": [
+          {
+            "type": "number",
+            "value": "3"
+          }
+        ],
+        "missing_total": 1
+      }
+    },
+    {
+      "id": "no-document-conversation",
+      "note": "sin anclas document la salida es la de hoy (sin evidence)",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "no-document-conversation",
+        "type": "fact",
+        "text": "Se acordó el 2026-11-20 referir de inmediato.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v1",
+            "source": {
+              "kind": "conversation",
+              "session": "s-1"
+            },
+            "quote": "se acordó referir de inmediato",
+            "quote_sha256": "55f0c7efc9319c8f6bf09bca3d1a4adfcf06ad09219644f532ceaca57e9bf4aa"
+          }
+        ]
+      },
+      "evidence": [
+        "se acordó referir de inmediato"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 1,
+          "present": 0,
+          "level": "none",
+          "rules": "fact-checks-rules/v2"
+        },
+        "missing": [
+          {
+            "type": "date",
+            "value": "2026-11-20"
+          }
+        ],
+        "missing_total": 1
+      }
+    },
+    {
+      "id": "rules-v1-unchanged",
+      "note": "con fact-checks-rules/v1 la evidencia no se aplica: salida de hoy",
+      "coverage_rules": "fact-checks-rules/v1",
+      "anchor_limit": 32,
+      "record": {
+        "id": "rules-v1-unchanged",
+        "type": "fact",
+        "text": "Según la página 188 del manual 2000-002-001, el dengue grave se refiere de inmediato al segundo nivel.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 4,
+          "present": 0,
+          "level": "none"
+        },
+        "missing": [
+          {
+            "type": "number",
+            "value": "188"
+          },
+          {
+            "type": "number",
+            "value": "2000"
+          },
+          {
+            "type": "number",
+            "value": "002"
+          },
+          {
+            "type": "number",
+            "value": "001"
+          }
+        ],
+        "missing_total": 4
+      }
+    },
+    {
+      "id": "document-form-error-ignored",
+      "note": "un ancla document con error de forma no entra en la cobertura ni pone la marca",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "document-form-error-ignored",
+        "type": "fact",
+        "text": "Ver docs/notas.md y la página 188.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "audio"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          },
+          {
+            "schema": "memoria/ancla/v1",
+            "source": {
+              "kind": "repo-file",
+              "repo": "github.com/ejemplo/consumidor",
+              "path": "docs/notas.md",
+              "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "quote": "Ver docs/notas.md para el criterio de referencia.",
+            "quote_sha256": "81665177b9092e8464a6425884fe8b0feb5864c11e401e942d210506bd9500cc"
+          }
+        ]
+      },
+      "evidence": [
+        null,
+        "Ver docs/notas.md para el criterio de referencia."
+      ],
+      "expect": {
+        "coverage": {
+          "total": 2,
+          "present": 1,
+          "level": "partial",
+          "rules": "fact-checks-rules/v2"
+        },
+        "missing": [
+          {
+            "type": "number",
+            "value": "188"
+          }
+        ],
+        "missing_total": 1
+      }
+    },
+    {
+      "id": "all-anchors-invalid",
+      "note": "sin citas válidas no hay evidencia ni marca: todo ausente como hoy",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "all-anchors-invalid",
+        "type": "fact",
+        "text": "Según la página 188 del manual 2000-002-001, el dengue grave se refiere de inmediato al segundo nivel.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "audio"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        null
+      ],
+      "expect": {
+        "coverage": {
+          "total": 4,
+          "present": 0,
+          "level": "none",
+          "rules": "fact-checks-rules/v2"
+        },
+        "missing": [
+          {
+            "type": "number",
+            "value": "188"
+          },
+          {
+            "type": "number",
+            "value": "2000"
+          },
+          {
+            "type": "number",
+            "value": "002"
+          },
+          {
+            "type": "number",
+            "value": "001"
+          }
+        ],
+        "missing_total": 4
+      }
+    },
+    {
+      "id": "past-anchor-limit",
+      "note": "un ancla document más allá del límite no se lee pero su evidencia cuenta",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 1,
+      "record": {
+        "id": "past-anchor-limit",
+        "type": "fact",
+        "text": "Según la página 188 del manual 2000-002-001, el dengue grave se refiere de inmediato al segundo nivel.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v1",
+            "source": {
+              "kind": "repo-file",
+              "repo": "github.com/ejemplo/consumidor",
+              "path": "docs/notas.md",
+              "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "quote": "Ver docs/notas.md para el criterio de referencia.",
+            "quote_sha256": "81665177b9092e8464a6425884fe8b0feb5864c11e401e942d210506bd9500cc"
+          },
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "Ver docs/notas.md para el criterio de referencia.",
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 4,
+          "present": 4,
+          "level": "full",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [],
+        "missing_total": 0
+      }
+    },
+    {
+      "id": "state-record",
+      "note": "registro state: sólo cuentan identifier, path, hash y version; la ruta del texto sale presente",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "state-record",
+        "type": "state",
+        "text": "El manual vigente está en docs/fuentes/imss/2000-002-001.pdf.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 1,
+          "present": 1,
+          "level": "full",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [],
+        "missing_total": 0
+      }
+    },
+    {
+      "id": "evidence-over-quote-limit",
+      "note": "una copy.path enorme lleva la evidencia por encima de 16384 bytes: coverage_error, con rules y evidence en la fila",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "evidence-over-quote-limit",
+        "type": "fact",
+        "text": "Según la página 188 del manual 2000-002-001, el dengue grave se refiere de inmediato al segundo nivel.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.pdf"
+      ],
+      "expect": {
+        "coverage_error": "invalid_fact_quotes",
+        "rules": "fact-checks-rules/v2",
+        "evidence": "ancla-document/v1"
+      }
+    },
+    {
+      "id": "nfc-path",
+      "note": "la ruta en NFD se normaliza con la evidencia (check_fact normaliza a NFC)",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "nfc-path",
+        "type": "fact",
+        "text": "La fuente está en docs/año/manual.pdf.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/año/manual.pdf"
+              },
+              "locator": {
+                "page": 1
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n1\ndocs/año/manual.pdf"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 1,
+          "present": 1,
+          "level": "full",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [],
+        "missing_total": 0
+      }
+    },
+    {
+      "id": "locator-item-id-only",
+      "note": "localizador sólo con item_id: no hay página que añadir; item_id no entra",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "locator-item-id-only",
+        "type": "fact",
+        "text": "El elemento `i-13` de la página 188 lo dice.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "locator": {
+                "item_id": "i-13"
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención."
+      ],
+      "expect": {
+        "coverage": {
+          "total": 2,
+          "present": 0,
+          "level": "none",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [
+          {
+            "type": "identifier",
+            "value": "i-13"
+          },
+          {
+            "type": "number",
+            "value": "188"
+          }
+        ],
+        "missing_total": 2
+      }
+    },
+    {
+      "id": "locator-item-ids-only",
+      "note": "localizador sólo con item_ids: sólo entra la ruta",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "locator-item-ids-only",
+        "type": "fact",
+        "text": "Según la página 188 del manual 2000-002-001, el dengue grave se refiere de inmediato al segundo nivel.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "item_ids": [
+                  "i-13",
+                  "i-14"
+                ]
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\ndocs/fuentes/imss/2000-002-001.pdf"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 4,
+          "present": 3,
+          "level": "partial",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [
+          {
+            "type": "number",
+            "value": "188"
+          }
+        ],
+        "missing_total": 1
+      }
+    },
+    {
+      "id": "page-bool-is-form-error",
+      "note": "page true es error de forma: el ancla no entra y no pone la marca",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "page-bool-is-form-error",
+        "type": "fact",
+        "text": "Ver docs/notas.md y la página 188.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": true
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          },
+          {
+            "schema": "memoria/ancla/v1",
+            "source": {
+              "kind": "repo-file",
+              "repo": "github.com/ejemplo/consumidor",
+              "path": "docs/notas.md",
+              "commit": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "quote": "Ver docs/notas.md para el criterio de referencia.",
+            "quote_sha256": "81665177b9092e8464a6425884fe8b0feb5864c11e401e942d210506bd9500cc"
+          }
+        ]
+      },
+      "evidence": [
+        null,
+        "Ver docs/notas.md para el criterio de referencia."
+      ],
+      "expect": {
+        "coverage": {
+          "total": 2,
+          "present": 1,
+          "level": "partial",
+          "rules": "fact-checks-rules/v2"
+        },
+        "missing": [
+          {
+            "type": "number",
+            "value": "188"
+          }
+        ],
+        "missing_total": 1
+      }
+    },
+    {
+      "id": "valid-and-invalid-documents",
+      "note": "un ancla document válida y otra con ruta de copia inválida: marca presente, la inválida no aporta su página",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "valid-and-invalid-documents",
+        "type": "fact",
+        "text": "Las páginas 188 y 40 lo dicen.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          },
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "../fuera.pdf"
+              },
+              "locator": {
+                "page": 40
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188",
+        null
+      ],
+      "expect": {
+        "coverage": {
+          "total": 2,
+          "present": 1,
+          "level": "partial",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [
+          {
+            "type": "number",
+            "value": "40"
+          }
+        ],
+        "missing_total": 1
+      }
+    },
+    {
+      "id": "too-many-anchors-rejected-whole",
+      "note": "17 anclas: el registro se rechaza entero y no hay cobertura",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "too-many-anchors-rejected-whole",
+        "type": "fact",
+        "text": "Según la página 188 del manual 2000-002-001, el dengue grave se refiere de inmediato al segundo nivel.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          },
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          },
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          },
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          },
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          },
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          },
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          },
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          },
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          },
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          },
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          },
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          },
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          },
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          },
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          },
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          },
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "docs/fuentes/imss/2000-002-001.pdf"
+              },
+              "locator": {
+                "page": 188
+              }
+            },
+            "quote": "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.",
+            "quote_sha256": "5909edbfbbcde1d3e62edc5e2d35b592650e21a8d346614fb76ed93172c86f0b"
+          }
+        ]
+      },
+      "evidence": [
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf",
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf",
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf",
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf",
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf",
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf",
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf",
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf",
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf",
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf",
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf",
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf",
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf",
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf",
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf",
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf",
+        "El paciente con sospecha de dengue grave debe referirse de inmediato al segundo nivel de atención.\n188\ndocs/fuentes/imss/2000-002-001.pdf"
+      ],
+      "expect": {
+        "error": "anchor_too_many"
+      }
+    },
+    {
+      "id": "no-crossing-date",
+      "note": "la fecha 2026-11-20 no se forma uniendo el final de la cita (2026-11-) con la página (20)",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "no-crossing-date",
+        "type": "fact",
+        "text": "Vigente desde el 2026-11-20.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "locator": {
+                "page": 20
+              }
+            },
+            "quote": "La norma de referencia inmediata está vigente desde 2026-11-",
+            "quote_sha256": "b11de08e96f34a25d305b8072245a4aefa2ce6395515305976e84718b6b7e3e6"
+          }
+        ]
+      },
+      "evidence": [
+        "La norma de referencia inmediata está vigente desde 2026-11-\n20"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 1,
+          "present": 0,
+          "level": "none",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [
+          {
+            "type": "date",
+            "value": "2026-11-20"
+          }
+        ],
+        "missing_total": 1
+      }
+    },
+    {
+      "id": "no-crossing-number",
+      "note": "el número 1234 no se forma uniendo el final de la cita (12) con la página (34)",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "no-crossing-number",
+        "type": "fact",
+        "text": "Son 1234 casos.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "locator": {
+                "page": 34
+              }
+            },
+            "quote": "El total de casos referidos de inmediato en el periodo fue de 12",
+            "quote_sha256": "31f168db4fc8492c87d3e0a466bf578a4db3f231247ab9b30daaf22453b4cf8c"
+          }
+        ]
+      },
+      "evidence": [
+        "El total de casos referidos de inmediato en el periodo fue de 12\n34"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 1,
+          "present": 0,
+          "level": "none",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [
+          {
+            "type": "number",
+            "value": "1234"
+          }
+        ],
+        "missing_total": 1
+      }
+    },
+    {
+      "id": "no-crossing-hash",
+      "note": "el hash abc1234def no se forma uniendo el final de la cita (abc12, menos de 7) con la ruta (34def/...)",
+      "coverage_rules": "fact-checks-rules/v2",
+      "anchor_limit": 32,
+      "record": {
+        "id": "no-crossing-hash",
+        "type": "fact",
+        "text": "La revisión abc1234def del anexo.",
+        "envelope": {
+          "repo": {
+            "id": "github.com/ejemplo/consumidor",
+            "branch": "main"
+          }
+        },
+        "anchors": [
+          {
+            "schema": "memoria/ancla/v2",
+            "source": {
+              "kind": "document",
+              "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+              "derivation": {
+                "custodian": "skopos",
+                "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+                "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+                "modality": "native_text"
+              },
+              "copy": {
+                "repo": "github.com/ejemplo/consumidor",
+                "path": "34def/anexo.pdf"
+              },
+              "locator": "unknown"
+            },
+            "quote": "El anexo de la norma de referencia inmediata se identifica como abc12",
+            "quote_sha256": "f461773feb13c514b72f550797ba362d5a8872bf00f27d4ebed8ea3eb55eed67"
+          }
+        ]
+      },
+      "evidence": [
+        "El anexo de la norma de referencia inmediata se identifica como abc12\n34def/anexo.pdf"
+      ],
+      "expect": {
+        "coverage": {
+          "total": 1,
+          "present": 0,
+          "level": "none",
+          "rules": "fact-checks-rules/v2",
+          "evidence": "ancla-document/v1"
+        },
+        "missing": [
+          {
+            "type": "hash",
+            "value": "abc1234def"
+          }
+        ],
+        "missing_total": 1
+      }
+    }
+  ]
+}

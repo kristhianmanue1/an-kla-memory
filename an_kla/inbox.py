@@ -54,6 +54,7 @@ ENTRY_SCHEMA = "an-kla/inbox-entry-v1"
 ENTRY_SCHEMA_V2 = "an-kla/inbox-entry-v2"  # ADR-0065 §3: v1 más `slot` opcional; la usan las entradas `state`
 ENTRY_SCHEMA_V3 = "an-kla/inbox-entry-v3"  # ADR-0066 §1: v2 más `anchors`, `verdict` y `operation` opcionales
 ENTRY_SCHEMA_V4 = "an-kla/inbox-entry-v4"  # ADR-0069 §1: v3 más `directive` en `kind` y `subject`, `audience`, `valid_until`, `until_revoked`, `revokes`
+ENTRY_SCHEMA_V5 = "an-kla/inbox-entry-v5"  # ADR-0073 §2: v4 más el resultado de un resolutor en las anclas y la anotación `anchor-check-v2`
 STATUS_SCHEMA = "an-kla/inbox-status-v1"
 INBOX_DIRNAME = "inbox"
 LOCK_NAME = ".lock"
@@ -591,7 +592,7 @@ def enqueue(
     anchor_kind = "decision" if resolved_kind == "directive" else resolved_kind  # una directive se ancla como una decision
     extras = entry_extras(
         store.project_root, identity, anchor_kind, data_text, anchors, verdict, operation, anchor_resolution, anchor_check,
-        store=store, clock=clock,
+        store=store, clock=clock, resolve_conversations=resolved_kind != "directive",  # ADR-0073 §5: a directive's anchors are never resolved
     )
     key_extra = {**(extras.key if extras and extras.key else {}), **scope} or None
     digest_extra = {**(extras.digest if extras else {}), **scope} or None
@@ -611,7 +612,7 @@ def enqueue(
             _custody_preflight(store, preflight, seen_custody)  # la custodia pudo cambiar mientras se esperaba
             envelope = identity_c0.build_envelope(identity, resolved_kind, key, clock)
             entry: dict[str, Any] = {
-                "schema": ENTRY_SCHEMA_V4 if scope or (extras and extras.v4) else ENTRY_SCHEMA_V3 if extras else ENTRY_SCHEMA if entry_slot is None else ENTRY_SCHEMA_V2,
+                "schema": ENTRY_SCHEMA_V5 if extras and extras.v5 else ENTRY_SCHEMA_V4 if scope or (extras and extras.v4) else ENTRY_SCHEMA_V3 if extras else ENTRY_SCHEMA if entry_slot is None else ENTRY_SCHEMA_V2,
                 "text": data_text,
                 "kind": resolved_kind,
                 "kind_explicit": explicit,
@@ -746,7 +747,7 @@ def _publish(
 from .inbox_status import read_status  # noqa: E402  (vive aparte por el tope de tamaño)
 
 __all__ = [
-    "DEFAULT_SLOT", "ENTRY_SCHEMA", "ENTRY_SCHEMA_V2", "ENTRY_SCHEMA_V3", "ENTRY_SCHEMA_V4", "SLOT_PATTERN", "InboxError", "InboxPaths", "ALL_KINDS", "KINDS", "MAX_TEXT_BYTES", "STATUS_SCHEMA",
+    "DEFAULT_SLOT", "ENTRY_SCHEMA", "ENTRY_SCHEMA_V2", "ENTRY_SCHEMA_V3", "ENTRY_SCHEMA_V4", "ENTRY_SCHEMA_V5", "SLOT_PATTERN", "InboxError", "InboxPaths", "ALL_KINDS", "KINDS", "MAX_TEXT_BYTES", "STATUS_SCHEMA",
     "collect_tmp", "ensure_layout", "enqueue", "entry_names", "inbox_lock", "inbox_paths", "inflight_is_empty",
     "is_entry_name", "is_marker_name", "marker_names", "payload_digest", "pending_is_empty",
     "read_status", "record_id", "resolve_kind", "root_state", "stream_for_kind", "subdir_names",

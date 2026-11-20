@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Any, Mapping
 
-from .anchor_checks import has_checks
+from .anchor_checks import has_checks, has_conversation_result
 from .anchors_coverage_v2 import has_rules
 from .anchors_read import DEFAULT_ANCHOR_LIMIT, AnchorServer
 from .audience import Reader, explicit_scope, has_scope, is_for_other, make_reader
@@ -26,6 +26,7 @@ from .state_slot import STATE_STREAM, StateRow, active_by_slot, state_rows
 
 RESULT_SCHEMA = "an-kla/state-result-v1"
 RESULT_SCHEMA_V2 = "an-kla/state-result-v2"  # ADR-0069 §4: sólo con `for_reader`, `subject`, `audience` o `excluded.other_audience`
+RESULT_SCHEMA_V3 = "an-kla/state-result-v3"  # ADR-0073 §6: sólo con el resultado de un resolutor en alguna ancla `conversation`
 DEFAULT_BUDGET = 4000
 MAX_PENDING_READ = 1000
 
@@ -106,7 +107,7 @@ def _response(
 ) -> dict[str, Any]:
     return {
         **(declared or {}),
-        "schema": RESULT_SCHEMA_V2 if scoped or other else RESULT_SCHEMA,  # ADR-0069 §4: v2 disperso
+        "schema": RESULT_SCHEMA_V3 if any(has_conversation_result(s) for s in slots) else RESULT_SCHEMA_V2 if scoped or other else RESULT_SCHEMA,  # ADR-0069 §4, ADR-0073 §6: disperso
         "untrusted_memory_data": True,
         "revision": revision,
         "scope": scope,

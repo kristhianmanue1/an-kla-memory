@@ -11,6 +11,7 @@ from ..canonical import digest_bytes
 
 SCHEMA_FILES = {
     "anchor-check-v1": "anchor-check-v1.schema.json",
+    "anchor-check-v2": "anchor-check-v2.schema.json",  # ADR-0073: con entradas de `conversation`
     "anchor-resolution-v1": "anchor-resolution-v1.schema.json",
     "anchors-verify-v1": "anchors-verify-v1.schema.json",
     "attest-receipt-v1": "attest-receipt-v1.schema.json",
@@ -78,6 +79,7 @@ SCHEMA_FILES = {
     "remember-result-v1": "remember-result-v1.schema.json",
     "remember-result-v2": "remember-result-v2.schema.json",  # ADR-0070: con cobertura `fact-checks-rules/v2`
     "remember-result-v3": "remember-result-v3.schema.json",  # ADR-0072: con el ámbito o la vigencia guardados
+    "remember-result-v4": "remember-result-v4.schema.json",  # ADR-0073: con el resultado de un resolutor
     "revision-v2": "revision-v2.schema.json",
     "revision-v3": "revision-v3.schema.json",
     "retrieval-eval-query-v2": "retrieval-eval-query-v2.schema.json",
@@ -113,16 +115,20 @@ SCHEMA_FILES = {
     # ADR-0069 (ámbito, destinatario y directivas): versiones dispersas, superconjunto de la anterior
     "anchors-verify-v2": "anchors-verify-v2.schema.json",
     "anchors-verify-v3": "anchors-verify-v3.schema.json",  # ADR-0072: con `served` o `warnings`
+    "anchors-verify-v4": "anchors-verify-v4.schema.json",  # ADR-0073: con una ancla `conversation` auditada
     "context-assembly-v3": "context-assembly-v3.schema.json",
     "disputes-list-v2": "disputes-list-v2.schema.json",
     "history-result-v2": "history-result-v2.schema.json",
+    "history-result-v3": "history-result-v3.schema.json",  # ADR-0073: con el resultado de un resolutor
     "inbox-entry-v4": "inbox-entry-v4.schema.json",
+    "inbox-entry-v5": "inbox-entry-v5.schema.json",  # ADR-0073: con el resultado de un resolutor
     "list-result-v2": "list-result-v2.schema.json",
     "mcp-retrieve-v4": "mcp-retrieve-v4.schema.json",
     "remember-error-v2": "remember-error-v2.schema.json",
     "resume-v2": "resume-v2.schema.json",
     "retrieval-result-v4": "retrieval-result-v4.schema.json",
     "state-result-v2": "state-result-v2.schema.json",
+    "state-result-v3": "state-result-v3.schema.json",  # ADR-0073: con el resultado de un resolutor
 }
 
 

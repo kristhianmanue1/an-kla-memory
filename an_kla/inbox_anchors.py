@@ -13,13 +13,15 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import Any, Callable, Mapping, Sequence
 
-from .anchor_checks import stored_check
+from .anchor_checks import CHECK_SCHEMA_V2, stored_check
 from .anchors import (
     MAX_ANCHORS, ANCHOR_SCHEMA, ANCHOR_SCHEMA_V2, AnchorRejected, normalize_quote, source_identity, validate_anchor,
 )
 from .anchors_conversation import check_conversation
+from .anchors_conversation_check import evaluate as evaluate_conversation
 from .audience import ENTRY_SCOPE_KEYS
-from .anchors_coverage_v2 import coverage as compute_coverage
+from .anchors_coverage_evidence import COVERAGE_ERROR, EVIDENCE, evidence_quotes
+from .anchors_coverage_v2 import COVERAGE_RULES, coverage as compute_coverage
 from .anchors_document_copy import copy_state
 from .anchors_document_v2 import REJECT_LOCATOR_REQUIRED, evaluate
 from .anchors_git import GitRepo
@@ -72,10 +74,21 @@ def coverage_fields(text: str, anchors: Sequence[Mapping[str, Any]] | None, kind
     """``coverage``, ``missing``, ``missing_total`` against the stored ``quote`` (never ``matched_text``, A3).
 
     Always ``fact-checks-rules/v2`` (ADR-0070): ``coverage.rules`` says so.  ``kind`` picks the mode: a ``state`` counts
-    only identifiers, paths, hashes and versions; every other kind counts the six element types."""
+    only identifiers, paths, hashes and versions; every other kind counts the six element types.
+
+    The evidence is one string per anchor (erratum 7 of ``ancla/v1``, ADR-0073 §8): the quote, except for a ``document`` anchor of valid
+    form, which adds its page and the path of its copy.  With such an anchor ``coverage.evidence`` says ``ancla-document/v1``; without
+    one the output is what it always was.  An evidence over 16 384 bytes voids the whole record's coverage (``coverage_error``)."""
     if not anchors:
         return {}
-    return compute_coverage(text, [a["quote"] for a in anchors], "state" if kind == "state" else "fact")
+    evidence = evidence_quotes(anchors, "decision" if kind == "directive" else kind)
+    if evidence is None:
+        return {"coverage": {"coverage_error": COVERAGE_ERROR, "rules": COVERAGE_RULES, "evidence": EVIDENCE}}
+    quotes, marked = evidence
+    result = compute_coverage(text, quotes, "state" if kind == "state" else "fact")
+    if marked:
+        result["coverage"] = {**result["coverage"], "evidence": EVIDENCE}
+    return result
 
 
 def record_fields(data: Mapping[str, Any]) -> dict[str, Any]:
@@ -88,7 +101,7 @@ def record_fields(data: Mapping[str, Any]) -> dict[str, Any]:
         checks = [  # ADR-0071 §5: what writing found out about each ``document`` anchor; the anchor itself does not change
             stored_check(index, anchor["quote_sha256"], anchor["write_check"])
             for index, anchor in enumerate(data["anchors"])
-            if anchor["source"]["kind"] == "document" and "checked_at" in anchor.get("write_check", {})
+            if anchor["source"]["kind"] in ("document", "conversation") and "checked_at" in anchor.get("write_check", {})  # ADR-0073 §2: also a resolver's
         ]
         if checks:
             fields["anchor_checks"] = checks
@@ -138,6 +151,7 @@ class WriteContext:
     setting: Any
     adapters: Adapters
     clock: Callable[[], datetime]
+    resolve_conversations: bool = True  # ADR-0073 §5: false for a ``directive``, whose anchors are never resolved
 
 
 def _check_document(repo: GitRepo, anchor: Mapping[str, Any], ctx: WriteContext) -> dict[str, Any]:
@@ -159,6 +173,10 @@ def _check(repo: GitRepo, anchor: Mapping[str, Any], record_type: str, ctx: Writ
     if kind == "repo-file":
         return verify_repo_file(repo, anchor, record_type, "write", ReadContext())
     if kind == "conversation":
+        # ADR-0073 §2: with a resolver (or a configuration that cannot be read) ``resolve`` is called; the result is stored in
+        # ``anchor_checks`` and the anchor stays as it was born.  Without one, as before: nothing is called and nothing stored.
+        if ctx.resolve_conversations and ctx.adapters.resolver_state() != "absent":
+            return evaluate_conversation(anchor, None, ctx.adapters, format_utc(ctx.clock()))
         return check_conversation(anchor, None)
     return _check_document(repo, anchor, ctx)
 
@@ -174,6 +192,7 @@ def prepare(
     store: Any = None,
     clock: Callable[[], datetime] | None = None,
     adapters: Adapters | None = None,
+    resolve_conversations: bool = True,
 ) -> Prepared:
     """Validate and check every anchor, in C3's order; raises :class:`AnchorRejected` for the first refusal.
 
@@ -188,7 +207,7 @@ def prepare(
         adapters = Adapters.for_store(store) if store is not None else Adapters()
     ctx = WriteContext(
         repo_id, default_branch_setting(store) if store is not None else ABSENT, adapters,
-        clock or (lambda: datetime.now(timezone.utc)),
+        clock or (lambda: datetime.now(timezone.utc)), resolve_conversations,
     )
     stored: list[dict[str, Any]] = []
     with GitRepo(project_root) as repo:
@@ -202,7 +221,7 @@ def prepare(
             if code:
                 raise AnchorRejected(code, index)
             stored.append({**anchor, "write_check": result})
-    documents = any(a["source"]["kind"] == "document" for a in stored)
+    documents = any(a["source"]["kind"] == "document" or "resolver_called" in a["write_check"] for a in stored)
     return Prepared(stored, coverage_fields(text, stored, record_type), adapters.config_error if documents else None)
 
 
@@ -215,6 +234,7 @@ class Extras:
     digest: dict[str, Any]  # joins ``payload_sha256``
     result: dict[str, Any]  # what ``remember`` answers beyond a plain write
     v4: bool = False  # ADR-0071 §6: a v2 anchor or an ``anchor_check`` annotation travels in an ``inbox-entry-v4``
+    v5: bool = False  # ADR-0073 §2: a resolver's result in the anchors, or an ``anchor-check-v2`` annotation, in an ``inbox-entry-v5``
 
 
 def payload_extra(data: Mapping[str, Any]) -> dict[str, Any]:
@@ -253,10 +273,12 @@ def entry_extras(
     *,
     store: Any = None,
     clock: Callable[[], datetime] | None = None,
+    resolve_conversations: bool = True,
 ) -> Extras | None:
     """Check the anchors (outside every lock) and gather the entry's extra fields; ``None`` for a plain one."""
     prepared = (
-        prepare(project_root, anchors, kind, text, identity["repo"]["id"], identity["session"]["id"], store=store, clock=clock)
+        prepare(project_root, anchors, kind, text, identity["repo"]["id"], identity["session"]["id"], store=store, clock=clock,
+                resolve_conversations=resolve_conversations)
         if anchors else None
     )
     if prepared is None and verdict is None and operation == "remember" and anchor_resolution is None and anchor_check is None:
@@ -289,4 +311,7 @@ def entry_extras(
         key = {**(key or {}), "anchor_check": [
             [target["stream"], target["record_id"]], digest_json(anchor_check["checks"]), anchor_check["checks"][0]["checked_at"]]}
     v4 = anchor_check is not None or any(a.get("schema") == ANCHOR_SCHEMA_V2 for a in (prepared.anchors if prepared else []))
-    return Extras(fields, key, payload_extra(fields), result, v4)
+    v5 = any("resolver_called" in a["write_check"] for a in (prepared.anchors if prepared else [])) or (
+        anchor_check is not None and anchor_check.get("schema") == CHECK_SCHEMA_V2
+    )
+    return Extras(fields, key, payload_extra(fields), result, v4 or v5, v5)
