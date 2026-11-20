@@ -80,6 +80,8 @@ adoptado la versión en todo el puesto). Tampoco lee `inbox-entry-v4`: `inbox dr
 pendientes 0 antes de bajar. Detalle en
 [`docs/architecture/0069-ambito-audiencia-directivas-v1.md`](docs/architecture/0069-ambito-audiencia-directivas-v1.md).
 
+`export` ya no falla con un `<store>/config.json`: corrige #243.
+
 No entra `recall` (ADR-0064). No cambia la plantilla gestionada (`0.1.0-beta.33`). Detalle en
 [`docs/releases/v0.1.0-beta.39.md`](docs/releases/v0.1.0-beta.39.md).
 
