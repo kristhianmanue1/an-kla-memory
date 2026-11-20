@@ -53,6 +53,7 @@ from .store_recovery import doctor_report, recover_report
 from .subject_binding import check_subject_ref_binding
 from .supersede import resolve_supersede_targets
 from .transactions import begin_transaction, commit_locked
+from .plan_write_guard import reject_scope_fields
 from .write_commit import commit_write_plan as _commit_write_plan_flow
 from .vigency import is_canonical_vigency
 from .write_policy import (
@@ -426,6 +427,7 @@ class MemoryStore(CompactionStoreMixin, RefuteStoreMixin):
         una sola adquisición del gate (acotada por ADR-0059).
         """
 
+        reject_scope_fields(proposal)  # ADR-0069 §2: el ámbito y `directive` sólo se escriben por `remember`
         with self.writer_gate():
             observed = self.read_current()
             decision = evaluate_write(proposal, authority)

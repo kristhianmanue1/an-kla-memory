@@ -619,8 +619,8 @@ def _run() -> None:
         result = run_reference_benchmark(measure_latency=args.measure_latency)
     elif args.command == "plan-write":
         proposal = _json(args.proposal, role="proposal")
-        reject_scope_fields(proposal)  # ADR-0069 §2: el ámbito y `directive` sólo se escriben por `remember`
         if args.emit_authority_template:
+            reject_scope_fields(proposal)  # ADR-0069 §2; `store.plan_write` y `commit_write_plan` llevan la suya
             result = emit_write_authority_template(proposal)
         else:
             if not args.authority:
