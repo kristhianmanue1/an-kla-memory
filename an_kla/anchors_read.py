@@ -21,7 +21,7 @@ from typing import Any, Callable, Mapping
 
 from .disputes import _valid_disputes
 from .anchor_checks import check_annotations, check_kind, has_checks, has_conversation_result, is_conclusive, is_directive_row, latest_check, normalized
-from .conversation_resolver import served as conversation_served
+from .conversation_resolver import decide_verify, served as conversation_served
 from .anchors import ANCHOR_SCHEMA_V2
 from .anchors_audit import AuditSession
 from .anchors_conversation import ConversationVerifier, apply_resolution, check_conversation
@@ -206,7 +206,11 @@ class AnchorServer:
         prior = stored if stored is not None and is_conclusive(stored) else None
         attempt = self.audit.audit_conversation(stream, record_id, index, anchor, prior)
         if attempt is None:  # no resolver: nothing is called and nothing stored, as in beta.40
-            attempt = dict(old)
+            if prior is not None and prior.get("resolution") == "resolved":
+                # the table of the contract for an anchor that is ``resolved`` without a resolver: ``no_verifier``, ``unverified`` (never ``pending``)
+                attempt = {**decide_verify(prior["turn_id"], prior["seal"], None), "checked_at": None, "resolver_called": None}
+            else:
+                attempt = dict(old)
         chosen = prior if prior is not None and not is_conclusive(attempt, "conversation") else attempt
         attempt["served"] = {"freshness": chosen["freshness"], "reason": chosen["reason"], "checked_at": chosen.get("checked_at")}
         return attempt
