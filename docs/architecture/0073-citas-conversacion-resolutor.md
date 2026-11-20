@@ -8,7 +8,8 @@
   - dónde se guarda lo que responde, en los tres momentos;
   - la regla de «concluyente» para las citas de conversación;
   - la voz (`speaker`), que viaja aparte del ancla;
-  - `served` siempre presente en `anchors verify`.
+  - `served` siempre presente en `anchors verify`;
+  - la evidencia de cobertura de un ancla `document` (errata 7 de `ancla/v1`, §8).
 - **Enmienda:** ADR-0066 §6bis (las resoluciones ya no sólo se leen: ahora se escriben) y ADR-0072 §2 (`served`).
 - **Cambio de alcance (decisión del Operador, 2026-11-20):** la política de órdenes se aplaza: quién las escribe, qué sesiones cuentan y cuándo se verifican. **Este ADR no toca `directive`.** Sus anclas no se resuelven, y siguen `pending` y `unverified` exactamente como en beta.40 (§5).
 - **Contrato:** `memoria/conversacion-resolutor/v1`, congelado (`coordination` `c77d75e`; 31 casos, sha256 `1e9187a9…7e78`). Errata 6 de `memoria/ancla/v1`. C0 sin cambios.
@@ -105,6 +106,22 @@ Una función, `is_conclusive(check, kind)`, con los dos criterios.
   - ignora las entradas `conversation` de `anchor_checks` y las anotaciones `anchor-check-v2`;
   - sirve esas anclas `pending`;
   - no rompe. Se prueba.
+
+### 8. Evidencia de cobertura de un ancla `document` (errata 7 de `ancla/v1`, añadida por orden del orquestador)
+
+- **Contrato:** la errata 7 de `ancla/v1` y `coverage-evidence-vectors.json` (34 casos, sha256 `b3034270…3f50`). La implementó agora en `6bdfa88`. Resuelve la fricción 7.1 de beta.39: una cita correcta de documento salía `none`, porque la página y la clave del documento contaban como números ausentes. Sustituye a la propuesta de un `fact-checks-rules/v3`, que agora aparca.
+- **La cobertura se mide contra una evidencia por ancla:**
+  - en `repo-file` y `conversation`, la evidencia es la cita, como hasta ahora;
+  - en `document` (esquema v1 o v2), es `quote`, más `"\n" + str(locator.page)` si `locator` es un objeto con `page` entero, más `"\n" + copy.path` si lleva `copy`. `item_id` e `item_ids` no entran.
+
+  Las reglas (`fact-checks-rules/v2`) y su función no cambian.
+- **Se declara:**
+  - si el registro tiene al menos un ancla `document` de forma válida, `coverage` lleva `evidence: "ancla-document/v1"` junto a `rules`;
+  - sin anclas `document`, la salida es byte a byte la de antes;
+  - sólo se aplica con v2, y lo guardado no se recalcula;
+  - una evidencia de más de 16 384 bytes anula la cobertura de todo el registro (`coverage_error`); no se trunca.
+- **Esquemas:** la clave `evidence` entra en las versiones dispersas nuevas de §6 (`remember-result-v4`, `history-result-v3` y `state-result-v3`), que todavía no están publicadas. Una respuesta con `coverage.evidence` también las dispara.
+- **Prueba de aceptación:** los 34 casos, exactos, con su sha256 comprobado.
 
 ## Por qué no
 
