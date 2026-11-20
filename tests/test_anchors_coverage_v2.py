@@ -52,6 +52,24 @@ class V2VectorsTest(unittest.TestCase):
             v2.coverage_from_elements([], "otro")
 
 
+class OwnVectorsTest(unittest.TestCase):
+    """Corrección 1: vectores propios de an-kla (archivo aparte del de C3) para lo que el texto de las reglas fija y C3 no cubre."""
+
+    def test_each_own_vector_passes_and_names_its_rule(self) -> None:
+        document = json.loads((FIXTURES.parent / "cobertura-v2" / "ankla-vectors.json").read_text(encoding="utf-8"))
+        self.assertGreaterEqual(len(document["cases"]), 3)
+        for case in document["cases"]:
+            with self.subTest(case["id"]):
+                self.assertTrue(case["note"] and case["rule"])
+                elements = v2.check_elements(case["text"], case["quotes"])
+                self.assertEqual(elements, case["elements"])
+                missing = [{"type": e["type"], "value": e["value"]} for e in elements if not e["present"]]
+                self.assertEqual(missing, case["missing"])
+
+    def test_the_c3_file_was_not_touched(self) -> None:
+        self.assertEqual(hashlib.sha256((FIXTURES / "fact-checks-v2-vectors.json").read_bytes()).hexdigest(), V2_SHA256)
+
+
 class V1UntouchedTest(unittest.TestCase):
     def test_the_63_v1_vectors_still_pass_with_v1(self) -> None:
         cases = _load("fact-checks-v1-vectors.json", V1_SHA256)["cases"]

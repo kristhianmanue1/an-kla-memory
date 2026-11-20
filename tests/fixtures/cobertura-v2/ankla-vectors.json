@@ -1,0 +1,77 @@
+{
+  "schema": "an-kla/fact-checks-vectors/v2-own",
+  "rules": "fact-checks-rules/v2",
+  "note": "Vectores propios de an-kla, aparte del archivo de C3 (fact-checks-v2-vectors.json, que no se toca). Cada uno fija una frase del texto escrito de las reglas que los vectores de C3 no cubren (corrección 1 de ADR-0070).",
+  "cases": [
+    {
+      "id": "own-identifier-empty-pair-pairs-next",
+      "rules": "fact-checks-rules/v2",
+      "note": "un par de comillas invertidas vacío no es un span: la segunda comilla del par abre el span que cierra la siguiente",
+      "rule": "identifier: \"a backtick, one or more characters that are neither a backtick nor a line break, a backtick\"",
+      "text": "`` 3.5 ``",
+      "quotes": ["valor 3.5"],
+      "elements": [{"type": "identifier", "value": "3.5", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-identifier-empty-pairs-then-span",
+      "rules": "fact-checks-rules/v2",
+      "note": "pares vacíos seguidos: los espacios entre comillas son spans en blanco (no elemento) y el resto queda sin comillas que lo abran",
+      "rule": "identifier: \"a backtick, one or more characters that are neither a backtick nor a line break, a backtick\"",
+      "text": "`` `` `decisión`",
+      "quotes": ["decisión"],
+      "elements": [],
+      "missing": []
+    },
+    {
+      "id": "own-identifier-cr-is-a-line-break",
+      "rules": "fact-checks-rules/v2",
+      "note": "un retorno de carro es un salto de línea: `a\\rb` no es un span (y nada más que él en el texto)",
+      "rule": "identifier: \"... neither a backtick nor a line break ...\"",
+      "text": "`a\rb`",
+      "quotes": ["ab"],
+      "elements": [],
+      "missing": []
+    },
+    {
+      "id": "own-date-iso-offset-without-colon",
+      "rules": "fact-checks-rules/v2",
+      "note": "la marca ISO con desfase +0600 (sin dos puntos) se enmascara entera: no deja 0600 como número",
+      "rule": "date: ISO time zone \"(Z|[+-]\\d{2}:?\\d{2})?\" (the colon is optional)",
+      "text": "Sellado 2026-12-01T10:30:00+0600 listo.",
+      "quotes": ["sello 2026-12-01"],
+      "elements": [{"type": "date", "value": "2026-12-01", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-date-iso-offset-with-colon-quote",
+      "rules": "fact-checks-rules/v2",
+      "note": "en la cita la marca con desfase sin dos puntos también se enmascara antes de leer sus números: 0600 no cubre un 0600 del texto",
+      "rule": "date: ISO time zone \"(Z|[+-]\\d{2}:?\\d{2})?\" (the colon is optional)",
+      "text": "Código 0600 emitido.",
+      "quotes": ["corrida 2026-12-01T10:30:00+0600"],
+      "elements": [{"type": "number", "value": "0600", "present": false}],
+      "missing": [{"type": "number", "value": "0600"}]
+    },
+    {
+      "id": "own-version-presence-is-substring",
+      "rules": "fact-checks-rules/v2",
+      "note": "la versión del texto está presente si es subcadena de alguna cita, aunque la cita la lleve dentro de otra versión mayor",
+      "rule": "identifier, path, version: \"substring\" of some NFC quote",
+      "text": "Instalada 1.0.0.",
+      "quotes": ["paquete 1.0.0-beta.38"],
+      "elements": [{"type": "version", "value": "1.0.0", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-version-presence-substring-absent",
+      "rules": "fact-checks-rules/v2",
+      "note": "sin subcadena en ninguna cita, la versión falta",
+      "rule": "identifier, path, version: \"substring\" of some NFC quote",
+      "text": "Instalada 1.0.0.",
+      "quotes": ["paquete 1.0.1"],
+      "elements": [{"type": "version", "value": "1.0.0", "present": false}],
+      "missing": [{"type": "version", "value": "1.0.0"}]
+    }
+  ]
+}

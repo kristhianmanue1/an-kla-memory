@@ -21,7 +21,7 @@ import re
 import unicodedata
 from typing import Any, Iterable, Sequence
 
-from .anchors_coverage import _SPAN, _blank, _numbers, _paths, _versions
+from .anchors_coverage import _blank, _numbers, _paths, _versions
 
 COVERAGE_RULES = "fact-checks-rules/v2"
 MISSING_MAX = 8
@@ -30,7 +30,10 @@ STATE_TYPES = ("identifier", "path", "hash", "version")
 MODES = ("fact", "state")
 
 _DATE = re.compile(r"(?<!\d)\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])(?!\d)")
-_ISO_TIME = re.compile(r"T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?")
+# "a backtick, one or more characters that are neither a backtick nor a line break, a backtick" (v1 text, inherited by v2)
+_SPAN = re.compile(r"`([^`\n\r]+)`")
+# the zone of an ISO time is "(Z|[+-]\d{2}:?\d{2})?": the colon is optional (v2 text)
+_ISO_TIME = re.compile(r"T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?")
 _HASH = re.compile(r"(?<!\w)[0-9a-f]{7,64}(?!\w)")
 _PRERELEASE = re.compile(r"(?<![\w.])(?:alpha|beta|rc)\.\d+(?:\.\d+)*(?!\w)")
 _HASH_MIN = 7
@@ -104,7 +107,6 @@ def check_elements(text: str, quotes: Iterable[str]) -> list[dict[str, Any]]:
             work = _blank(work, start, end)
         masked.append(work)
     hashes = {h for q in norm for _, h, _ in _hashes(q)}
-    versions = {v for q in norm for _, v, _ in _versions(q)} | {v for q in norm for _, v, _ in _prereleases(q)}
     numbers = {n for q in masked for _, n, _ in _numbers(q)}
     out = []
     for element in extract_elements(text):
@@ -113,11 +115,9 @@ def check_elements(text: str, quotes: Iterable[str]) -> list[dict[str, Any]]:
             present = value in dates
         elif kind == "hash":
             present = _hash_present(value, hashes)
-        elif kind == "version":
-            present = value in versions
         elif kind == "number":
             present = value in numbers
-        else:  # identifier, path: the text as it is, anywhere in a quote
+        else:  # identifier, path, version: "substring" of some NFC quote (the rules' text)
             present = any(value in q for q in norm)
         out.append({**element, "present": present})
     return out
