@@ -10,6 +10,22 @@ El formato de cada entrada sigue [Keep a Changelog](https://keepachangelog.com/e
 por intención, y el proyecto usa [versionado semántico](https://semver.org/lang/es/)
 en fase de pre-release `0.1.0`.
 
+## [Sin publicar]
+
+**Fricción del primer día de beta.39 (ADR-0072; errata 6 de `memoria/ancla/v2`)**: **un intento de
+auditoría que no concluye no rebaja lo comprobado**. `anchors verify` desde un entorno sin tabla de
+custodios guardaba una anotación `unverified` / `no_adapter` y, como leer sirve lo último, una cita
+`fresh` pasaba a servirse como no comprobada. Ahora un resultado guardado con `integrity_reason`
+`no_adapter` o `adapter_error` no concluye: se guarda, pero leer sirve el último concluyente (una
+copia que contradice, `copy_sha_mismatch`, sí concluye); lo ya rebajado vuelve a `fresh` sin migrar.
+La respuesta de `anchors verify` dice por ancla lo que leer seguirá sirviendo (`served`) y avisa con
+`warnings` (`custodian_not_configured`) cuando el custodio no está en la tabla; sube a
+`anchors-verify-v3`, disperso. Además: la pista de `--subject` trae el `repo.id` del proyecto, las
+mayúsculas se normalizan a minúsculas (`subject_normalized_from`), `remember` devuelve el ámbito y la
+vigencia guardados (`remember-result-v3`, disperso) y `state show` muestra el `subject` y el `audience`
+de la cabeza. Se documenta que una cita `ocr_text` sale `unverified` / `derived_modality`. Detalle en
+[`docs/architecture/0072-friccion-beta39.md`](docs/architecture/0072-friccion-beta39.md).
+
 ## [v0.1.0-beta.39]
 
 **Anclas `document` de `memoria/ancla/v2`, adaptador de custodio y resultado guardado (ADR-0071)**:

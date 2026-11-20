@@ -77,6 +77,7 @@ SCHEMA_FILES = {
     "remember-error-v1": "remember-error-v1.schema.json",
     "remember-result-v1": "remember-result-v1.schema.json",
     "remember-result-v2": "remember-result-v2.schema.json",  # ADR-0070: con cobertura `fact-checks-rules/v2`
+    "remember-result-v3": "remember-result-v3.schema.json",  # ADR-0072: con el ámbito o la vigencia guardados
     "revision-v2": "revision-v2.schema.json",
     "revision-v3": "revision-v3.schema.json",
     "retrieval-eval-query-v2": "retrieval-eval-query-v2.schema.json",
@@ -111,6 +112,7 @@ SCHEMA_FILES = {
     "working-state-v2": "working-state-v2.schema.json",
     # ADR-0069 (ámbito, destinatario y directivas): versiones dispersas, superconjunto de la anterior
     "anchors-verify-v2": "anchors-verify-v2.schema.json",
+    "anchors-verify-v3": "anchors-verify-v3.schema.json",  # ADR-0072: con `served` o `warnings`
     "context-assembly-v3": "context-assembly-v3.schema.json",
     "disputes-list-v2": "disputes-list-v2.schema.json",
     "history-result-v2": "history-result-v2.schema.json",
