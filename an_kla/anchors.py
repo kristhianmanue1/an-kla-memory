@@ -13,7 +13,11 @@ import re
 import unicodedata
 from typing import Any, Mapping, Sequence
 
-ANCHOR_SCHEMA = "memoria/ancla/v1"
+from .canonical import digest_json
+
+ANCHOR_SCHEMA ="memoria/ancla/v1"
+ANCHOR_SCHEMA_V2 = "memoria/ancla/v2"  # ADR-0071 §1: lo que se escribe para un `document`; se acepta en los tres tipos (B3)
+ANCHOR_SCHEMAS = (ANCHOR_SCHEMA, ANCHOR_SCHEMA_V2)
 MAX_ANCHORS = 16
 MIN_USEFUL_BYTES = 8
 MIN_USEFUL_BYTES_DOCUMENT = 40
@@ -32,6 +36,7 @@ WHITE_SPACE = frozenset(
     )
 )
 _HEX64 = re.compile(r"[0-9a-f]{64}")
+CUSTODIAN_ID = re.compile(r"[a-z0-9][a-z0-9_-]{0,31}")
 _COMMIT = re.compile(r"(?:[0-9a-f]{40}|[0-9a-f]{64})")
 
 REJECTION_CODES = (
@@ -103,7 +108,7 @@ def _is_str(value: Any) -> bool:
 
 
 def _shape_ok(anchor: Mapping[str, Any], record_type: str) -> bool:
-    if not isinstance(anchor, Mapping) or anchor.get("schema") != ANCHOR_SCHEMA:
+    if not isinstance(anchor, Mapping) or anchor.get("schema") not in ANCHOR_SCHEMAS:
         return False
     if not isinstance(anchor.get("quote"), str):
         return False
@@ -136,8 +141,34 @@ def _shape_ok(anchor: Mapping[str, Any], record_type: str) -> bool:
             return False
         if not (_is_str(derivation.get("custodian")) and _is_str(derivation.get("derivation_id"))):
             return False
-        return _is_str(derivation.get("manifest_sha256"))
+        if not _is_str(derivation.get("manifest_sha256")):
+            return False
+        return anchor["schema"] == ANCHOR_SCHEMA or _document_v2_ok(source, derivation)
     return False
+
+
+def _document_v2_ok(source: Mapping[str, Any], derivation: Mapping[str, Any]) -> bool:
+    """What ``memoria/ancla/v2`` adds to the shape of a ``document``: the custodian id, the locator and the copy."""
+    if not CUSTODIAN_ID.fullmatch(derivation["custodian"]):
+        return False
+    locator = source.get("locator")
+    if locator is not None and locator != "unknown":  # absent or "unknown": only an anchor stored before v2
+        if not isinstance(locator, Mapping) or not set(locator) <= {"page", "item_id", "item_ids"}:
+            return False
+        page = locator.get("page")
+        if "page" in locator and not (type(page) is int and page >= 1):
+            return False
+        if "item_id" in locator and "item_ids" in locator:
+            return False
+        if "item_id" in locator and not _is_str(locator["item_id"]):
+            return False
+        ids = locator.get("item_ids")
+        if "item_ids" in locator and not (isinstance(ids, list) and ids and all(_is_str(i) for i in ids)):
+            return False
+    copy = source.get("copy")
+    if copy is not None:
+        return isinstance(copy, Mapping) and set(copy) == {"repo", "path"} and _is_str(copy["repo"]) and isinstance(copy["path"], str)
+    return True
 
 
 def validate_anchor(anchor: Mapping[str, Any], record_type: str, index: int | None = None) -> dict[str, Any]:
@@ -185,4 +216,6 @@ def source_identity(anchor: Mapping[str, Any]) -> list[Any]:
         return [kind, source["repo"], source.get("commit"), source["path"]]
     if kind == "conversation":
         return [kind, source["session"]]
+    if anchor.get("schema") == ANCHOR_SCHEMA_V2:  # ADR-0071 §2: the whole canonical source (page, items, modality, copy), not the result
+        return [kind, source["document_sha256"], source["derivation"]["derivation_id"], digest_json(source)]
     return [kind, source["document_sha256"], source["derivation"]["derivation_id"]]

@@ -1,0 +1,2705 @@
+{
+ "document": [
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "literal",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X01",
+   "moment": "write",
+   "note": "copia correcta y custodio que responde: fresh",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "none",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "literal",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X02",
+   "moment": "write",
+   "note": "sin copia declarada: el custodio responde por el documento",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "missing",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "literal",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X03",
+   "moment": "audit",
+   "note": "la copia declarada se movi\u00f3 y el custodio responde: sigue comprobada, no rota",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-12",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a"
+     },
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_ids": [
+       "i-12",
+       "i-13"
+      ],
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "ws-nfc/v1",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X04",
+   "moment": "write",
+   "note": "cita que cruza dos elementos contiguos: se unen con salto de l\u00ednea",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-01",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Manual de organizaci\u00f3n. P\u00e1gina 188."
+     },
+     {
+      "item_id": "i-12",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a"
+     },
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "ws-nfc/v1",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X05",
+   "moment": "write",
+   "note": "localizador de p\u00e1gina entera",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "expired"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "literal",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X06",
+   "moment": "audit",
+   "note": "retenci\u00f3n del custodio vencida: dato aparte, no cambia la frescura",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "ocr_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "ocr_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "unverified",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "literal",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": "derived_modality",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X07",
+   "moment": "audit",
+   "note": "cita de OCR: comprobada pero nunca fresh",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": "unknown"
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "reject": "anchor_locator_required"
+   },
+   "id": "X10",
+   "moment": "write",
+   "note": "sin localizador de p\u00e1gina no se escribe un ancla de documento",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document"
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "reject": "anchor_locator_required"
+   },
+   "id": "X11",
+   "moment": "write",
+   "note": "localizador ausente al escribir: igual",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "missing",
+   "expect": {
+    "reject": "anchor_copy_not_found"
+   },
+   "id": "X12",
+   "moment": "write",
+   "note": "copia declarada que no existe al escribir",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "bad_sha",
+   "expect": {
+    "reject": "anchor_integrity_not_found"
+   },
+   "id": "X13",
+   "moment": "write",
+   "note": "el sha de la copia no es el declarado",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [],
+    "locator": "not_found",
+    "manifest": "mismatch",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "reject": "anchor_integrity_not_found"
+   },
+   "id": "X14",
+   "moment": "write",
+   "note": "el manifiesto no es el declarado",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "0000000000000000000000000000000000000000000000000000000000000001",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "reject": "anchor_integrity_not_found"
+   },
+   "id": "X15",
+   "moment": "write",
+   "note": "la derivaci\u00f3n dice venir de otro documento",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": null,
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [],
+    "locator": "not_found",
+    "manifest": "missing",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "reject": "anchor_derivation_not_found"
+   },
+   "id": "X16",
+   "moment": "write",
+   "note": "el custodio conoce el documento pero no esa derivaci\u00f3n",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "superseded",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "reject": "anchor_derivation_superseded"
+   },
+   "id": "X17",
+   "moment": "write",
+   "note": "derivaci\u00f3n sustituida: el custodio ya no responde por ella",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "unsupported",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [],
+    "locator": "not_found",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "reject": "anchor_derivation_unsupported"
+   },
+   "id": "X18",
+   "moment": "write",
+   "note": "derivaci\u00f3n de una derivaci\u00f3n (etiquetas, grafo) o sin manifiesto (HTML): fuera de v2",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [],
+    "locator": "not_found",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "reject": "anchor_locator_not_found"
+   },
+   "id": "X19",
+   "moment": "write",
+   "note": "el elemento no est\u00e1 en esa p\u00e1gina: el puntero est\u00e1 mal, no la cita",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [],
+    "locator": "invalid",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_ids": [
+       "i-13",
+       "o-02"
+      ],
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "reject": "anchor_locator_invalid"
+   },
+   "id": "X20",
+   "moment": "write",
+   "note": "elementos de modalidades distintas en un mismo localizador",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-01",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Manual de organizaci\u00f3n. P\u00e1gina 188."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-01",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "reject": "anchor_quote_not_found"
+   },
+   "id": "X21",
+   "moment": "write",
+   "note": "la cita no est\u00e1 en el elemento localizado",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "unknown"
+    },
+    "derivation": null,
+    "derivation_parent_sha256": null,
+    "document": "unknown",
+    "items": [],
+    "locator": "not_found",
+    "manifest": "missing",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "none",
+   "expect": {
+    "reject": "anchor_source_not_found"
+   },
+   "id": "X22",
+   "moment": "write",
+   "note": "ni copia ni custodio que conozca el documento",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "abcde abcde abcde abcde abcde abcde abcde abcd",
+    "quote_sha256": "5237bfba805f281c96b6e1e162da05811b3b3374180a8c7315fd3c67c4865ebd",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "reject": "anchor_quote_too_short"
+   },
+   "id": "X23",
+   "moment": "write",
+   "note": "cita de 39 bytes \u00fatiles: el m\u00ednimo de document es 40",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13"
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "reject": "anchor_locator_required"
+   },
+   "id": "X25",
+   "moment": "write",
+   "note": "localizador con elemento pero sin p\u00e1gina",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "../bin/otro",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "reject": "anchor_schema_invalid"
+   },
+   "id": "X24",
+   "moment": "write",
+   "note": "nombre de custodio que no es un identificador simple",
+   "stored": null
+  },
+  {
+   "adapter": "none",
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": false,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "no_adapter",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "integrity_not_verified",
+    "reason": "no_adapter",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X30",
+   "moment": "write",
+   "note": "sin adaptador configurado",
+   "stored": null
+  },
+  {
+   "adapter": "exit_nonzero",
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "adapter_error",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "integrity_not_verified",
+    "reason": "adapter_error",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X31",
+   "moment": "write",
+   "note": "el adaptador sale con error",
+   "stored": null
+  },
+  {
+   "adapter": "none",
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "none",
+   "expect": {
+    "adapter_called": false,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "no_adapter",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "no_adapter",
+    "reject": null,
+    "source": "unverifiable",
+    "source_reason": "no_adapter"
+   },
+   "id": "X32",
+   "moment": "write",
+   "note": "sin copia y sin adaptador: se guarda sin comprobar nada",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "unknown"
+    },
+    "derivation": null,
+    "derivation_parent_sha256": null,
+    "document": "unknown",
+    "items": [],
+    "locator": "not_found",
+    "manifest": "missing",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "document_unknown",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "integrity_not_verified",
+    "reason": "document_unknown",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X33",
+   "moment": "write",
+   "note": "copia correcta y custodio que no conoce el documento",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "visual"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "unverified",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "derived_modality",
+    "reason": "derived_modality",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X34",
+   "moment": "write",
+   "note": "visual al escribir: se comprueban documento y derivaci\u00f3n; la cita queda sin comprobar",
+   "stored": null
+  },
+  {
+   "adapter": "none",
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "missing",
+   "expect": {
+    "adapter_called": false,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "no_adapter",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "copy_missing",
+    "reject": null,
+    "source": "unverifiable",
+    "source_reason": "copy_missing"
+   },
+   "id": "X40",
+   "moment": "audit",
+   "note": "copia ausente y sin adaptador: no comprobable, nunca rota",
+   "stored": null
+  },
+  {
+   "adapter": "none",
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "bad_sha",
+   "expect": {
+    "adapter_called": false,
+    "freshness": "broken",
+    "integrity": "not_found",
+    "integrity_reason": "copy_sha_mismatch",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "integrity_not_verified",
+    "reason": "copy_sha_mismatch",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X41",
+   "moment": "audit",
+   "note": "sha de copia distinto, visto sin adaptador: rota",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "0000000000000000000000000000000000000000000000000000000000000001",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "broken",
+    "integrity": "not_found",
+    "integrity_reason": "derivation_parent_mismatch",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "integrity_not_verified",
+    "reason": "derivation_parent_mismatch",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X42",
+   "moment": "audit",
+   "note": "derivaci\u00f3n de otro documento: rota, y la cita NO se da por comprobada",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-01",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Manual de organizaci\u00f3n. P\u00e1gina 188."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-01",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "broken",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": null,
+    "quote": "not_found",
+    "quote_reason": "quote_absent",
+    "reason": "quote_absent",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X43",
+   "moment": "audit",
+   "note": "cita ausente del elemento localizado: rota (no hay stale)",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": null,
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [],
+    "locator": "not_found",
+    "manifest": "missing",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "manifest_missing",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "integrity_not_verified",
+    "reason": "manifest_missing",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X44",
+   "moment": "audit",
+   "note": "la derivaci\u00f3n ya no est\u00e1 en el custodio: no comprobable, y el motivo es el del manifiesto",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "superseded",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "derivation_superseded",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "integrity_not_verified",
+    "reason": "derivation_superseded",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X45",
+   "moment": "audit",
+   "note": "derivaci\u00f3n sustituida despu\u00e9s de guardar",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [],
+    "locator": "not_found",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "unverified",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "locator_not_found",
+    "reason": "locator_not_found",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X46",
+   "moment": "audit",
+   "note": "localizador que ya no casa: no comprobable, nunca rota",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-01",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Manual de organizaci\u00f3n. P\u00e1gina 188."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": true
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": "unknown"
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "unverified",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "adapter_truncated",
+    "reason": "adapter_truncated",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X47",
+   "moment": "audit",
+   "note": "ancla antigua sin localizador, respuesta truncada y cita no hallada",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "visual"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "unverified",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "derived_modality",
+    "reason": "derived_modality",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X48",
+   "moment": "audit",
+   "note": "visual: la cita no se comprueba",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "unknown"
+    },
+    "derivation": null,
+    "derivation_parent_sha256": null,
+    "document": "unknown",
+    "items": [],
+    "locator": "not_found",
+    "manifest": "missing",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "document_unknown",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "integrity_not_verified",
+    "reason": "document_unknown",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X49",
+   "moment": "audit",
+   "note": "copia correcta y custodio que no conoce el documento",
+   "stored": null
+  },
+  {
+   "adapter": "timeout",
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "adapter_error",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "integrity_not_verified",
+    "reason": "adapter_error",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X50",
+   "moment": "audit",
+   "note": "el adaptador no responde a tiempo",
+   "stored": null
+  },
+  {
+   "adapter": "bad_json",
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "none",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "adapter_error",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "source_not_verified",
+    "reason": "adapter_error",
+    "reject": null,
+    "source": "unverifiable",
+    "source_reason": "adapter_error"
+   },
+   "id": "X51",
+   "moment": "audit",
+   "note": "salida que no es JSON, sin copia",
+   "stored": null
+  },
+  {
+   "adapter": "bad_schema",
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "adapter_error",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "integrity_not_verified",
+    "reason": "adapter_error",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X52",
+   "moment": "audit",
+   "note": "respuesta con otro esquema",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-12",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a"
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_ids": [
+       "i-12",
+       "i-13"
+      ],
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "adapter_error",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "integrity_not_verified",
+    "reason": "adapter_error",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X53",
+   "moment": "audit",
+   "note": "se pidieron dos elementos y vuelve uno: fallo del adaptador, no cita ausente",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 187,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "adapter_error",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "integrity_not_verified",
+    "reason": "adapter_error",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X54",
+   "moment": "audit",
+   "note": "devuelve un elemento de otra p\u00e1gina",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "ocr_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "adapter_error",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "integrity_not_verified",
+    "reason": "adapter_error",
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X55",
+   "moment": "audit",
+   "note": "devuelve otra modalidad que la pedida",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": false,
+    "checked_at": "2026-11-19T21:00:00Z",
+    "derivation": "current",
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+    "match": "literal",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X60",
+   "moment": "read",
+   "note": "leer sirve lo guardado con su fecha, sin llamar al adaptador",
+   "stored": {
+    "checked_at": "2026-11-19T21:00:00Z",
+    "derivation": "current",
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+    "match": "literal",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "source": "verified",
+    "source_reason": null
+   }
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": false,
+    "checked_at": null,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "not_checked",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "not_checked",
+    "reason": "not_checked",
+    "reject": null,
+    "source": "unverifiable",
+    "source_reason": "not_checked"
+   },
+   "id": "X61",
+   "moment": "read",
+   "note": "leer un ancla nunca comprobada",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v1",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": true,
+    "freshness": "fresh",
+    "integrity": "verified",
+    "integrity_reason": null,
+    "match": "literal",
+    "quote": "verified",
+    "quote_reason": null,
+    "reason": null,
+    "reject": null,
+    "source": "verified",
+    "source_reason": null
+   },
+   "id": "X70",
+   "moment": "audit",
+   "note": "ancla document guardada con v1: v\u00e1lida en v2 tal cual",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "adapter_called": false,
+    "freshness": "unverified",
+    "integrity": "unverifiable",
+    "integrity_reason": "kind_not_supported",
+    "match": null,
+    "quote": "unverifiable",
+    "quote_reason": "kind_not_supported",
+    "reason": "kind_not_supported",
+    "reject": null,
+    "source": "unverifiable",
+    "source_reason": "kind_not_supported"
+   },
+   "id": "X71",
+   "implementation": "no-document",
+   "moment": "audit",
+   "note": "implementaci\u00f3n de v2 sin soporte de document",
+   "stored": null
+  },
+  {
+   "adapter": {
+    "custody": {
+     "retention": "effective"
+    },
+    "derivation": "current",
+    "derivation_parent_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+    "document": "known",
+    "items": [
+     {
+      "item_id": "i-13",
+      "modality": "native_text",
+      "page": 188,
+      "text": "Cl\u00e1usula 47. El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones al a\u00f1o."
+     }
+    ],
+    "locator": "match",
+    "manifest": "match",
+    "schema": "memoria/custodio-adaptador/v1",
+    "truncated": false
+   },
+   "anchor": {
+    "quote": "El personal de base tendr\u00e1 derecho a veinte d\u00edas de vacaciones",
+    "quote_sha256": "86f95768007fdbab33dcf715e88890de10c4652ce01d375672da9783c42db697",
+    "schema": "memoria/ancla/v2",
+    "source": {
+     "copy": {
+      "path": "docs/fuentes/manual-2000.pdf",
+      "repo": "github.com/ejemplo/consumidor"
+     },
+     "derivation": {
+      "custodian": "skopos",
+      "derivation_id": "372fdaef00000000000000000000000000000000000000000000000000000000",
+      "manifest_sha256": "7f81b16100000000000000000000000000000000000000000000000000000000",
+      "modality": "native_text"
+     },
+     "document_sha256": "719d6da341bff3733750f05357de50ca09fabc7c31c4354186dae8a7a3a70323",
+     "kind": "document",
+     "locator": {
+      "item_id": "i-13",
+      "page": 188
+     }
+    }
+   },
+   "copy_state": "ok",
+   "expect": {
+    "reject": "anchor_schema_invalid"
+   },
+   "id": "X72",
+   "implementation": "v1-only",
+   "moment": "write",
+   "note": "implementaci\u00f3n que s\u00f3lo conoce v1 ante un ancla v2",
+   "stored": null
+  }
+ ],
+ "estado": "congelado",
+ "schema": "memoria/ancla/v2-vectores"
+}

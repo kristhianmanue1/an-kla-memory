@@ -10,6 +10,7 @@ process; their declared size is asked first and a blob over the limit is never r
 
 from __future__ import annotations
 
+import hashlib
 import os
 import subprocess
 from dataclasses import dataclass
@@ -17,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 MAX_READ_BYTES = 4 * 1024 * 1024
+BLOCK_BYTES = 1024 * 1024
 BINARY_PROBE_BYTES = 8000
 _SYMLINK_MODE = "120000"
 _TIMEOUT = 60
@@ -202,6 +204,29 @@ class GitRepo:
         if len(data) != size + 1:
             raise GitUnavailable()
         return data[:size]
+
+    def blob_sha256(self, sha: str, block: int = BLOCK_BYTES) -> str:
+        """sha256 of a blob's bytes, read by blocks and with no size limit (ADR-0071 §2: a custodied PDF can be large)."""
+        proc = self._process("--batch")
+        digest = hashlib.sha256()
+        try:
+            proc.stdin.write(sha.encode() + b"\n")  # type: ignore[union-attr]
+            proc.stdin.flush()  # type: ignore[union-attr]
+            header = proc.stdout.readline().split()  # type: ignore[union-attr]
+            if len(header) != 3 or header[1] != b"blob":
+                raise GitUnavailable()
+            left = int(header[2])
+            while left:
+                chunk = proc.stdout.read(min(block, left))  # type: ignore[union-attr]
+                if not chunk:
+                    raise GitUnavailable()
+                digest.update(chunk)
+                left -= len(chunk)
+            if proc.stdout.read(1) != b"\n":  # type: ignore[union-attr]
+                raise GitUnavailable()
+        except (OSError, ValueError):
+            raise GitUnavailable() from None
+        return digest.hexdigest()
 
     # -- working tree -----------------------------------------------------
     def tracked(self, path: str) -> bool:

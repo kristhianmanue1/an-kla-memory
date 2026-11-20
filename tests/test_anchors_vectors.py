@@ -1,8 +1,9 @@
 """C3 vector harness (ADR-0066 §8), every ``expect`` compared field by field.
 
 Sections run here: ``cita`` (24) + Q25, ``busqueda`` (25), ``conversation`` (11) +
-S12, S13, ``document`` (17) + D18 (the ``supported: true`` ones are "not applicable"
-and must answer ``kind_not_supported``), ``frescura`` (110), errata 2 (10).  The 48 + 2
+S12, S13, ``frescura`` (110), errata 2 (10).  The ``document`` cases D01–D18 are **replaced** by those of
+``memoria/ancla/v2`` (ADR-0071; ``test_anchors_document_v2_vectors``): here only the declaration and what is
+kept, a v1 ``document`` never audited, answers ``kind_not_supported``.  The 48 + 2
 ``repo_file`` cases need real Git and live in ``test_anchors_repo_file``; the coverage
 ones in ``test_anchors_coverage``.  ``COUNTS`` feeds the report.
 """
@@ -16,7 +17,7 @@ from an_kla.anchors import (
     WHITE_SPACE, AnchorRejected, normalize_quote, prepare_quote, quote_sha256, validate_anchor, validate_anchors,
 )
 from an_kla.anchors_conversation import ConversationVerifier, TurnView, apply_resolution, check_conversation
-from an_kla.anchors_document import check_document
+from an_kla.anchors_document_v2 import kind_not_supported
 from an_kla.anchors_freshness import derive_freshness
 from an_kla.anchors_search import find_quote
 
@@ -178,21 +179,21 @@ class ConversationVectors(unittest.TestCase):
 
 
 class DocumentVectors(unittest.TestCase):
-    def test_document(self) -> None:
+    def test_d01_to_d18_are_replaced_by_the_cases_of_ancla_v2(self) -> None:
+        """README of ``memoria/ancla/v2``: «los vectores de document de v1 (D01–D18) quedan sustituidos por los de aquí».
+
+        They are declared replaced, not run: the 61 exigible cases of v2 are in ``test_anchors_document_v2_vectors``.  What
+        v1 and v2 share is checked: a v1 ``document`` anchor never audited is still stored intact and served as beta.38 did,
+        ``unverified`` / ``kind_not_supported``, and never rejected (ADR-0071 §5)."""
         cases = load_vectors("vectores.json")["document"] + load_vectors("vectores-errata-1.json")["document"]
-        self.assertEqual(len(cases), 18)
+        self.assertEqual([case["id"] for case in cases], [f"D{n:02d}" for n in range(1, 19)])
         for case in cases:
             with self.subTest(case["id"]):
                 anchor = validate_anchor(document_anchor(case["anchor"]), "fact")
-                got = check_document(anchor)
-                if case["supported"]:
-                    # D01..D16 and D18 need a custodian: not applicable here, but never rejected.
-                    _note("document", "total")
-                    _note("document", "n/a")
-                    self.assertEqual((got["freshness"], got["reason"]), ("unverified", "kind_not_supported"))
-                else:
-                    _check(self, "document", case["id"], {k: got[k] for k in case["expect"] if k != "reject"},
-                           {k: v for k, v in case["expect"].items() if k != "reject"})
+                got = kind_not_supported(anchor)
+                _note("document", "total")
+                _note("document", "replaced")
+                self.assertEqual((got["freshness"], got["reason"]), ("unverified", "kind_not_supported"))
 
 
 class Errata2Vectors(unittest.TestCase):
