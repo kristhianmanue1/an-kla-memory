@@ -19,15 +19,17 @@ import stat
 from dataclasses import dataclass, field
 from typing import Any, Mapping
 
-from . import identity_c0
+from . import directive, identity_c0
 from .anchors import AnchorRejected, validate_anchors
+from .audience import ENTRY_SCOPE_KEYS, ScopeError
 from .canonical import canonical_json, digest_json
 from .inbox import (
     DEFAULT_SLOT,
     ENTRY_SCHEMA,
     ENTRY_SCHEMA_V2,
     ENTRY_SCHEMA_V3,
-    KINDS,
+    ENTRY_SCHEMA_V4,
+    ALL_KINDS,
     MAX_TEXT_BYTES,
     REASON_SUFFIX,
     SLOT_PATTERN,
@@ -138,6 +140,22 @@ def _read_regular(path: Any) -> bytes:
 
 
 _V3_KEYS = {"anchors", "verdict", "operation", "anchor_resolution"}
+_V4_KEYS = set(ENTRY_SCOPE_KEYS)
+
+
+def _validate_scope(data: dict[str, Any]) -> None:
+    """The v4 fields (ADR-0069 §1–§3): their types, then the write rejections in the ADR's order (the drain's second look)."""
+
+    for key in ("subject", "audience", "valid_until"):
+        if key in data and not isinstance(data[key], str):
+            raise Reject(INVALID, [key])
+    for key in ("until_revoked", "revokes"):
+        if key in data and data[key] is not True:
+            raise Reject(INVALID, [key])
+    try:
+        directive.check_entry(data)
+    except ScopeError as refused:
+        raise Reject(refused.code) from None
 
 
 def _validate_v3(data: dict[str, Any]) -> None:
@@ -158,7 +176,7 @@ def _validate_v3(data: dict[str, Any]) -> None:
         raise Reject(INVALID, ["anchors"])
     if anchors:
         try:
-            validate_anchors(stored_anchors(anchors), data["kind"])
+            validate_anchors(stored_anchors(anchors), "decision" if data["kind"] == "directive" else data["kind"])
         except AnchorRejected as refused:
             raise Reject(refused.code, [] if refused.anchor_index is None else [f"anchor_{refused.anchor_index}"]) from None
 
@@ -167,13 +185,16 @@ def _validate(data: Any) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise Reject(INVALID, ["not_object"])
     keys = set(data)
-    v3 = data.get("schema") == ENTRY_SCHEMA_V3
+    v4 = data.get("schema") == ENTRY_SCHEMA_V4
+    v3 = data.get("schema") in (ENTRY_SCHEMA_V3, ENTRY_SCHEMA_V4)
     v2 = data.get("schema") == ENTRY_SCHEMA_V2 or (v3 and "slot" in data)
-    optional = {"target_id"} | ({"slot"} if v2 else set()) | (_V3_KEYS if v3 else set())
+    optional = {"target_id"} | ({"slot"} if v2 else set()) | (_V3_KEYS if v3 else set()) | (_V4_KEYS if v4 else set())
     if not _REQUIRED <= keys or not keys <= _REQUIRED | optional:
         raise Reject(INVALID, ["keys"])
-    if data["schema"] not in (ENTRY_SCHEMA, ENTRY_SCHEMA_V2, ENTRY_SCHEMA_V3):
+    if data["schema"] not in (ENTRY_SCHEMA, ENTRY_SCHEMA_V2, ENTRY_SCHEMA_V3, ENTRY_SCHEMA_V4):
         raise Reject(INVALID, ["schema"])
+    if data.get("kind") == "directive" and not v4:  # ADR-0069 §1: `directive` es de v4
+        raise Reject(INVALID, ["kind"])
     text, kind, target = data["text"], data["kind"], data.get("target_id")
     slot = data.get("slot")
     if v2 and (kind != "state" or not isinstance(slot, str) or not SLOT_PATTERN.fullmatch(slot)):
@@ -187,7 +208,7 @@ def _validate(data: Any) -> dict[str, Any]:
             raise Reject(INVALID, ["text_too_large"])
     except UnicodeEncodeError:
         raise Reject(INVALID, ["text"]) from None
-    if kind not in KINDS or not isinstance(data["kind_explicit"], bool):
+    if kind not in ALL_KINDS or not isinstance(data["kind_explicit"], bool):
         raise Reject(INVALID, ["kind"])
     if "target_id" in data and not (isinstance(target, str) and 0 < len(target) <= 256):
         raise Reject(INVALID, ["target_id"])
@@ -200,6 +221,8 @@ def _validate(data: Any) -> dict[str, Any]:
     envelope = data["envelope"]
     if envelope["idempotency_key"] != data["idempotency_key"] or envelope["kind"] != kind:
         raise Reject(INVALID, ["envelope_mismatch"])
+    if v4 and (kind == "directive" or any(key in data for key in ENTRY_SCOPE_KEYS)):
+        _validate_scope(data)
     if data["payload_sha256"] != payload_digest(text, kind, target, slot, payload_extra(data) or None):
         raise Reject(INVALID, ["payload_sha256_mismatch"])
     return data

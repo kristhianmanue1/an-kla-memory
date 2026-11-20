@@ -16,6 +16,7 @@ from .anchors import (
     MAX_ANCHORS, ANCHOR_SCHEMA, AnchorRejected, normalize_quote, source_identity, validate_anchor,
 )
 from .anchors_conversation import check_conversation
+from .audience import ENTRY_SCOPE_KEYS
 from .anchors_coverage import coverage as compute_coverage
 from .anchors_document import check_document
 from .anchors_git import GitRepo
@@ -169,7 +170,13 @@ def payload_extra(data: Mapping[str, Any]) -> dict[str, Any]:
         extra["operation"] = operation
     if data.get("anchor_resolution") is not None:
         extra["anchor_resolution"] = digest_json(data["anchor_resolution"])
+    extra.update(scope_extra(data))  # ADR-0069 §1: the same text for two projects or two addressees is two intentions
     return extra
+
+
+def scope_extra(data: Mapping[str, Any]) -> dict[str, Any]:
+    """The scope and directive fields an entry carries (``subject``, ``audience``, validity, ``revokes``), as given."""
+    return {key: data[key] for key in ENTRY_SCOPE_KEYS if key in data}
 
 
 def entry_extras(
