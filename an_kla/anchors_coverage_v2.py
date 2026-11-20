@@ -1,8 +1,10 @@
 """Deterministic coverage of checkable elements (``fact-checks-rules/v2``; C3 erratum 4, ADR-0070).
 
-Pure functions, no I/O.  Derived from the 74 vectors of the erratum, not from another implementation.  It keeps what
-v1 (:mod:`an_kla.anchors_coverage`, untouched) already did for identifiers, paths, versions and numbers and adds two
-element types, ``hash`` and ``date``, plus ``rc.N``-style pre-release tags as versions.
+Pure functions, no I/O.  Derived from the 74 vectors of the erratum and from the written text of the rules (which v2
+inherits from v1 for identifiers, paths, versions and numbers), not from another implementation.  It imports nothing
+from :mod:`an_kla.anchors_coverage` (v1, untouched): each extractor follows the text, so v1's deviations from it
+(word-based paths, a looser version suffix, a looser number canon) are not inherited.  It adds two element types, ``hash``
+and ``date``, plus ``rc.N``-style pre-release tags as versions.
 
 Extraction order on the text, each type masking what it found before the next one looks (the vectors fix it):
 ``identifier`` (backticks), ``path`` (so a date inside a path is part of the path), ``date`` (with an ISO time that
@@ -21,8 +23,6 @@ import re
 import unicodedata
 from typing import Any, Iterable, Sequence
 
-from .anchors_coverage import _blank, _numbers, _paths, _versions
-
 COVERAGE_RULES = "fact-checks-rules/v2"
 MISSING_MAX = 8
 TYPE_ORDER = ("identifier", "path", "hash", "version", "date", "number")
@@ -37,6 +37,68 @@ _ISO_TIME = re.compile(r"T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})
 _HASH = re.compile(r"(?<!\w)[0-9a-f]{7,64}(?!\w)")
 _PRERELEASE = re.compile(r"(?<![\w.])(?:alpha|beta|rc)\.\d+(?:\.\d+)*(?!\w)")
 _HASH_MIN = 7
+# 1b: "first URLs, then paths"; "trailing .,;:!? are stripped repeatedly from each match"; a path without any ASCII
+# letter ("12/15") "is not a path and is not masked"
+_URL = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://[^\s`'\"<>()\[\]{}]+")
+_PATH = re.compile(r"(?<![\w/.~-])(?:~|\.{1,2})?/?[\w.-]+(?:/[\w.-]+)+/?")
+_TRAILING = ".,;:!?"
+_ASCII_LETTER = re.compile(r"[A-Za-z]")
+# 1c: only with a leading "v", or two or more dots in the numeric core, or a pre-release suffix
+_VERSION = re.compile(
+    r"(?<![\w.])(?P<v>v)?(?P<core>\d+(?:\.\d+)+)(?P<suffix>(?:a|b|rc)\d+|-[0-9A-Za-z]+(?:\.[0-9A-Za-z]+)*)?(?!\w)"
+)
+# 1d
+_NUMBER = re.compile(r"(?<!\w)\d+(?:[.,]\d+)*(?!\w)")
+
+
+def _blank(text: str, start: int, end: int) -> str:
+    return text[:start] + " " * (end - start) + text[end:]
+
+
+def _paths(text: str) -> list[tuple[int, str, int]]:
+    """URLs, then paths, each step masking what it captured; a rejected match is not masked and scanning goes on after it."""
+    found: list[tuple[int, str, int]] = []
+    work = text
+    for pattern in (_URL, _PATH):
+        hits = []
+        for m in pattern.finditer(work):
+            value = m.group(0).rstrip(_TRAILING)
+            if value and _ASCII_LETTER.search(value):
+                hits.append((m.start(), value, m.start() + len(value)))
+        for start, value, end in hits:
+            work = _blank(work, start, end)
+        found.extend(hits)
+    return found
+
+
+def _versions(text: str) -> list[tuple[int, str, int]]:
+    return [
+        (m.start(), m.group(0), m.end())
+        for m in _VERSION.finditer(text)
+        if m["v"] or m["suffix"] or m["core"].count(".") >= 2
+    ]
+
+
+def _canonical_number(token: str) -> str:
+    """1d: thousands, decimal or thousands plus decimal; anything else is the token with ``,`` replaced by ``.``."""
+    groups = re.split(r"[.,]", token)
+    separators = re.findall(r"[.,]", token)
+    if not separators:
+        return token
+    if len(set(separators)) == 1 and all(len(group) == 3 for group in groups[1:]):
+        return "".join(groups)
+    if len(groups) == 2:
+        return groups[0] + "." + groups[1]
+    if (
+        len(groups) >= 3 and len(set(separators[:-1])) == 1 and separators[-1] != separators[0]
+        and all(len(group) == 3 for group in groups[1:-1])
+    ):
+        return "".join(groups[:-1]) + "." + groups[-1]
+    return token.replace(",", ".")
+
+
+def _numbers(text: str) -> list[tuple[int, str, int]]:
+    return [(m.start(), _canonical_number(m.group(0)), m.end()) for m in _NUMBER.finditer(text)]
 
 
 def _dates(text: str) -> list[tuple[int, str, int]]:

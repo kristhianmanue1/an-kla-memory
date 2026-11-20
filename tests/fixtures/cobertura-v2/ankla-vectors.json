@@ -72,6 +72,119 @@
       "quotes": ["paquete 1.0.1"],
       "elements": [{"type": "version", "value": "1.0.0", "present": false}],
       "missing": [{"type": "version", "value": "1.0.0"}]
+    },
+    {
+      "id": "own-path-backtick-glued-before",
+      "rules": "fact-checks-rules/v2",
+      "note": "una comilla invertida suelta pegada al principio de una ruta no es parte de la ruta",
+      "rule": "path: paths \"(?<![\\w/.~-])(?:~|\\.{1,2})?/?[\\w.-]+(?:/[\\w.-]+)+/?\" (a backtick is not in [\\w.-])",
+      "text": "ver `feat/x ahora",
+      "quotes": ["rama feat/x"],
+      "elements": [{"type": "path", "value": "feat/x", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-path-backtick-glued-after",
+      "rules": "fact-checks-rules/v2",
+      "note": "una comilla invertida suelta pegada al final de una ruta no es parte de la ruta",
+      "rule": "path: paths \"...[\\w.-]+(?:/[\\w.-]+)+/?\" (a backtick is not in [\\w.-]) and trailing \".,;:!?\" are stripped",
+      "text": "ver feat/x` ahora",
+      "quotes": ["rama feat/x"],
+      "elements": [{"type": "path", "value": "feat/x", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-path-random-11549",
+      "rules": "fact-checks-rules/v2",
+      "note": "caso de la entrada aleatoria 11549 del contraste con agora: pares vacíos de comillas invertidas y una ruta; la ruta es feat/x sin comilla pegada y se cuenta una sola vez",
+      "rule": "identifier: \"a backtick, one or more characters that are neither a backtick nor a line break, a backtick\"; path: \"(?<![\\w/.~-])(?:~|\\.{1,2})?/?[\\w.-]+(?:/[\\w.-]+)+/?\"; \"No duplicates by (type, value)\"",
+      "text": "fecha sha_E934CD7199A9147597DCD2E6EBB2938E90FF8ED9. en `` `decisión` de `feat/x` `feat/x`.",
+      "quotes": [
+        "fecha 1234567 en `` `decisión`",
+        "fecha sha_E934CD7199A9147597DCD2E6EBB2938E90FF8ED9. en sello 2025-01-19 `decisión` de 1999-01-31T10:001 `feat/x`.",
+        "fecha sha_E934CD7199A9147597DCD2E6EBB2938E90FF8ED9. e9a19bceab5ed071af7a8bd965c11ba7 `` `a92b9252` en deadbeef `feat/x`."
+      ],
+      "elements": [
+        {"type": "identifier", "value": "de", "present": true},
+        {"type": "path", "value": "feat/x", "present": true}
+      ],
+      "missing": []
+    },
+    {
+      "id": "own-path-no-ascii-letter",
+      "rules": "fact-checks-rules/v2",
+      "note": "una ruta con letras no ASCII y ninguna ASCII no es ruta y no se enmascara",
+      "rule": "path: \"A path with no ASCII letter (for example 12/15) is not a path and is not masked\" (ASCII letter is [A-Za-z])",
+      "text": "ver ñ/ö ahora",
+      "quotes": ["ver ñ/ö"],
+      "elements": [],
+      "missing": []
+    },
+    {
+      "id": "own-path-no-ascii-letter-numbers-stay",
+      "rules": "fact-checks-rules/v2",
+      "note": "12/15 no es ruta y no se enmascara: quedan dos números",
+      "rule": "path: \"A path with no ASCII letter (for example 12/15) is not a path and is not masked\"",
+      "text": "el 12/15 fue",
+      "quotes": ["x"],
+      "elements": [
+        {"type": "number", "value": "12", "present": false},
+        {"type": "number", "value": "15", "present": false}
+      ],
+      "missing": [{"type": "number", "value": "12"}, {"type": "number", "value": "15"}]
+    },
+    {
+      "id": "own-path-non-ascii-with-ascii-letter",
+      "rules": "fact-checks-rules/v2",
+      "note": "con alguna letra ASCII sí es ruta, aunque tenga letras no ASCII",
+      "rule": "path: paths \"(?<![\\w/.~-])(?:~|\\.{1,2})?/?[\\w.-]+(?:/[\\w.-]+)+/?\" with at least one ASCII letter",
+      "text": "ver docs/ñandú.md ahora",
+      "quotes": ["docs/ñandú.md"],
+      "elements": [{"type": "path", "value": "docs/ñandú.md", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-number-canon-anything-else",
+      "rules": "fact-checks-rules/v2",
+      "note": "1.2,5 no es millares ni millares más decimal (el grupo del medio no tiene 3 cifras): «anything else», la coma pasa a punto; 1.2.5 de la cita da el mismo valor",
+      "rule": "number: \"Anything else: the token with , replaced by .\"",
+      "text": "pesa 1.2,5 kg",
+      "quotes": ["mide 1.2.5 m"],
+      "elements": [{"type": "number", "value": "1.2.5", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-number-canon-same-separator-not-thousands",
+      "rules": "fact-checks-rules/v2",
+      "note": "1.2.3 con el mismo separador pero grupos que no son de 3 cifras no es millares: el valor es el token",
+      "rule": "number: \"more than one group, all separators equal and every group after the first of exactly 3 digits: thousands\"; otherwise \"Anything else: the token with , replaced by .\"",
+      "text": "sección 1,2,3 cerrada",
+      "quotes": ["sección 1.2.3"],
+      "elements": [{"type": "number", "value": "1.2.3", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-version-uppercase-v-is-not-a-version",
+      "rules": "fact-checks-rules/v2",
+      "note": "V mayúscula no es el prefijo v: V1.2 no es versión; el 1 pegado a la V no es número (lookbehind de 1d) y queda el 2 tras el punto",
+      "rule": "version: \"(?<![\\w.])v?\\d+(?:\\.\\d+)+...\" only with a leading v, two or more dots or a pre-release suffix (case is never folded); number: \"(?<!\\w)\\d+(?:[.,]\\d+)*(?!\\w)\"",
+      "text": "Instalada V1.2.",
+      "quotes": ["V1.2"],
+      "elements": [{"type": "number", "value": "2", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-version-suffix-is-a-b-rc-or-hyphen",
+      "rules": "fact-checks-rules/v2",
+      "note": "el sufijo de una versión es a|b|rc seguido de cifras o un guion con alfanuméricos; 2.0x3 no es versión (sólo queda el 2, por 1d)",
+      "rule": "version: \"(?:(?:a|b|rc)\\d+|-[0-9A-Za-z]+(?:\\.[0-9A-Za-z]+)*)?(?!\\w)\"; number: \"(?<!\\w)\\d+(?:[.,]\\d+)*(?!\\w)\"",
+      "text": "Probadas 2.0b1 y 2.0x3.",
+      "quotes": ["2.0b1"],
+      "elements": [
+        {"type": "version", "value": "2.0b1", "present": true},
+        {"type": "number", "value": "2", "present": true}
+      ],
+      "missing": []
     }
   ]
 }
