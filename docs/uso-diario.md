@@ -467,6 +467,10 @@ custodio (`[a-z0-9][a-z0-9_-]{0,31}`) es sólo la clave de la tabla. El adaptado
 `PATH=/usr/bin:/bin`, `LC_ALL=C`, directorio `/`, 10 s de plazo y 8 MiB de salida como máximo.
 Un custodio que no está en la tabla es «sin adaptador»; una tabla que no se puede leer da
 `adapter_error` en todos y la respuesta lo dice (`custodians_config_error`).
+**Si vas a reubicar el store (`relocate`), usa `AN_KLA_CUSTODIANS` (y `AN_KLA_DEFAULT_BRANCH`)
+en vez del `config.json`:** `relocate` rechaza un store con `config.json`
+(`relocate_local_config_present`) porque no se mueve con la custodia; mueve sus claves a las
+variables y retira el archivo.
 
 **Citar.** Con el atajo (repetible, en grupo), o con `--anchor-file` y el ancla completa:
 
