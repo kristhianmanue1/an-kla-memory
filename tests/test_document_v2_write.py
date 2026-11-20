@@ -260,7 +260,7 @@ class ThreeMomentsTests(DocumentCase):
         written_at = body["anchors"][0]["checked_at"]
         self.fake.set({"mode": "response", "response": response(manifest="mismatch", derivation=None, derivation_parent_sha256=None)})
         audit = self.served("anchors", "verify", body["record_id"])
-        self.assertEqual(audit["schema"], "an-kla/anchors-verify-v2")
+        self.assertEqual(audit["schema"], "an-kla/anchors-verify-v3")
         record = audit["records"][0]
         self.assertTrue(record["recorded"], record)
         item = record["anchors"][0]
@@ -356,7 +356,7 @@ class SchemaTests(DocumentCase):
         self.validator("remember-result-v2").validate(state)
         self.fake.set({"mode": "response", "response": response(manifest="mismatch", derivation=None, derivation_parent_sha256=None)})
         audit = self.served("anchors", "verify", "--all")
-        self.validator("anchors-verify-v2").validate(audit)
+        self.validator("anchors-verify-v3").validate(audit)
         self.assertTrue(all(record["recorded"] for record in audit["records"]), audit)
         self.fake.set({"mode": "exit_nonzero"})
         history = self.served("history", body["record_id"])
@@ -381,7 +381,7 @@ class SchemaTests(DocumentCase):
         self.validator("remember-result-v2").validate(body)
         audit = self.served("anchors", "verify", "f-v2")
         self.assertEqual(audit["custodians_config_error"], "custodians_invalid_shape")
-        self.validator("anchors-verify-v2").validate(audit)
+        self.validator("anchors-verify-v3").validate(audit)
 
 
 class InvariantTests(DocumentCase):
