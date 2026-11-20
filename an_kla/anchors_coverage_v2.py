@@ -34,8 +34,13 @@ _DATE = re.compile(r"(?<!\d)\d{4}-(?:0[1-9]|1[0-2])-(?:0[1-9]|[12]\d|3[01])(?!\d
 _SPAN = re.compile(r"`([^`\n\r]+)`")
 # the zone of an ISO time is "(Z|[+-]\d{2}:?\d{2})?": the colon is optional (v2 text)
 _ISO_TIME = re.compile(r"T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:?\d{2})?")
-_HASH = re.compile(r"(?<!\w)[0-9a-f]{7,64}(?!\w)")
-_PRERELEASE = re.compile(r"(?<![\w.])(?:alpha|beta|rc)\.\d+(?:\.\d+)*(?!\w)")
+# 1d (text): "(?<!\w)[0-9a-f]{7,64}(?!\w) with at least one letter and one digit, optionally followed by …; the token and the
+# ellipsis are masked, the ellipsis is not part of the value"
+_HASH = re.compile(r"(?<!\w)(?P<h>[0-9a-f]{7,64})(?!\w)…?")
+# 2 (quote): "some token (?<!\w)[0-9a-f]+(?!\w)" of any form: no letter-and-digit demand and no cap of 64
+_HASH_TOKEN = re.compile(r"(?<!\w)[0-9a-f]+(?!\w)")
+# 1e: "(?<![\w.])(alpha|beta|rc)\.\d+(?!\w)", one version each
+_PRERELEASE = re.compile(r"(?<![\w.])(?:alpha|beta|rc)\.\d+(?!\w)")
 _HASH_MIN = 7
 # 1b: "first URLs, then paths"; "trailing .,;:!? are stripped repeatedly from each match"; a path without any ASCII
 # letter ("12/15") "is not a path and is not masked"
@@ -111,11 +116,11 @@ def _dates(text: str) -> list[tuple[int, str, int]]:
 
 
 def _hashes(text: str) -> list[tuple[int, str, int]]:
-    """Lowercase hexadecimal tokens of 7 to 64 characters with at least a digit and a letter."""
+    """Lowercase hexadecimal tokens of 7 to 64 characters with at least a digit and a letter; a ``…`` after one is masked, not valued."""
     return [
-        (m.start(), m.group(0), m.end())
+        (m.start(), m["h"], m.end())
         for m in _HASH.finditer(text)
-        if any(c.isdigit() for c in m.group(0)) and any(c.isalpha() for c in m.group(0))
+        if any(c.isdigit() for c in m["h"]) and any(c.isalpha() for c in m["h"])
     ]
 
 
@@ -168,7 +173,7 @@ def check_elements(text: str, quotes: Iterable[str]) -> list[dict[str, Any]]:
             dates.add(value)
             work = _blank(work, start, end)
         masked.append(work)
-    hashes = {h for q in norm for _, h, _ in _hashes(q)}
+    hashes = {m.group(0) for q in norm for m in _HASH_TOKEN.finditer(q)}  # rule 2: tokens of any form, not only hashes
     numbers = {n for q in masked for _, n, _ in _numbers(q)}
     out = []
     for element in extract_elements(text):

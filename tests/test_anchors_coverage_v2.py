@@ -66,6 +66,16 @@ class OwnVectorsTest(unittest.TestCase):
                 missing = [{"type": e["type"], "value": e["value"]} for e in elements if not e["present"]]
                 self.assertEqual(missing, case["missing"])
 
+    def test_the_own_vectors_are_counted_and_have_unique_ids(self) -> None:
+        cases = json.loads((FIXTURES.parent / "cobertura-v2" / "ankla-vectors.json").read_text(encoding="utf-8"))["cases"]
+        self.assertEqual(len(cases), 23)  # Q-04: el informe cuenta lo que hay
+        self.assertEqual(len({c["id"] for c in cases}), len(cases))
+
+    def test_a_hash_ellipsis_is_masked_with_the_token_and_not_valued(self) -> None:
+        self.assertEqual(v2._hashes("a92b9252…x"), [(0, "a92b9252", 9)])  # el span cubre la elipsis; el valor no
+        self.assertEqual(v2._hashes("a92b9252x"), [])
+        self.assertEqual(v2._hashes("abcdef12"), [(0, "abcdef12", 8)])
+
     def test_the_c3_file_was_not_touched(self) -> None:
         self.assertEqual(hashlib.sha256((FIXTURES / "fact-checks-v2-vectors.json").read_bytes()).hexdigest(), V2_SHA256)
 
