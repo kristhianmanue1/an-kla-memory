@@ -57,7 +57,7 @@ class CriteriaTest(AnchorCase):
     def test_8080_against_8081_is_none_with_the_number_pointed_at(self) -> None:
         result = self.say("el servidor usa el puerto 8080", anchors=[self.anchor()])
         self.assertEqual(result["state"], "committed")
-        self.assertEqual(result["coverage"], {"total": 1, "present": 0, "level": "none"})
+        self.assertEqual(result["coverage"], {"total": 1, "present": 0, "level": "none", "rules": "fact-checks-rules/v2"})  # ADR-0070
         self.assertEqual(result["missing"], [{"type": "number", "value": "8080"}])
         self.assertEqual(result["missing_total"], 1)
         stored = self.record(result["record_id"])  # top-level siblings of the record, saved as computed

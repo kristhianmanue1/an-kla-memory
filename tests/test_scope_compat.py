@@ -74,10 +74,6 @@ class ByteIdenticalWithBetaTests(ScopeCase):
         (self.project / "nota.txt").write_text("El puerto de quetzal es 8081 siempre.\n")
         run_git(self.project, "add", "nota.txt")
         run_git(self.project, "commit", "-q", "-m", "nota")
-        _rc, anchored = remember(
-            self.project, "el puerto anclado es 8081", "--anchor-path", "nota.txt", "--anchor-quote", "puerto de quetzal es 8081", env=env,
-        )
-        self.anchored_id = anchored["record_id"]
         remember(self.project, "en curso: revisar el puerto", "--kind", "state", env=env)
         remember(self.project, "otro estado del puerto", "--kind", "state", "--slot", "lateral", env=env)
         self.assertEqual(cli(self.project, "dispute", disputed["record_id"], "--verdict", "insufficient", "--text", "sin cita", env=self.env("rev-1", "revisor")).returncode, 0)
@@ -99,6 +95,14 @@ class ByteIdenticalWithBetaTests(ScopeCase):
             self.assertEqual(
                 subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, sys.argv[1]); import an_kla.version as v; print(v.VERSION)", str(tree)],
                                capture_output=True, text=True).stdout.strip(), "0.1.0b38")
+            # El hecho anclado lo escribe beta.38: con ADR-0070 lo escrito ahora lleva cobertura v2 y no es «un store sin campos nuevos»
+            written = subprocess.run(
+                [sys.executable, "-m", "an_kla", "--project-root", str(self.project), "remember", "--text", "el puerto anclado es 8081",
+                 "--anchor-path", "nota.txt", "--anchor-quote", "puerto de quetzal es 8081"],
+                cwd=tree, env={**cli_env(self.env("orq-plano")), "PYTHONPATH": str(tree)}, capture_output=True, text=True,
+            )
+            self.assertEqual(written.returncode, 0, written.stderr)
+            self.anchored_id = json.loads(written.stdout)["record_id"]
             for args in self.commands():
                 with self.subTest(args=args):
                     before, after = self.run_tree(tree, *args), self.run_tree(ROOT, *args)
