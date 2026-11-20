@@ -12,6 +12,21 @@ en fase de pre-release `0.1.0`.
 
 ## [Sin publicar]
 
+**Cobertura con `fact-checks-rules/v2` y modo `state` (ADR-0070, errata 4 de C3; cierra #239)**:
+todo lo que se escribe (`remember`, el vaciado de la bandeja y `dispute`) calcula la cobertura
+con las reglas v2 (`an_kla/anchors_coverage_v2.py`, derivada de los 74 vectores de la errata): una
+fecha `AAAA-MM-DD` cuenta como un elemento y no como tres números, las huellas hexadecimales
+(`a92b9252`) y las versiones `rc.N`, `alpha.N` y `beta.N` son elementos, y `missing` admite los
+tipos `hash` y `date`. Un `state` sólo cuenta identificadores, rutas, huellas y versiones: sin
+ninguno es `unchecked`, así que `none` deja de avisar por cifras de avance. El `kind` llega al
+cálculo al encolar y al vaciar. `coverage.rules` (`"fact-checks-rules/v2"`) dice con qué reglas
+se calculó; **un `coverage` sin `rules` es v1** (lo escrito por beta.36 a beta.38) y no se
+recalcula ni se reescribe. Esquemas: `remember-result-v2`, nuevo y disperso (sólo con cobertura
+v2), y `history-result-v2`, `state-result-v2` y `anchors-verify-v2` ampliados antes de su primera
+publicación. Un store sin registros nuevos da byte a byte lo de beta.38. Vuelta atrás: un binario
+anterior lee `coverage.rules` y los tipos nuevos como datos que no entiende, sin error. Detalle en
+[`docs/architecture/0070-cobertura-reglas-v2.md`](docs/architecture/0070-cobertura-reglas-v2.md).
+
 **Ámbito y destinatario de un recuerdo, y órdenes del Operador (`directive`)
 (ADR-0069)**: `remember --subject <repo.id> --audience all|role:<papel>|agent:<nombre>`
 en `fact`, `decision` y `state` (campos de primer nivel, como `slot`; C0 y

@@ -129,6 +129,8 @@ def capabilities() -> dict[str, Any]:
             "remember": {
                 "command": "remember (--text <t> | --text-file <ruta|->) [--kind fact|decision|state|directive] [--slot <s>] [--subject <repo.id>] [--audience all|role:<papel>|agent:<nombre>] [--valid-until <fecha> | --until-revoked] [--supersedes <id> [--revoke]] [--idempotency-key <k>] [--anchor-file <ruta|-> | --anchor-path <p> --anchor-quote <q> [--anchor-commit <c>]]",
                 "schema": "an-kla/remember-result-v1",
+                "schema_v2": "an-kla/remember-result-v2 (sólo con cobertura fact-checks-rules/v2, ADR-0070)",
+                "coverage_rules": "fact-checks-rules/v2",
                 "read_only": False,
                 "mcp": False,
                 "decision": "ADR-0063 D1",
