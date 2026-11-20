@@ -121,6 +121,7 @@ Una función, `is_conclusive(check, kind)`, con los dos criterios.
   - sólo se aplica con v2, y lo guardado no se recalcula;
   - una evidencia de más de 16 384 bytes anula la cobertura de todo el registro (`coverage_error`); no se trunca.
 - **Esquemas:** la clave `evidence` entra en las versiones dispersas nuevas de §6 (`remember-result-v4`, `history-result-v3` y `state-result-v3`), que todavía no están publicadas. Una respuesta con `coverage.evidence` también las dispara.
+- **`anchors verify` también sirve la cobertura del registro** (ronda de código r1, Q-04). Una auditoría cuya respuesta lleva `coverage.evidence` sube a **`anchors-verify-v4`**, aunque sólo tenga anclas `document`, porque `anchors-verify-v3` (publicado) no admite esa clave. Sin `coverage.evidence` ni anclas `conversation`, la auditoría de un `document` sigue en v3.
 - **Prueba de aceptación:** los 34 casos, exactos, con su sha256 comprobado.
 
 ## Por qué no
