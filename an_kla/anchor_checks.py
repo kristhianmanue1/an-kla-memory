@@ -217,7 +217,10 @@ def has_checks(item: Any) -> bool:
 
 
 def has_conversation_result(item: Any) -> bool:
-    """True if a served record or node carries a conversation result of the resolver (it has a ``speaker`` key): the trigger of the sparse versions."""
+    """True if a served record or node carries a conversation result of the resolver (it has a ``speaker`` key) or a coverage that
+    declares its ``evidence`` (erratum 7, ADR-0073 §8): the trigger of the sparse versions ``history-result-v3`` and ``state-result-v3``."""
+    if isinstance(item, dict) and isinstance(item.get("coverage"), dict) and "evidence" in item["coverage"]:
+        return True
     anchors = item.get("anchors") if isinstance(item, dict) else None
     return isinstance(anchors, list) and any(isinstance(a, dict) and "speaker" in a and "resolution" in a for a in anchors)
 

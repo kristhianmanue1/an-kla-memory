@@ -160,7 +160,7 @@ def _result(queued: dict[str, Any], report: dict[str, Any], pending_resolution: 
         result[field] = queued[field]  # ADR-0072 §4: el ámbito y la vigencia guardados
     if scoped:
         result["schema"] = RESULT_SCHEMA_V3  # disperso: sólo con alguna de esas claves; v1 y v2 están publicados
-    if any("speaker" in a and "resolution" in a for a in result.get("anchors", [])):
+    if "evidence" in result.get("coverage", {}) or any("speaker" in a and "resolution" in a for a in result.get("anchors", [])):  # erratum 7: also coverage.evidence
         result["schema"] = RESULT_SCHEMA_V4  # ADR-0073 §6: el resultado de un resolutor en una ancla `conversation`
     rejections = report["rejected"]["entries"]
     result["rejected"] = {"count": len(rejections), "entries": rejections}

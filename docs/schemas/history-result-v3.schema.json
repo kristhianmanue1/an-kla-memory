@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:an-kla:schema:history-result:v3",
   "title": "AN-KLA History Result v3",
-  "description": "Resultado de `history <id>` (ADR-0065 §6), sólo lectura y datos no confiables. Grafo de la revisión vigente: nodos = registros, aristas dirigidas `supersedes` (nuevo → antiguo, incluida la jubilación por casilla) y `disputes` (disputa → target). Se recorre en anchura desde `root` por las aristas en los dos sentidos, con visitados (un ciclo se recorre una vez), hasta `--limit` nodos. `nodes` va ordenado por `enqueued_at` ascendente, los legados (sin sobre válido: `enqueued_at`, `writer` y `slot` nulos) después, y por `id`; `edges` por `(from, to, type)`, y sólo con los dos extremos en `nodes`. `truncated` es true si el límite o `--budget` podaron nodos (del final del orden, con sus aristas). `used_bytes` es la longitud exacta de la salida, con su salto de línea final. ADR-0066: un nodo con anclas lleva `anchors`, `anchors_freshness` y `coverage`; con disputas con veredicto, `disputed`. La salida declara `anchor_limit`, `anchors_checked` y `anchors_unchecked` (sólo si sirvió anclas). ADR-0069: versión dispersa; sólo sale con alguna clave de ámbito o destinatario, y entonces es el superconjunto de la anterior. ADR-0070: con `fact-checks-rules/v2` la cobertura dice sus `rules` y `missing` admite `hash` y `date`; sin `rules` es v1. ADR-0071: un `document` de `memoria/ancla/v2` se comprueba al escribir y al auditar, y al leer se sirve lo guardado: su resultado lleva `checked_at`, `manifest_sha256`, `derivation` y `custody`; sin resultado guardado, `not_checked`. ADR-0073: v3 es la anterior más el resultado del resolutor por ancla `conversation`. ADR-0073: un ancla `conversation` (no la de una `directive`) con resolutor configurado lleva el resultado del resolutor: `resolution`, `turn_id`, `seal`, `speaker` (en qué voz está la cita: `user` no prueba que hablara el Operador), `candidates` (cuántos mensajes la contienen por voz; nulo tras `verify`) y `detail`.",
+  "description": "Resultado de `history <id>` (ADR-0065 §6), sólo lectura y datos no confiables. Grafo de la revisión vigente: nodos = registros, aristas dirigidas `supersedes` (nuevo → antiguo, incluida la jubilación por casilla) y `disputes` (disputa → target). Se recorre en anchura desde `root` por las aristas en los dos sentidos, con visitados (un ciclo se recorre una vez), hasta `--limit` nodos. `nodes` va ordenado por `enqueued_at` ascendente, los legados (sin sobre válido: `enqueued_at`, `writer` y `slot` nulos) después, y por `id`; `edges` por `(from, to, type)`, y sólo con los dos extremos en `nodes`. `truncated` es true si el límite o `--budget` podaron nodos (del final del orden, con sus aristas). `used_bytes` es la longitud exacta de la salida, con su salto de línea final. ADR-0066: un nodo con anclas lleva `anchors`, `anchors_freshness` y `coverage`; con disputas con veredicto, `disputed`. La salida declara `anchor_limit`, `anchors_checked` y `anchors_unchecked` (sólo si sirvió anclas). ADR-0069: versión dispersa; sólo sale con alguna clave de ámbito o destinatario, y entonces es el superconjunto de la anterior. ADR-0070: con `fact-checks-rules/v2` la cobertura dice sus `rules` y `missing` admite `hash` y `date`; sin `rules` es v1. ADR-0071: un `document` de `memoria/ancla/v2` se comprueba al escribir y al auditar, y al leer se sirve lo guardado: su resultado lleva `checked_at`, `manifest_sha256`, `derivation` y `custody`; sin resultado guardado, `not_checked`. ADR-0073: v3 es la anterior más el resultado del resolutor por ancla `conversation`. ADR-0073: un ancla `conversation` (no la de una `directive`) con resolutor configurado lleva el resultado del resolutor: `resolution`, `turn_id`, `seal`, `speaker` (en qué voz está la cita: `user` no prueba que hablara el Operador), `candidates` (cuántos mensajes la contienen por voz; nulo tras `verify`) y `detail`. Errata 7 de `ancla/v1` (ADR-0073 §8): `coverage.evidence` (`ancla-document/v1`) dice que la cobertura se midió contra la evidencia de un ancla `document` de forma válida (su cita, su página y la ruta de su copia); una evidencia de más de 16 384 bytes anula la cobertura de todo el registro: `coverage` lleva `coverage_error` (`invalid_fact_quotes`) en vez de `total`, `present` y `level`.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -456,11 +456,7 @@
           },
           "coverage": {
             "type": "object",
-            "required": [
-              "total",
-              "present",
-              "level"
-            ],
+            "required": [],
             "additionalProperties": false,
             "properties": {
               "total": {
@@ -481,8 +477,30 @@
               },
               "rules": {
                 "const": "fact-checks-rules/v2"
+              },
+              "evidence": {
+                "const": "ancla-document/v1"
+              },
+              "coverage_error": {
+                "enum": [
+                  "invalid_fact_quotes"
+                ]
               }
-            }
+            },
+            "anyOf": [
+              {
+                "required": [
+                  "total",
+                  "present",
+                  "level"
+                ]
+              },
+              {
+                "required": [
+                  "coverage_error"
+                ]
+              }
+            ]
           },
           "missing": {
             "type": "array",

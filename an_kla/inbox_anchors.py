@@ -20,7 +20,8 @@ from .anchors import (
 from .anchors_conversation import check_conversation
 from .anchors_conversation_check import evaluate as evaluate_conversation
 from .audience import ENTRY_SCOPE_KEYS
-from .anchors_coverage_v2 import coverage as compute_coverage
+from .anchors_coverage_evidence import COVERAGE_ERROR, EVIDENCE, evidence_quotes
+from .anchors_coverage_v2 import COVERAGE_RULES, coverage as compute_coverage
 from .anchors_document_copy import copy_state
 from .anchors_document_v2 import REJECT_LOCATOR_REQUIRED, evaluate
 from .anchors_git import GitRepo
@@ -73,10 +74,21 @@ def coverage_fields(text: str, anchors: Sequence[Mapping[str, Any]] | None, kind
     """``coverage``, ``missing``, ``missing_total`` against the stored ``quote`` (never ``matched_text``, A3).
 
     Always ``fact-checks-rules/v2`` (ADR-0070): ``coverage.rules`` says so.  ``kind`` picks the mode: a ``state`` counts
-    only identifiers, paths, hashes and versions; every other kind counts the six element types."""
+    only identifiers, paths, hashes and versions; every other kind counts the six element types.
+
+    The evidence is one string per anchor (erratum 7 of ``ancla/v1``, ADR-0073 §8): the quote, except for a ``document`` anchor of valid
+    form, which adds its page and the path of its copy.  With such an anchor ``coverage.evidence`` says ``ancla-document/v1``; without
+    one the output is what it always was.  An evidence over 16 384 bytes voids the whole record's coverage (``coverage_error``)."""
     if not anchors:
         return {}
-    return compute_coverage(text, [a["quote"] for a in anchors], "state" if kind == "state" else "fact")
+    evidence = evidence_quotes(anchors, "decision" if kind == "directive" else kind)
+    if evidence is None:
+        return {"coverage": {"coverage_error": COVERAGE_ERROR, "rules": COVERAGE_RULES, "evidence": EVIDENCE}}
+    quotes, marked = evidence
+    result = compute_coverage(text, quotes, "state" if kind == "state" else "fact")
+    if marked:
+        result["coverage"] = {**result["coverage"], "evidence": EVIDENCE}
+    return result
 
 
 def record_fields(data: Mapping[str, Any]) -> dict[str, Any]:

@@ -182,3 +182,39 @@ en el último mensaje. Ningún caso congelado cambia.
   S13). Si la sesión no está disponible, es `session_unavailable`: no comprobable, nunca rota.
 - **Leer no llama al resolutor**, y un intento que no concluye no sustituye a un resultado
   concluyente guardado (la misma regla que la errata 6 de `memoria/ancla/v2`).
+
+## Errata 7 — 2026-11-20 (evidencia de cobertura de una cita de documento)
+
+Origen: el segundo usuario real midió que una cita correcta de un documento salía con
+cobertura `none` (0 de 4): la página y la clave del manual contaban como números ausentes,
+aunque van en el localizador y en la ruta de la copia. agora propuso no tocar las reglas de
+elementos sino la **evidencia** contra la que se miden, y lo implementó (PR #32, `6bdfa88`).
+Casos, copiados aquí byte a byte: `coverage-evidence-vectors.json`, 34 casos, sha256
+`b303427014e0d36ee084a450691820a7618584f0d37fc182400b07895bec3f50`.
+
+- **La cobertura de un registro se mide contra una evidencia por ancla.** Para `repo-file` y
+  `conversation`, la evidencia es la cita, como hasta ahora. Para un ancla `document` (de
+  esquema v1 o v2):
+
+  ```
+  quote
+  + "\n" + str(locator.page)   si locator es un objeto con page entero
+  + "\n" + copy.path           si lleva copy
+  ```
+
+  `item_id` e `item_ids` no entran. Las reglas de elementos (`fact-checks-rules/v2`) y su
+  función no cambian ni reciben el ancla.
+- **Se declara:** cuando el registro tiene al menos un ancla `document` de forma válida, la
+  cobertura lleva `evidence: "ancla-document/v1"` junto a `rules`. Sin anclas `document`, la
+  salida es byte a byte la de antes. Sólo se aplica con las reglas v2; lo guardado con v1 no
+  se recalcula.
+- **Límites declarados:** la página del localizador es la **física** y el texto suele citar
+  la impresa: cuando no coinciden, ese número sigue ausente. Es la primera vez que algo de
+  fuera de la cita cuenta: un año o una clave que sólo están en la ruta salen presentes. La
+  línea de la página o un segmento de la ruta pueden casar por prefijo con un hash del texto.
+  Una evidencia de más de 16 384 bytes (una ruta enorme) anula la cobertura de todo el
+  registro (`coverage_error`), no se trunca. La cobertura sigue sin juzgar si la cita
+  respalda el hecho.
+- **Aparcado:** tratar un código con guiones (`2000-002-001`) como un solo elemento. Choca
+  con las fechas y no cubre las claves alfanuméricas habituales; con la ruta como evidencia
+  el caso medido ya se resuelve.
