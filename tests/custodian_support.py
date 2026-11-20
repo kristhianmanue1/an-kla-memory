@@ -36,6 +36,21 @@ def exigible_cases() -> list[dict[str, Any]]:
     return [case for case in cases if case["id"] not in NOT_EXIGIBLE]
 
 
+def schema_validator(testcase: unittest.TestCase, name: str) -> Any:
+    """A validator of one of the installed schemas; the ``urn:`` references resolve among all of them (skips without jsonschema)."""
+    try:
+        from jsonschema import Draft202012Validator
+        from referencing import Registry, Resource
+        from referencing.jsonschema import DRAFT202012
+    except ImportError:
+        testcase.skipTest("jsonschema unavailable")
+    from an_kla.schemas import schema_document, schema_names
+
+    docs = [schema_document(other) for other in schema_names()]
+    registry = Registry().with_resources([(doc["$id"], Resource.from_contents(doc, default_specification=DRAFT202012)) for doc in docs])
+    return Draft202012Validator(schema_document(name), registry=registry)
+
+
 class FakeCustodian:
     """A table entry that runs ``custodian_adapter_fake.py`` with a scenario; ``log()`` says what the process saw."""
 

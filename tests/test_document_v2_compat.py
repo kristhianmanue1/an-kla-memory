@@ -16,6 +16,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tests.custodian_support import schema_validator
 from tests.inbox_support import run_git
 from tests.remember_support import ROOT, cli, cli_env, remember
 from tests.scope_support import ScopeCase
@@ -135,6 +136,7 @@ class RollbackTests(BetaCase):
         holder.wait(timeout=10)
         entry = json.loads((self.inbox / "pending" / self.pending()[0]).read_text())
         self.assertEqual((entry["schema"], entry["anchors"][0]["schema"]), ("an-kla/inbox-entry-v4", "memoria/ancla/v2"))
+        schema_validator(self, "inbox-entry-v4").validate(entry)  # the widened (unpublished) entry schema admits it
         done = self.run_tree(self.tree, "inbox", "drain", check=False)
         rejected = json.loads(done.stdout)["rejected"]["entries"]
         self.assertEqual([r["code"] for r in rejected], ["inbox_entry_invalid"], done.stdout[-500:])

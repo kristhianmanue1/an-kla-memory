@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 from unittest import mock
 
-from tests.custodian_support import FakeCustodian
+from tests.custodian_support import FakeCustodian, schema_validator
 from tests.inbox_support import AGENT_ENV, run_git
 from tests.remember_support import cli, remember
 from tests.scope_support import ScopeCase
@@ -340,6 +340,48 @@ class ThreeMomentsTests(DocumentCase):
             second = verify_command(self.store, args, clock=fixed)  # the cut-off retry: the same key
         self.assertEqual([r["records"][0]["recorded"] for r in (first, second)], [True, True])
         self.assertEqual(len(self.events("anchor_check")), 1)
+
+
+class SchemaTests(DocumentCase):
+    """ADR-0071 §6: what is answered and stored validates against the widened (unpublished) schemas and the new one."""
+
+    def validator(self, name: str) -> Any:
+        return schema_validator(self, name)
+
+    def test_every_answer_validates_against_its_schema(self) -> None:
+        body = self.written(*shortcut(copy=COPY))
+        self.validator("remember-result-v2").validate(body)
+        state = self.write(*shortcut(), "--kind", "state", "--idempotency-key", "estado", text="en curso: la cláusula 47")[1]
+        self.assertEqual(state["state"], "committed", state)
+        self.validator("remember-result-v2").validate(state)
+        self.fake.set({"mode": "response", "response": response(manifest="mismatch", derivation=None, derivation_parent_sha256=None)})
+        audit = self.served("anchors", "verify", "--all")
+        self.validator("anchors-verify-v2").validate(audit)
+        self.assertTrue(all(record["recorded"] for record in audit["records"]), audit)
+        self.fake.set({"mode": "exit_nonzero"})
+        history = self.served("history", body["record_id"])
+        self.validator("history-result-v2").validate(history)
+        self.assertEqual(history["schema"], "an-kla/history-result-v2")
+        shown = self.served("state", "show", "--all-slots")
+        self.validator("state-result-v2").validate(shown)
+        for note in self.events("anchor_check"):
+            self.validator("anchor-check-v1").validate(note["anchor_check"])
+        self.assertFalse(self.fake.called())
+
+    def test_a_not_checked_anchor_and_a_config_error_validate(self) -> None:
+        anchor = {"schema": "memoria/ancla/v2", "quote": QUOTE, "quote_sha256": hashlib.sha256(QUOTE.encode()).hexdigest(),
+                  "source": {"kind": "document", "document_sha256": DOC_SHA, "locator": {"page": 188},
+                            "derivation": {"custodian": "skopos", "derivation_id": DERIVATION, "manifest_sha256": MANIFEST, "modality": "native_text"}}}
+        self.commit_record("f-v2", anchors=[anchor])
+        history = self.served("history", "f-v2")
+        self.validator("history-result-v2").validate(history)
+        (Path(self.store.store_root) / "config.json").write_text("[]", encoding="utf-8")
+        body = self.written(*shortcut())
+        self.assertEqual(body["custodians_config_error"], "custodians_invalid_shape")
+        self.validator("remember-result-v2").validate(body)
+        audit = self.served("anchors", "verify", "f-v2")
+        self.assertEqual(audit["custodians_config_error"], "custodians_invalid_shape")
+        self.validator("anchors-verify-v2").validate(audit)
 
 
 class InvariantTests(DocumentCase):
