@@ -112,6 +112,7 @@ class InstalledSchemaTests(unittest.TestCase):
         "remember-error-v1",
         "remember-error-v2",
         "remember-result-v1",
+        "remember-result-v2",
         "restore-result-v1",
         "resume-evidence-v1",
         "resume-v1",

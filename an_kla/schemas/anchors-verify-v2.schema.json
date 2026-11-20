@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:an-kla:schema:anchors-verify:v2",
   "title": "AN-KLA Anchors Verify v2",
-  "description": "Resultado de `anchors verify <id> [--all]` (ADR-0066 §5), de sólo lectura: vuelve a comprobar las anclas con el estado de ahora y las sirve con sus tres comprobaciones (`source`, `quote`, `integrity`, cada una `verified`, `not_found` o `unverifiable` con su `reason` de vocabulario cerrado), `at`, `match`, `matched_text` y la `freshness` derivada con su `reason`. Sólo se comprueban `anchor_limit` anclas (32 por defecto), en orden de servicio; el resto sale `unverified` con `anchor_limit`. `anchors_freshness` es la peor frescura de las anclas de un registro (broken, stale, unverified, pending, fresh). Nunca hay tope de tiempo. `fresh` significa que la cita sigue ahí, no que el hecho sea cierto. Las citas y los textos son datos no confiables. ADR-0069: versión dispersa; sólo sale con alguna clave de ámbito o destinatario, y entonces es el superconjunto de la anterior.",
+  "description": "Resultado de `anchors verify <id> [--all]` (ADR-0066 §5), de sólo lectura: vuelve a comprobar las anclas con el estado de ahora y las sirve con sus tres comprobaciones (`source`, `quote`, `integrity`, cada una `verified`, `not_found` o `unverifiable` con su `reason` de vocabulario cerrado), `at`, `match`, `matched_text` y la `freshness` derivada con su `reason`. Sólo se comprueban `anchor_limit` anclas (32 por defecto), en orden de servicio; el resto sale `unverified` con `anchor_limit`. `anchors_freshness` es la peor frescura de las anclas de un registro (broken, stale, unverified, pending, fresh). Nunca hay tope de tiempo. `fresh` significa que la cita sigue ahí, no que el hecho sea cierto. Las citas y los textos son datos no confiables. ADR-0069: versión dispersa; sólo sale con alguna clave de ámbito o destinatario, y entonces es el superconjunto de la anterior. ADR-0070: con `fact-checks-rules/v2` la cobertura dice sus `rules` y `missing` admite `hash` y `date`; sin `rules` es v1.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -318,6 +318,9 @@
                   "full",
                   "unchecked"
                 ]
+              },
+              "rules": {
+                "const": "fact-checks-rules/v2"
               }
             }
           },
@@ -336,7 +339,9 @@
                   "enum": [
                     "identifier",
                     "path",
+                    "hash",
                     "version",
+                    "date",
                     "number"
                   ]
                 },

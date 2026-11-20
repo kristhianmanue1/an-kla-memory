@@ -17,7 +17,7 @@ from .anchors import (
 )
 from .anchors_conversation import check_conversation
 from .audience import ENTRY_SCOPE_KEYS
-from .anchors_coverage import coverage as compute_coverage
+from .anchors_coverage_v2 import coverage as compute_coverage
 from .anchors_document import check_document
 from .anchors_git import GitRepo
 from .anchors_repo_file import ReadContext, verify_repo_file, write_rejection
@@ -61,11 +61,14 @@ def key_extra(anchors: Sequence[Mapping[str, Any]] | None, verdict: str | None) 
     return extra or None
 
 
-def coverage_fields(text: str, anchors: Sequence[Mapping[str, Any]] | None) -> dict[str, Any]:
-    """``coverage``, ``missing``, ``missing_total`` against the stored ``quote`` (never ``matched_text``, A3)."""
+def coverage_fields(text: str, anchors: Sequence[Mapping[str, Any]] | None, kind: str = "fact") -> dict[str, Any]:
+    """``coverage``, ``missing``, ``missing_total`` against the stored ``quote`` (never ``matched_text``, A3).
+
+    Always ``fact-checks-rules/v2`` (ADR-0070): ``coverage.rules`` says so.  ``kind`` picks the mode: a ``state`` counts
+    only identifiers, paths, hashes and versions; every other kind counts the six element types."""
     if not anchors:
         return {}
-    return compute_coverage(text, [a["quote"] for a in anchors])
+    return compute_coverage(text, [a["quote"] for a in anchors], "state" if kind == "state" else "fact")
 
 
 def record_fields(data: Mapping[str, Any]) -> dict[str, Any]:
@@ -74,7 +77,7 @@ def record_fields(data: Mapping[str, Any]) -> dict[str, Any]:
     anchors = stored_anchors(data.get("anchors"))
     if anchors:
         fields["anchors"] = anchors
-        fields.update(coverage_fields(data["text"], anchors))
+        fields.update(coverage_fields(data["text"], anchors, data["kind"]))  # R70-01: the mode comes from the entry's kind
     if data.get("verdict") is not None:
         fields["verdict"] = data["verdict"]
     return fields
@@ -145,7 +148,7 @@ def prepare(
             if code:
                 raise AnchorRejected(code, index)
             stored.append({**anchor, "write_check": result})
-    return Prepared(stored, coverage_fields(text, stored))
+    return Prepared(stored, coverage_fields(text, stored, record_type))
 
 
 @dataclass(frozen=True)

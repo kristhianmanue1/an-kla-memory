@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:an-kla:schema:state-result:v2",
   "title": "AN-KLA State Result v2",
-  "description": "Resultado de `state show` (ADR-0065 §4-5), sólo lectura y datos no confiables. Un registro por casilla: la cabeza (el `state` vigente con sobre válido de mayor `enqueued_at` y después mayor `id`) del repo actual, o de todos con `--scope all` (entonces cada entrada lleva `repo_id`). `retired_count` son los estados que la casilla ha jubilado; `pending_states`, los de la bandeja sin vaciar. Con más de un vigente en la casilla, `conflict` lista todos sus ids: nunca se elige en silencio. `truncated: true` marca el stub (sólo `slot`, `id`, `enqueued_at`) de una casilla cuya entrada completa no cabe en `--budget`; `excluded.budget` cuenta las casillas que ni el stub cabe. `used_bytes` es la longitud exacta de la salida, con su salto de línea final, y nunca supera `--budget`. `empty` es true si no hay ninguna casilla vigente que mostrar. ADR-0066: una cabeza con anclas lleva `anchors` (frescura comprobada ahora), `anchors_freshness`, `coverage` y, si está disputada con veredicto, `disputed`; la salida declara `anchor_limit`, `anchors_checked` y `anchors_unchecked` (sólo si sirvió anclas). ADR-0069: versión dispersa; sólo sale con alguna clave de ámbito o destinatario, y entonces es el superconjunto de la anterior.",
+  "description": "Resultado de `state show` (ADR-0065 §4-5), sólo lectura y datos no confiables. Un registro por casilla: la cabeza (el `state` vigente con sobre válido de mayor `enqueued_at` y después mayor `id`) del repo actual, o de todos con `--scope all` (entonces cada entrada lleva `repo_id`). `retired_count` son los estados que la casilla ha jubilado; `pending_states`, los de la bandeja sin vaciar. Con más de un vigente en la casilla, `conflict` lista todos sus ids: nunca se elige en silencio. `truncated: true` marca el stub (sólo `slot`, `id`, `enqueued_at`) de una casilla cuya entrada completa no cabe en `--budget`; `excluded.budget` cuenta las casillas que ni el stub cabe. `used_bytes` es la longitud exacta de la salida, con su salto de línea final, y nunca supera `--budget`. `empty` es true si no hay ninguna casilla vigente que mostrar. ADR-0066: una cabeza con anclas lleva `anchors` (frescura comprobada ahora), `anchors_freshness`, `coverage` y, si está disputada con veredicto, `disputed`; la salida declara `anchor_limit`, `anchors_checked` y `anchors_unchecked` (sólo si sirvió anclas). ADR-0069: versión dispersa; sólo sale con alguna clave de ámbito o destinatario, y entonces es el superconjunto de la anterior. ADR-0070: con `fact-checks-rules/v2` la cobertura dice sus `rules` y `missing` admite `hash` y `date`; sin `rules` es v1.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -358,6 +358,9 @@
                       "full",
                       "unchecked"
                     ]
+                  },
+                  "rules": {
+                    "const": "fact-checks-rules/v2"
                   }
                 }
               },
@@ -376,7 +379,9 @@
                       "enum": [
                         "identifier",
                         "path",
+                        "hash",
                         "version",
+                        "date",
                         "number"
                       ]
                     },

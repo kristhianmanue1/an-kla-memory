@@ -1,0 +1,3475 @@
+{
+  "schema": "agora/fact-checks-vectors/v2-experimental",
+  "rules": "fact-checks-rules/v2",
+  "cases": [
+    {
+      "id": "consumer-date-equal-iso-in-quote",
+      "rules": "fact-checks-rules/v2",
+      "origin": "consumer",
+      "note": "fecha igual en la cita, allí como prefijo de una marca ISO",
+      "text": "La política vence el 2026-11-08.",
+      "quotes": [
+        "retention_until 2026-11-08T00:00:00Z"
+      ],
+      "elements": [
+        {
+          "type": "date",
+          "value": "2026-11-08",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "consumer-date-other-format",
+      "rules": "fact-checks-rules/v2",
+      "origin": "consumer",
+      "note": "límite declarado: «8 de noviembre de 2026» no es la fecha canónica",
+      "text": "La política vence el 2026-11-08.",
+      "quotes": [
+        "vence el 8 de noviembre de 2026"
+      ],
+      "elements": [
+        {
+          "type": "date",
+          "value": "2026-11-08",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "date",
+          "value": "2026-11-08"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "date",
+              "value": "2026-11-08"
+            }
+          ],
+          "missing_total": 1
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "consumer-date-chance-numbers",
+      "rules": "fact-checks-rules/v2",
+      "origin": "consumer",
+      "note": "fecha que en v1 salía cubierta por un 10, un 8 y un 2026 sueltos",
+      "text": "Decisión del 2026-10-08.",
+      "quotes": [
+        "página 10, línea 8, año 2026, 08 casos"
+      ],
+      "elements": [
+        {
+          "type": "date",
+          "value": "2026-10-08",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "date",
+          "value": "2026-10-08"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "date",
+              "value": "2026-10-08"
+            }
+          ],
+          "missing_total": 1
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "consumer-hash-short-no-backticks",
+      "rules": "fact-checks-rules/v2",
+      "origin": "consumer",
+      "note": "huella corta con elipsis y sin comillas invertidas; la cita trae la completa",
+      "text": "Política a92b9252… vigente.",
+      "quotes": [
+        "policy_sha256 a92b9252cc27a5a0a421fa1422b583d61cafdb0026956794a302c09db3c52160"
+      ],
+      "elements": [
+        {
+          "type": "hash",
+          "value": "a92b9252",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "consumer-hash-short-backticks",
+      "rules": "fact-checks-rules/v2",
+      "origin": "consumer",
+      "note": "entre comillas invertidas sigue siendo identifier, como en v1",
+      "text": "Política `a92b9252` vigente.",
+      "quotes": [
+        "policy_sha256 a92b9252cc27a5a0a421fa1422b583d61cafdb0026956794a302c09db3c52160"
+      ],
+      "elements": [
+        {
+          "type": "identifier",
+          "value": "a92b9252",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "consumer-commit-backticks-absent",
+      "rules": "fact-checks-rules/v2",
+      "origin": "consumer",
+      "note": "identifier ausente: none, como en v1",
+      "text": "Rama @ `c9ab602`.",
+      "quotes": [
+        "contratos reescritos en la rama de custodia"
+      ],
+      "elements": [
+        {
+          "type": "identifier",
+          "value": "c9ab602",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "identifier",
+          "value": "c9ab602"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "identifier",
+              "value": "c9ab602"
+            }
+          ],
+          "missing_total": 1
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "identifier",
+              "value": "c9ab602"
+            }
+          ],
+          "missing_total": 1
+        }
+      }
+    },
+    {
+      "id": "consumer-version-beta",
+      "rules": "fact-checks-rules/v2",
+      "origin": "consumer",
+      "note": "límite declarado: beta.38 y 0.1.0b38 no son equivalentes",
+      "text": "an-kla 0.1.0b38 instalada (beta.38).",
+      "quotes": [
+        "an-kla-memory 0.1.0b38"
+      ],
+      "elements": [
+        {
+          "type": "version",
+          "value": "0.1.0b38",
+          "present": true
+        },
+        {
+          "type": "version",
+          "value": "beta.38",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "version",
+          "value": "beta.38"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 2,
+            "present": 1,
+            "level": "partial"
+          },
+          "missing": [
+            {
+              "type": "version",
+              "value": "beta.38"
+            }
+          ],
+          "missing_total": 1
+        },
+        "state": {
+          "coverage": {
+            "total": 2,
+            "present": 1,
+            "level": "partial"
+          },
+          "missing": [
+            {
+              "type": "version",
+              "value": "beta.38"
+            }
+          ],
+          "missing_total": 1
+        }
+      }
+    },
+    {
+      "id": "consumer-pr-and-revision",
+      "rules": "fact-checks-rules/v2",
+      "origin": "consumer",
+      "note": "números en dos citas distintas",
+      "text": "PR #124 fusionado; store en rev 49.",
+      "quotes": [
+        "Merge pull request #124",
+        "revision_number: 49"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "124",
+          "present": true
+        },
+        {
+          "type": "number",
+          "value": "49",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 2,
+            "present": 2,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "consumer-decimal-comma",
+      "rules": "fact-checks-rules/v2",
+      "origin": "consumer",
+      "note": "0,979 se canoniza como en v1 (millares: 0979)",
+      "text": "Recuperación mínima 0,979 en p61.",
+      "quotes": [
+        "Mínimo de recuperación por página contra pypdf: 0,979 en p61"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "0979",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "consumer-thousands-space",
+      "rules": "fact-checks-rules/v2",
+      "origin": "consumer",
+      "note": "millares con espacio: dos números, como en v1",
+      "text": "pypdf: 55 158 palabras.",
+      "quotes": [
+        "pypdf: 55 158 palabras"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "55",
+          "present": true
+        },
+        {
+          "type": "number",
+          "value": "158",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 2,
+            "present": 2,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "consumer-manual-id-number",
+      "rules": "fact-checks-rules/v2",
+      "origin": "consumer",
+      "note": "2000-002-001 no es fecha (mes 00): 2000 es número",
+      "text": "Manual IMSS 2000.",
+      "quotes": [
+        "2000-002-001.pdf"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "2000",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "consumer-no-elements",
+      "rules": "fact-checks-rules/v2",
+      "origin": "consumer",
+      "note": "sin elementos: unchecked",
+      "text": "La custodia es indefinida por decisión del Operador.",
+      "quotes": [
+        "custodia indefinida"
+      ],
+      "elements": [],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "review-hash-full-text-short-quote",
+      "rules": "fact-checks-rules/v2",
+      "origin": "review",
+      "note": "commit completo en el texto, abreviado en la cita: casan (prefijo bidireccional)",
+      "text": "Corregido en a92b92523456789abcdef0123456789abcdef012.",
+      "quotes": [
+        "commit a92b925 en main"
+      ],
+      "elements": [
+        {
+          "type": "hash",
+          "value": "a92b92523456789abcdef0123456789abcdef012",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "review-hash-short-text-full-quote",
+      "rules": "fact-checks-rules/v2",
+      "origin": "review",
+      "note": "abreviado en el texto, completo en la cita",
+      "text": "Corregido en a92b925.",
+      "quotes": [
+        "commit a92b92523456789abcdef0123456789abcdef012"
+      ],
+      "elements": [
+        {
+          "type": "hash",
+          "value": "a92b925",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "review-hash-deface1-false-positive",
+      "rules": "fact-checks-rules/v2",
+      "origin": "review",
+      "note": "límite declarado: deface1 es hash y casa con cualquier token que empiece igual",
+      "text": "El atacante usó deface1 en el portal.",
+      "quotes": [
+        "build deface1234abcd publicado"
+      ],
+      "elements": [
+        {
+          "type": "hash",
+          "value": "deface1",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "review-hash-deface1-absent",
+      "rules": "fact-checks-rules/v2",
+      "origin": "review",
+      "note": "deface1 es hash; sin token que case, falta",
+      "text": "El atacante usó deface1 en el portal.",
+      "quotes": [
+        "el portal fue modificado"
+      ],
+      "elements": [
+        {
+          "type": "hash",
+          "value": "deface1",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "hash",
+          "value": "deface1"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "hash",
+              "value": "deface1"
+            }
+          ],
+          "missing_total": 1
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "hash",
+              "value": "deface1"
+            }
+          ],
+          "missing_total": 1
+        }
+      }
+    },
+    {
+      "id": "review-date-inside-quote-path",
+      "rules": "fact-checks-rules/v2",
+      "origin": "review",
+      "note": "fecha dentro de una ruta en un tramo de código de la cita: presente",
+      "text": "Incidente registrado el 2026-11-18.",
+      "quotes": [
+        "Logs archivados en `var/log/2026-11-18/crash.dump`"
+      ],
+      "elements": [
+        {
+          "type": "date",
+          "value": "2026-11-18",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "review-date-iso-with-zone-in-text",
+      "rules": "fact-checks-rules/v2",
+      "origin": "review",
+      "note": "marca ISO con zona en el texto: se enmascara entera, sin números sueltos",
+      "text": "Generado el 2026-11-19T10:30:00-06:00 en main.",
+      "quotes": [
+        "corrida del 2026-11-19"
+      ],
+      "elements": [
+        {
+          "type": "date",
+          "value": "2026-11-19",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "review-date-iso-z-in-text",
+      "rules": "fact-checks-rules/v2",
+      "origin": "review",
+      "note": "marca ISO con Z y fracción de segundo",
+      "text": "Sellado 2026-11-19T16:30:00.125Z.",
+      "quotes": [
+        "sello 2026-11-19T16:30:00.125Z"
+      ],
+      "elements": [
+        {
+          "type": "date",
+          "value": "2026-11-19",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "review-report-date-limit",
+      "rules": "fact-checks-rules/v2",
+      "origin": "review",
+      "note": "límite declarado: la fecha del informe cuenta como presente aunque no sea la del hecho",
+      "text": "Fallo ocurrido el 2026-11-18.",
+      "quotes": [
+        "Informe generado el 2026-11-18T23:59:59Z sobre hechos del mes pasado"
+      ],
+      "elements": [
+        {
+          "type": "date",
+          "value": "2026-11-18",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "fix-path-with-date-in-text",
+      "rules": "fact-checks-rules/v2",
+      "origin": "implementer-fix",
+      "note": "D1: una fecha dentro de una ruta del texto es parte de la ruta; otra ruta con la misma fecha no la cubre",
+      "text": "La delegación consta en docs/gobernanza/2026-11-14-delegacion-memoria-agentica.md.",
+      "quotes": [
+        "docs/gobernanza/2026-11-14-otro-documento.md"
+      ],
+      "elements": [
+        {
+          "type": "path",
+          "value": "docs/gobernanza/2026-11-14-delegacion-memoria-agentica.md",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "path",
+          "value": "docs/gobernanza/2026-11-14-delegacion-memoria-agentica.md"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "path",
+              "value": "docs/gobernanza/2026-11-14-delegacion-memoria-agentica.md"
+            }
+          ],
+          "missing_total": 1
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "path",
+              "value": "docs/gobernanza/2026-11-14-delegacion-memoria-agentica.md"
+            }
+          ],
+          "missing_total": 1
+        }
+      }
+    },
+    {
+      "id": "fix-path-with-date-present",
+      "rules": "fact-checks-rules/v2",
+      "origin": "implementer-fix",
+      "note": "D1: la misma ruta en la cita",
+      "text": "La delegación consta en docs/gobernanza/2026-11-14-delegacion-memoria-agentica.md.",
+      "quotes": [
+        "ver docs/gobernanza/2026-11-14-delegacion-memoria-agentica.md, sección 2"
+      ],
+      "elements": [
+        {
+          "type": "path",
+          "value": "docs/gobernanza/2026-11-14-delegacion-memoria-agentica.md",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "fix-url-with-date-in-text",
+      "rules": "fact-checks-rules/v2",
+      "origin": "implementer-fix",
+      "note": "D1: URL con fecha; el prefijo de la URL y la fecha sueltos no la cubren",
+      "text": "Informe en https://example.org/informes/2026-11-18/final.html.",
+      "quotes": [
+        "https://example.org/informes/ y el 2026-11-18"
+      ],
+      "elements": [
+        {
+          "type": "path",
+          "value": "https://example.org/informes/2026-11-18/final.html",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "path",
+          "value": "https://example.org/informes/2026-11-18/final.html"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "path",
+              "value": "https://example.org/informes/2026-11-18/final.html"
+            }
+          ],
+          "missing_total": 1
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "path",
+              "value": "https://example.org/informes/2026-11-18/final.html"
+            }
+          ],
+          "missing_total": 1
+        }
+      }
+    },
+    {
+      "id": "fix-number-in-quote-code-span",
+      "rules": "fact-checks-rules/v2",
+      "origin": "implementer-fix",
+      "note": "D2: una cifra sólo dentro de un tramo de código de la cita cuenta (vector v1 code-span-only-in-quote)",
+      "text": "el límite es 100",
+      "quotes": [
+        "El límite se fija en `100` solicitudes."
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "100",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "fix-port-in-quote-code-span",
+      "rules": "fact-checks-rules/v2",
+      "origin": "implementer-fix",
+      "note": "D2: puerto dentro de un tramo de código de la cita",
+      "text": "el puerto es 8080",
+      "quotes": [
+        "escucha en `localhost:8080`"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "8080",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "fix-number-in-quote-path",
+      "rules": "fact-checks-rules/v2",
+      "origin": "implementer-fix",
+      "note": "D2: número dentro de una ruta de la cita",
+      "text": "cierra el issue 24",
+      "quotes": [
+        "ver docs/issue-24.md"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "24",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "fix-hash-in-quote-url",
+      "rules": "fact-checks-rules/v2",
+      "origin": "implementer-fix",
+      "note": "D2: hash dentro de una URL de la cita",
+      "text": "Corregido en el commit 9f3c2a1b.",
+      "quotes": [
+        "https://github.com/o/r/commit/9f3c2a1b"
+      ],
+      "elements": [
+        {
+          "type": "hash",
+          "value": "9f3c2a1b",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "fix-hash-in-quote-path",
+      "rules": "fact-checks-rules/v2",
+      "origin": "implementer-fix",
+      "note": "D2: hash dentro de una ruta de la cita",
+      "text": "Recibo 31c293bee71c guardado.",
+      "quotes": [
+        "runs/31c293bee71c/score.json"
+      ],
+      "elements": [
+        {
+          "type": "hash",
+          "value": "31c293bee71c",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "fix-hash-in-quote-code-span",
+      "rules": "fact-checks-rules/v2",
+      "origin": "implementer-fix",
+      "note": "D2: hash dentro de un tramo de código de la cita",
+      "text": "Rama en c9ab602.",
+      "quotes": [
+        "HEAD es `c9ab602`"
+      ],
+      "elements": [
+        {
+          "type": "hash",
+          "value": "c9ab602",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "limit-year-alone-vs-quote-date",
+      "rules": "fact-checks-rules/v2",
+      "origin": "implementer-fix",
+      "note": "límite declarado: un año suelto en el texto no casa con una fecha de la cita",
+      "text": "En 2026 se decidió cerrar el experimento.",
+      "quotes": [
+        "decisión del 2026-11-19"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "2026",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "2026"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "number",
+              "value": "2026"
+            }
+          ],
+          "missing_total": 1
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "quote-iso-time-not-numbers",
+      "rules": "fact-checks-rules/v2",
+      "origin": "implementer-fix",
+      "note": "la marca ISO de la cita se enmascara antes de sacar sus números",
+      "text": "Arrancó a las 10 en punto.",
+      "quotes": [
+        "arranque 2026-11-19T10:00:00Z"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "10",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "10"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "number",
+              "value": "10"
+            }
+          ],
+          "missing_total": 1
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "limit-date-space-time",
+      "rules": "fact-checks-rules/v2",
+      "origin": "implementer-fix",
+      "note": "límite declarado: con espacio en vez de T, la hora queda como números",
+      "text": "Corrida del 2026-11-08 10:00.",
+      "quotes": [
+        "corrida 2026-11-08T10:00:00Z"
+      ],
+      "elements": [
+        {
+          "type": "date",
+          "value": "2026-11-08",
+          "present": true
+        },
+        {
+          "type": "number",
+          "value": "10",
+          "present": false
+        },
+        {
+          "type": "number",
+          "value": "00",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "10"
+        },
+        {
+          "type": "number",
+          "value": "00"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 3,
+            "present": 1,
+            "level": "partial"
+          },
+          "missing": [
+            {
+              "type": "number",
+              "value": "10"
+            },
+            {
+              "type": "number",
+              "value": "00"
+            }
+          ],
+          "missing_total": 2
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "date-invalid-month",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "mes 13: no es fecha, quedan tres números como en v1",
+      "text": "Plazo 2026-13-01.",
+      "quotes": [
+        "plazo 2026"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "2026",
+          "present": true
+        },
+        {
+          "type": "number",
+          "value": "13",
+          "present": false
+        },
+        {
+          "type": "number",
+          "value": "01",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "13"
+        },
+        {
+          "type": "number",
+          "value": "01"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 3,
+            "present": 1,
+            "level": "partial"
+          },
+          "missing": [
+            {
+              "type": "number",
+              "value": "13"
+            },
+            {
+              "type": "number",
+              "value": "01"
+            }
+          ],
+          "missing_total": 2
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "date-invalid-day",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "día 32: no es fecha",
+      "text": "Plazo 2026-11-32.",
+      "quotes": [
+        "2026-11-32"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "2026",
+          "present": true
+        },
+        {
+          "type": "number",
+          "value": "11",
+          "present": true
+        },
+        {
+          "type": "number",
+          "value": "32",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 3,
+            "present": 3,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "date-no-calendar-check",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "31 de febrero es fecha: sólo se comprueban los rangos 01–12 y 01–31",
+      "text": "Plazo 2026-02-31.",
+      "quotes": [
+        "plazo 2026-02-31"
+      ],
+      "elements": [
+        {
+          "type": "date",
+          "value": "2026-02-31",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "date-glued-digit-text",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "pegada a una cifra no es fecha",
+      "text": "Lote 12026-11-08.",
+      "quotes": [
+        "lote 12026"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "12026",
+          "present": true
+        },
+        {
+          "type": "number",
+          "value": "11",
+          "present": false
+        },
+        {
+          "type": "number",
+          "value": "08",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "11"
+        },
+        {
+          "type": "number",
+          "value": "08"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 3,
+            "present": 1,
+            "level": "partial"
+          },
+          "missing": [
+            {
+              "type": "number",
+              "value": "11"
+            },
+            {
+              "type": "number",
+              "value": "08"
+            }
+          ],
+          "missing_total": 2
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "date-glued-digit-quote",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "en la cita la fecha debe ir entre no-dígitos",
+      "text": "Vence el 2026-11-08.",
+      "quotes": [
+        "código 2026-11-081"
+      ],
+      "elements": [
+        {
+          "type": "date",
+          "value": "2026-11-08",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "date",
+          "value": "2026-11-08"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "date",
+              "value": "2026-11-08"
+            }
+          ],
+          "missing_total": 1
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "date-in-identifier",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "entre comillas invertidas es identifier",
+      "text": "Rama `2026-11-18`.",
+      "quotes": [
+        "rama 2026-11-18"
+      ],
+      "elements": [
+        {
+          "type": "identifier",
+          "value": "2026-11-18",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "date-filename-no-dir",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "nombre de archivo sin directorio no es ruta: queda la fecha",
+      "text": "Ver 2026-11-18-cierre-e3-2-juez-local.md.",
+      "quotes": [
+        "2026-11-18-cierre-e3-2-juez-local.md"
+      ],
+      "elements": [
+        {
+          "type": "date",
+          "value": "2026-11-18",
+          "present": true
+        },
+        {
+          "type": "number",
+          "value": "2",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 2,
+            "present": 2,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "date-underscore-prefix",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "un guion bajo antes no impide la fecha (entre no-dígitos)",
+      "text": "Copia backup_2026-11-08 creada.",
+      "quotes": [
+        "copia del 2026-11-08"
+      ],
+      "elements": [
+        {
+          "type": "date",
+          "value": "2026-11-08",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "date-iso-glued-digits-text",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "el no-dígito se exige tras la fecha; la marca ISO que sigue se enmascara aunque la sigan cifras, que quedan como número",
+      "text": "Sellado 2026-11-19T10:001 listo.",
+      "quotes": [
+        "sello 2026-11-19"
+      ],
+      "elements": [
+        {
+          "type": "date",
+          "value": "2026-11-19",
+          "present": true
+        },
+        {
+          "type": "number",
+          "value": "1",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "1"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 2,
+            "present": 1,
+            "level": "partial"
+          },
+          "missing": [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ],
+          "missing_total": 1
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "date-iso-glued-digits-quote",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "lo mismo en la cita: tras enmascarar la fecha y su marca ISO queda el 1",
+      "text": "Paso 1 del 2026-11-19.",
+      "quotes": [
+        "2026-11-19T10:001"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "1",
+          "present": true
+        },
+        {
+          "type": "date",
+          "value": "2026-11-19",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 2,
+            "present": 2,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "date-duplicate",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "la misma fecha dos veces es un elemento",
+      "text": "Del 2026-11-08 al 2026-11-08.",
+      "quotes": [
+        "2026-11-08"
+      ],
+      "elements": [
+        {
+          "type": "date",
+          "value": "2026-11-08",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "hash-six-chars",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "6 caracteres no es hash ni número",
+      "text": "Código abc123.",
+      "quotes": [
+        "código xyz"
+      ],
+      "elements": [],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "hash-uppercase-text",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "mayúsculas no son hash",
+      "text": "Huella A92B9252.",
+      "quotes": [
+        "huella a92b9252"
+      ],
+      "elements": [],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "hash-uppercase-quote",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "token en mayúsculas en la cita no casa",
+      "text": "Huella a92b9252.",
+      "quotes": [
+        "huella A92B9252"
+      ],
+      "elements": [
+        {
+          "type": "hash",
+          "value": "a92b9252",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "hash",
+          "value": "a92b9252"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "hash",
+              "value": "a92b9252"
+            }
+          ],
+          "missing_total": 1
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "hash",
+              "value": "a92b9252"
+            }
+          ],
+          "missing_total": 1
+        }
+      }
+    },
+    {
+      "id": "hash-letters-only",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "sin cifra no es hash",
+      "text": "Valor deadbeef.",
+      "quotes": [
+        "deadbeef"
+      ],
+      "elements": [],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "hash-digits-only",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "sin letra no es hash: es número",
+      "text": "Lote 1234567.",
+      "quotes": [
+        "lote 1234567"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "1234567",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "hash-64-present",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "64 caracteres, presente",
+      "text": "sha a92b9252cc27a5a0a421fa1422b583d61cafdb0026956794a302c09db3c52160.",
+      "quotes": [
+        "sha256 a92b9252cc27a5a0a421fa1422b583d61cafdb0026956794a302c09db3c52160"
+      ],
+      "elements": [
+        {
+          "type": "hash",
+          "value": "a92b9252cc27a5a0a421fa1422b583d61cafdb0026956794a302c09db3c52160",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "hash-65-not-hash",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "65 caracteres no es hash",
+      "text": "sha a92b9252cc27a5a0a421fa1422b583d61cafdb0026956794a302c09db3c521600.",
+      "quotes": [
+        "sha256 a92b9252cc27a5a0a421fa1422b583d61cafdb0026956794a302c09db3c52160"
+      ],
+      "elements": [],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "hash-ellipsis-in-quote",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "abreviado con elipsis en la cita",
+      "text": "Política a92b9252cc27a5a0a421fa1422b583d61cafdb0026956794a302c09db3c52160.",
+      "quotes": [
+        "policy a92b9252…"
+      ],
+      "elements": [
+        {
+          "type": "hash",
+          "value": "a92b9252cc27a5a0a421fa1422b583d61cafdb0026956794a302c09db3c52160",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "hash-quote-prefix-too-short",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "el más corto debe tener al menos 7",
+      "text": "Huella a92b9252cc.",
+      "quotes": [
+        "huella a92b92"
+      ],
+      "elements": [
+        {
+          "type": "hash",
+          "value": "a92b9252cc",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "hash",
+          "value": "a92b9252cc"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "hash",
+              "value": "a92b9252cc"
+            }
+          ],
+          "missing_total": 1
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "hash",
+              "value": "a92b9252cc"
+            }
+          ],
+          "missing_total": 1
+        }
+      }
+    },
+    {
+      "id": "hash-not-prefix",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "comparten comienzo pero ninguno es prefijo del otro",
+      "text": "Huella a92b9252.",
+      "quotes": [
+        "huella a92b9253ffff"
+      ],
+      "elements": [
+        {
+          "type": "hash",
+          "value": "a92b9252",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "hash",
+          "value": "a92b9252"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "hash",
+              "value": "a92b9252"
+            }
+          ],
+          "missing_total": 1
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "hash",
+              "value": "a92b9252"
+            }
+          ],
+          "missing_total": 1
+        }
+      }
+    },
+    {
+      "id": "hash-glued-underscore",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "pegado a un guion bajo no es token completo",
+      "text": "Valor sha_a92b9252.",
+      "quotes": [
+        "a92b9252"
+      ],
+      "elements": [],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "hash-ascii-dots",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "seguido de tres puntos ASCII sigue siendo hash",
+      "text": "Commit c9ab602... fusionado.",
+      "quotes": [
+        "c9ab602f fusionado"
+      ],
+      "elements": [
+        {
+          "type": "hash",
+          "value": "c9ab602",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "hash-in-text-url",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "dentro de una URL del texto es parte de la ruta",
+      "text": "Ver https://github.com/o/r/commit/9f3c2a1b.",
+      "quotes": [
+        "commit 9f3c2a1b"
+      ],
+      "elements": [
+        {
+          "type": "path",
+          "value": "https://github.com/o/r/commit/9f3c2a1b",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "path",
+          "value": "https://github.com/o/r/commit/9f3c2a1b"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "path",
+              "value": "https://github.com/o/r/commit/9f3c2a1b"
+            }
+          ],
+          "missing_total": 1
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "path",
+              "value": "https://github.com/o/r/commit/9f3c2a1b"
+            }
+          ],
+          "missing_total": 1
+        }
+      }
+    },
+    {
+      "id": "version-rc-standalone",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "rc.N es una sola versión",
+      "text": "Publicada rc.2.",
+      "quotes": [
+        "candidata rc.2"
+      ],
+      "elements": [
+        {
+          "type": "version",
+          "value": "rc.2",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "version-alpha-absent",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "alpha.N ausente",
+      "text": "Probada alpha.3.",
+      "quotes": [
+        "probada alpha 3"
+      ],
+      "elements": [
+        {
+          "type": "version",
+          "value": "alpha.3",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "version",
+          "value": "alpha.3"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "version",
+              "value": "alpha.3"
+            }
+          ],
+          "missing_total": 1
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "version",
+              "value": "alpha.3"
+            }
+          ],
+          "missing_total": 1
+        }
+      }
+    },
+    {
+      "id": "version-beta-in-semver",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "1.0.0-beta.38 ya era versión en v1",
+      "text": "Instalada 1.0.0-beta.38.",
+      "quotes": [
+        "paquete 1.0.0-beta.38"
+      ],
+      "elements": [
+        {
+          "type": "version",
+          "value": "1.0.0-beta.38",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "version-beta-uppercase",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "Beta.38 no es versión: queda el número",
+      "text": "Fase Beta.38.",
+      "quotes": [
+        "fase 38"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "38",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "state-only-numbers",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "state con sólo números: unchecked en modo state",
+      "text": "3 de 5 tareas terminadas.",
+      "quotes": [
+        "tareas pendientes"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "3",
+          "present": false
+        },
+        {
+          "type": "number",
+          "value": "5",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "3"
+        },
+        {
+          "type": "number",
+          "value": "5"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 2,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "number",
+              "value": "3"
+            },
+            {
+              "type": "number",
+              "value": "5"
+            }
+          ],
+          "missing_total": 2
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "state-alien-identifier",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "state que cita algo ajeno: none también en modo state",
+      "text": "3 de 5 tareas; rama `feat/x`.",
+      "quotes": [
+        "rama main al día"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "3",
+          "present": false
+        },
+        {
+          "type": "number",
+          "value": "5",
+          "present": false
+        },
+        {
+          "type": "identifier",
+          "value": "feat/x",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "3"
+        },
+        {
+          "type": "number",
+          "value": "5"
+        },
+        {
+          "type": "identifier",
+          "value": "feat/x"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 3,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "identifier",
+              "value": "feat/x"
+            },
+            {
+              "type": "number",
+              "value": "3"
+            },
+            {
+              "type": "number",
+              "value": "5"
+            }
+          ],
+          "missing_total": 3
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "identifier",
+              "value": "feat/x"
+            }
+          ],
+          "missing_total": 1
+        }
+      }
+    },
+    {
+      "id": "state-identifier-present",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "state con identifier presente y números ausentes: full en modo state, partial en fact",
+      "text": "3 de 5 tareas; rama `feat/x`.",
+      "quotes": [
+        "trabajo en `feat/x`"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "3",
+          "present": false
+        },
+        {
+          "type": "number",
+          "value": "5",
+          "present": false
+        },
+        {
+          "type": "identifier",
+          "value": "feat/x",
+          "present": true
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "3"
+        },
+        {
+          "type": "number",
+          "value": "5"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 3,
+            "present": 1,
+            "level": "partial"
+          },
+          "missing": [
+            {
+              "type": "number",
+              "value": "3"
+            },
+            {
+              "type": "number",
+              "value": "5"
+            }
+          ],
+          "missing_total": 2
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "missing-order-all-types",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "los seis tipos ausentes: orden de missing de C3",
+      "text": "El 2026-11-19 `x` en a/b con c9ab602 y v1.2 mide 7.",
+      "quotes": [
+        "nada"
+      ],
+      "elements": [
+        {
+          "type": "date",
+          "value": "2026-11-19",
+          "present": false
+        },
+        {
+          "type": "identifier",
+          "value": "x",
+          "present": false
+        },
+        {
+          "type": "path",
+          "value": "a/b",
+          "present": false
+        },
+        {
+          "type": "hash",
+          "value": "c9ab602",
+          "present": false
+        },
+        {
+          "type": "version",
+          "value": "v1.2",
+          "present": false
+        },
+        {
+          "type": "number",
+          "value": "7",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "date",
+          "value": "2026-11-19"
+        },
+        {
+          "type": "identifier",
+          "value": "x"
+        },
+        {
+          "type": "path",
+          "value": "a/b"
+        },
+        {
+          "type": "hash",
+          "value": "c9ab602"
+        },
+        {
+          "type": "version",
+          "value": "v1.2"
+        },
+        {
+          "type": "number",
+          "value": "7"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 6,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "identifier",
+              "value": "x"
+            },
+            {
+              "type": "path",
+              "value": "a/b"
+            },
+            {
+              "type": "hash",
+              "value": "c9ab602"
+            },
+            {
+              "type": "version",
+              "value": "v1.2"
+            },
+            {
+              "type": "date",
+              "value": "2026-11-19"
+            },
+            {
+              "type": "number",
+              "value": "7"
+            }
+          ],
+          "missing_total": 6
+        },
+        "state": {
+          "coverage": {
+            "total": 4,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "identifier",
+              "value": "x"
+            },
+            {
+              "type": "path",
+              "value": "a/b"
+            },
+            {
+              "type": "hash",
+              "value": "c9ab602"
+            },
+            {
+              "type": "version",
+              "value": "v1.2"
+            }
+          ],
+          "missing_total": 4
+        }
+      }
+    },
+    {
+      "id": "missing-cap-eight",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "más de ocho ausentes: missing se corta en 8 y missing_total los cuenta",
+      "text": "1 2 3 4 5 6 7 8 9 10",
+      "quotes": [
+        "ninguno"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "1",
+          "present": false
+        },
+        {
+          "type": "number",
+          "value": "2",
+          "present": false
+        },
+        {
+          "type": "number",
+          "value": "3",
+          "present": false
+        },
+        {
+          "type": "number",
+          "value": "4",
+          "present": false
+        },
+        {
+          "type": "number",
+          "value": "5",
+          "present": false
+        },
+        {
+          "type": "number",
+          "value": "6",
+          "present": false
+        },
+        {
+          "type": "number",
+          "value": "7",
+          "present": false
+        },
+        {
+          "type": "number",
+          "value": "8",
+          "present": false
+        },
+        {
+          "type": "number",
+          "value": "9",
+          "present": false
+        },
+        {
+          "type": "number",
+          "value": "10",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "1"
+        },
+        {
+          "type": "number",
+          "value": "2"
+        },
+        {
+          "type": "number",
+          "value": "3"
+        },
+        {
+          "type": "number",
+          "value": "4"
+        },
+        {
+          "type": "number",
+          "value": "5"
+        },
+        {
+          "type": "number",
+          "value": "6"
+        },
+        {
+          "type": "number",
+          "value": "7"
+        },
+        {
+          "type": "number",
+          "value": "8"
+        },
+        {
+          "type": "number",
+          "value": "9"
+        },
+        {
+          "type": "number",
+          "value": "10"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 10,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "number",
+              "value": "1"
+            },
+            {
+              "type": "number",
+              "value": "2"
+            },
+            {
+              "type": "number",
+              "value": "3"
+            },
+            {
+              "type": "number",
+              "value": "4"
+            },
+            {
+              "type": "number",
+              "value": "5"
+            },
+            {
+              "type": "number",
+              "value": "6"
+            },
+            {
+              "type": "number",
+              "value": "7"
+            },
+            {
+              "type": "number",
+              "value": "8"
+            }
+          ],
+          "missing_total": 10
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "multi-quote-mixed",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "fecha en una cita, hash en otra",
+      "text": "El 2026-11-19 se fusionó b142f4b.",
+      "quotes": [
+        "fusión del 2026-11-19",
+        "Merge b142f4b0"
+      ],
+      "elements": [
+        {
+          "type": "date",
+          "value": "2026-11-19",
+          "present": true
+        },
+        {
+          "type": "hash",
+          "value": "b142f4b",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 2,
+            "present": 2,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "nfc-date-identifier",
+      "rules": "fact-checks-rules/v2",
+      "origin": "edge",
+      "note": "NFC: identifier con tilde descompuesta en el texto",
+      "text": "Archivo `decisión` del 2026-11-19.",
+      "quotes": [
+        "archivo `decisión` 2026-11-19"
+      ],
+      "elements": [
+        {
+          "type": "identifier",
+          "value": "decisión",
+          "present": true
+        },
+        {
+          "type": "date",
+          "value": "2026-11-19",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 2,
+            "present": 2,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "limit-number-vs-quote-date-day",
+      "rules": "fact-checks-rules/v2",
+      "origin": "review-r1",
+      "note": "límite declarado: un número que en la cita sólo aparece como día o mes de una fecha no cuenta (en v1 contaba)",
+      "text": "Cierra el issue 24.",
+      "quotes": [
+        "reunión del 2026-01-24"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "24",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "24"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "number",
+              "value": "24"
+            }
+          ],
+          "missing_total": 1
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "limit-version-rc-vs-bare-number",
+      "rules": "fact-checks-rules/v2",
+      "origin": "review-r1",
+      "note": "límite declarado: rc.N es una versión y no casa con su número suelto (en v1 el 2 casaba)",
+      "text": "Publicada rc.2.",
+      "quotes": [
+        "candidata 2"
+      ],
+      "elements": [
+        {
+          "type": "version",
+          "value": "rc.2",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "version",
+          "value": "rc.2"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "version",
+              "value": "rc.2"
+            }
+          ],
+          "missing_total": 1
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "version",
+              "value": "rc.2"
+            }
+          ],
+          "missing_total": 1
+        }
+      }
+    },
+    {
+      "id": "edge-version-with-hash-suffix",
+      "rules": "fact-checks-rules/v2",
+      "origin": "review-r1",
+      "note": "hash va antes que version: un sufijo hexadecimal de una versión se parte en version y hash (en v1 era una sola versión)",
+      "text": "Instalada 1.0.0-9f3c2a1.",
+      "quotes": [
+        "paquete 1.0.0-9f3c2a1"
+      ],
+      "elements": [
+        {
+          "type": "version",
+          "value": "1.0.0",
+          "present": true
+        },
+        {
+          "type": "hash",
+          "value": "9f3c2a1",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 2,
+            "present": 2,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 2,
+            "present": 2,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "limit-hash-after-underscore",
+      "rules": "fact-checks-rules/v2",
+      "origin": "review-r1",
+      "note": "límite declarado: un hash pegado a un guion bajo no es token completo y no se detecta",
+      "text": "Corregido en sha256_9f3c2a1b.",
+      "quotes": [
+        "sha256_9f3c2a1b"
+      ],
+      "elements": [],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "limit-number-vs-quote-iso-time",
+      "rules": "fact-checks-rules/v2",
+      "origin": "review-r2",
+      "note": "límite declarado: un número que en la cita sólo aparece como minuto o segundo de una marca ISO no cuenta (en v1 contaba)",
+      "text": "Tardó 30 minutos.",
+      "quotes": [
+        "job 2026-11-19T10:30:00Z terminó"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "30",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "30"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "number",
+              "value": "30"
+            }
+          ],
+          "missing_total": 1
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "v1-port-missing",
+      "rules": "fact-checks-rules/v2",
+      "origin": "v1",
+      "note": "como v1: el puerto falta",
+      "text": "el puerto es 8080",
+      "quotes": [
+        "el puerto se configura en config.toml"
+      ],
+      "elements": [
+        {
+          "type": "number",
+          "value": "8080",
+          "present": false
+        }
+      ],
+      "missing": [
+        {
+          "type": "number",
+          "value": "8080"
+        }
+      ],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 0,
+            "level": "none"
+          },
+          "missing": [
+            {
+              "type": "number",
+              "value": "8080"
+            }
+          ],
+          "missing_total": 1
+        },
+        "state": {
+          "coverage": {
+            "total": 0,
+            "present": 0,
+            "level": "unchecked"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    },
+    {
+      "id": "v1-version-three-parts",
+      "rules": "fact-checks-rules/v2",
+      "origin": "v1",
+      "note": "como v1: versión de tres partes",
+      "text": "requiere 3.12.1",
+      "quotes": [
+        "Python 3.12.1 o superior"
+      ],
+      "elements": [
+        {
+          "type": "version",
+          "value": "3.12.1",
+          "present": true
+        }
+      ],
+      "missing": [],
+      "coverage": {
+        "fact": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        },
+        "state": {
+          "coverage": {
+            "total": 1,
+            "present": 1,
+            "level": "full"
+          },
+          "missing": [],
+          "missing_total": 0
+        }
+      }
+    }
+  ]
+}

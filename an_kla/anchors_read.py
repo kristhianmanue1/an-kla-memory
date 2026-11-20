@@ -20,6 +20,7 @@ from .anchors_document import check_document
 from .anchors_freshness import aggregate_freshness, unchecked_result
 from .anchors_git import GitRepo
 from .anchors_repo_file import ABSENT, ReadContext, verify_repo_file
+from .anchors_coverage_v2 import has_rules
 from .audience import has_scope, is_for_other, make_reader
 from .identity_c0 import validate_envelope
 from .store import STREAMS
@@ -210,6 +211,6 @@ def verify_command(store: Any, args: Any) -> dict[str, Any]:
             marked = {"for_reader": False} if has_scope(row) and is_for_other(row, reader) else {}
             records.append({"id": str(row.get("id", "")), "stream": stream, **marked, **server.serve(stream, row)})
         declared = server.declare()
-    schema = RESULT_SCHEMA_V2 if any("for_reader" in record for record in records) else RESULT_SCHEMA
+    schema = RESULT_SCHEMA_V2 if any("for_reader" in record or has_rules(record) for record in records) else RESULT_SCHEMA
     return {"schema": schema, "untrusted_memory_data": True, "revision": snapshot.revision_id,
             **declared, "records": records}

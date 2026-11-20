@@ -399,13 +399,26 @@ sin fiarse de quien lo escribió y sin ningún modelo, si la cita sigue ahí.
   `anchor_quote_not_normalized`, `anchor_quote_too_short`, `anchor_quote_too_long`,
   `anchor_path_invalid`, `anchor_input_invalid` (JSON mal formado).
   `--anchor-file -` no puede coincidir con `--text-file -`.
-- **Cobertura determinista** (`fact-checks-rules/v1`): `coverage`, `missing` y
+- **Cobertura determinista** (`fact-checks-rules/v2`, ADR-0070): `coverage`, `missing` y
   `missing_total` comparan los elementos del texto (identificadores entre
-  comillas invertidas, rutas y URL, versiones y números) con la **cita guardada**.
+  comillas invertidas, rutas y URL, huellas hexadecimales de 7 a 64 caracteres,
+  versiones, fechas `AAAA-MM-DD` y números) con la **cita guardada**.
   «El servidor usa el puerto 8080» con una cita que dice 8081 da `level: none` y
   `missing: [{type: number, value: "8080"}]`. El registro siempre se guarda y
-  ningún nivel afirma respaldo: sólo `none` es un aviso. Un hecho anclado, una
-  afirmación; el estado de trabajo, que mezcla cifras, suele ir sin ancla.
+  ningún nivel afirma respaldo: sólo `none` es un aviso.
+  - **`coverage.rules`** dice con qué reglas se calculó. Todo lo que se escribe desde
+    esta versión (`remember`, el vaciado, `dispute`) lleva `"fact-checks-rules/v2"`.
+    **Un `coverage` sin `rules` es de `fact-checks-rules/v1`**: lo escrito por
+    beta.36 a beta.38, que no se recalcula ni se reescribe y se sirve tal cual.
+    Una fecha cuenta como un elemento, no como tres números.
+  - **En un `state`** sólo cuentan identificadores, rutas, huellas y versiones: sin ninguno
+    el nivel es `unchecked`, y `none` sigue avisando cuando el estado cita algo ajeno,
+    no por cifras de avance. Un hecho anclado, una afirmación.
+  - Una respuesta con cobertura v2 sale con `remember-result-v2` (y `history`, `state
+    show` y `anchors verify` con su versión `-v2`); sin ella, el esquema es el de siempre.
+  - Límites declarados: un año suelto no casa con una fecha completa, una fecha en
+    palabras no es la canónica, `beta.38` y `0.1.0b38` no son equivalentes y `deface1`
+    cuenta como huella.
 - **Al leer** (`state show`, `history`, `anchors verify`) se vuelve a comprobar
   con el estado de ahora: el `HEAD` de la rama por defecto y, si no basta, la
   rama del sobre. La rama por defecto no se adivina: `AN_KLA_DEFAULT_BRANCH`

@@ -1,0 +1,256 @@
+{
+  "schema": "an-kla/fact-checks-vectors/v2-own",
+  "rules": "fact-checks-rules/v2",
+  "note": "Vectores propios de an-kla, aparte del archivo de C3 (fact-checks-v2-vectors.json, que no se toca). Cada uno fija una frase del texto escrito de las reglas que los vectores de C3 no cubren (corrección 1 de ADR-0070).",
+  "cases": [
+    {
+      "id": "own-identifier-empty-pair-pairs-next",
+      "rules": "fact-checks-rules/v2",
+      "note": "un par de comillas invertidas vacío no es un span: la segunda comilla del par abre el span que cierra la siguiente",
+      "rule": "identifier: \"a backtick, one or more characters that are neither a backtick nor a line break, a backtick\"",
+      "text": "`` 3.5 ``",
+      "quotes": ["valor 3.5"],
+      "elements": [{"type": "identifier", "value": "3.5", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-identifier-empty-pairs-then-span",
+      "rules": "fact-checks-rules/v2",
+      "note": "pares vacíos seguidos: los espacios entre comillas son spans en blanco (no elemento) y el resto queda sin comillas que lo abran",
+      "rule": "identifier: \"a backtick, one or more characters that are neither a backtick nor a line break, a backtick\"",
+      "text": "`` `` `decisión`",
+      "quotes": ["decisión"],
+      "elements": [],
+      "missing": []
+    },
+    {
+      "id": "own-identifier-cr-is-a-line-break",
+      "rules": "fact-checks-rules/v2",
+      "note": "un retorno de carro es un salto de línea: `a\\rb` no es un span (y nada más que él en el texto)",
+      "rule": "identifier: \"... neither a backtick nor a line break ...\"",
+      "text": "`a\rb`",
+      "quotes": ["ab"],
+      "elements": [],
+      "missing": []
+    },
+    {
+      "id": "own-date-iso-offset-without-colon",
+      "rules": "fact-checks-rules/v2",
+      "note": "la marca ISO con desfase +0600 (sin dos puntos) se enmascara entera: no deja 0600 como número",
+      "rule": "date: ISO time zone \"(Z|[+-]\\d{2}:?\\d{2})?\" (the colon is optional)",
+      "text": "Sellado 2026-12-01T10:30:00+0600 listo.",
+      "quotes": ["sello 2026-12-01"],
+      "elements": [{"type": "date", "value": "2026-12-01", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-date-iso-offset-with-colon-quote",
+      "rules": "fact-checks-rules/v2",
+      "note": "en la cita la marca con desfase sin dos puntos también se enmascara antes de leer sus números: 0600 no cubre un 0600 del texto",
+      "rule": "date: ISO time zone \"(Z|[+-]\\d{2}:?\\d{2})?\" (the colon is optional)",
+      "text": "Código 0600 emitido.",
+      "quotes": ["corrida 2026-12-01T10:30:00+0600"],
+      "elements": [{"type": "number", "value": "0600", "present": false}],
+      "missing": [{"type": "number", "value": "0600"}]
+    },
+    {
+      "id": "own-version-presence-is-substring",
+      "rules": "fact-checks-rules/v2",
+      "note": "la versión del texto está presente si es subcadena de alguna cita, aunque la cita la lleve dentro de otra versión mayor",
+      "rule": "identifier, path, version: \"substring\" of some NFC quote",
+      "text": "Instalada 1.0.0.",
+      "quotes": ["paquete 1.0.0-beta.38"],
+      "elements": [{"type": "version", "value": "1.0.0", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-version-presence-substring-absent",
+      "rules": "fact-checks-rules/v2",
+      "note": "sin subcadena en ninguna cita, la versión falta",
+      "rule": "identifier, path, version: \"substring\" of some NFC quote",
+      "text": "Instalada 1.0.0.",
+      "quotes": ["paquete 1.0.1"],
+      "elements": [{"type": "version", "value": "1.0.0", "present": false}],
+      "missing": [{"type": "version", "value": "1.0.0"}]
+    },
+    {
+      "id": "own-path-backtick-glued-before",
+      "rules": "fact-checks-rules/v2",
+      "note": "una comilla invertida suelta pegada al principio de una ruta no es parte de la ruta",
+      "rule": "path: paths \"(?<![\\w/.~-])(?:~|\\.{1,2})?/?[\\w.-]+(?:/[\\w.-]+)+/?\" (a backtick is not in [\\w.-])",
+      "text": "ver `feat/x ahora",
+      "quotes": ["rama feat/x"],
+      "elements": [{"type": "path", "value": "feat/x", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-path-backtick-glued-after",
+      "rules": "fact-checks-rules/v2",
+      "note": "una comilla invertida suelta pegada al final de una ruta no es parte de la ruta",
+      "rule": "path: paths \"...[\\w.-]+(?:/[\\w.-]+)+/?\" (a backtick is not in [\\w.-]) and trailing \".,;:!?\" are stripped",
+      "text": "ver feat/x` ahora",
+      "quotes": ["rama feat/x"],
+      "elements": [{"type": "path", "value": "feat/x", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-path-random-11549",
+      "rules": "fact-checks-rules/v2",
+      "note": "caso de la entrada aleatoria 11549 del contraste con agora: pares vacíos de comillas invertidas y una ruta; la ruta es feat/x sin comilla pegada y se cuenta una sola vez",
+      "rule": "identifier: \"a backtick, one or more characters that are neither a backtick nor a line break, a backtick\"; path: \"(?<![\\w/.~-])(?:~|\\.{1,2})?/?[\\w.-]+(?:/[\\w.-]+)+/?\"; \"No duplicates by (type, value)\"",
+      "text": "fecha sha_E934CD7199A9147597DCD2E6EBB2938E90FF8ED9. en `` `decisión` de `feat/x` `feat/x`.",
+      "quotes": [
+        "fecha 1234567 en `` `decisión`",
+        "fecha sha_E934CD7199A9147597DCD2E6EBB2938E90FF8ED9. en sello 2025-01-19 `decisión` de 1999-01-31T10:001 `feat/x`.",
+        "fecha sha_E934CD7199A9147597DCD2E6EBB2938E90FF8ED9. e9a19bceab5ed071af7a8bd965c11ba7 `` `a92b9252` en deadbeef `feat/x`."
+      ],
+      "elements": [
+        {"type": "identifier", "value": "de", "present": true},
+        {"type": "path", "value": "feat/x", "present": true}
+      ],
+      "missing": []
+    },
+    {
+      "id": "own-path-no-ascii-letter",
+      "rules": "fact-checks-rules/v2",
+      "note": "una ruta con letras no ASCII y ninguna ASCII no es ruta y no se enmascara",
+      "rule": "path: \"A path with no ASCII letter (for example 12/15) is not a path and is not masked\" (ASCII letter is [A-Za-z])",
+      "text": "ver ñ/ö ahora",
+      "quotes": ["ver ñ/ö"],
+      "elements": [],
+      "missing": []
+    },
+    {
+      "id": "own-path-no-ascii-letter-numbers-stay",
+      "rules": "fact-checks-rules/v2",
+      "note": "12/15 no es ruta y no se enmascara: quedan dos números",
+      "rule": "path: \"A path with no ASCII letter (for example 12/15) is not a path and is not masked\"",
+      "text": "el 12/15 fue",
+      "quotes": ["x"],
+      "elements": [
+        {"type": "number", "value": "12", "present": false},
+        {"type": "number", "value": "15", "present": false}
+      ],
+      "missing": [{"type": "number", "value": "12"}, {"type": "number", "value": "15"}]
+    },
+    {
+      "id": "own-path-non-ascii-with-ascii-letter",
+      "rules": "fact-checks-rules/v2",
+      "note": "con alguna letra ASCII sí es ruta, aunque tenga letras no ASCII",
+      "rule": "path: paths \"(?<![\\w/.~-])(?:~|\\.{1,2})?/?[\\w.-]+(?:/[\\w.-]+)+/?\" with at least one ASCII letter",
+      "text": "ver docs/ñandú.md ahora",
+      "quotes": ["docs/ñandú.md"],
+      "elements": [{"type": "path", "value": "docs/ñandú.md", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-number-canon-anything-else",
+      "rules": "fact-checks-rules/v2",
+      "note": "1.2,5 no es millares ni millares más decimal (el grupo del medio no tiene 3 cifras): «anything else», la coma pasa a punto; 1.2.5 de la cita da el mismo valor",
+      "rule": "number: \"Anything else: the token with , replaced by .\"",
+      "text": "pesa 1.2,5 kg",
+      "quotes": ["mide 1.2.5 m"],
+      "elements": [{"type": "number", "value": "1.2.5", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-number-canon-same-separator-not-thousands",
+      "rules": "fact-checks-rules/v2",
+      "note": "1.2.3 con el mismo separador pero grupos que no son de 3 cifras no es millares: el valor es el token",
+      "rule": "number: \"more than one group, all separators equal and every group after the first of exactly 3 digits: thousands\"; otherwise \"Anything else: the token with , replaced by .\"",
+      "text": "sección 1,2,3 cerrada",
+      "quotes": ["sección 1.2.3"],
+      "elements": [{"type": "number", "value": "1.2.3", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-version-uppercase-v-is-not-a-version",
+      "rules": "fact-checks-rules/v2",
+      "note": "V mayúscula no es el prefijo v: V1.2 no es versión; el 1 pegado a la V no es número (lookbehind de 1d) y queda el 2 tras el punto",
+      "rule": "version: \"(?<![\\w.])v?\\d+(?:\\.\\d+)+...\" only with a leading v, two or more dots or a pre-release suffix (case is never folded); number: \"(?<!\\w)\\d+(?:[.,]\\d+)*(?!\\w)\"",
+      "text": "Instalada V1.2.",
+      "quotes": ["V1.2"],
+      "elements": [{"type": "number", "value": "2", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-hash-quote-token-without-digit",
+      "rules": "fact-checks-rules/v2",
+      "note": "el token de la cita puede ser sólo letras (sin cifra): deadbeef es prefijo del hash del texto y mide 8",
+      "rule": "presence of a hash: \"some token (?<!\\w)[0-9a-f]+(?!\\w) of the quote and the hash are prefix of one another and the shorter has at least 7 characters\"",
+      "text": "commit deadbeef12 listo",
+      "quotes": ["ver deadbeef aquí"],
+      "elements": [{"type": "hash", "value": "deadbeef12", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-hash-quote-token-without-letter",
+      "rules": "fact-checks-rules/v2",
+      "note": "el token de la cita puede ser sólo cifras: 1234567 es prefijo del hash del texto",
+      "rule": "presence of a hash: \"some token (?<!\\w)[0-9a-f]+(?!\\w) of the quote and the hash are prefix of one another and the shorter has at least 7 characters\"",
+      "text": "huella 1234567a9 cerrada",
+      "quotes": ["recibo 1234567 emitido"],
+      "elements": [{"type": "hash", "value": "1234567a9", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-hash-quote-token-over-64",
+      "rules": "fact-checks-rules/v2",
+      "note": "el token de la cita puede pasar de 64 caracteres: el tope de 64 es del hash del texto, no de la cita",
+      "rule": "presence of a hash: \"some token (?<!\\w)[0-9a-f]+(?!\\w) of the quote and the hash are prefix of one another and the shorter has at least 7 characters\"",
+      "text": "huella abc1234567 cerrada",
+      "quotes": ["blob abc12345670123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789 fin"],
+      "elements": [{"type": "hash", "value": "abc1234567", "present": true}],
+      "missing": []
+    },
+    {
+      "id": "own-hash-quote-token-too-short",
+      "rules": "fact-checks-rules/v2",
+      "note": "el más corto debe tener 7: un token de 6 de la cita no cubre aunque sea prefijo",
+      "rule": "presence of a hash: \"... the shorter has at least 7 characters\"",
+      "text": "huella abc1234567 cerrada",
+      "quotes": ["ver abc123 aquí"],
+      "elements": [{"type": "hash", "value": "abc1234567", "present": false}],
+      "missing": [{"type": "hash", "value": "abc1234567"}]
+    },
+    {
+      "id": "own-hash-ellipsis-masked-not-valued",
+      "rules": "fact-checks-rules/v2",
+      "note": "la elipsis tras un hash se enmascara con el token y no entra en el valor; el hash pegado tras ella es otro elemento",
+      "rule": "hash: \"optionally followed by …; the token and the ellipsis are masked, the ellipsis is not part of the value\"",
+      "text": "huella a92b9252…b142f4b fin",
+      "quotes": ["a92b9252 b142f4b0"],
+      "elements": [
+        {"type": "hash", "value": "a92b9252", "present": true},
+        {"type": "hash", "value": "b142f4b", "present": true}
+      ],
+      "missing": []
+    },
+    {
+      "id": "own-version-prerelease-has-no-tail",
+      "rules": "fact-checks-rules/v2",
+      "note": "rc.1.2 es la versión rc.1 y queda un número 2: la etiqueta no admite cola .N.M",
+      "rule": "version: \"(?<![\\w.])(alpha|beta|rc)\\.\\d+(?!\\w)\", one version each",
+      "text": "versión rc.1.2 lista",
+      "quotes": ["candidata rc.1"],
+      "elements": [
+        {"type": "version", "value": "rc.1", "present": true},
+        {"type": "number", "value": "2", "present": false}
+      ],
+      "missing": [{"type": "number", "value": "2"}]
+    },
+    {
+      "id": "own-version-suffix-is-a-b-rc-or-hyphen",
+      "rules": "fact-checks-rules/v2",
+      "note": "el sufijo de una versión es a|b|rc seguido de cifras o un guion con alfanuméricos; 2.0x3 no es versión (sólo queda el 2, por 1d)",
+      "rule": "version: \"(?:(?:a|b|rc)\\d+|-[0-9A-Za-z]+(?:\\.[0-9A-Za-z]+)*)?(?!\\w)\"; number: \"(?<!\\w)\\d+(?:[.,]\\d+)*(?!\\w)\"",
+      "text": "Probadas 2.0b1 y 2.0x3.",
+      "quotes": ["2.0b1"],
+      "elements": [
+        {"type": "version", "value": "2.0b1", "present": true},
+        {"type": "number", "value": "2", "present": true}
+      ],
+      "missing": []
+    }
+  ]
+}

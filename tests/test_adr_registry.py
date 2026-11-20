@@ -55,8 +55,9 @@ class AdrRegistryTests(unittest.TestCase):
         # 0067 aceptada por delegación del orquestador tras su ronda proceed.
         # 0068 aceptada por delegación del orquestador tras su ronda proceed.
         # 0069 (ámbito y directivas) aceptada por delegación del orquestador tras r2 proceed.
+        # 0070 (cobertura v2, errata 4 de C3) aceptada por delegación del orquestador tras r1 proceed.
         self.assertEqual(states["Propuesta"], 5)
-        self.assertEqual(states["Aceptada"], 64)
+        self.assertEqual(states["Aceptada"], 65)
 
     def test_detects_gap_and_state_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

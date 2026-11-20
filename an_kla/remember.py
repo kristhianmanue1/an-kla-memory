@@ -37,6 +37,7 @@ from .store_errors import StoreError
 from .transaction_attempts import TransactionError
 
 RESULT_SCHEMA = "an-kla/remember-result-v1"
+RESULT_SCHEMA_V2 = "an-kla/remember-result-v2"  # ADR-0070 §3: sólo cuando la respuesta lleva una cobertura con `rules`
 KEY_MAX_CHARS = 256
 _DIGEST = re.compile(r"sha256:[0-9a-f]{64}")
 _STORAGE_HINT = "la escritura falló en disco; no se perdió nada confirmado: reintenta (es idempotente)"
@@ -149,6 +150,8 @@ def _result(queued: dict[str, Any], report: dict[str, Any], pending_resolution: 
     for field in ("anchors", "coverage", "missing", "missing_total", "verdict"):
         if field in queued:
             result[field] = queued[field]  # ADR-0066: what the three checks said at enqueue
+    if "rules" in result.get("coverage", {}):
+        result["schema"] = RESULT_SCHEMA_V2  # ADR-0070 §3: v2 disperso; el resto de las respuestas sigue siendo v1
     rejections = report["rejected"]["entries"]
     result["rejected"] = {"count": len(rejections), "entries": rejections}
     committed = _find(report["committed"]["entries"], name)
