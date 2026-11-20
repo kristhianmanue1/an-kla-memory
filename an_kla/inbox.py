@@ -27,6 +27,7 @@ from datetime import datetime
 from typing import Any, Callable, Iterator, Mapping, NamedTuple, Sequence
 
 from . import identity_c0, lock_order
+from .audience import ScopeError, normalize_subject, scope_row_fields, subject_hint
 from .canonical import canonical_json, digest_json
 from .custody import CustodyError, read_pointer
 from .identity import IdentityError, _mutation_preflight_with_context, identity_lock
@@ -577,10 +578,16 @@ def enqueue(
     entry_slot = (slot or (target_slot(store, target_id) if not explicit else None) or DEFAULT_SLOT) if resolved_kind == "state" else None
     identity = identity_c0.build_identity(store.project_root, env)
     # ADR-0069 §1–§3: los rechazos de ámbito y de directiva van antes que las anclas y antes de cualquier candado.
-    scope = entry_scope(
-        store, identity, resolved_kind, target_id, anchors, subject=subject, audience=audience,
-        valid_until=valid_until, until_revoked=until_revoked, revoke=revoke, clock=clock,
-    )
+    subject, subject_from = normalize_subject(subject)  # ADR-0072 §3: sólo mayúsculas; se guarda en minúsculas y se dice
+    try:
+        scope = entry_scope(
+            store, identity, resolved_kind, target_id, anchors, subject=subject, audience=audience,
+            valid_until=valid_until, until_revoked=until_revoked, revoke=revoke, clock=clock,
+        )
+    except ScopeError as refused:
+        if refused.code == "remember_subject_invalid":
+            refused.hint = subject_hint(store.project_root, refused.hint)  # ADR-0072 §3: la pista trae el repo.id del proyecto
+        raise
     anchor_kind = "decision" if resolved_kind == "directive" else resolved_kind  # una directive se ancla como una decision
     extras = entry_extras(
         store.project_root, identity, anchor_kind, data_text, anchors, verdict, operation, anchor_resolution, anchor_check,
@@ -632,6 +639,10 @@ def enqueue(
     }
     if extras:
         result.update(extras.result)
+    if scope:  # ADR-0072 §4: lo guardado se ve al escribir (la vigencia normalizada y la dada)
+        result.update(scope_row_fields(scope))
+    if subject_from is not None:
+        result["subject_normalized_from"] = subject_from
     if entry_slot is not None:
         result["slot"] = entry_slot  # un `state` en cola no anuncia `record_id`: su id depende de la cabeza (§3)
     elif target_id is None:
