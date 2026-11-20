@@ -122,24 +122,38 @@ def latest_check(
     entry with that ``index`` and the vigent annotations of that target and ``index``, whenever the ``quote_sha256``
     is the anchor's.  The greatest ``(checked_at, origin, enqueued_at, id)`` wins: origin 0 for the record and 1 for an
     annotation (on the same date the audit rules); ``enqueued_at`` is the envelope's (``""`` without one); ``id``
-    that of the record or the annotation, as strings."""
+    that of the record or the annotation, as strings.
+
+    ADR-0072 §1 (erratum 6 of ``memoria/ancla/v2``): among the candidates the latest **conclusive** one wins, with that same order; only
+    if none is conclusive, the latest at all.  An attempt that did not conclude never covers a result that did."""
     record_id = str(row.get("id", ""))
     envelope = row.get("an_kla_envelope")
     own_at = envelope.get("enqueued_at") if isinstance(envelope, dict) else None
-    best: tuple[tuple[str, int, str, str], dict[str, Any]] | None = None
+    best: list[tuple[tuple[str, int, str, str], dict[str, Any]] | None] = [None, None]  # [latest conclusive, latest at all]
 
     def consider(checks: Any, origin: int, at: str, ident: str) -> None:
-        nonlocal best
         for check in checks if isinstance(checks, list) else []:
             if valid_check(check) and check["index"] == index and check["quote_sha256"] == anchor.get("quote_sha256"):
                 key = (normalized(check["checked_at"]), origin, at, ident)
-                if best is None or key > best[0]:
-                    best = (key, check)
+                for slot in ((0, 1) if is_conclusive(check) else (1,)):
+                    if best[slot] is None or key > best[slot][0]:  # type: ignore[index]
+                        best[slot] = (key, check)
 
     consider(row.get("anchor_checks"), 0, own_at if isinstance(own_at, str) else "", record_id)
     for note in notes.get((stream, record_id), ()):
         consider(note["checks"], 1, note["enqueued_at"], note["id"])
-    return None if best is None else best[1]
+    chosen = best[0] or best[1]
+    return None if chosen is None else chosen[1]
+
+
+NOT_CONCLUSIVE = ("no_adapter", "adapter_error")
+
+
+def is_conclusive(check: Mapping[str, Any]) -> bool:
+    """ADR-0072 §1: a stored result does not conclude when its ``integrity_reason`` is ``no_adapter`` or ``adapter_error`` (A3 puts
+    ``copy_sha_mismatch`` before both, so a contradicting copy does conclude).  Derived from what is stored: no new field, and it
+    holds for what beta.39 already wrote.  A table that cannot be read is an ``adapter_error`` too."""
+    return check.get("integrity_reason") not in NOT_CONCLUSIVE
 
 
 def has_checks(item: Any) -> bool:

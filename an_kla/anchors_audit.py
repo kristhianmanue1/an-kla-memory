@@ -36,6 +36,7 @@ class AuditSession:
         self._repo_id: str | None | bool = False
         self._pending: dict[tuple[str, str], list[dict[str, Any]]] = {}
         self._at: dict[tuple[str, str], str] = {}
+        self._unconfigured: dict[str, int] = {}
         self.used_adapters = False  # a ``document`` anchor was audited: the answer says if the table could not be read
 
     def repo_id(self) -> str | None:
@@ -54,8 +55,17 @@ class AuditSession:
         out = evaluate(anchor, "audit", state, self.adapters, at)
         self._pending.setdefault(key, []).append(stored_check(index, anchor["quote_sha256"], out))
         self.used_adapters = True
+        name = anchor["source"]["derivation"]["custodian"]
+        if self.adapters.config_error is None and name not in self.adapters.table:
+            self._unconfigured[name] = self._unconfigured.get(name, 0) + 1  # ADR-0072 §2: not in the table, or no table
         del out["reject"]
         return out
+
+    def warnings(self) -> list[dict[str, Any]]:
+        """``custodian_not_configured``, one per custodian an audited anchor named that the table does not have (or there is no
+        table).  A table that cannot be read says ``custodians_config_error`` instead, and a process that fails with its
+        custodian configured is no configuration warning (ADR-0072 §2)."""
+        return [{"code": "custodian_not_configured", "custodian": name, "anchors": count} for name, count in self._unconfigured.items()]
 
     def finish(self, stream: str, record_id: str) -> dict[str, Any]:
         """Store the record's audited results; ``{}`` when it had no ``document`` anchor audited."""
