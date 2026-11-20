@@ -40,7 +40,7 @@ por separado el contrato de contexto:
 
 ```bash
 .venv/bin/python -m pip install --upgrade \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.38"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.39"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . context status
 .venv/bin/python -m an_kla --project-root . context plan --operation update
@@ -51,7 +51,7 @@ git diff -- AGENTS.md AN-KLA.md
 ```
 
 Con el CLI global instalado con uv, el primer paso es
-`uv tool install --force "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.38"`
+`uv tool install --force "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.39"`
 y los siguientes usan `an-kla --project-root .` en lugar de
 `.venv/bin/python -m an_kla --project-root .`. Comprueba con `--version` que
 responde la instalación que acabas de actualizar.
@@ -200,7 +200,7 @@ puede inspeccionar la actualización de la integración sin mutar el proyecto:
 
 ```bash
 .venv/bin/python -m an_kla --project-root . upgrade inspect \
-  --target v0.1.0-beta.38 > RUTA_EFIMERA_NUEVA
+  --target v0.1.0-beta.39 > RUTA_EFIMERA_NUEVA
 ```
 
 El agente debe conservar por separado el `plan_fingerprint` devuelto, revisar
@@ -212,7 +212,7 @@ bytes del upgrade:
 .venv/bin/python -m an_kla --project-root . upgrade apply \
   <plan_fingerprint> --plan RUTA_EFIMERA_NUEVA
 .venv/bin/python -m an_kla --project-root . upgrade verify \
-  --target v0.1.0-beta.38
+  --target v0.1.0-beta.39
 git diff -- AGENTS.md AN-KLA.md
 ```
 
@@ -467,6 +467,10 @@ custodio (`[a-z0-9][a-z0-9_-]{0,31}`) es sólo la clave de la tabla. El adaptado
 `PATH=/usr/bin:/bin`, `LC_ALL=C`, directorio `/`, 10 s de plazo y 8 MiB de salida como máximo.
 Un custodio que no está en la tabla es «sin adaptador»; una tabla que no se puede leer da
 `adapter_error` en todos y la respuesta lo dice (`custodians_config_error`).
+**Si vas a reubicar el store (`relocate`), usa `AN_KLA_CUSTODIANS` (y `AN_KLA_DEFAULT_BRANCH`)
+en vez del `config.json`:** `relocate` rechaza un store con `config.json`
+(`relocate_local_config_present`) porque no se mueve con la custodia; mueve sus claves a las
+variables y retira el archivo.
 
 **Citar.** Con el atajo (repetible, en grupo), o con `--anchor-file` y el ancla completa:
 

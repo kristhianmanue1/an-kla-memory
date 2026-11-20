@@ -123,8 +123,16 @@ def _write_journal(project_root: Path, journal: dict[str, Any], stage: str) -> N
 
 
 def _move_set(anchor: Path) -> list[tuple[str, Path]]:
-    """Export allow-list plus ``attest.key`` (ADR-0048 §3, H5)."""
+    """Export allow-list plus ``attest.key`` (ADR-0048 §3, H5).
 
+    ``<store>/config.json`` is local configuration that ``export`` leaves out (#243) and relocation does not move: with it the
+    relocated store would silently stop seeing ``default_branch`` and ``custodians``.  It is refused, in the plan, in the
+    commit (under its lock) and in either direction; the way out is to move its keys to ``AN_KLA_DEFAULT_BRANCH`` /
+    ``AN_KLA_CUSTODIANS`` and remove the file.
+    """
+
+    if os.path.lexists(anchor / "config.json"):
+        raise RelocateError("relocate_local_config_present")
     try:
         rows = _files(anchor)
     except ExportIOError as exc:

@@ -67,6 +67,32 @@ class ExportRestoreTests(unittest.TestCase):
             self.assertTrue(any("hook-runs" in name for name in names))
             self.assertFalse(any("host-hooks" in name for name in names))
 
+    def test_export_with_a_local_config_json_issue243(self) -> None:
+        # #243: `<store>/config.json` (`default_branch`, la tabla `custodians`) es configuración local de la máquina, con las
+        # rutas absolutas del adaptador: no entra en el paquete y no hace fallar `export`; `restore` no la recrea.
+        with tempfile.TemporaryDirectory() as root:
+            source = Path(root) / "source"
+            bundle = Path(root) / "bundle"
+            restored = Path(root) / "restored"
+            source.mkdir()
+            store = MemoryStore(source)
+            initial = store.initialize()
+            current = store.commit(
+                expected_current_hash=initial, checkpoint_patch={},
+                facts=[{"id": "f-export", "payload": {"text": "backup"}}],
+            )
+            config = {"default_branch": "main", "custodians": {"skopos": {"argv": ["/usr/bin/python3", "/ruta/adaptador.py"]}}}
+            (source / ".an-kla" / "config.json").write_text(json.dumps(config), encoding="utf-8")
+            create_export(store, bundle)
+            self.assertTrue(verify_export(bundle)["verified"])
+            manifest = json.loads((bundle / "manifest.json").read_text(encoding="utf-8"))
+            self.assertFalse(any(entry["path"].endswith("config.json") for entry in manifest["core"]["entries"]))
+            self.assertFalse(any(path.name == "config.json" for path in bundle.rglob("*")))
+            self.assertNotIn("/ruta/adaptador.py", "".join(path.read_text(errors="ignore") for path in bundle.rglob("*") if path.is_file()))
+            restore_export(bundle, restored)
+            self.assertFalse((restored / ".an-kla" / "config.json").exists())
+            self.assertEqual(MemoryStore(restored).read_current(), current)  # se lee sin ella
+
     def test_roundtrip_and_tamper_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory() as root:
             source = Path(root) / "source"

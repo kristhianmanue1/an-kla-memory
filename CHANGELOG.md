@@ -10,7 +10,7 @@ El formato de cada entrada sigue [Keep a Changelog](https://keepachangelog.com/e
 por intención, y el proyecto usa [versionado semántico](https://semver.org/lang/es/)
 en fase de pre-release `0.1.0`.
 
-## [Sin publicar]
+## [v0.1.0-beta.39]
 
 **Anclas `document` de `memoria/ancla/v2`, adaptador de custodio y resultado guardado (ADR-0071)**:
 se puede citar una página de un documento custodiado (p. ej. un PDF de skopos) con comprobación real,
@@ -79,6 +79,11 @@ filtro y sin marca**; no bajes con directivas escritas (o no las escribas hasta 
 adoptado la versión en todo el puesto). Tampoco lee `inbox-entry-v4`: `inbox drain` y
 pendientes 0 antes de bajar. Detalle en
 [`docs/architecture/0069-ambito-audiencia-directivas-v1.md`](docs/architecture/0069-ambito-audiencia-directivas-v1.md).
+
+`export` ya no falla con un `<store>/config.json`: corrige #243.
+
+No entra `recall` (ADR-0064). No cambia la plantilla gestionada (`0.1.0-beta.33`). Detalle en
+[`docs/releases/v0.1.0-beta.39.md`](docs/releases/v0.1.0-beta.39.md).
 
 ## [v0.1.0-beta.38]
 

@@ -101,6 +101,42 @@ class RelocateTests(unittest.TestCase):
         self.assertTrue(replay["replayed"])
         self.assertEqual(replay["relocation_receipt"], result["relocation_receipt"])
 
+    def test_a_local_config_json_is_refused_in_plan_commit_and_back_issue243(self) -> None:
+        """#243: `config.json` (`default_branch`, `custodians`) no se mueve con la custodia; en vez de perderla en silencio,
+        `relocate` la rechaza con `relocate_local_config_present` y no mueve nada."""
+        config = self.project / ".an-kla" / "config.json"
+        config.write_text(json.dumps({"default_branch": "main", "custodians": {}}), encoding="utf-8")
+        before = sorted(p.relative_to(self.project).as_posix() for p in (self.project / ".an-kla").rglob("*"))
+        with self.assertRaises(RelocateError) as caught:
+            self._plan()
+        self.assertEqual(str(caught.exception), "relocate_local_config_present")
+        self.assertIsNone(read_pointer(self.project))
+        self.assertEqual(MemoryStore(self.project).read_current(), self.revision)
+        self.assertFalse(self.vault.exists())
+        self.assertEqual(sorted(p.relative_to(self.project).as_posix() for p in (self.project / ".an-kla").rglob("*")), before)
+        # the file shows up between the plan and the commit: refused under the commit's lock, nothing moved
+        config.unlink()
+        plan = self._plan()
+        config.write_text("{}", encoding="utf-8")
+        with self.assertRaises(RelocateError) as caught:
+            commit_relocation(self.store, plan, self.revision)
+        self.assertEqual(str(caught.exception), "relocate_local_config_present")
+        self.assertIsNone(read_pointer(self.project))
+        self.assertEqual(MemoryStore(self.project).read_current(), self.revision)
+        self.assertFalse(self.vault.exists())
+        # without it, everything as before; and back, a config.json in the external store is refused too
+        config.unlink()
+        result = commit_relocation(self.store, self._plan(), self.revision)
+        self._assert_relocated(result)
+        from an_kla.relocate_back import plan_back
+
+        external = MemoryStore(self.project, store_root=self.vault)
+        (self.vault / "config.json").write_text("{}", encoding="utf-8")
+        with self.assertRaises(RelocateError) as caught:
+            plan_back(external)
+        self.assertEqual(str(caught.exception), "relocate_local_config_present")
+        self.assertEqual(read_pointer(self.project)["store_root"], str(self.vault))  # the external store keeps resolving
+
     def test_fail_closed_cases_keep_the_origin(self) -> None:
         plan = self._plan()
         with self.assertRaises(RelocateError) as caught:

@@ -94,3 +94,20 @@ contra los casos del contrato y contra sus manifiestos reales. Sin casos nuevos.
   adaptador no está obligado a poder producir byte a byte las respuestas de ejemplo.
 - **`current` es la vista del adaptador.** Ya escrito en el README: el servicio del custodio
   puede ser más estricto (recibo en su base, ruta de política que carga el host).
+
+## Errata 5 — 2026-11-20 (el caso F16 de v1 frente a B3)
+
+Origen: la implementación de an-kla (PR #242; 61 de 61 con procesos reales, y una cita
+escrita, auditada y leída contra el adaptador real de skopos). Su capitán y su revisor
+externo señalaron que tres cosas congeladas no pueden cumplirse a la vez: el caso F16 de
+`memoria/ancla/v1` (`vectores-errata-2.json` de v1: un `repo-file` con
+`schema: memoria/ancla/v2` se rechaza con `anchor_schema_invalid`), la errata 2 B3 de aquí
+(ese ancla es válida y se comprueba como en v1) y la frase del README «una implementación de
+v2 debe seguir pasando los vectores de v1».
+
+- **Prevalece B3.** F16 probaba un esquema *desconocido*, y para una implementación de v2 el
+  esquema v2 ha dejado de serlo. Una implementación de v2 pasa F16 sustituyendo su `schema`
+  por uno que de verdad no conozca (por ejemplo `memoria/ancla/v3`), que se sigue rechazando.
+  Para una implementación que sólo conoce v1, F16 vale tal cual (y coincide con X72).
+- Precisión aceptada, igual en an-kla y en agora: una copia local declarada en **otro
+  repositorio** que la implementación no tiene a mano cuenta como copia ausente.
