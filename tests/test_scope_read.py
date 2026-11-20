@@ -310,10 +310,12 @@ class RestoredRecordTests(ScopeCase):
                 "source": {"kind": "conversation", "session": identity["session"]["id"], "resolution": "pending",
                            "turn_id": None, "seal": None},
             }]
-        self.commit_record(
-            rid, text="orden de quetzal sobre el puerto", indexable_text="orden de quetzal sobre el puerto",
-            an_kla_envelope=envelope, subject=OTHER, audience="agent:orq-b", until_revoked=True, **extra,
-        )
+        # Simula lo que llega de un store ajeno: la guarda de la API pública (Q-01) no deja escribirlo por plan_write
+        with mock.patch("an_kla.store.reject_scope_fields"), mock.patch("an_kla.write_commit.reject_scope_fields"):
+            self.commit_record(
+                rid, text="orden de quetzal sobre el puerto", indexable_text="orden de quetzal sobre el puerto",
+                an_kla_envelope=envelope, subject=OTHER, audience="agent:orq-b", until_revoked=True, **extra,
+            )
 
     def test_a_directive_without_anchor_or_with_no_session_restored_from_a_bundle_is_malformed(self) -> None:
         from an_kla.export_restore import create_export, restore_export

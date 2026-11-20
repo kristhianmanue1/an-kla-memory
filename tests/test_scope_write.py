@@ -153,3 +153,44 @@ class PlanWriteTests(ScopeCase):
         envelope = {"kind": "directive"}
         self.assertNotEqual(self.propose({"id": "f-d", "text": "t", "an_kla_envelope": envelope}), 0)
         self.assertIn("plan_write_scope_fields_not_allowed", self.last.stderr)
+
+
+class ApiGuardTests(ScopeCase):
+    """Corrección 1 (Q-01): la guarda también está en la API pública de planificación y de compromiso."""
+
+    def proposal(self, **record) -> dict:
+        from an_kla.record_text import record_text  # noqa: F401  (el registro sólo necesita id y texto)
+
+        return {
+            "schema": "an-kla/write-proposal-v1", "base_revision": self.store.read_current(), "stream": "facts",
+            "operation": "add", "requested_representation": "summary",
+            "lineage": {"derived_from_retrieval": False, "refs": []},
+            "record": {"id": "f-api", "text": "texto", "indexable_text": "texto", **record},
+        }
+
+    def test_store_plan_write_rejects_scope_and_directive(self) -> None:
+        from an_kla.write_policy import WritePolicyError, emit_write_authority_template
+
+        for extra in ({"subject": OTHER}, {"audience": "all"}, {"revokes": True}, {"an_kla_envelope": {"kind": "directive"}}):
+            proposal = self.proposal(**extra)
+            with self.subTest(extra=extra):
+                with self.assertRaises(WritePolicyError) as caught:
+                    self.store.plan_write(proposal, emit_write_authority_template(proposal))
+                self.assertEqual(caught.exception.code, "plan_write_scope_fields_not_allowed")
+        plain = self.proposal()
+        self.assertIn("plan", self.store.plan_write(plain, emit_write_authority_template(plain)))
+
+    def test_a_hand_made_plan_cannot_be_committed_either(self) -> None:
+        from an_kla.write_policy import WritePolicyError, build_write_plan, emit_write_authority_template, evaluate_write
+
+        proposal = self.proposal(subject=OTHER, audience="all")
+        authority = emit_write_authority_template(proposal)  # las funciones puras no llevan la guarda: así lo arma el vaciado
+        decision = evaluate_write(proposal, authority)
+        plan = build_write_plan(proposal, authority, decision)
+        base = self.store.read_current()
+        with self.assertRaises(WritePolicyError) as caught:
+            self.store.commit_write_plan(expected_current_hash=base, plan=plan, proposal=proposal, authority=authority, decision=decision)
+        self.assertEqual(caught.exception.code, "plan_write_scope_fields_not_allowed")
+        self.assertEqual(self.store.read_current(), base)  # nada se escribió
+        rc, body = remember(self.project, "por el camino bueno", "--subject", OTHER, env=self.env("orq-a"))  # el vaciado sigue escribiendo ámbito
+        self.assertEqual((rc, body["state"]), (0, "committed"))

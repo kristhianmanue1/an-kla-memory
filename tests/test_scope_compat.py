@@ -10,6 +10,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from tests.inbox_support import run_git
 from tests.remember_support import ROOT, cli, cli_env, remember
 from tests.scope_support import OTHER, ScopeCase
 
@@ -54,6 +55,14 @@ class ByteIdenticalWithBetaTests(ScopeCase):
         ("disputes", "list"),
     )
 
+    def commands(self) -> tuple:
+        """La matriz fija más las lecturas por id (Q-02): `history` y `anchors verify`, con id y con `--all`."""
+
+        return self.COMMANDS + (
+            ("history", self.old_id), ("history", self.disputed_id), ("history", self.anchored_id),
+            ("anchors", "verify", self.anchored_id), ("anchors", "verify", "--all"),
+        )
+
     def setUp(self) -> None:
         super().setUp()
         env = self.env("orq-plano")
@@ -61,6 +70,14 @@ class ByteIdenticalWithBetaTests(ScopeCase):
         _rc, old = remember(self.project, "el puerto de quetzal es 8080", "--kind", "decision", env=env)
         remember(self.project, "puerto corregido a 8081", "--supersedes", old["record_id"], env=env)
         _rc, disputed = remember(self.project, "el puerto de quetzal es 9090", env=env)
+        self.old_id, self.disputed_id = old["record_id"], disputed["record_id"]
+        (self.project / "nota.txt").write_text("El puerto de quetzal es 8081 siempre.\n")
+        run_git(self.project, "add", "nota.txt")
+        run_git(self.project, "commit", "-q", "-m", "nota")
+        _rc, anchored = remember(
+            self.project, "el puerto anclado es 8081", "--anchor-path", "nota.txt", "--anchor-quote", "puerto de quetzal es 8081", env=env,
+        )
+        self.anchored_id = anchored["record_id"]
         remember(self.project, "en curso: revisar el puerto", "--kind", "state", env=env)
         remember(self.project, "otro estado del puerto", "--kind", "state", "--slot", "lateral", env=env)
         self.assertEqual(cli(self.project, "dispute", disputed["record_id"], "--verdict", "insufficient", "--text", "sin cita", env=self.env("rev-1", "revisor")).returncode, 0)
@@ -82,7 +99,7 @@ class ByteIdenticalWithBetaTests(ScopeCase):
             self.assertEqual(
                 subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, sys.argv[1]); import an_kla.version as v; print(v.VERSION)", str(tree)],
                                capture_output=True, text=True).stdout.strip(), "0.1.0b38")
-            for args in self.COMMANDS:
+            for args in self.commands():
                 with self.subTest(args=args):
                     before, after = self.run_tree(tree, *args), self.run_tree(ROOT, *args)
                     self.assertEqual(after, before)
