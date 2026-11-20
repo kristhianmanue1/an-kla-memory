@@ -98,7 +98,7 @@ def _files(anchor: Path) -> list[tuple[str, Path]]:
             continue  # la bandeja no es estado durable (ADR-0063 D1); los enlaces ya se rechazaron arriba
         if _allowed(relative):
             rows.append((relative, path))
-        elif relative in {"anchor/.identity.lock", "anchor/memory/.write.lock", "anchor/memory/.reader-gate", "anchor/attest.key", "anchor/host-hooks.json", "anchor/store-root.txt"} or relative.startswith(("anchor/context/", "anchor/relocations/", "anchor/memory/indexes/", "anchor/memory/leases/", "anchor/memory/quarantine/", "anchor/memory/watermarks/")):
+        elif relative in {"anchor/.identity.lock", "anchor/memory/.write.lock", "anchor/memory/.reader-gate", "anchor/attest.key", "anchor/host-hooks.json", "anchor/config.json", "anchor/store-root.txt"} or relative.startswith(("anchor/context/", "anchor/relocations/", "anchor/memory/indexes/", "anchor/memory/leases/", "anchor/memory/quarantine/", "anchor/memory/watermarks/")):
             continue
         else:
             raise ExportError("export_unrecognized_durable_path")
