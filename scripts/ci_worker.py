@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from scripts.ci_results import RETIRED, collect, identity, leaves, result_class, save
+from scripts.ci_results import REMOVED, RETIRED, collect, identity, leaves, result_class, save
 
 
 def build_suite():
@@ -22,6 +22,9 @@ def build_suite():
     absent = RETIRED - cases.keys()
     if absent:
         raise ValueError("retired_orchestration_missing:" + repr(sorted(absent)))
+    back = REMOVED & cases.keys()
+    if back:  # ADR-0074 §3 quitó estas corridas completas: si reaparecen, que sea por una decisión, no por descuido
+        raise ValueError("removed_orchestration_present:" + repr(sorted(back)))
     selected = unittest.TestSuite(test for test in leaves(suite) if identity(test) not in RETIRED)
     for key in RETIRED:
         del cases[key]
@@ -46,7 +49,7 @@ def main():
                "platform": sys.platform, "flags": str(sys.flags),
                "export": bool(getattr(os, "O_NOFOLLOW", None) and getattr(os, "O_DIRECTORY", None)
                               and os.open in os.supports_dir_fd),
-               "retired_orchestration": sorted(RETIRED)}
+               "retired_orchestration": sorted(RETIRED), "removed_orchestration": sorted(REMOVED)}
     save(args.result, payload)
     if args.collect_only:
         return 0

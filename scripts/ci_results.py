@@ -15,13 +15,20 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+#: Orquestación que SIGUE en el árbol y que la auditoría filtra (re-ejecuta la suite o sus módulos por subproceso). Debe existir: si un caso
+#: declarado aquí desaparece sin pasar a ``REMOVED``, ``build_suite`` falla (``retired_orchestration_missing``).
 RETIRED = {
     "test_sealed_matrix.MatrixReRunTests.test_rerun_source_modules_this_interpreter",
     "test_sealed_matrix.MatrixReRunTests.test_rerun_crypto_rows_with_clt_python",
+    "test_sealed_matrix_rows.Row11V1BundlesUnchangedTests.test_v1_suite_reruns_in_this_interpreter",
+}
+#: Orquestación que ADR-0074 §3 QUITÓ del árbol (la fila 15 como corridas completas y ``test_ci_local_both_modes``): ya no se filtra porque ya no
+#: existe. Sigue declarada para (a) las baselines legadas, que sí la traen y no deben exigirla, y (b) fallar si reaparece sin una decisión
+#: (``removed_orchestration_present``): un caso que desaparece sin estar en ``RETIRED`` ni en ``REMOVED`` sigue siendo un fallo.
+REMOVED = {
     "test_sealed_matrix_rows.Row15SuiteBothProfilesTests.test_full_suite_this_interpreter",
     "test_sealed_matrix_rows.Row15SuiteBothProfilesTests.test_full_suite_with_extra_clt_python",
     "test_sealed_matrix_rows.Row15SuiteBothProfilesTests.test_ci_local_both_modes",
-    "test_sealed_matrix_rows.Row11V1BundlesUnchangedTests.test_v1_suite_reruns_in_this_interpreter",
 }
 
 

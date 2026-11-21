@@ -17,7 +17,7 @@ from scripts import ci_process
 from scripts.ci_baseline import compare_worker, load_baseline
 from scripts.ci_process import registered_cleanup, run_task
 from scripts.ci_fixture_registry import cleanup_scripts, register_script
-from scripts.ci_results import RETIRED, collect, result_class, bootstrap_command, observed_command
+from scripts.ci_results import REMOVED, RETIRED, collect, result_class, bootstrap_command, observed_command
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -162,7 +162,8 @@ class CaseEvidenceTests(unittest.TestCase):
             self.assertEqual(len(observations), 1)
             record = json.loads(observations[0].read_text())
             self.assertTrue(record["complete"] and record["successful"])
-            self.assertEqual(len(record["cases"]), 6)
+            # todos los casos del módulo, los que haya: el recuento sale de lo que queda, no de un número escrito a mano
+            self.assertEqual(len(record["cases"]), unittest.defaultTestLoader.loadTestsFromName("tests.test_ci_local_matriz").countTestCases())
             self.assertEqual(record["startup_customization"], getattr(sys.modules.get("sitecustomize"), "__file__", None))
             self.assertTrue(observations[0].with_suffix(".events.jsonl").read_text())
 
@@ -254,11 +255,28 @@ class CaseEvidenceTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "retired_orchestration_missing"):
                 ci_worker.build_suite()
 
-    def test_only_the_six_declared_orchestration_cases_are_filtered(self):
+    def test_only_the_declared_orchestration_cases_are_filtered(self):
+        """ADR-0074 §3: 3 siguen en el árbol y se filtran (``RETIRED``); las 3 corridas completas de la fila 15 se quitaron (``REMOVED``)."""
         _, cases, _ = ci_worker.build_suite()
-        self.assertEqual(len(RETIRED), 6)
+        self.assertEqual(len(RETIRED), 3)
+        self.assertEqual(len(REMOVED), 3)
         self.assertFalse(RETIRED.intersection(cases))
+        self.assertFalse(REMOVED.intersection(cases))  # ya no existen: no se filtran, no están
+        self.assertFalse(RETIRED & REMOVED)
         self.assertIn("test_sealed_matrix_rows.Row11V1BundlesUnchangedTests.test_v1_path_does_not_touch_sealed_crypto", cases)
+        self.assertIn("test_sealed_matrix_rows.Row15SuiteBothProfilesTests.test_sealed_probe_with_extra_clt_python", cases)  # el sondeo que se queda
+
+    def test_a_removed_orchestration_case_that_comes_back_is_a_failure(self):
+        with patch.object(ci_worker, "REMOVED", {"test_sealed_matrix_rows.Row15SuiteBothProfilesTests.test_sealed_probe_with_extra_clt_python"}):
+            with self.assertRaisesRegex(ValueError, "removed_orchestration_present"):
+                ci_worker.build_suite()
+
+    def test_a_declared_case_that_disappears_without_being_listed_still_fails(self):
+        """No se debilita la comprobación: borrar un caso de ``RETIRED`` del árbol sin pasarlo a ``REMOVED`` sigue siendo ``retired_orchestration_missing``."""
+        extra = RETIRED | {"test_sealed_matrix_rows.Row15SuiteBothProfilesTests.test_ya_no_existe"}
+        with patch.object(ci_worker, "RETIRED", extra):
+            with self.assertRaisesRegex(ValueError, "retired_orchestration_missing.*test_ya_no_existe"):
+                ci_worker.build_suite()
 
 
 class PlanEvidenceTests(unittest.TestCase):
