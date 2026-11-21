@@ -2,7 +2,8 @@
 
 Lanza ``n`` invocaciones SUCESIVAS de ``python -m an_kla remember --text-file -`` (cada una, un proceso
 nuevo) con texto único y registra el resultado y la latencia de cada una; y ``drain_loop`` vacía en bucle
-con ``inbox drain`` hasta que existe el archivo de parada.
+con ``inbox drain`` hasta que existe el archivo de parada, **o vence su plazo propio** (5.º argumento, 900 s por defecto: rc 3), **o desaparece el
+proyecto** (rc 4). Nunca queda lanzando ``inbox drain`` sin fin si la prueba que lo lanzó murió (ADR-0074 §1).
 """
 
 from __future__ import annotations
@@ -14,12 +15,19 @@ import time
 
 from tests.remember_support import cli
 
+DRAIN_LOOP_DEADLINE = 900.0
+
 
 def main(argv: list[str]) -> int:
     if argv[0] == "drain_loop":
         project, out, stop = argv[1], argv[2], argv[3]
+        deadline = time.monotonic() + (float(argv[4]) if len(argv) > 4 else DRAIN_LOOP_DEADLINE)
         with open(out, "a", buffering=1) as handle:
             while not os.path.exists(stop):
+                if not os.path.isdir(project):
+                    return 4
+                if time.monotonic() > deadline:
+                    return 3
                 done = cli(project, "inbox", "drain")
                 try:
                     result = json.loads(done.stdout)

@@ -26,6 +26,7 @@ from an_kla.sealed.cli_dispatch import dispatch_export_create
 from an_kla.store import MemoryStore
 from tests.inbox_support import AGENT_ENV, InboxCase
 from tests.test_export_sealed_cli import FakeAdapter, _cryptography_importable
+from tests import proc_support
 
 HAS_FLOCK = inbox.fcntl is not None
 MARKER = "0a92bdfb-286a-44b5-8c24-8d7a1332c6b6.json"
@@ -645,7 +646,7 @@ class RoundTwoTests(CustodyCase):
         self.queue()
         self.drain_by_hand()
         lock = Path(self.store.store_root) / ".identity.lock"
-        child = subprocess.Popen(
+        child = proc_support.spawn_for(self,
             [sys.executable, "-I", "-c", HOLDER, str(lock), "ex"],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
         )

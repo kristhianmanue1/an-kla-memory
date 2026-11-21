@@ -41,12 +41,14 @@ def threshold_from_env(default: float = DEFAULT_THRESHOLD) -> float:
 
 def process_table() -> dict[int, tuple[int, int]]:
     """``pid -> (ppid, pgid)`` de los procesos vivos que ``ps`` ve (sin zombis)."""
-    out = subprocess.run(["ps", "-Ao", "pid=,ppid=,pgid=,stat="], capture_output=True, text=True).stdout
+    proc = subprocess.Popen(["ps", "-Ao", "pid=,ppid=,pgid=,stat="], stdout=subprocess.PIPE, text=True)
+    out = proc.communicate()[0]
     table: dict[int, tuple[int, int]] = {}
     for line in out.splitlines():
         parts = line.split()
         if len(parts) == 4 and all(p.lstrip("-").isdigit() for p in parts[:3]) and not parts[3].startswith("Z"):  # un zombi ya no es de nadie
             table[int(parts[0])] = (int(parts[1]), int(parts[2]))
+    table.pop(proc.pid, None)  # el propio `ps` es hijo de quien pregunta: no es de la corrida
     return table
 
 

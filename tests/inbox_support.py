@@ -13,6 +13,7 @@ from unittest import mock
 
 from an_kla.store import MemoryStore
 from tests import write_commit_scenarios as scenarios
+from tests import proc_support
 
 GIT_ENV = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
 AGENT_ENV = {
@@ -82,7 +83,7 @@ class InboxCase(unittest.TestCase):
         """Otro proceso toma ``memory/inbox/.lock`` (``ex`` o ``sh``) hasta cerrar su stdin."""
 
         self.inbox.mkdir(exist_ok=True)
-        child = subprocess.Popen(
+        child = proc_support.spawn_for(self,
             [sys.executable, "-I", "-c", HOLDER, str(self.inbox / ".lock"), mode],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
         )
@@ -176,7 +177,7 @@ class EntryFactory:
 def hold_flock(path: Path, mode: str = "ex") -> subprocess.Popen:
     """Un proceso ajeno toma un ``flock`` sobre ``path`` hasta cerrar su stdin (ver ``InboxCase.release``)."""
 
-    child = subprocess.Popen(
+    child = proc_support.spawn(
         [sys.executable, "-I", "-c", HOLDER, str(path), mode],
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
     )

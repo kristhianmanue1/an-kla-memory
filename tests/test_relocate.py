@@ -24,6 +24,7 @@ from an_kla.relocate import (
 )
 from an_kla.store import MemoryStore
 from tests.test_custody_root import _commit_fact
+from tests import proc_support
 
 ROOT = Path(__file__).resolve().parents[1]
 _POINTS = ("journal_staging", "before_publish", "after_rename", "after_publish", "after_pointer")
@@ -264,7 +265,7 @@ class RelocateTests(unittest.TestCase):
         plan = self._plan()
         ready = self.base / "ready"
         release = self.base / "release"
-        reader = subprocess.Popen(
+        reader = proc_support.spawn_for(self,
             [sys.executable, "-c", (
                 "import sys, time\n"
                 "from pathlib import Path\n"

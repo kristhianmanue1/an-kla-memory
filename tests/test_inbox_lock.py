@@ -15,6 +15,7 @@ from an_kla import inbox, lock_order, store_locks
 from an_kla.identity import identity_lock
 from tests.inbox_support import AGENT_ENV, InboxCase
 from tests.legacy_store_goldens import ROOT
+from tests import proc_support
 
 HAS_FLOCK = inbox.fcntl is not None
 
@@ -118,7 +119,7 @@ class LayoutRaceTests(unittest.TestCase):
                 shutil.rmtree(project / ".an-kla" / "memory" / "inbox", ignore_errors=True)
                 go = base / f"go-{round_number}"
                 children = [
-                    subprocess.Popen(
+                    proc_support.spawn_for(self,
                         [sys.executable, "-c", RACER, str(ROOT), str(project), str(go)],
                         stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                     )

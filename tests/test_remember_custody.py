@@ -16,6 +16,7 @@ from an_kla.store import MemoryStore
 from tests.inbox_support import InboxCase, hold_flock
 from tests.remember_support import ROOT, cli, cli_env, remember
 import tests.test_inbox_custody as base
+from tests import proc_support
 
 
 def inbox_listing(store: MemoryStore) -> list[tuple[str, int, int, str]]:
@@ -87,7 +88,7 @@ class CustodyWithRememberTests(QueuedByRememberCase):
 
         def fault(name: str) -> None:
             if name == "journal_staging" and "proc" not in spawned:
-                spawned["proc"] = subprocess.Popen(
+                spawned["proc"] = proc_support.spawn_for(self,
                     [os.sys.executable, "-m", "an_kla", "--project-root", str(self.project), "remember", "--text-file", "-"],
                     cwd=ROOT, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=cli_env(),
                 )

@@ -23,6 +23,7 @@ from tests.custodian_support import FakeCustodian, schema_validator
 from tests.remember_support import cli, cli_env
 from tests.scope_support import ScopeCase
 from tests.test_scope_compat import baseline_tree
+from tests import proc_support
 
 QUOTE = "Adelante con el cambio de puerto del servidor de quetzal, a 8081."
 SEAL = "m1:" + "ab" * 32
@@ -282,7 +283,7 @@ class Beta40Tests(ConversationCase):
     def test_an_entry_v5_is_rejected_by_beta40_and_recovered_here(self) -> None:
         import fcntl  # noqa: F401  (the holder is another process)
 
-        holder = subprocess.Popen(
+        holder = proc_support.spawn_for(self,
             [sys.executable, "-I", "-c", "import fcntl,os,sys\nfd=os.open(sys.argv[1],os.O_RDWR|os.O_CREAT,0o600)\nfcntl.flock(fd,fcntl.LOCK_EX)\nsys.stdout.write('ready\\n');sys.stdout.flush()\nsys.stdin.read()\n",
              str(Path(self.store.root) / ".write.lock")], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
         self.addCleanup(lambda: (holder.stdin.close(), holder.wait(timeout=10), holder.stdout.close()) if holder.poll() is None else holder.stdout.close())
