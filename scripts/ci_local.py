@@ -227,16 +227,27 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    resultados = {
-        "importabilidad": paso_import(),
-        "unittest": paso_tests(args.simulate_ci),
-        "redteam_selftest": paso_redteam_selftest(),
-        "matriz_interpretes": paso_matriz(args.matrix),
-        "kill9_bandeja": paso_kill9_bandeja(),
-        "check_sizes": paso_sizes(),
-        "check_plans": paso_plans(),
-        "check_adr_registry": paso_adrs(),
-    }
+    # (nombre, paso, pesado). Un paso pesado lanza la suite o una matriz y va con su vigilante; los ligeros son los chequeos de los archivos.
+    pasos = [
+        ("importabilidad", lambda: paso_import(), False),
+        ("unittest", lambda: paso_tests(args.simulate_ci), True),
+        ("redteam_selftest", lambda: paso_redteam_selftest(), True),
+        ("matriz_interpretes", lambda: paso_matriz(args.matrix), True),
+        ("kill9_bandeja", lambda: paso_kill9_bandeja(), True),
+        ("check_sizes", lambda: paso_sizes(), False),
+        ("check_plans", lambda: paso_plans(), False),
+        ("check_adr_registry", lambda: paso_adrs(), False),
+    ]
+    resultados: dict[str, str] = {}
+    saltados: list[str] = []
+    for nombre, paso, pesado in pasos:
+        if pesado and ABORTED:
+            # Q-01: abortada por carga, la máquina no aguanta más pasos pesados: no se lanza ninguno (se declara). Los ligeros (los tres
+            # chequeos de archivos, un proceso corto cada uno) siguen: dan información del cambio sin cargar nada.
+            resultados[nombre] = "SKIP (abortada por carga)"
+            saltados.append(nombre)
+            continue
+        resultados[nombre] = paso()
 
     print("\nResumen:")
     for nombre, estado in resultados.items():
@@ -244,6 +255,8 @@ def main() -> int:
 
     if ABORTED:
         print("\nci_local: ABORTADA POR CARGA (rc 75); no es un fallo de las pruebas")
+        if saltados:
+            print(f"  pasos pesados saltados por el aborto: {', '.join(saltados)}")
         return load_guard.EXIT_ABORTED
     fallos = [n for n, e in resultados.items() if e == "FAIL"]
     if not fallos:

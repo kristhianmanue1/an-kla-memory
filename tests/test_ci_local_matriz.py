@@ -99,5 +99,38 @@ class UnaSolaCorridaTests(unittest.TestCase):
         self.assertEqual(len(self.count(["--matrix"], es_39=False)), 1)
 
 
+class AbortCutsTheHeavyStepsTests(unittest.TestCase):
+    """Q-01: tras un aborto por carga no se lanza ningún paso pesado más; los ligeros siguen; sale con rc 75 e imprime lo saltado."""
+
+    def test_a_75_in_the_discover_launches_neither_the_matrix_nor_kill9(self) -> None:
+        ci_local.ABORTED.clear()
+        self.addCleanup(ci_local.ABORTED.clear)
+        launched: list[list[str]] = []
+
+        def guarded(cmd, **kw):
+            launched.append(list(cmd))
+            return mock.Mock(rc=75, aborted=True, left=[], reason={"threshold": 20, "samples": [99] * 6, "killed": []})
+
+        light = {name: mock.Mock(return_value="OK") for name in ("paso_import", "paso_sizes", "paso_plans", "paso_adrs")}
+        patches = [mock.patch.object(ci_local, name, fn) for name, fn in light.items()]
+        patches += [mock.patch.object(ci_local, "paso_redteam_selftest", return_value="OK"),
+                    mock.patch.object(ci_local, "_es_39", return_value=True),
+                    mock.patch.object(ci_local.load_guard, "run_guarded", side_effect=guarded),
+                    mock.patch.object(sys, "argv", ["ci_local.py", "--matrix"])]
+        for patch in patches:
+            patch.start()
+            self.addCleanup(patch.stop)
+        out = io.StringIO()
+        with redirect_stdout(out):
+            self.assertEqual(ci_local.main(), 75)
+        self.assertEqual(len(launched), 1)  # sólo el discover: ni la matriz del 3.9 ni el kill -9
+        self.assertIn("discover", launched[0])
+        text = out.getvalue()
+        self.assertIn("pasos pesados saltados por el aborto: redteam_selftest, matriz_interpretes, kill9_bandeja", text)
+        self.assertIn("matriz_interpretes: SKIP (abortada por carga)", text)
+        for name, fn in light.items():  # los ligeros siguen: no cargan nada
+            fn.assert_called_once()
+
+
 if __name__ == "__main__":
     unittest.main()

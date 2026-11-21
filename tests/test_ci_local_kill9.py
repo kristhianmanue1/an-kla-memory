@@ -41,7 +41,7 @@ class KillNinePassTests(unittest.TestCase):
 
     def test_is_part_of_the_summary_and_the_slow_test_skips_without_the_variable(self) -> None:
         source = (ROOT / "scripts" / "ci_local.py").read_text()
-        self.assertIn('"kill9_bandeja": paso_kill9_bandeja()', source)
+        self.assertIn('("kill9_bandeja", lambda: paso_kill9_bandeja(), True)', source)
         crash = (ROOT / "tests" / "test_inbox_crash.py").read_text()
         self.assertIn('@unittest.skipUnless(SLOW, "prueba lenta', crash)
         self.assertIn('os.environ.get("AN_KLA_SLOW_KILL9") == "1"', crash)
