@@ -15,12 +15,13 @@ Desde beta.22 añade dos pasos locales (issue #112 e issue #111/P5):
   verificación post-ataque; ADR-0043 §Test de regresión). Requiere un
   store canónico local (`.an-kla/`): en clones frescos o worktrees sin
   store el paso declara SKIP honesto;
-- la matriz de intérpretes soportados emite estado por versión y falla si
-  una versión soportada disponible no pasa la suite. Coste: cada
-  intérprete disponible distinto del principal corre la suite completa
-  anidada (~45-90s por intérprete según skips criptográficos); un host
-  con varios intérpretes en PATH puede tardar 10-15 min. Define
-  AN_KLA_CI_LOCAL_MATRIX=0 para saltar la matriz (SKIP declarado).
+- la matriz de intérpretes (ADR-0074 §3) sólo corre con `--matrix`: la suite
+  completa con el Python 3.9 de /usr/bin/python3, en secuencia y con su freno.
+  Sin `--matrix` declara `SKIP (usa --matrix)`. La suite completa corre UNA vez
+  por ci_local (antes, cinco: la fila 15 y `test_ci_local_both_modes` la
+  repetían). Cada paso pesado (discover, kill -9, 3.9) corre en su sesión con
+  un vigilante de carga (scripts/load_guard.py): rc 75 si lo aborta, no es un
+  fallo de las pruebas (AN_KLA_CI_LOAD_ABORT, 30 por defecto).
 
 ADR-0062 incorpora scripts/ci_audit.py como perfil optativo en verificación;
 no sustituye este gate hasta aceptación explícita de la transición.
@@ -30,7 +31,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -46,7 +46,6 @@ CHECK_PLANS = ROOT / "scripts" / "check_plans.py"
 CHECK_ADRS = ROOT / "scripts" / "check_adr_registry.py"
 REDTEAM = ROOT / "scripts" / "redteam_consistent_rewrite.py"
 KILL9_TEST = ROOT / "tests" / "test_inbox_crash.py"
-SUPPORTED_VERSIONS = ("3.9", "3.12", "3.13")
 
 
 ABORTED: list[dict] = []  # los motivos de los pasos que el vigilante abortó por carga: ``main`` sale con 75
@@ -128,42 +127,37 @@ def paso_redteam_selftest() -> str:
     return "FAIL"
 
 
-def _interprete_para(version: str) -> str | None:
-    """Resuelve un intérprete para la versión, o None si no hay."""
-    encontrado = shutil.which(f"python{version}")
-    if encontrado:
-        return encontrado
-    mayor, menor = (int(parte) for parte in version.split("."))
-    if sys.version_info[:2] == (mayor, menor):
-        return sys.executable
-    return None
+PYTHON_39 = "/usr/bin/python3"
 
 
-def paso_matriz() -> str:
+def _es_39(interprete: str) -> bool:
+    """True si ``interprete`` existe y es un Python 3.9 (ADR-0074 §3: el 3.9 soportado sale de ``/usr/bin/python3``)."""
+    if not Path(interprete).exists():
+        return False
+    try:
+        out = subprocess.run([interprete, "-c", "import sys; print('%d.%d' % sys.version_info[:2])"], capture_output=True, text=True, timeout=30)
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return out.returncode == 0 and out.stdout.strip() == "3.9"
+
+
+def paso_matriz(matriz: bool = False) -> str:
+    """Matriz de intérpretes (ADR-0074 §3): sólo con ``--matrix``, y sólo el 3.9 de ``/usr/bin/python3``.
+
+    La suite completa corre UNA vez por ``ci_local`` (con el intérprete principal). El 3.9 es un intérprete soportado que ninguna otra corrida
+    prueba: se corre a propósito con ``--matrix``, en secuencia, con su freno, en los pasos de cada release."""
     print("==> [4/8] matriz de intérpretes soportados", flush=True)
-    if os.environ.get("AN_KLA_CI_LOCAL_MATRIX") == "0":
-        print("    SKIP (AN_KLA_CI_LOCAL_MATRIX=0)")
+    if not matriz:
+        print("    SKIP (usa --matrix)")
         return "SKIP"
-    estados: dict[str, str] = {}
-    for version in SUPPORTED_VERSIONS:
-        interprete = _interprete_para(version)
-        if interprete is None:
-            estados[version] = "SKIP (intérprete no disponible en PATH)"
-            continue
-        if Path(interprete).resolve() == Path(PYTHON).resolve():
-            estados[version] = (
-                f"OK ({Path(interprete).name}: cubierto por el paso unittest)"
-            )
-            continue
-        env = dict(os.environ)
-        env["PYTHONPATH"] = str(ROOT)
-        estado = run_step([interprete, "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"], env=env)
-        estados[version] = "OK" if estado == "OK" else f"{estado} ({Path(interprete).name})"
-    for version, estado in estados.items():
-        print(f"    python{version}: {estado}")
-    if any(estado.startswith("FAIL") for estado in estados.values()):
-        return "FAIL"
-    return "OK"
+    if not _es_39(PYTHON_39):
+        print(f"    SKIP: {PYTHON_39} no existe o no es Python 3.9")
+        return "SKIP"
+    env = dict(os.environ)
+    env["PYTHONPATH"] = str(ROOT)
+    estado = run_step([PYTHON_39, "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"], env=env)
+    print(f"    python3.9: {estado}")
+    return estado
 
 
 def paso_kill9_bandeja() -> str:
@@ -226,13 +220,18 @@ def main() -> int:
         action="store_true",
         help="exporta GITHUB_ACTIONS=true y CI=true antes de los tests",
     )
+    parser.add_argument(
+        "--matrix",
+        action="store_true",
+        help="además corre la suite completa con el Python 3.9 de /usr/bin/python3 (ADR-0074 §3; entra en los pasos de cada release)",
+    )
     args = parser.parse_args()
 
     resultados = {
         "importabilidad": paso_import(),
         "unittest": paso_tests(args.simulate_ci),
         "redteam_selftest": paso_redteam_selftest(),
-        "matriz_interpretes": paso_matriz(),
+        "matriz_interpretes": paso_matriz(args.matrix),
         "kill9_bandeja": paso_kill9_bandeja(),
         "check_sizes": paso_sizes(),
         "check_plans": paso_plans(),

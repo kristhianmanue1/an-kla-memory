@@ -33,6 +33,7 @@ from an_kla.sealed.cli_dispatch import (
 )
 from an_kla.store import MemoryStore
 from tests.sealed_helpers import (_cryptography_importable, _make_store, FakeAdapterB64, _create_sealed)
+from tests import proc_support
 
 ROOT = Path(__file__).resolve().parents[1]
 CLT_PYTHON = Path(
@@ -319,106 +320,32 @@ class Row14WarningTaxonomyTests(unittest.TestCase):
 
 
 class Row15SuiteBothProfilesTests(unittest.TestCase):
-    """Fila 15: suite completa + CI local SIN ``[sealed]`` instalado y con él.
+    """Fila 15: el sondeo sellado con el intérprete extra (ADR-0074 §3).
 
-    - Este intérprete SIN cryptography (``.venv``): discover completo de
-      ``tests/`` debe ser verde (skips honestos en lo criptográfico).
-    - CLT python3 CON cryptography: discover completo verde, y los tests
-      criptográficos (p. ej. ``tests.test_sealed_bundle``) corren SIN
-      saltarse.
-    - ``scripts/ci_local.py`` en ambos modos (con y sin --simulate-ci).
-
-    NOTA de costo: el discover completo se ejecuta UNA vez por intérprete
-    (2 subprocesses) + ci_local dos modos. Anti-recursión: los discovers
-    lanzados aquí marcan ``ANKLA_MATRIX_ROW15_ACTIVE`` y una fila 15
-    anidada dentro de esos runs se salta (la ejecución de nivel superior
-    ya la cubre).
+    Antes la fila 15 lanzaba la suite completa con este intérprete, con el CLT y dos veces ``ci_local``: cuatro corridas completas anidadas por
+    cada ``ci_local``. Ahora la suite corre UNA vez; el 3.9 se prueba entero con ``ci_local --matrix`` (en los pasos de cada release), y aquí se
+    queda sólo lo que hace falta en la corrida normal: el módulo criptográfico ``tests.test_sealed_bundle`` con el intérprete CLT, que es lo único
+    que comprueba la cripto sellada en un host cuyo ``.venv`` no la tiene (un solo módulo, pocos segundos, con su misma condición de siempre).
     """
 
     @classmethod
     def setUpClass(cls) -> None:
         if os.environ.get(_ROW15_ENV) == "1":
-            raise unittest.SkipTest(
-                "fila 15 anidada: el discover de nivel superior ya la "
-                "cubre (anti-recursión)"
-            )
+            raise unittest.SkipTest("fila 15 anidada: el discover de nivel superior ya la cubre (anti-recursión)")
 
-    def _discover(self, interpreter: str) -> subprocess.CompletedProcess:
-        return subprocess.run(
-            [interpreter, "-m", "unittest", "discover",
-             "-s", "tests", "-p", "test_*.py"],
-            cwd=str(ROOT), capture_output=True, text=True,
-            env={
-                **os.environ,
-                "AN_KLA_NO_UPDATE_CHECK": "1",
-                _ROW15_ENV: "1",
-            },
-        )
-
-    def test_full_suite_this_interpreter(self):
-        completed = self._discover(sys.executable)
-        self.assertEqual(
-            completed.returncode, 0,
-            f"discover en rojo ({sys.executable}):\n"
-            f"{completed.stderr[-6000:]}",
-        )
-
-    def test_full_suite_with_extra_clt_python(self):
+    def test_sealed_probe_with_extra_clt_python(self):
         interpreter = _clt_python()
-        completed = self._discover(interpreter)
-        self.assertEqual(
-            completed.returncode, 0,
-            f"discover (CLT) en rojo:\n{completed.stderr[-6000:]}",
+        if _cryptography_importable():
+            self.skipTest("este intérprete ya trae cryptography: los tests criptográficos corren en la suite normal")
+        # En .venv (sin cryptography) los tests criptográficos se saltan con skip honesto: verificamos que el CLT los ejecuta SIN saltarlos,
+        # con un run dirigido -v del módulo canónico.
+        probe = proc_support.run(
+            [interpreter, "-m", "unittest", "tests.test_sealed_bundle", "-v"],
+            timeout=600, cwd=str(ROOT), capture_output=True, text=True,
+            env={**os.environ, "AN_KLA_NO_UPDATE_CHECK": "1"},
         )
-        if not _cryptography_importable():
-            # En .venv, verificamos que el run CLT ejecutó la cripto: el
-            # módulo criptográfico canonical NO puede terminar en
-            # "skipped" masivo — lo comprobamos con un run dirigido -v.
-            probe = subprocess.run(
-                [interpreter, "-m", "unittest",
-                 "tests.test_sealed_bundle", "-v"],
-                cwd=str(ROOT), capture_output=True, text=True,
-                env={**os.environ, "AN_KLA_NO_UPDATE_CHECK": "1"},
-            )
-            self.assertEqual(probe.returncode, 0, probe.stderr[-4000:])
-            self.assertIn("... ok", probe.stderr)
-
-    def test_ci_local_both_modes(self):
-        """``scripts/ci_local.py`` verde en modo normal y --simulate-ci.
-
-        Corre con el intérprete SIN extra (``sys.executable`` cuando es
-        .venv): es el modo canónico de desarrollo. Se coteja que la
-        salida termina en ``ci_local: OK``.
-        """
-        for mode in ([], ["--simulate-ci"]):
-            with self.subTest(mode=mode or "normal"):
-                completed = subprocess.run(
-                    [sys.executable, "scripts/ci_local.py", *mode],
-                    cwd=str(ROOT), capture_output=True, text=True,
-                    env={
-                        **os.environ,
-                        "AN_KLA_NO_UPDATE_CHECK": "1",
-                        # Anti-recursión: ci_local lanza un discover que
-                        # vuelve a cargar esta matriz; su fila 15 anidada
-                        # se salta.
-                        _ROW15_ENV: "1",
-                        # La pierna anidada de la matriz (issue #111/P5)
-                        # re-correría la suite completa por cada
-                        # intérprete disponible: se escapa aquí porque el
-                        # paso queda cubierto por pruebas unitarias
-                        # (tests/test_ci_local_matriz.py).
-                        "AN_KLA_CI_LOCAL_MATRIX": "0",
-                        # La matriz `kill -9` de la bandeja (ADR-0063, criterio 3)
-                        # es lenta y tiene su propio paso; se cubre en
-                        # tests/test_ci_local_kill9.py.
-                        "AN_KLA_CI_LOCAL_KILL9": "0",
-                    },
-                )
-                self.assertEqual(
-                    completed.returncode, 0,
-                    completed.stdout[-4000:] + completed.stderr[-2000:],
-                )
-                self.assertIn("ci_local: OK", completed.stdout)
+        self.assertEqual(probe.returncode, 0, probe.stderr[-4000:])
+        self.assertIn("... ok", probe.stderr)
 
 
 # ---------------------------------------------------------------------------
