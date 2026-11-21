@@ -36,6 +36,16 @@ la página y la clave. Una evidencia de más de 16 384 bytes anula la cobertura 
 `AN_KLA_AGENT_CLI=claude-code`. Detalle en
 [`docs/architecture/0073-citas-conversacion-resolutor.md`](docs/architecture/0073-citas-conversacion-resolutor.md).
 
+**La suite no tumba la máquina (ADR-0074; sólo para quien desarrolla)**: `ci_local` corre la suite completa
+una vez (antes, cinco) y el Python 3.9 va a `ci_local --matrix`; cada paso pesado corre en su sesión con un
+vigilante de carga (`scripts/load_guard.py`) que lo aborta con **rc 75**, «abortada por carga»
+(`AN_KLA_CI_LOAD_ABORT`, 30 por defecto), y `scripts/run_guarded.py` hace lo mismo para una orden suelta; las
+pruebas lanzan sus procesos con dueño (`tests/proc_support.py`) y usan una plantilla de repo con huella.
+`identity_c0` guarda en caché, **por proceso**, `repo_id_for` y `branch_for`: se invalida si cambia
+`.git/config` o `HEAD`, o el entorno; en el servidor MCP, un cambio de la configuración global de git dentro
+de ese proceso no la invalida (hay que reiniciarlo). Detalle en
+[`docs/architecture/0074-suite-sin-tumbar-la-maquina.md`](docs/architecture/0074-suite-sin-tumbar-la-maquina.md).
+
 ## [v0.1.0-beta.40]
 
 **Fricción del primer día de beta.39 (ADR-0072; errata 6 de `memoria/ancla/v2`)**: **un intento de
