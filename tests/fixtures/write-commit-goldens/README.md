@@ -53,6 +53,12 @@ cadena de versión o en digests derivados (275 de 357, ninguno por otra causa).
 iguales; y los stores fichero a fichero sólo difieren en la cadena de versión o en digests derivados (275
 de 357, ninguno por otra causa).
 
+**Regeneración de la beta.41.** Con `VERSION = "0.1.0b41"`, igual que la de la beta.40: el mismo árbol con
+`VERSION = "0.1.0b40"` reproduce byte a byte los goldens anteriores; dos corridas con b41 dan lo mismo
+(goldens y stores, salvo `attest.key`); los 14 goldens b40/b41, con digests y versión enmascarados, son
+iguales; y los stores fichero a fichero sólo difieren en la cadena de versión o en digests derivados (275
+de 357, ninguno por otra causa).
+
 **Regenerar** (sólo si el comportamiento cambia a propósito; la fase A exige
 que no cambie). Crea un worktree desechable de `main`, copia allí
 `tests/write_commit_scenarios.py` y ejecuta, con el intérprete 3.12 del
