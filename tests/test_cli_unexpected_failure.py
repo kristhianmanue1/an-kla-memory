@@ -111,7 +111,8 @@ class UnexpectedFailureSafetyNetTest(unittest.TestCase):
     def _run_main(
         self, debug: str | None = None, log_target: Path | None = None
     ) -> tuple[object, str, str]:
-        env: dict[str, str] = {}
+        # HOME propio y ajeno al destino del log: el mensaje no depende de dónde esté TMPDIR (bajo $HOME la CLI abrevia a ``~/…``)
+        env: dict[str, str] = {"HOME": tempfile.mkdtemp(prefix="home-")}
         if debug is not None:
             env[cli_error_log.DEBUG_ENV] = debug
         stderr = io.StringIO()
@@ -170,7 +171,7 @@ class UnexpectedFailureEndToEndTest(unittest.TestCase):
                 [sys.executable, "-c", driver],
                 capture_output=True,
                 text=True,
-                env={**os.environ, "AN_KLA_NO_UPDATE_CHECK": "1"},
+                env={**os.environ, "AN_KLA_NO_UPDATE_CHECK": "1", "HOME": tempfile.mkdtemp(prefix="home-")},  # HOME ajeno al destino: sin ``~/…``
                 cwd=ROOT,
             )
             self.assertEqual(completed.returncode, 1, completed.stderr)
