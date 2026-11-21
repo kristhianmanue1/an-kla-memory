@@ -1,6 +1,6 @@
 # AN-KLA Memory
 
-[![Version](https://img.shields.io/badge/version-0.1.0--beta.40-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.40)
+[![Version](https://img.shields.io/badge/version-0.1.0--beta.41-blue)](https://github.com/kristhianmanue1/an-kla-memory/releases/tag/v0.1.0-beta.41)
 [![Python](https://img.shields.io/badge/python-3.9%20%7C%203.12%20%7C%203.13-blue)](https://www.python.org/downloads/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 [![Beta](https://img.shields.io/badge/status-local%20beta-orange)](https://github.com/kristhianmanue1/an-kla-memory/releases)
@@ -12,10 +12,10 @@ un plan verificable.
 
 La beta se distribuye desde GitHub, no desde PyPI. Usa siempre una etiqueta
 exacta: no instales `main` ni otra referencia móvil. La versión del código es
-`0.1.0b40` y su etiqueta de distribución es `v0.1.0-beta.40`. El contexto
+`0.1.0b41` y su etiqueta de distribución es `v0.1.0-beta.41`. El contexto
 gestionado y la plantilla administrada (`TEMPLATE_VERSION`) son un eje
 **separado** de la versión del paquete — `0.1.0-beta.33` (sin cambios en
-beta.40; antes `0.1.0-beta.36`, `0.1.0-beta.35`, `0.1.0-beta.34`, `0.1.0-beta.32` y `0.1.0-beta.26`); `context status` distingue ambos
+beta.41; antes `0.1.0-beta.36`, `0.1.0-beta.35`, `0.1.0-beta.34`, `0.1.0-beta.32` y `0.1.0-beta.26`); `context status` distingue ambos
 (`template_version` vs `current_template_version` y `runtime_version`) y avisa
 con `runtime_older_than_context_template` cuando el intérprete es más antiguo
 que la plantilla del proyecto. Los hooks gobernados del host (`host-hooks/v1`,
@@ -41,7 +41,7 @@ intérprete del entorno virtual.
 
 ## Estado actual
 
-La beta pública más reciente es **`v0.1.0-beta.40`** (`0.1.0b40`),
+La beta pública más reciente es **`v0.1.0-beta.41`** (`0.1.0b41`),
 instalable mediante su etiqueta Git exacta. AN-KLA no se distribuye desde
 PyPI; el wheel de la release se publica como asset de la etiqueta y la
 instalación canónica sigue siendo `pip install` fijado a la etiqueta exacta.
@@ -50,6 +50,9 @@ No instales `main` como sustituto de una versión.
 Las últimas betas, de la más reciente a la más antigua (detalle en
 [CHANGELOG](CHANGELOG.md) y [`docs/releases/`](docs/releases/)):
 
+- **beta.41**: las citas de una conversación se comprueban con un resolutor (ADR-0073: `fact`, `decision` y
+  `state`; las `directive` no) y la cobertura cuenta la página y la copia de una cita de documento (errata 7).
+  La suite deja de tumbar la máquina (ADR-0074). **Baja de versión con cuidado**: ver su nota.
 - **beta.40**: un intento de auditoría que no concluye no rebaja lo comprobado
   (errata 6, `custodian_not_configured`), pista y mayúsculas de `--subject` y
   ámbito visible en `remember` y `state show` (ADR-0072).
@@ -69,12 +72,6 @@ Las últimas betas, de la más reciente a la más antigua (detalle en
   **No incluye** `recall` (ADR-0064), el estado de una casilla ni `history`
   (ADR-0065) ni las anclas: los dos ADR entran sólo como documentos
   aceptados, sin implementar.
-- **beta.35**: idempotencia real de hook-runs por `run_id` bajo lock de
-  custodia (reparación H0–H4, cuatro rondas adversariales), vigencia de
-  cadena vacía coherente (#181), `writer_gate_busy` y planificación sin
-  TOCTOU con compactación (#186/#187), contrato rc=3 descubrible (#188),
-  linaje y proyecciones verificadas (ADR-0061) y runner de auditoría
-  optativo (ADR-0062, sin activar).
 
 La plantilla de `authority` la genera `--emit-authority-template` en
 `plan-write` y `checkpoint plan` (#71, cerrado).
@@ -103,7 +100,7 @@ P0–P2 del plan llegaron en beta.31 y la paginación en origen de
 Hasta beta.30 las betas se marcaban como prerelease en GitHub; desde beta.31
 se publican como release normal, así que GitHub muestra la más reciente como
 “Latest”. El update-check de AN-KLA no depende de ese distintivo: consulta el
-índice de releases, incluye prereleases y descubre beta.40.
+índice de releases, incluye prereleases y descubre beta.41.
 **Limitación conocida**: el soporte de Windows permanece diferido por
 decisión del operador (el protocolo de anclaje y partes de la suite son
 POSIX; la candidata se declara procedible para macOS/Linux) — ver la
@@ -117,7 +114,7 @@ verificación canónica es la CI local — suite, wheel aislado, upgrades por
 etiqueta y gates de tamaños/registro, con ronda adversarial `proceed` antes
 de cada tag (la evidencia de beta.18 está en su
 [ronda REL](docs/releases/v0.1.0-beta.18-adversarial.md)). Para instalar
-usa el comando fijado a beta.40 de la sección siguiente; para actualizar
+usa el comando fijado a beta.41 de la sección siguiente; para actualizar
 entre betas, consulta
 [Uso diario y mantenimiento](docs/uso-diario.md#actualizar-desde-otra-beta).
 
@@ -171,7 +168,7 @@ Desde la raíz del proyecto consumidor en macOS o Linux:
 python3.12 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip
 .venv/bin/python -m pip install \
-  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.40"
+  "an-kla-memory @ git+https://github.com/kristhianmanue1/an-kla-memory.git@v0.1.0-beta.41"
 .venv/bin/python -m an_kla --version
 .venv/bin/python -m an_kla --project-root . init
 .venv/bin/python -m an_kla --project-root . context plan --operation install

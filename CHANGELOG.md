@@ -10,7 +10,7 @@ El formato de cada entrada sigue [Keep a Changelog](https://keepachangelog.com/e
 por intención, y el proyecto usa [versionado semántico](https://semver.org/lang/es/)
 en fase de pre-release `0.1.0`.
 
-## [Sin publicar]
+## [v0.1.0-beta.41]
 
 **Citas de conversación con resolutor (ADR-0073; contrato `memoria/conversacion-resolutor/v1`, 31 casos)**:
 un ancla `conversation` de un `fact`, una `decision` o un `state` se comprueba con un **resolutor** (un
@@ -35,6 +35,16 @@ la página y la clave. Una evidencia de más de 16 384 bytes anula la cobertura 
 (`coverage_error`). Las reglas no cambian y lo guardado no se recalcula. Los agentes de Claude Code llevan
 `AN_KLA_AGENT_CLI=claude-code`. Detalle en
 [`docs/architecture/0073-citas-conversacion-resolutor.md`](docs/architecture/0073-citas-conversacion-resolutor.md).
+
+**La suite no tumba la máquina (ADR-0074; sólo para quien desarrolla)**: `ci_local` corre la suite completa
+una vez (antes, cinco) y el Python 3.9 va a `ci_local --matrix`; cada paso pesado corre en su sesión con un
+vigilante de carga (`scripts/load_guard.py`) que lo aborta con **rc 75**, «abortada por carga»
+(`AN_KLA_CI_LOAD_ABORT`, 30 por defecto), y `scripts/run_guarded.py` hace lo mismo para una orden suelta; las
+pruebas lanzan sus procesos con dueño (`tests/proc_support.py`) y usan una plantilla de repo con huella.
+`identity_c0` guarda en caché, **por proceso**, `repo_id_for` y `branch_for`: se invalida si cambia
+`.git/config` o `HEAD`, o el entorno; en el servidor MCP, un cambio de la configuración global de git dentro
+de ese proceso no la invalida (hay que reiniciarlo). Detalle en
+[`docs/architecture/0074-suite-sin-tumbar-la-maquina.md`](docs/architecture/0074-suite-sin-tumbar-la-maquina.md).
 
 ## [v0.1.0-beta.40]
 
