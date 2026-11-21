@@ -203,6 +203,49 @@ def _git(checkout: str | os.PathLike[str], *args: str) -> str | None:
     return done.stdout.rstrip("\n") if done.returncode == 0 else None
 
 
+# --- cache of the answers derived from the repository (ADR-0074 §4) ------------
+#
+# ``repo_id_for`` and ``branch_for`` run 1-4 commands each time an identity is built (the MCP server builds one on every call).  Inside one process the
+# answer only changes when the repository's own files change: the key is the real path of the checkout plus the identity (inode, size, ``mtime_ns``)
+# of ``.git/config`` (the remote) or of ``HEAD`` (the branch), and the environment that steers the configuration.  A changed remote or branch rewrites
+# those files (the tool renames a lock over them), so it misses the cache.  Without a resolvable ``.git`` (a subdirectory, a bare repo) nothing is cached.
+
+_CACHE: dict[tuple, Any] = {}
+_CACHE_ENV = ("GIT_CONFIG_GLOBAL", "GIT_CONFIG_SYSTEM", "GIT_CONFIG_NOSYSTEM", "GIT_CONFIG_COUNT", "HOME", "XDG_CONFIG_HOME", *_GIT_REDIRECTING_ENV)
+
+
+def clear_cache() -> None:
+    _CACHE.clear()
+
+
+def _stat_key(path: Path) -> tuple[int, int, int]:
+    st = os.stat(path)
+    return (st.st_ino, st.st_size, st.st_mtime_ns)
+
+
+def _cache_key(kind: str, checkout: str | os.PathLike[str]) -> tuple | None:
+    """``None`` when the repository directory cannot be resolved without running anything (then nothing is cached)."""
+
+    try:
+        root = Path(os.path.realpath(checkout))
+        dot = root / ".git"
+        if dot.is_dir():
+            gitdir = common = dot
+        elif dot.is_file():  # a linked worktree: ``gitdir: <path>``, and ``commondir`` points at the main one
+            text = dot.read_text(encoding="utf-8").strip()
+            if not text.startswith("gitdir:"):
+                return None
+            gitdir = (root / text[len("gitdir:"):].strip()).resolve()
+            marker = gitdir / "commondir"
+            common = (gitdir / marker.read_text(encoding="utf-8").strip()).resolve() if marker.is_file() else gitdir
+        else:
+            return None
+        watched = _stat_key(common / "config") if kind == "repo" else _stat_key(gitdir / "HEAD")
+        return (kind, str(root), watched, tuple(os.environ.get(name) for name in _CACHE_ENV))
+    except (OSError, ValueError, UnicodeError):
+        return None
+
+
 def git_version() -> tuple[int, ...] | None:
     """Installed Git version as a tuple, or ``None`` when absent or unparsable."""
 
@@ -230,8 +273,18 @@ def git_problem() -> str | None:
 
 
 def repo_id_for(checkout: str | os.PathLike[str]) -> str:
-    """Canonical ``repo.id`` of a checkout or worktree (cases 1, 2 and 3)."""
+    """Canonical ``repo.id`` of a checkout or worktree (cases 1, 2 and 3); cached inside the process (see ``_cache_key``)."""
 
+    key = _cache_key("repo", checkout)
+    if key is not None and key in _CACHE:
+        return _CACHE[key]
+    value = _repo_id_uncached(checkout)
+    if key is not None:
+        _CACHE[key] = value
+    return value
+
+
+def _repo_id_uncached(checkout: str | os.PathLike[str]) -> str:
     url = _git(checkout, "remote", "get-url", "origin")
     if url:
         root = _git(checkout, "rev-parse", "--show-toplevel") or os.fspath(checkout)
@@ -257,9 +310,15 @@ def branch_for(checkout: str | os.PathLike[str]) -> str | None:
     ``heads/<name>`` when a tag shares the name.
     """
 
+    key = _cache_key("branch", checkout)
+    if key is not None and key in _CACHE:
+        return _CACHE[key]
     ref = _git(checkout, "symbolic-ref", "--quiet", "HEAD")
     prefix = "refs/heads/"
-    return ref[len(prefix):] if ref and ref.startswith(prefix) else None
+    value = ref[len(prefix):] if ref and ref.startswith(prefix) else None
+    if key is not None:
+        _CACHE[key] = value
+    return value
 
 
 # --- validation ------------------------------------------------------------
