@@ -30,6 +30,7 @@ EXIT_ABORTED = 75
 SAMPLES = 6
 INTERVAL = 5.0
 TERM_WAIT = 10.0
+GUARDED_ENV = "AN_KLA_GUARDED_RUN"  # lo pone run_guarded en el entorno del paso: dentro de una corrida guardada, el líder de la sesión es el paso
 
 
 def threshold_from_env(default: float = DEFAULT_THRESHOLD) -> float:
@@ -216,7 +217,7 @@ def run_guarded(argv: list[str], *, threshold: float | None = None, cwd: str | N
     threshold = threshold_from_env() if threshold is None else threshold
     with tempfile.TemporaryDirectory(prefix="load-guard-") as tmp:
         reason_path = Path(tmp) / "reason.json"
-        step = subprocess.Popen(argv, cwd=cwd, env=env, start_new_session=True)
+        step = subprocess.Popen(argv, cwd=cwd, env={**(os.environ if env is None else env), GUARDED_ENV: "1"}, start_new_session=True)
         guard_cmd = [sys.executable, str(Path(__file__).resolve()), "--sid", str(step.pid), "--pid", str(step.pid), "--parent", str(os.getpid()),
                      "--reason", str(reason_path), "--threshold", str(threshold), "--interval", str(interval), "--samples", str(samples),
                      "--term-wait", str(term_wait)]
@@ -257,7 +258,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--load-file", default=None, help="fuente de carga inyectable, sólo para pruebas: un archivo con un número")
     args = parser.parse_args(argv)
     return watch(args.sid, args.pid, threshold=args.threshold, reason=args.reason, parent=args.parent, interval=args.interval,
-                 samples=args.samples, term_wait=args.term_wait, load=read_load_file(args.load_file) if args.load_file else None)
+                 exclude={args.parent} if args.parent else set(), samples=args.samples, term_wait=args.term_wait, load=read_load_file(args.load_file) if args.load_file else None)
 
 
 if __name__ == "__main__":

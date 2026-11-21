@@ -157,6 +157,17 @@ class AbortTests(GuardCase):
         self.assertTrue(alive(orphan))
 
 
+class ParentIsNeverKilledTests(GuardCase):
+    def test_q02_the_guard_excludes_its_parent_even_if_it_sits_in_the_run(self) -> None:
+        """Q-02: defensa en profundidad: aunque el padre (``ci_local``) estuviera dentro de la sesión vigilada, el vigilante no lo mata."""
+        parent = self.spawn_session(HANG)  # un «padre» que, por error de configuración, es la propia sesión vigilada
+        status = load_guard.main(["--sid", str(parent.pid), "--pid", str(parent.pid), "--parent", str(parent.pid), "--reason", str(self.dir / "r.json"),
+                                  "--threshold", "20", "--interval", "0.05", "--samples", "3", "--term-wait", "1", "--load-file", str(self.load)])
+        self.assertEqual(status, 0)  # no hay nada que matar: el padre está excluido
+        self.assertTrue(alive(parent.pid))
+        self.assertFalse((self.dir / "r.json").exists())
+
+
 class LifecycleTests(GuardCase):
     def test_the_guard_of_a_step_is_gone_before_the_next_one_starts(self) -> None:
         self.load.write_text("0\n")

@@ -9,9 +9,12 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from tests import proc_support
 from tests.remember_support import ROOT, cli_env
+
+sys.path.insert(0, str(ROOT / "scripts"))
 
 SLEEPER = "import time\nwhile True:\n    time.sleep(60)"
 WITH_GRANDCHILD = ("import subprocess, sys, time\n"
@@ -97,6 +100,37 @@ class DeathByGroupTests(unittest.TestCase):
         self.assertIn(child.pid, [pid for pid, _name in proc_support.children_left()])
         proc_support.terminate(child)
         self.assertEqual(proc_support.children_left(), [])
+
+    def test_q03_inside_a_guarded_run_children_left_also_finds_a_grandchild_reparented_to_pid_1(self) -> None:
+        """Q-03: el árbol de ``ppid`` pierde al nieto huérfano (PID 1); dentro de una corrida guardada la búsqueda por sesión lo encuentra."""
+        import json
+        import load_guard
+
+        code = ("import json, os, subprocess, sys, time\n"
+                "r, w = os.pipe()\n"
+                "if os.fork() == 0:\n"
+                "    if os.fork() == 0:\n"
+                "        null = os.open(os.devnull, os.O_RDWR); os.dup2(null, 1); os.dup2(null, 2)\n"  # sin tubería heredada: no retiene al que lee
+                "        os.write(w, str(os.getpid()).encode()); os.close(w)\n"
+                "        time.sleep(300)\n"
+                "    os._exit(0)\n"
+                "orphan = int(os.read(r, 20))\n"
+                "time.sleep(0.5)\n"
+                f"sys.path.insert(0, {str(ROOT)!r})\n"
+                "from tests import proc_support\n"
+                "print(json.dumps([pid for pid, _ in proc_support.children_left()]), flush=True)\n"
+                "print(orphan, flush=True)\n")
+        with tempfile.TemporaryDirectory() as temp:
+            out = Path(temp) / "out"
+            wrapper = f"import subprocess, sys; open({str(out)!r}, 'w').write(subprocess.run([sys.executable, '-c', {code!r}], capture_output=True, text=True).stdout)"
+            outcome = load_guard.run_guarded([sys.executable, "-c", wrapper], threshold=1e9, load_file=os.devnull, interval=0.2, term_wait=2)
+            self.assertEqual(outcome.rc, 0)
+            seen, orphan = out.read_text().split("\n")[:2]
+            self.assertIn(int(orphan), json.loads(seen))  # el huérfano reparentado a PID 1 se ve
+            self.assertTrue(gone(int(orphan)))  # y run_guarded lo mató al acabar el paso (children_left)
+        # fuera de una corrida guardada sólo se mira por ppid: sin falsos positivos por la shell del usuario
+        with mock.patch.dict(os.environ, {"AN_KLA_GUARDED_RUN": ""}):
+            self.assertEqual(proc_support.children_left(), [])
 
     def test_stop_process_handles_a_multiprocessing_child_and_one_that_never_started(self) -> None:
         import multiprocessing

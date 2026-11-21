@@ -140,7 +140,13 @@ def stop_process(process: Any, wait: float = TERM_WAIT) -> None:
 
 
 def children_left() -> list[tuple[int, str]]:
-    """Los descendientes vivos de este proceso ``[(pid, nombre)]``: tras una prueba no debe quedar ninguno."""
+    """Los descendientes vivos de este proceso ``[(pid, nombre)]``: tras una prueba no debe quedar ninguno.
+
+    Dentro de una corrida guardada (``run_guarded`` pone ``AN_KLA_GUARDED_RUN`` en el entorno del paso, que lo heredan sus descendientes) busca además por la **sesión**
+    (sin contar a este proceso ni a sus ancestros):
+    así encuentra también a un nieto reparentado a PID 1, que el árbol de ``ppid`` pierde. Fuera de una corrida guardada la sesión es la de la shell del
+    usuario (su terminal, otros procesos suyos): buscar por ella daría falsos positivos, así que sólo mira los descendientes por ``ppid``. Límite
+    declarado: sin corrida guardada, un huérfano reparentado a PID 1 no se ve."""
     import importlib
 
     scripts = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "scripts")
@@ -148,5 +154,11 @@ def children_left() -> list[tuple[int, str]]:
         sys.path.insert(0, scripts)
     guard = importlib.import_module("load_guard")
     tracker = getattr(getattr(__import__("multiprocessing.resource_tracker", fromlist=["x"]), "_resource_tracker", None), "_pid", None)
-    found = guard.find_run(None, os.getpid(), exclude={os.getpid(), tracker})  # el rastreador de recursos de `multiprocessing` vive lo que el intérprete
+    guarded = os.environ.get(guard.GUARDED_ENV) == "1"
+    table = guard.process_table()
+    ancestors, pid = set(), os.getpid()
+    while pid in table and pid not in ancestors:  # los ancestros (quien nos lanzó dentro de la corrida) no son «hijos que quedan»
+        ancestors.add(pid)
+        pid = table[pid][0]
+    found = guard.find_run(os.getsid(0) if guarded else None, os.getpid(), exclude=ancestors | {os.getpid(), tracker}, table=table)  # el rastreador de recursos de `multiprocessing` vive lo que el intérprete
     return [(pid, guard.command_name(pid)) for pid in sorted(found)]
