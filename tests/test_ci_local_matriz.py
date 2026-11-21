@@ -69,10 +69,10 @@ class PasoMatrizTests(unittest.TestCase):
            mock.patch.object(ci_local.sys, "executable", executable), \
            mock.patch.object(ci_local.sys, "version_info",
                              (3, 12, 0, "final", 0)), \
-           mock.patch.object(ci_local, "subprocess") as sub, \
+           mock.patch.object(ci_local, "run_step", return_value="OK") as step, \
            redirect_stdout(captured):
             os.environ.pop(_SIN_ESCAPE, None)
-            sub.run.return_value = mock.Mock(returncode=0)
+            sub = mock.Mock(run=step)  # `run` = el paso pesado con su freno (ADR-0074): nunca lanza una suite aquí
             estado = ci_local.paso_matriz()
         return estado, sub, captured.getvalue()
 

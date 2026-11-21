@@ -35,6 +35,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import load_guard  # noqa: E402  (ADR-0074: el freno por carga de cada paso pesado)
+
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON = sys.executable
 CHECK_SIZES = ROOT / "scripts" / "check_sizes.py"
@@ -43,6 +47,25 @@ CHECK_ADRS = ROOT / "scripts" / "check_adr_registry.py"
 REDTEAM = ROOT / "scripts" / "redteam_consistent_rewrite.py"
 KILL9_TEST = ROOT / "tests" / "test_inbox_crash.py"
 SUPPORTED_VERSIONS = ("3.9", "3.12", "3.13")
+
+
+ABORTED: list[dict] = []  # los motivos de los pasos que el vigilante abortó por carga: ``main`` sale con 75
+
+
+def run_step(argv: list[str], *, cwd=ROOT, env=None, **guard) -> str:
+    """Un paso pesado (ADR-0074 §2): en su propia sesión, con su vigilante, que muere con el paso. ``ci_local`` queda fuera de esa sesión.
+
+    ``OK``, ``FAIL`` (rc distinto de 0 o ``children_left``: quedó algún proceso de la corrida y se mató) o ``ABORT`` (por carga)."""
+    outcome = load_guard.run_guarded(argv, cwd=str(cwd), env=env, **guard)
+    if outcome.aborted:
+        ABORTED.append(outcome.reason)
+        print(f"    ABORT: abortada por carga (umbral {outcome.reason.get('threshold')}); muestras: {outcome.reason.get('samples')}")
+        print(f"    matados: {outcome.reason.get('killed')}")
+        return "ABORT"
+    if outcome.left:
+        print(f"    FAIL: children_left: {[{'pid': p, 'command': n} for p, n in outcome.left]} (se mataron)")
+        return "FAIL"
+    return "OK" if outcome.rc == 0 else "FAIL"
 
 
 def paso_import() -> str:
@@ -74,12 +97,7 @@ def paso_tests(simulate_ci: bool) -> str:
     if simulate_ci:
         env["GITHUB_ACTIONS"] = "true"
         env["CI"] = "true"
-    result = subprocess.run(
-        [PYTHON, "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"],
-        cwd=ROOT,
-        env=env,
-    )
-    estado = "OK" if result.returncode == 0 else "FAIL"
+    estado = run_step([PYTHON, "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"], env=env)
     print(f"    {estado}")
     return estado
 
@@ -139,13 +157,8 @@ def paso_matriz() -> str:
             continue
         env = dict(os.environ)
         env["PYTHONPATH"] = str(ROOT)
-        result = subprocess.run(
-            [interprete, "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"],
-            cwd=ROOT,
-            env=env,
-        )
-        nombre = Path(interprete).name
-        estados[version] = "OK" if result.returncode == 0 else f"FAIL ({nombre})"
+        estado = run_step([interprete, "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"], env=env)
+        estados[version] = "OK" if estado == "OK" else f"{estado} ({Path(interprete).name})"
     for version, estado in estados.items():
         print(f"    python{version}: {estado}")
     if any(estado.startswith("FAIL") for estado in estados.values()):
@@ -171,10 +184,7 @@ def paso_kill9_bandeja() -> str:
         return "SKIP"
     env = dict(os.environ)
     env["AN_KLA_SLOW_KILL9"] = "1"
-    result = subprocess.run(
-        [PYTHON, "-m", "unittest", "tests.test_inbox_crash.Kill9MatrixTests"], cwd=ROOT, env=env
-    )
-    estado = "OK" if result.returncode == 0 else "FAIL"
+    estado = run_step([PYTHON, "-m", "unittest", "tests.test_inbox_crash.Kill9MatrixTests"], env=env)
     print(f"    {estado}")
     return estado
 
@@ -233,6 +243,9 @@ def main() -> int:
     for nombre, estado in resultados.items():
         print(f"  {nombre}: {estado}")
 
+    if ABORTED:
+        print("\nci_local: ABORTADA POR CARGA (rc 75); no es un fallo de las pruebas")
+        return load_guard.EXIT_ABORTED
     fallos = [n for n, e in resultados.items() if e == "FAIL"]
     if not fallos:
         print("\nci_local: OK")
