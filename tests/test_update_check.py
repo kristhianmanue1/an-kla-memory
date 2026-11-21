@@ -187,6 +187,7 @@ def normalized_release_tag_inv(version: str) -> str:
         "0.1.0b38": "0.1.0-beta.38",
         "0.1.0b39": "0.1.0-beta.39",
         "0.1.0b40": "0.1.0-beta.40",
+        "0.1.0b41": "0.1.0-beta.41",
     }
     if version in mapping:
         return mapping[version]

@@ -10,7 +10,7 @@ El formato de cada entrada sigue [Keep a Changelog](https://keepachangelog.com/e
 por intención, y el proyecto usa [versionado semántico](https://semver.org/lang/es/)
 en fase de pre-release `0.1.0`.
 
-## [Sin publicar]
+## [v0.1.0-beta.41]
 
 **Citas de conversación con resolutor (ADR-0073; contrato `memoria/conversacion-resolutor/v1`, 31 casos)**:
 un ancla `conversation` de un `fact`, una `decision` o un `state` se comprueba con un **resolutor** (un
