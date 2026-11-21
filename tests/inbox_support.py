@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import atexit
+import hashlib
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -13,6 +16,7 @@ from unittest import mock
 
 from an_kla.store import MemoryStore
 from tests import write_commit_scenarios as scenarios
+from tests import proc_support
 
 GIT_ENV = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1"}
 AGENT_ENV = {
@@ -40,11 +44,54 @@ def run_git(cwd: Path, *args: str) -> None:
     )
 
 
-def make_project(path: Path) -> Path:
-    """Directorio con un repo Git y un commit vacío (C0 exige un repo)."""
+#: Plantilla de repo por proceso de prueba (ADR-0074 §4): ``init`` y el commit base se hacen una vez; cada ``make_project`` la copia sin lanzar nada.
+#: ``AN_KLA_TEST_NO_REPO_TEMPLATE=1`` vuelve al camino de siempre (para medir antes y después).
+_TEMPLATE: dict[str, Any] = {}
 
-    run_git(path, "init", "-q")
-    run_git(path, "commit", "-q", "--allow-empty", "-m", "base")
+
+def tree_digest(root: Path) -> str:
+    """sha256 del árbol: rutas, tipo, modo y contenido (o destino del enlace) de cada entrada, en orden."""
+
+    digest = hashlib.sha256()
+    for path in sorted(root.rglob("*")):
+        rel = path.relative_to(root).as_posix()
+        if path.is_symlink():
+            digest.update(f"L {rel} {os.readlink(path)}\n".encode())
+        elif path.is_dir():
+            digest.update(f"D {rel}\n".encode())
+        else:
+            digest.update(f"F {rel} {path.stat().st_mode & 0o777:o} ".encode() + hashlib.sha256(path.read_bytes()).digest() + b"\n")
+    return digest.hexdigest()
+
+
+def _build_template() -> None:
+    if "base" in _TEMPLATE:  # regenerar: la plantilla tocada se tira
+        shutil.rmtree(_TEMPLATE["base"], ignore_errors=True)
+    else:
+        atexit.register(lambda: shutil.rmtree(_TEMPLATE.get("base", ""), ignore_errors=True))
+    base = Path(tempfile.mkdtemp(prefix="repo-template-")).resolve()
+    run_git(base, "init", "-q")
+    run_git(base, "commit", "-q", "--allow-empty", "-m", "base")
+    locks = list(base.rglob("*.lock"))
+    if locks:
+        raise RuntimeError(f"la plantilla de repo quedó con candados: {locks}")
+    _TEMPLATE.update(base=base, digest=tree_digest(base / ".git"))
+
+
+def make_project(path: Path) -> Path:
+    """Directorio con un repo Git y un commit vacío (C0 exige un repo).
+
+    Copia la plantilla del proceso (``shutil.copytree`` del ``.git``, sin candados y sin lanzar ningún proceso). Se protege con una huella, no con
+    permisos: antes de cada copia se comprueba el sha256 de su árbol y, si no coincide, se regenera. El ``repo.id`` local depende de la ruta, así que
+    sigue siendo distinto en cada copia."""
+
+    if os.environ.get("AN_KLA_TEST_NO_REPO_TEMPLATE") == "1":
+        run_git(path, "init", "-q")
+        run_git(path, "commit", "-q", "--allow-empty", "-m", "base")
+        return path
+    if "base" not in _TEMPLATE or tree_digest(_TEMPLATE["base"] / ".git") != _TEMPLATE["digest"]:
+        _build_template()
+    shutil.copytree(_TEMPLATE["base"] / ".git", path / ".git", ignore=shutil.ignore_patterns("*.lock"))
     return path
 
 
@@ -82,7 +129,7 @@ class InboxCase(unittest.TestCase):
         """Otro proceso toma ``memory/inbox/.lock`` (``ex`` o ``sh``) hasta cerrar su stdin."""
 
         self.inbox.mkdir(exist_ok=True)
-        child = subprocess.Popen(
+        child = proc_support.spawn_for(self,
             [sys.executable, "-I", "-c", HOLDER, str(self.inbox / ".lock"), mode],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
         )
@@ -176,7 +223,7 @@ class EntryFactory:
 def hold_flock(path: Path, mode: str = "ex") -> subprocess.Popen:
     """Un proceso ajeno toma un ``flock`` sobre ``path`` hasta cerrar su stdin (ver ``InboxCase.release``)."""
 
-    child = subprocess.Popen(
+    child = proc_support.spawn(
         [sys.executable, "-I", "-c", HOLDER, str(path), mode],
         stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
     )

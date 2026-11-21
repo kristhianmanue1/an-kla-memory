@@ -21,6 +21,7 @@ from an_kla.store import MemoryStore
 from tests.inbox_support import AGENT_ENV, HOLDER
 from tests.remember_support import cli
 from tests.rejected_support import POLICY, RejectedCase, validates
+from tests import proc_support
 
 
 class Crash(Exception):
@@ -178,7 +179,7 @@ class RequeueTests(RejectedCase):
 
 class RequeueLocksTests(RejectedCase):
     def hold(self, path: Path, mode: str = "ex") -> subprocess.Popen:
-        child = subprocess.Popen(
+        child = proc_support.spawn_for(self,
             [sys.executable, "-I", "-c", HOLDER, str(path), mode],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
         )

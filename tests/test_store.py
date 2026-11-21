@@ -22,6 +22,7 @@ from an_kla.identity import IdentityError, read_binding
 from an_kla.index import INDEX_PROFILE, build_index, detect_fts5, record_text, resolve_index, verify_index_deep
 from an_kla.retrieval import SCAN_PROFILE, retrieve
 from an_kla.mcp import ReadOnlyMcp
+from tests import proc_support
 from an_kla.store import ConcurrentUpdateError, IntegrityError, LockBusyError, MemoryStore
 from an_kla.subject_binding import check_subject_ref_binding
 from an_kla.subject_ref import derive_namespace
@@ -423,6 +424,7 @@ class MemoryStoreTests(unittest.TestCase):
             for index in (1, 2)
         ]
         for process in processes:
+            self.addCleanup(proc_support.stop_process, process)
             process.start()
         for process in processes:
             process.join(10)
@@ -438,6 +440,7 @@ class MemoryStoreTests(unittest.TestCase):
             for index in range(1, 21)
         ]
         for process in processes:
+            self.addCleanup(proc_support.stop_process, process)
             process.start()
         for process in processes:
             process.join(15)

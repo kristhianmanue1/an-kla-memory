@@ -22,6 +22,7 @@ from tests.remember_support import ROOT, cli, cli_env, remember
 from tests.scope_support import ScopeCase
 from tests.test_document_v2_write import DERIVATION, DOC_SHA, MANIFEST, QUOTE, shortcut
 from tests.test_scope_compat import BASELINE_TAG, baseline_tree
+from tests import proc_support
 
 V1_DOCUMENT = {
     "schema": "memoria/ancla/v1", "quote": QUOTE,
@@ -123,7 +124,7 @@ class RollbackTests(BetaCase):
         self.assertNotIn("recorded", audit["records"][0])  # beta.38 writes nothing when auditing
 
     def test_a_pending_v4_entry_with_a_v2_anchor_is_rejected_by_beta38_and_drains_here(self) -> None:
-        holder = subprocess.Popen(  # the write lock is held by another process: `remember` queues and does not drain
+        holder = proc_support.spawn_for(self,  # the write lock is held by another process: `remember` queues and does not drain
             [sys.executable, "-I", "-c", "import fcntl,os,sys\nfd=os.open(sys.argv[1],os.O_RDWR|os.O_CREAT,0o600)\nfcntl.flock(fd,fcntl.LOCK_EX)\nsys.stdout.write('ready\\n');sys.stdout.flush()\nsys.stdin.read()\n",
              str(Path(self.store.root) / ".write.lock")], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
         )

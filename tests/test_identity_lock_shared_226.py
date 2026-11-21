@@ -20,12 +20,13 @@ from unittest import mock
 from an_kla import inbox
 from tests.inbox_support import AGENT_ENV, HOLDER, InboxCase
 from tests.remember_support import cli
+from tests import proc_support
 
 
 class SharedIdentityLockTests(InboxCase):
     def hold_identity(self, mode: str) -> subprocess.Popen:
         lock = Path(self.store.store_root) / ".identity.lock"
-        child = subprocess.Popen(
+        child = proc_support.spawn_for(self,
             [sys.executable, "-I", "-c", HOLDER, str(lock), mode],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
         )

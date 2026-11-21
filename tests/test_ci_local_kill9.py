@@ -31,17 +31,17 @@ class KillNinePassTests(unittest.TestCase):
         for code, expected in ((0, "OK"), (1, "FAIL")):
             with self.subTest(code=code):
                 env = {k: v for k, v in os.environ.items() if k != "AN_KLA_CI_LOCAL_KILL9"}
-                with mock.patch.dict(os.environ, env, clear=True), mock.patch.object(ci_local, "subprocess") as sub:
-                    sub.run.return_value.returncode = code
+                with mock.patch.dict(os.environ, env, clear=True), mock.patch.object(ci_local.load_guard, "run_guarded") as guarded:
+                    guarded.return_value = mock.Mock(rc=code, aborted=False, left=[], reason={})  # el paso pesado, con su freno (ADR-0074)
                     self.assertEqual(ci_local.paso_kill9_bandeja(), expected)
-                args, kwargs = sub.run.call_args
+                args, kwargs = guarded.call_args
                 self.assertEqual(args[0][-1], "tests.test_inbox_crash.Kill9MatrixTests")
                 self.assertEqual(kwargs["env"]["AN_KLA_SLOW_KILL9"], "1")
-                self.assertEqual(kwargs["cwd"], ci_local.ROOT)
+                self.assertEqual(kwargs["cwd"], str(ci_local.ROOT))
 
     def test_is_part_of_the_summary_and_the_slow_test_skips_without_the_variable(self) -> None:
         source = (ROOT / "scripts" / "ci_local.py").read_text()
-        self.assertIn('"kill9_bandeja": paso_kill9_bandeja()', source)
+        self.assertIn('("kill9_bandeja", lambda: paso_kill9_bandeja(), True)', source)
         crash = (ROOT / "tests" / "test_inbox_crash.py").read_text()
         self.assertIn('@unittest.skipUnless(SLOW, "prueba lenta', crash)
         self.assertIn('os.environ.get("AN_KLA_SLOW_KILL9") == "1"', crash)

@@ -13,6 +13,7 @@ from tests.inbox_support import run_git
 from tests.remember_support import ROOT, cli, cli_env, remember
 from tests.scope_support import ScopeCase
 from tests.test_scope_compat import BASELINE_TAG, baseline_tree
+from tests import proc_support
 
 FILE = "El servicio se despliega en el puerto 8081 siempre.\nLa rama de trabajo se llama principal.\n"
 V2 = "fact-checks-rules/v2"
@@ -66,7 +67,7 @@ class WriteTests(CoverageCase):
     def test_a_queued_state_drained_by_another_invocation_keeps_the_state_mode(self) -> None:
         """R70-02: el `kind` llega al cálculo del vaciado; sin él saldría `none` por las cifras (modo `fact`)."""
 
-        holder = subprocess.Popen(
+        holder = proc_support.spawn_for(self,
             [sys.executable, "-I", "-c", "import fcntl,os,sys\nfd=os.open(sys.argv[1],os.O_RDWR|os.O_CREAT,0o600)\nfcntl.flock(fd,fcntl.LOCK_EX)\nsys.stdout.write('ready\\n');sys.stdout.flush()\nsys.stdin.read()\n",
              str(Path(self.store.root) / ".write.lock")], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True,
         )

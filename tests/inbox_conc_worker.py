@@ -1,8 +1,8 @@
 """Procesos del criterio 2 (concurrencia): ``python -m tests.inbox_conc_worker <orden> ...``.
 
 ``enqueue <proyecto> <prefijo> <n> <salida.jsonl>`` encola ``n`` textos únicos y registra cada
-resultado con su latencia; ``drain_loop <proyecto> <salida.jsonl> <archivo-stop>`` vacía en bucle
-con plazo 0 hasta que existe el archivo de parada, una línea de resumen por llamada.
+resultado con su latencia; ``drain_loop <proyecto> <salida.jsonl> <archivo-stop> [plazo]`` vacía en bucle
+con plazo 0 hasta que existe el archivo de parada, o vence su plazo propio (900 s por defecto: rc 3), o desaparece el proyecto (rc 4), una línea de resumen por llamada.
 """
 
 from __future__ import annotations
@@ -35,8 +35,13 @@ def main(argv: list[str]) -> int:
         return 0
     if command == "drain_loop":
         out, stop = argv[2], argv[3]
+        deadline = time.monotonic() + (float(argv[4]) if len(argv) > 4 else 900.0)
         with open(out, "a", buffering=1) as handle:
             while not os.path.exists(stop):
+                if not os.path.isdir(argv[1]):
+                    return 4
+                if time.monotonic() > deadline:
+                    return 3
                 result = inbox_drain.drain(store, lock_wait_seconds=0.0)
                 handle.write(json.dumps({
                     "state": result["state"], "drain_error": result.get("drain_error"),

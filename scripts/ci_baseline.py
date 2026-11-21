@@ -5,7 +5,7 @@ import json
 import hashlib
 from pathlib import Path
 
-from scripts.ci_results import RETIRED
+from scripts.ci_results import REMOVED, RETIRED
 
 
 def load_baseline(directory):
@@ -44,7 +44,7 @@ def load_baseline(directory):
         candidates = [record for record in records if runtime_key(record) == runtime_key(expected)
                       and record["mode"] == expected["mode"]]
         required = set(expected["case_ids"])
-        if not required or not any(set(record["cases"]) - RETIRED == required for record in candidates):
+        if not required or not any(set(record["cases"]) - RETIRED - REMOVED == required for record in candidates):
             raise ValueError("legacy_full_suite_inventory_incomplete")
     for record in records:
         record["input_signature"] = manifest["input_signature"]
@@ -66,7 +66,7 @@ def compare_worker(report, records):
     compared = set()
     for record in selected:
         for key, previous in record["cases"].items():
-            if key in RETIRED:
+            if key in RETIRED or key in REMOVED:
                 continue
             if key.startswith("fixture:"):
                 # Only a class setup skip is resolved by ci_results; other fixtures are invalid.
@@ -100,5 +100,5 @@ def coverage_gaps(reports, records):
     """No observed legacy runtime/mode may disappear from the new audit."""
     provided = {(runtime_key(r), tuple(sorted(r["mode"].items()))) for r in reports}
     required = {(runtime_key(r), tuple(sorted(r["mode"].items()))) for r in records
-                if any(k not in RETIRED for k in r["cases"])}
+                if any(k not in RETIRED and k not in REMOVED for k in r["cases"])}
     return [repr(item) for item in required - provided]

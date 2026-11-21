@@ -10,6 +10,7 @@ import unittest
 
 from an_kla.mcp import PROTOCOL_VERSION
 from an_kla.store import MemoryStore
+from tests import proc_support
 
 
 class McpStdioTests(unittest.TestCase):
@@ -68,7 +69,7 @@ class McpStdioTests(unittest.TestCase):
             expected = store.read_current()
             env = dict(os.environ)
             env["PYTHONPYCACHEPREFIX"] = str(Path(tempfile.gettempdir()) / "an-kla-pycache")
-            process = subprocess.Popen(
+            process = proc_support.spawn_for(self,
                 [sys.executable, "-m", "an_kla.mcp", "--project-root", project_root],
                 cwd=Path(__file__).resolve().parents[1], text=True,
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env,

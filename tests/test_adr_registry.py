@@ -59,8 +59,9 @@ class AdrRegistryTests(unittest.TestCase):
         # 0071 (anclas document de memoria/ancla/v2) aceptada por delegación del orquestador tras r3 proceed.
         # 0072 (fricción de beta.39: errata 6, --subject, ámbito visible) aceptada tras r2 proceed.
         # 0073 (citas de conversación con resolutor) aceptada tras r3 proceed.
+        # 0074 (la suite no tumba la máquina) aceptada tras r3 proceed.
         self.assertEqual(states["Propuesta"], 5)
-        self.assertEqual(states["Aceptada"], 68)
+        self.assertEqual(states["Aceptada"], 69)
 
     def test_detects_gap_and_state_mismatch(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

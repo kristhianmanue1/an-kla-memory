@@ -17,6 +17,7 @@ from unittest.mock import patch
 
 from an_kla.canonical import digest_json
 from an_kla.retrieval import retrieve
+from tests import proc_support
 from an_kla.store import LockBusyError, MemoryStore
 from an_kla.write_policy import (
     WritePolicyError,
@@ -526,6 +527,7 @@ class WriteCommitTests(unittest.TestCase):
             for index in (1, 2)
         ]
         for process in processes:
+            self.addCleanup(proc_support.stop_process, process)
             process.start()
         for process in processes:
             process.join(10)

@@ -1,16 +1,11 @@
-"""test_ci_local_matriz.py — unidad del paso matriz de ci_local (#111/P5).
+"""test_ci_local_matriz.py — unidad del paso matriz de ci_local y de la cuenta de corridas completas (ADR-0074 §3).
 
-Con mocks de ``shutil.which`` y del intérprete: resolución de
-intérpretes (binario dedicado, fallback al intérprete actual, ausencia
--> SKIP), sin correr suite alguna. La pierna anidada real quedó fuera
-de ``test_ci_local_both_modes`` (escape ``AN_KLA_CI_LOCAL_MATRIX=0``)
-para no multiplicar corridas completas.
+Sin correr suite alguna: el paso pesado (``load_guard.run_guarded``) se simula y se cuentan sus llamadas.
 """
 
 from __future__ import annotations
 
 import io
-import os
 import sys
 import unittest
 from contextlib import redirect_stdout
@@ -23,85 +18,118 @@ if sys_path not in sys.path:
 
 import ci_local  # noqa: E402
 
-#: Hermeticidad: los tests de unidad fuerzan la AUSENCIA del escape,
-#: sea cual sea el entorno del proceso que los ejecute (suite anidada,
-#: shell del operador, etc.). Se toma snapshot con patch.dict(os.environ)
-#: y se elimina la clave a mano: os.environ rechaza valores None.
-_SIN_ESCAPE = "AN_KLA_CI_LOCAL_MATRIX"
 
-
-def _sin_matriz_escape():
-    return mock.patch.dict(os.environ)
-
-
-class InterpreteParaTests(unittest.TestCase):
-    def test_prefers_dedicated_binary(self) -> None:
-        with mock.patch.object(
-            ci_local.shutil, "which", return_value="/opt/bin/python3.12"
-        ):
-            self.assertEqual(
-                ci_local._interprete_para("3.12"), "/opt/bin/python3.12"
-            )
-
-    def test_falls_back_to_running_interpreter(self) -> None:
-        with mock.patch.object(
-            ci_local.shutil, "which", return_value=None
-        ), mock.patch.object(ci_local.sys, "version_info", (3, 9, 6, "final", 0)):
-            self.assertEqual(
-                ci_local._interprete_para("3.9"), ci_local.sys.executable
-            )
-
-    def test_absent_version_returns_none(self) -> None:
-        with mock.patch.object(
-            ci_local.shutil, "which", return_value=None
-        ), mock.patch.object(ci_local.sys, "version_info", (3, 12, 0, "final", 0)):
-            self.assertIsNone(ci_local._interprete_para("3.9"))
+def outcome(rc: int = 0) -> mock.Mock:
+    return mock.Mock(rc=rc, aborted=False, left=[], reason={})
 
 
 class PasoMatrizTests(unittest.TestCase):
-    def _run(self, which_map, executable="/actual/python3"):
+    def run_paso(self, matriz: bool, *, es_39: bool = True):
         captured = io.StringIO()
-        with _sin_matriz_escape(), mock.patch.object(
-            ci_local.shutil,
-            "which",
-            side_effect=lambda name: which_map.get(name),
-        ), mock.patch.object(ci_local, "PYTHON", executable), \
-           mock.patch.object(ci_local.sys, "executable", executable), \
-           mock.patch.object(ci_local.sys, "version_info",
-                             (3, 12, 0, "final", 0)), \
-           mock.patch.object(ci_local, "subprocess") as sub, \
-           redirect_stdout(captured):
-            os.environ.pop(_SIN_ESCAPE, None)
-            sub.run.return_value = mock.Mock(returncode=0)
-            estado = ci_local.paso_matriz()
-        return estado, sub, captured.getvalue()
+        with mock.patch.object(ci_local, "_es_39", return_value=es_39), \
+                mock.patch.object(ci_local.load_guard, "run_guarded", return_value=outcome()) as guarded, redirect_stdout(captured):
+            estado = ci_local.paso_matriz(matriz)
+        return estado, guarded, captured.getvalue()
 
-    def test_current_interpreter_covered_without_nested_runs(self) -> None:
-        # Sólo 3.12 disponible y coincide con el intérprete actual:
-        # cubierto por el paso unittest, cero subprocess de suite.
-        estado, sub, salida = self._run({"python3.12": "/actual/python3"})
+    def test_without_matrix_it_is_skip_and_runs_nothing(self) -> None:
+        estado, guarded, salida = self.run_paso(False)
+        self.assertEqual(estado, "SKIP")
+        self.assertIn("SKIP (usa --matrix)", salida)
+        guarded.assert_not_called()
+
+    def test_with_matrix_it_runs_the_discover_with_the_39_of_usr_bin(self) -> None:
+        estado, guarded, salida = self.run_paso(True)
         self.assertEqual(estado, "OK")
-        self.assertIn("cubierto", salida)
-        self.assertIn("python3.9: SKIP", salida)
-        self.assertIn("python3.13: SKIP", salida)
-        sub.run.assert_not_called()
+        argv = guarded.call_args.args[0]
+        self.assertEqual((argv[0], argv[1:3], "discover" in argv), ("/usr/bin/python3", ["-m", "unittest"], True))
+        self.assertIn("python3.9: OK", salida)
 
-    def test_escape_flag_reports_skip(self) -> None:
-        with mock.patch.dict("os.environ", {"AN_KLA_CI_LOCAL_MATRIX": "0"}):
-            captured = io.StringIO()
-            with redirect_stdout(captured):
-                self.assertEqual(ci_local.paso_matriz(), "SKIP")
-        self.assertIn("AN_KLA_CI_LOCAL_MATRIX=0", captured.getvalue())
+    def test_with_matrix_but_no_39_it_is_a_declared_skip(self) -> None:
+        estado, guarded, salida = self.run_paso(True, es_39=False)
+        self.assertEqual(estado, "SKIP")
+        self.assertIn("no es Python 3.9", salida)
+        guarded.assert_not_called()
 
-    def test_missing_binary_is_skip_and_foreign_leg_runs_suite(self) -> None:
-        estado, sub, salida = self._run(
-            {"python3.12": "/opt/py312/bin/python3.12"},
-            executable="/actual/python3",
-        )
-        self.assertEqual(estado, "OK")
-        self.assertIn("python3.9: SKIP", salida)
-        self.assertIn("python3.13: SKIP", salida)
-        sub.run.assert_called_once()  # pierna 3.12 = suite anidada
+    def test_a_failing_39_is_fail(self) -> None:
+        with mock.patch.object(ci_local, "_es_39", return_value=True), redirect_stdout(io.StringIO()):
+            with mock.patch.object(ci_local.load_guard, "run_guarded", return_value=outcome(1)):
+                self.assertEqual(ci_local.paso_matriz(True), "FAIL")
+
+    def test_es_39_requires_an_existing_python_39(self) -> None:
+        self.assertFalse(ci_local._es_39("/no/existe/python"))
+        with mock.patch.object(ci_local.Path, "exists", return_value=True), \
+                mock.patch.object(ci_local.subprocess, "run", return_value=mock.Mock(returncode=0, stdout="3.12\n")):
+            self.assertFalse(ci_local._es_39("/x/python3"))
+        with mock.patch.object(ci_local.Path, "exists", return_value=True), \
+                mock.patch.object(ci_local.subprocess, "run", return_value=mock.Mock(returncode=0, stdout="3.9\n")):
+            self.assertTrue(ci_local._es_39("/x/python3"))
+
+
+class UnaSolaCorridaTests(unittest.TestCase):
+    """Aceptación 6: ``ci_local --simulate-ci`` lanza un solo ``discover`` completo (se cuenta); ``--matrix`` lanza además el del 3.9."""
+
+    def count(self, argv: list[str], *, es_39: bool = True) -> list[list[str]]:
+        calls: list[list[str]] = []
+
+        def guarded(cmd, **kw):
+            calls.append(list(cmd))
+            return outcome()
+
+        quiet = [mock.patch.object(ci_local, name, return_value="OK") for name in ("paso_import", "paso_redteam_selftest", "paso_sizes", "paso_plans", "paso_adrs")]
+        patches = quiet + [mock.patch.object(ci_local.load_guard, "run_guarded", side_effect=guarded),
+                           mock.patch.object(ci_local, "_es_39", return_value=es_39),
+                           mock.patch.object(sys, "argv", ["ci_local.py", *argv])]
+        for patch in patches:
+            patch.start()
+            self.addCleanup(patch.stop)
+        with redirect_stdout(io.StringIO()):
+            self.assertEqual(ci_local.main(), 0)
+        return [cmd for cmd in calls if "discover" in cmd]
+
+    def test_simulate_ci_launches_one_full_discover(self) -> None:
+        discovers = self.count(["--simulate-ci"])
+        self.assertEqual(len(discovers), 1)
+        self.assertEqual(discovers[0][0], sys.executable)
+
+    def test_matrix_adds_the_discover_of_the_39(self) -> None:
+        discovers = self.count(["--simulate-ci", "--matrix"])
+        self.assertEqual([cmd[0] for cmd in discovers], [sys.executable, "/usr/bin/python3"])
+
+    def test_matrix_without_a_39_adds_nothing(self) -> None:
+        self.assertEqual(len(self.count(["--matrix"], es_39=False)), 1)
+
+
+class AbortCutsTheHeavyStepsTests(unittest.TestCase):
+    """Q-01: tras un aborto por carga no se lanza ningún paso pesado más; los ligeros siguen; sale con rc 75 e imprime lo saltado."""
+
+    def test_a_75_in_the_discover_launches_neither_the_matrix_nor_kill9(self) -> None:
+        ci_local.ABORTED.clear()
+        self.addCleanup(ci_local.ABORTED.clear)
+        launched: list[list[str]] = []
+
+        def guarded(cmd, **kw):
+            launched.append(list(cmd))
+            return mock.Mock(rc=75, aborted=True, left=[], reason={"threshold": 20, "samples": [99] * 6, "killed": []})
+
+        light = {name: mock.Mock(return_value="OK") for name in ("paso_import", "paso_sizes", "paso_plans", "paso_adrs")}
+        patches = [mock.patch.object(ci_local, name, fn) for name, fn in light.items()]
+        patches += [mock.patch.object(ci_local, "paso_redteam_selftest", return_value="OK"),
+                    mock.patch.object(ci_local, "_es_39", return_value=True),
+                    mock.patch.object(ci_local.load_guard, "run_guarded", side_effect=guarded),
+                    mock.patch.object(sys, "argv", ["ci_local.py", "--matrix"])]
+        for patch in patches:
+            patch.start()
+            self.addCleanup(patch.stop)
+        out = io.StringIO()
+        with redirect_stdout(out):
+            self.assertEqual(ci_local.main(), 75)
+        self.assertEqual(len(launched), 1)  # sólo el discover: ni la matriz del 3.9 ni el kill -9
+        self.assertIn("discover", launched[0])
+        text = out.getvalue()
+        self.assertIn("pasos pesados saltados por el aborto: redteam_selftest, matriz_interpretes, kill9_bandeja", text)
+        self.assertIn("matriz_interpretes: SKIP (abortada por carga)", text)
+        for name, fn in light.items():  # los ligeros siguen: no cargan nada
+            fn.assert_called_once()
 
 
 if __name__ == "__main__":

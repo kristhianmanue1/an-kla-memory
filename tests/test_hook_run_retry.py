@@ -11,6 +11,7 @@ from an_kla import hook_runs, store_locks
 from an_kla.attest import ensure_attest_files
 from an_kla.custody import CustodyError
 from an_kla.store import MemoryStore
+from tests import proc_support
 
 
 def mint(root, **overrides):
@@ -73,6 +74,7 @@ class RetryTests(unittest.TestCase):
         ctx = multiprocessing.get_context('spawn')
         barrier, queue = ctx.Barrier(1), ctx.Queue()
         process = ctx.Process(target=worker, args=(self.root, barrier, queue, 'x'))
+        self.addCleanup(proc_support.stop_process, process)  # el hijo muere con la prueba (terminate, join(5), kill)
         process.start(); process.join(20)
         if process.is_alive():
             process.terminate(); process.join()
@@ -111,7 +113,7 @@ class RetryTests(unittest.TestCase):
                     else: self.assertIn(('error','hook_run_conflict'), results)
                 finally:
                     for p in processes:
-                        if p.is_alive(): p.terminate(); p.join()
+                        proc_support.stop_process(p)
                     queue.close(); queue.join_thread()
 
     def test_corrupt_and_nonregular_candidates(self):
